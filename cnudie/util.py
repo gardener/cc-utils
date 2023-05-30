@@ -1,8 +1,5 @@
 import dataclasses
-import io
 import graphlib
-import os
-import tarfile
 import typing
 
 import deprecated
@@ -473,45 +470,3 @@ def diff_resources(
             _add_if_not_duplicate(resource_diff.resource_refs_only_right, i)
 
     return resource_diff
-
-
-def component_descriptors_from_ctf_archive(
-    ctf_archive: typing.Union[str, typing.IO[bytes]],
-) -> typing.Generator[cm.ComponentDescriptor, None, None]:
-    if isinstance(ctf_archive, str):
-        if os.path.isdir(ctf_archive):
-            # TODO Implement after clarifying with @Schrodit
-            raise NotImplementedError(f'{ctf_archive=}')
-        elif os.path.isfile(ctf_archive):
-            yield from _component_descriptors_from_ctf_archive_file(ctf_file_path=ctf_archive)
-        else:
-            raise NotImplementedError(f'{ctf_archive=}')
-    elif isinstance(ctf_archive, io.IOBase):
-        yield from _component_descriptors_from_ctf_archive_file(ctf_file_path=ctf_archive)
-    else:
-        raise NotImplementedError(f'{ctf_archive=}')
-
-
-def _component_descriptors_from_ctf_archive_file(
-    ctf_file_path: str = None,
-    ctf_fileobj: typing.IO[bytes] = None,
-) -> typing.Generator[cm.ComponentDescriptor, None, None]:
-
-    if not (bool(ctf_fileobj) ^ bool(ctf_file_path)):
-        raise ValueError('One of ctf_file_path or ctf_file_path must be given')
-
-    with tarfile.open(name=ctf_file_path, fileobj=ctf_fileobj, mode='r|') as ctf_tar:
-        for member in ctf_tar:
-            # manually check whether member is a file to be able to generate a more expressive
-            # error-msg
-            if not member.isfile():
-                raise RuntimeError('Content of the CTF archive is not a file')
-
-            with tarfile.open(fileobj=ctf_tar.extractfile(member), mode='r|') as component_tar:
-                first_entry = component_tar.next()
-                if not first_entry.name == 'component-descriptor.yaml':
-                    raise RuntimeError(
-                        'First entry in the component archive MUST be the component descriptor'
-                    )
-                cd_dict = ci.util.load_yaml(component_tar.extractfile(first_entry))
-                yield cm.ComponentDescriptor.from_dict(cd_dict)

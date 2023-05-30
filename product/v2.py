@@ -30,9 +30,6 @@ import version
 logger = logging.getLogger(__name__)
 
 
-CTF_OUT_DIR_NAME = 'cnudie-transport-format.out'
-
-
 COMPONENT_TYPE_NAME = 'component'
 
 

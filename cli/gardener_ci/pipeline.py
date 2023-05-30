@@ -410,9 +410,7 @@ def component_descriptor(
     env |= {
         'MAIN_REPO_DIR': repo.working_tree_dir,
         'BASE_DEFINITION_PATH': base_component_descriptor_file.name,
-        # BASE_CTF_PATH - XXX
         'COMPONENT_DESCRIPTOR_PATH': outfile,
-        # CTF_PATH - XXX
         'COMPONENT_NAME': base_component.name,
         'COMPONENT_VERSION': base_component.version,
         'EFFECTIVE_VERSION': base_component.version,

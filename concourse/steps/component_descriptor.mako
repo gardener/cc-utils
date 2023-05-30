@@ -151,10 +151,6 @@ v2_outfile = os.path.join(
   component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2),
 )
 
-ctf_out_path = os.path.abspath(
-  os.path.join(descriptor_out_dir, product.v2.CTF_OUT_DIR_NAME)
-)
-
 descriptor_script = os.path.abspath(
   '${job_variant.main_repository().resource_name()}/.ci/component_descriptor'
 )
@@ -162,10 +158,6 @@ if os.path.isfile(descriptor_script):
   is_executable = bool(os.stat(descriptor_script)[stat.ST_MODE] & stat.S_IEXEC)
   if not is_executable:
     fail(f'descriptor script file exists but is not executable: {descriptor_script}')
-
-  # dump base_ctf_v2 as valid component archive and pass it to descriptor script
-  base_ctf_dir = os.path.join(descriptor_out_dir, 'base_component_ctf')
-  os.makedirs(base_ctf_dir, exist_ok=False)
 
   # dump base_descriptor_v2 and pass it to descriptor script
   base_component_descriptor_fname = (
@@ -182,9 +174,7 @@ if os.path.isfile(descriptor_script):
   subproc_env['${main_repo_path_env_var}'] = main_repo_path
   subproc_env['MAIN_REPO_DIR'] = main_repo_path
   subproc_env['BASE_DEFINITION_PATH'] = base_descriptor_file_v2
-  subproc_env['BASE_CTF_PATH'] = base_ctf_dir
   subproc_env['COMPONENT_DESCRIPTOR_PATH'] = v2_outfile
-  subproc_env['CTF_PATH'] = ctf_out_path
   subproc_env['COMPONENT_NAME'] = component_name
   subproc_env['COMPONENT_VERSION'] = effective_version
   subproc_env['EFFECTIVE_VERSION'] = effective_version
@@ -222,12 +212,9 @@ else:
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
   logger.info(f'wrote component descriptor (v2): {v2_outfile=}')
 
-have_ctf = os.path.exists(ctf_out_path)
 have_cd = os.path.exists(v2_outfile)
 
-if not have_ctf ^ have_cd:
-    fail(f'exactly one of {ctf_out_path=}, {v2_outfile=} must exist')
-elif have_cd:
+if have_cd:
   # ensure the script actually created an output
   if not os.path.isfile(v2_outfile):
     fail(f'no descriptor file was found at: {v2_outfile=}')
@@ -237,8 +224,9 @@ elif have_cd:
   )
   logger.info(f'found component-descriptor (v2) at {v2_outfile=}:\n')
   print(dump_component_descriptor_v2(descriptor_v2))
-elif have_ctf:
-  logger.info(f'found ctf-archive at {ctf_out_path=}')
+else:
+  print(f'XXX: did not find a component-descriptor at {v2_outfile=}')
+  exit(1)
 
 % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
 if snapshot_ctx_repository_base_url:
@@ -260,26 +248,7 @@ if snapshot_ctx_repository_base_url:
       'Successfully uploaded snapshot Component Descriptor to '
       f'{product.v2._target_oci_ref(snapshot_descriptor.component)}'
     )
-  elif have_ctf:
-    subprocess_args = [
-      'component-cli',
-      'ctf',
-      'push',
-      ctf_out_path,
-    ]
-    if ctx_repository_base_url != snapshot_ctx_repository_base_url:
-      subprocess_args.extend(['--repo-ctx', snapshot_ctx_repository_base_url])
-
-    subprocess.run(
-      subprocess_args,
-      check=True,
-      env=subproc_env,
-    )
 % endif
-if have_ctf:
-  logger.info(f'processed ctf-archive at {ctf_out_path=} - exiting')
-  # XXX TODO: also calculate bom-diff!
-  exit(0)
 
 # determine "bom-diff" (changed component references)
 try:
@@ -305,9 +274,6 @@ else:
   with open(dependencies_path) as f:
     print(f.read())
 % if retention_policy:
-if have_ctf:
-  logger.warning('purging not implemented for ctf')
-  exit(0)
 
 logger.info('will honour retention-policy')
 retention_policy = dacite.from_dict(

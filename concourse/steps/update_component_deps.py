@@ -49,44 +49,14 @@ def current_product_descriptor():
     component_descriptor_file_path = cdu.component_descriptor_path(
         schema_version=gci.componentmodel.SchemaVersion.V2,
     )
-    ctf_out_file_path = os.path.join(
-      ci.util.check_env('COMPONENT_DESCRIPTOR_DIR'),
-      product.v2.CTF_OUT_DIR_NAME,
-    )
 
     # cd is supplied via component-descriptor file. Parse and return
     if os.path.isfile(component_descriptor_file_path):
         return gci.componentmodel.ComponentDescriptor.from_dict(
             component_descriptor_dict=ci.util.parse_yaml_file(component_descriptor_file_path,)
         )
-
-    # cd is supplied via CTF archive. Parse ctf archive and return correct one
-    elif os.path.isfile(ctf_out_file_path):
-        component_name = ci.util.check_env('COMPONENT_NAME')
-        component_descriptors = [
-            cd
-            for cd in cnudie.util.component_descriptors_from_ctf_archive(ctf_out_file_path)
-            if cd.component.name == component_name
-        ]
-        if (cds_len := len(component_descriptors)) == 0:
-            raise RuntimeError(
-                f"No component descriptor for component '{component_name}' found in ctf archive "
-                f"at '{ctf_out_file_path}'"
-            )
-        elif cds_len > 1:
-            raise RuntimeError(
-                f"More than one component descriptor for component '{component_name}' found in ctf "
-                f"archive at '{ctf_out_file_path}'"
-            )
-        else:
-            return component_descriptors[0]
-
-    # either ctf or cd-file _must_ exist (enforced by component-descriptor-trait)
     else:
-        raise RuntimeError(
-            f'Neither component-descriptor file at {component_descriptor_file_path=} or '
-            f'ctf-archive at {ctf_out_file_path=} exist'
-        )
+        raise RuntimeError(f'did not find component-descriptor at {component_descriptor_file_path=}')
 
 
 def current_component():

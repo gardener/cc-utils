@@ -54,13 +54,8 @@ logger = logging.getLogger('step.release')
 
 def component_descriptors(
     component_descriptor_path: str,
-    ctf_path: str,
 ):
-    have_ctf = os.path.exists(ctf_path)
     have_cd = os.path.exists(component_descriptor_path)
-
-    if not have_ctf ^ have_cd:
-        ci.util.fail('exactly one of component-descriptor, or ctf-archive must exist')
 
     if have_cd:
         component_descriptor = cm.ComponentDescriptor.from_dict(
@@ -71,9 +66,8 @@ def component_descriptors(
         )
         yield component_descriptor.component
         return
-    elif have_ctf:
-        for component_descriptor in cnudie.util.component_descriptors_from_ctf_archive(ctf_path):
-            yield component_descriptor.component
+    else:
+        raise RuntimeError('did not find component-descriptor')
 
 
 class TransactionContext:
@@ -543,19 +537,14 @@ class UploadComponentDescriptorStep(TransactionalStep):
         self,
         github_helper: GitHubRepositoryHelper,
         components: tuple[cm.Component],
-        ctf_path:str,
         release_on_github: bool,
     ):
         self.github_helper = not_none(github_helper)
         self.components = components
-        self.ctf_path = ctf_path
         self.release_on_github = release_on_github
 
     def name(self):
         return "Upload Component Descriptor"
-
-    def _have_ctf(self) -> bool:
-        return os.path.exists(self.ctf_path)
 
     def validate(self):
         components: tuple[cm.Component] = tuple(
@@ -624,16 +613,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
                     component_descriptor_v2=component,
                 )
 
-        def upload_ctf(ctf_path: str):
-            subprocess.run(
-                ('component-cli', 'ctf', 'push', ctf_path),
-                check=True,
-            )
-
-        if not self._have_ctf():
-            upload_component_descriptors(components=components)
-        else:
-            upload_ctf(ctf_path=self.ctf_path)
+        upload_component_descriptors(components=components)
 
         def upload_component_descriptor_as_release_asset():
             try:
@@ -876,7 +856,6 @@ def release_and_prepare_next_dev_cycle(
     release_commit_callback_image_reference: str,
     release_notes_handling: str,
     component_descriptor_path: str=None,
-    ctf_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
     prerelease_suffix: str="dev",
@@ -890,7 +869,6 @@ def release_and_prepare_next_dev_cycle(
     components = tuple(
         component_descriptors(
             component_descriptor_path=component_descriptor_path,
-            ctf_path=ctf_path,
         )
     )
     if len(components) == 1:
@@ -981,7 +959,6 @@ def release_and_prepare_next_dev_cycle(
     upload_component_descriptor_step = UploadComponentDescriptorStep(
         github_helper=github_helper,
         components=components,
-        ctf_path=ctf_path,
         release_on_github=release_on_github,
     )
 

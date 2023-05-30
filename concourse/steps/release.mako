@@ -35,10 +35,6 @@ component_descriptor_path = os.path.join(
   job_step.input('component_descriptor_dir'),
   cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
-ctf_path = os.path.join(
-  job_step.input('component_descriptor_dir'),
-  product.v2.CTF_OUT_DIR_NAME,
-)
 
 component_descriptor_trait = job_variant.trait('component_descriptor')
 component_name = component_descriptor_trait.component_name()
@@ -89,7 +85,6 @@ release_commit_callback_image_reference = None
 concourse.steps.release.release_and_prepare_next_dev_cycle(
   component_name=component_name,
   component_descriptor_path='${component_descriptor_path}',
-  ctf_path='${ctf_path}',
   % if has_slack_trait:
   slack_channel_configs=${slack_channel_cfgs},
   % endif
