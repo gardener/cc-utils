@@ -205,18 +205,44 @@ def determine_reference_versions(
         raise NotImplementedError
 
 
+def create_ctx_repo_mapping(
+    map: dict[str, str],
+) -> dict[str, gci.componentmodel.OciRepositoryContext]:
+    # invert the input map and replace the ctx repo names with actual instances, i.e. turn it from
+    # a mapping of ctx repo name -> component name(s) to a mapping of component name -> ctx repo.
+    cfg_factory = ci.util.ctx().cfg_factory()
+
+    return {
+        component_name: gci.componentmodel.OciRepositoryContext(
+            baseUrl=cfg_factory.ctx_repository(ctx_repo_name).base_url()
+        )
+        for ctx_repo_name, component_name_list in map.items()
+            for component_name in component_name_list
+    }
+
+
 def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
     upgrade_pull_requests: typing.Iterable[github.util.UpgradePullRequest],
-    ctx_repo: gci.componentmodel.OciRepositoryContext,
+    default_ctx_repo: gci.componentmodel.OciRepositoryContext,
+    ctx_repo_mapping: dict[str, gci.componentmodel.OciRepositoryContext],
     ignore_prerelease_versions=False,
-) -> typing.Iterable[typing.Tuple[
-    gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
-]]:
+) -> typing.Iterable[
+    typing.Tuple[
+        gci.componentmodel.ComponentReference,
+        str,
+        gci.componentmodel.OciRepositoryContext,
+    ]
+]:
     for greatest_component_reference in product.v2.greatest_references(
         references=current_component().componentReferences,
     ):
+        if (c_name := greatest_component_reference.componentName) in ctx_repo_mapping:
+            ctx_repo = ctx_repo_mapping[c_name]
+        else:
+            ctx_repo = default_ctx_repo
+
         greatest_versions_to_consider = determine_reference_versions(
             component_name=greatest_component_reference.componentName,
             reference_version=greatest_component_reference.version,
@@ -229,7 +255,7 @@ def determine_upgrade_prs(
             logger.info(
                 f'Found possible version{"s" if len(greatest_versions_to_consider)>1 else ""} to '
                 f'upgrade to: {greatest_versions_to_consider} for '
-                f'{greatest_component_reference.componentName=}'
+                f'{greatest_component_reference.componentName=} in {ctx_repo.baseUrl=}'
             )
         else:
             logger.warning(
@@ -264,7 +290,7 @@ def determine_upgrade_prs(
                 )
                 continue
             else:
-                yield(greatest_component_reference, greatest_version)
+                yield (greatest_component_reference, greatest_version, ctx_repo)
 
 
 def _import_release_notes(

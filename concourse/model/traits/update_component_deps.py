@@ -160,6 +160,29 @@ ATTRIBUTES = (
         type=MergePolicy,
     ),
     AttributeSpec.optional(
+        name='additional_ctx_repositories',
+        default=dict(),
+        doc='''
+            Additional context repositories to look up components in. The entries are expected
+            to be mappings of context repo config names to a list of component names.
+
+            Example:
+
+            .. code-block:: yaml
+
+                additional_ctx_repositories:
+                    ctx_repo_config_name:
+                    - example/component/name
+                    - another/example/component
+                    ctx_repo_config_name_two:
+                    - yet/another/component
+
+            If a component name is configured for two context repository config names the last
+            mention will take precedence.
+        ''',
+        type=dict,
+    ),
+    AttributeSpec.optional(
         name='merge_policies',
         default=(),
         doc=(
@@ -218,6 +241,9 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def upstream_update_policy(self):
         return UpstreamUpdatePolicy(self.raw.get('upstream_update_policy'))
+
+    def additional_ctx_repositories(self):
+        return self.raw['additional_ctx_repositories']
 
     def merge_policies(self):
         # handle default here

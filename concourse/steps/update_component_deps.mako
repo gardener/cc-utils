@@ -24,6 +24,7 @@ ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_version
 release_notes_handling=update_component_deps_trait.release_notes_handling()
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ctx_repo = component_descriptor_trait.ctx_repository()
+additional_ctx_repository_mapping = update_component_deps_trait.additional_ctx_repositories()
 
 set_version_script_image_cfg = \
     update_component_deps_trait.set_dependency_version_script_container_image()
@@ -149,15 +150,20 @@ ctx_repo = dacite.from_dict(
   )
 )
 
+ctx_repo_mapping = create_ctx_repo_mapping(
+    map=${additional_ctx_repository_mapping},
+)
+
 # we at most need to do this once
 os.environ['DOCKERD_STARTED'] = 'no'
 
 # find components that need to be upgraded
-for from_ref, to_version in determine_upgrade_prs(
+for from_ref, to_version, component_ctx_repo in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    ctx_repo=ctx_repo,
+    default_ctx_repo=ctx_repo,
+    ctx_repo_mapping=ctx_repo_mapping,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
     applicable_merge_policy = [
@@ -189,7 +195,7 @@ for from_ref, to_version in determine_upgrade_prs(
         githubrepobranch=githubrepobranch,
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
-        ctx_repo=ctx_repo,
+        ctx_repo=component_ctx_repo,
         merge_policy=merge_policy,
         merge_method=merge_method,
 % if after_merge_callback:
