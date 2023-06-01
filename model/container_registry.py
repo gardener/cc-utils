@@ -115,6 +115,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
                     auths[docker_v1_prefix] = auth_cfg
                     break # use first (we have no way of knowing which one would be better..)
 
+        logger.info(f'using cfg {self.name()=} for prefixes {list(auths.keys())}')
+
         return auths
 
     def privileges(self) -> oa.Privileges:
