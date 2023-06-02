@@ -400,7 +400,34 @@ considered to be “local” (built by component’s pipeline) or “external”
 <p>Gardener-Components have a name that is by convention the github-repo-url (w/o scheme). If the
 <code class="code docutils literal notranslate"><span class="pre">sourceRepository</span></code> is different from current component name, a component-reference is added.</p>
 <p><em>Example</em></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># current component: github.com/gardener/gardener</span>
+<span class="c1"># current version: 1.67.0</span>
+<span class="c1"># github-repo: github.com/gardener/gardener</span>
+
+<span class="nt">images</span><span class="p">:</span>
+<span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardenlet</span>
+<span class="w">  </span><span class="nt">sourceRepository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/gardener/gardener</span><span class="w"> </span><span class="c1"># same as current component in this example</span>
+<span class="w">  </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">eu.gcr.io/gardener-project/gardener/gardenlet</span>
+</pre></div>
+</div>
 <p><em>Results in:</em></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">resources</span><span class="p">:</span>
+<span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardenlet</span><span class="w"> </span><span class="c1"># from name-attribute</span>
+<span class="w">  </span><span class="nt">relation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span><span class="w"> </span><span class="c1"># from repository&#39;s prefix matching eu.gcr.io/gardener-project/gardener</span>
+<span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ociImage</span><span class="w"> </span><span class="c1"># hard-coded</span>
+<span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.67.0</span><span class="w"> </span><span class="c1"># from current version</span>
+<span class="w">  </span><span class="nt">access</span><span class="p">:</span>
+<span class="w">   </span><span class="nt">imageReference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">eu.gcr.io/gardener-project/gardener/gardenlet:1.67.0</span><span class="w"> </span><span class="c1"># &lt;repo&gt;:&lt;version&gt;</span>
+<span class="w">   </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ociRegistry</span><span class="w"> </span><span class="c1"># hard-coded</span>
+<span class="w w-Error"> </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">imagevector.gardener.cloud/name</span>
+<span class="w">   </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardenlet</span><span class="w"> </span><span class="c1"># from name-attribute</span>
+<span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">imagevector.gardener.cloud/repository</span>
+<span class="w">   </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">eu.gcr.io/gardener-project/gardener/gardenlet</span><span class="w"> </span><span class="c1"># from repository-attribute</span>
+<span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">imagevector.gardener.cloud/source-repository</span>
+<span class="w">   </span><span class="nt">value</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/gardener/gardener</span><span class="w"> </span><span class="c1"># github-repo</span>
+</pre></div>
+</div>
 </section>
 </section>
 <section id="retention-policies-aka-cleaning-up-old-versions">
