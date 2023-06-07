@@ -48,6 +48,7 @@ def filter_image(
     oci_client: oc.Client=None,
     mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
     platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
+    oci_manifest_annotations: dict[str, str]=None,
 ) -> typing.Tuple[requests.Response, str, bytes]: # response, tgt-ref, manifest_bytes
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -63,6 +64,7 @@ def filter_image(
             oci_client=oci_client,
             mode=mode,
             platform_filter=platform_filter,
+            annotations=oci_manifest_annotations,
         )
 
     if mode is oci.ReplicationMode.REGISTRY_DEFAULTS:
@@ -106,6 +108,7 @@ def filter_image(
                 target_ref=tgt_name,
                 remove_files=remove_files,
                 oci_client=oci_client,
+                oci_manifest_annotations=oci_manifest_annotations,
             )
 
             # patch (potentially) modified manifest-digest
@@ -145,6 +148,7 @@ def filter_image(
             target_ref=target_ref.ref_without_tag,
             remove_files=remove_files,
             oci_client=oci_client,
+            oci_manifest_annotations=oci_manifest_annotations,
         )
 
         manifest_list = om.OciImageManifestList(
@@ -304,6 +308,12 @@ def filter_image(
         # if tgt does not bear a tag, calculate hash digest as tgt
         manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
         target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
+
+    if oci_manifest_annotations:
+        if not 'annotations' in manifest_raw:
+            manifest_raw['annotations'] = {}
+
+        manifest_raw |= oci_manifest_annotations
 
     res = oci_client.put_manifest(
         image_reference=target_ref,

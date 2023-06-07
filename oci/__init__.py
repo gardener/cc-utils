@@ -69,6 +69,7 @@ def replicate_artifact(
     oci_client: oc.Client=None,
     mode: ReplicationMode=ReplicationMode.REGISTRY_DEFAULTS,
     platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
+    annotations: dict[str, str]=None,
 ) -> typing.Tuple[requests.Response, str, bytes]:
     '''
     replicate the given OCI Artifact from src_image_reference to tgt_image_reference.
@@ -93,6 +94,12 @@ def replicate_artifact(
 
     If platform_filter is specified (only applied for multi-arch images), the replication
     result will obviously also deviate from src, depending on the filter semantics.
+
+    If `annotations` are passed (which must be a dict w/ plain str->str entries as
+    specified by https://github.com/opencontainers/image-spec/blob/main/annotations.md),
+    they are updated into the target-manifest. If they are already present, they will be
+    overwritten. If existing values are identical, it is tried to avoid to create a "pseudo-diff"
+    (i.e. in case the existing values are equal, the manifest will be left untouched).
 
     pass either `credentials_lookup`, `routes`, OR `oci_client`
     '''
@@ -156,6 +163,7 @@ def replicate_artifact(
                 data_class=om.OciImageManifestList,
                 data=manifest,
             )
+            manifest: om.OciImageManifestList
 
             src_ref = om.OciImageReference(image_reference=src_image_reference)
             src_name = src_ref.ref_without_tag
@@ -188,7 +196,18 @@ def replicate_artifact(
                     src_image_reference=src_reference,
                     tgt_image_reference=tgt_reference,
                     oci_client=client,
+                    annotations=annotations,
                 )
+
+            if annotations:
+                # try to avoid unnecessary changes by x-serialisation - only add values if
+                # they are either new or different
+                for k, v in annotations:
+                    if manifest.annotations.get(k) == v:
+                        continue
+                    else:
+                        manifest.annotations[k] = v
+                        manifest_dirty = True
 
             if manifest_dirty:
                 raw_manifest = json.dumps(manifest.as_dict())
@@ -223,6 +242,7 @@ def replicate_artifact(
                     src_image_reference=src_image_reference,
                     tgt_image_reference=tgt_image_ref,
                     oci_client=oci_client,
+                    annotations=annotations,
                 )
 
                 manifest_list = om.OciImageManifestList(
@@ -354,6 +374,19 @@ def replicate_artifact(
         manifest_dict['config']['digest'] = cfg_digest
         manifest_dict['config']['size'] = len(fake_cfg_raw)
         raw_manifest = json.dumps(manifest_dict)
+
+    if annotations:
+        manifest_dirty = False
+
+        for k, v in annotations.items():
+            if manifest.annotations.get(k) == v:
+                continue
+            else:
+                manifest.annotations[k] = v
+                manifest_dirty = True
+
+        if manifest_dirty:
+            raw_manifest = json.dumps(manifest_dict)
 
     res = client.put_manifest(
         image_reference=tgt_image_reference,
