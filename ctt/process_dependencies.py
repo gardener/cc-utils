@@ -478,109 +478,110 @@ def process_images(
     )
 
     def process_job(processing_job: processing_model.ProcessingJob):
-        # do actual processing
-        if processing_mode is ProcessingMode.REGULAR:
-            docker_content_digest = process_upload_request(
-                upload_request=processing_job.upload_request,
-                upload_mode_images=upload_mode_images,
-                replication_mode=replication_mode,
-                platform_filter=platform_filter,
-                oci_client=oci_client,
-            )
-
-            if not docker_content_digest:
-                raise RuntimeError(f'No Docker_Content_Digest returned for {processing_job=}')
-
-            if generate_cosign_signatures:
-                digest_ref = set_digest(
-                    processing_job.upload_request.target_ref,
-                    docker_content_digest,
-                )
-                cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
-
-                unsigned_payload = cp.Payload(
-                    image_ref=digest_ref,
-                ).normalised_json()
-                hash = hashlib.sha256(unsigned_payload.encode())
-                digest = hash.digest()
-                signature = ctt_util.sign_with_signing_server(
-                    server_url=signing_server_url,
-                    content=digest,
-                    root_ca_cert_path=root_ca_cert_path,
-                )
-
-                # cosign every time appends the signature in the signature oci artifact, even if
-                # the exact same signature already exists there. therefore, check if the exact same
-                # signature already exists
-                signature_exists = False
-
-                # accept header should not be needed here as we are referencing the manifest
-                # via digest.
-                # but set just for safety reasons.
-                accept = replication_mode.accept_header()
-                manifest_blob_ref = oci_client.head_manifest(
-                    image_reference=cosign_sig_ref,
-                    absent_ok=True,
-                    accept=accept,
-                )
-
-                if bool(manifest_blob_ref):
-                    cosign_sig_manifest = oci_client.manifest(cosign_sig_ref)
-                    for layer in cosign_sig_manifest.layers:
-                        existing_signature = layer.annotations.get(
-                            "dev.cosignproject.cosign/signature",
-                            "",
-                        )
-                        if existing_signature == signature:
-                            signature_exists = True
-                            break
-
-                if not signature_exists:
-                    cosign.attach_signature(
-                        image_ref=digest_ref,
-                        unsigned_payload=unsigned_payload.encode(),
-                        signature=signature.encode(),
-                        cosign_repository=cosign_repository,
-                    )
-                else:
-                    logger.info(
-                        f'{digest_ref=} - signature for manifest already exists '
-                        '- skipping signature upload'
-                    )
-
-            if replace_resource_tags_with_digests:
-                processing_job.upload_request = dataclasses.replace(
-                    processing_job.upload_request,
-                    target_ref=set_digest(
-                        processing_job.upload_request.target_ref,
-                        docker_content_digest,
-                    ),
-                )
-
-                if processing_job.processed_resource:
-                    processing_job.processed_resource = access_resource_via_digest(
-                        processing_job.processed_resource,
-                        docker_content_digest,
-                    )
-                else:
-                    processing_job.resource = access_resource_via_digest(
-                        processing_job.resource,
-                        docker_content_digest,
-                    )
-
-            bom_resources.append(
-                BOMEntry(
-                    processing_job.upload_request.target_ref,
-                    BOMEntryType.Docker,
-                    f'{processing_job.component.name}/{processing_job.resource.name}',
-                )
-            )
-        elif processing_mode == ProcessingMode.DRY_RUN:
+        if processing_mode is ProcessingMode.DRY_RUN:
+            return processing_job
+        elif processing_mode is ProcessingMode.REGULAR:
             pass
         else:
             raise NotImplementedError(processing_mode)
 
-        return processing_job
+        docker_content_digest = process_upload_request(
+            upload_request=processing_job.upload_request,
+            upload_mode_images=upload_mode_images,
+            replication_mode=replication_mode,
+            platform_filter=platform_filter,
+            oci_client=oci_client,
+        )
+
+        if not docker_content_digest:
+            raise RuntimeError(f'No Docker_Content_Digest returned for {processing_job=}')
+
+        if generate_cosign_signatures:
+            digest_ref = set_digest(
+                processing_job.upload_request.target_ref,
+                docker_content_digest,
+            )
+            cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
+
+            unsigned_payload = cp.Payload(
+                image_ref=digest_ref,
+            ).normalised_json()
+            hash = hashlib.sha256(unsigned_payload.encode())
+            digest = hash.digest()
+            signature = ctt_util.sign_with_signing_server(
+                server_url=signing_server_url,
+                content=digest,
+                root_ca_cert_path=root_ca_cert_path,
+            )
+
+            # cosign every time appends the signature in the signature oci artifact, even if
+            # the exact same signature already exists there. therefore, check if the exact same
+            # signature already exists
+            signature_exists = False
+
+            # accept header should not be needed here as we are referencing the manifest
+            # via digest.
+            # but set just for safety reasons.
+            accept = replication_mode.accept_header()
+            manifest_blob_ref = oci_client.head_manifest(
+                image_reference=cosign_sig_ref,
+                absent_ok=True,
+                accept=accept,
+            )
+
+            if bool(manifest_blob_ref):
+                cosign_sig_manifest = oci_client.manifest(cosign_sig_ref)
+                for layer in cosign_sig_manifest.layers:
+                    existing_signature = layer.annotations.get(
+                        "dev.cosignproject.cosign/signature",
+                        "",
+                    )
+                    if existing_signature == signature:
+                        signature_exists = True
+                        break
+
+            if not signature_exists:
+                cosign.attach_signature(
+                    image_ref=digest_ref,
+                    unsigned_payload=unsigned_payload.encode(),
+                    signature=signature.encode(),
+                    cosign_repository=cosign_repository,
+                )
+            else:
+                logger.info(
+                    f'{digest_ref=} - signature for manifest already exists '
+                    '- skipping signature upload'
+                )
+
+        if replace_resource_tags_with_digests:
+            processing_job.upload_request = dataclasses.replace(
+                processing_job.upload_request,
+                target_ref=set_digest(
+                    processing_job.upload_request.target_ref,
+                    docker_content_digest,
+                ),
+            )
+
+            if processing_job.processed_resource:
+                processing_job.processed_resource = access_resource_via_digest(
+                    processing_job.processed_resource,
+                    docker_content_digest,
+                )
+            else:
+                processing_job.resource = access_resource_via_digest(
+                    processing_job.resource,
+                    docker_content_digest,
+                )
+
+        bom_resources.append(
+            BOMEntry(
+                processing_job.upload_request.target_ref,
+                BOMEntryType.Docker,
+                f'{processing_job.component.name}/{processing_job.resource.name}',
+            )
+        )
+
+    return processing_job
 
     jobs = executor.map(process_job, jobs)
 
