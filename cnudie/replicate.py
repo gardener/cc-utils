@@ -31,7 +31,6 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         raise ValueError('exactly one of src_ctx_repo, src_ctx_repo_base_url must be passed')
 
     if src_ctx_repo_base_url:
-        logger.warning('passing src_ctx_repo_base_url is deprecated - pass src_ctx_repo')
         src_ctx_repo = cm.OciRepositoryContext(
             baseUrl=src_ctx_repo_base_url,
         )
