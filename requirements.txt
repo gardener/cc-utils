@@ -38,7 +38,6 @@ pycryptodome
 pydash<8.0.0
 pylama
 pylint
-pymongo
 pytest
 python-dateutil
 python-gitlab
@@ -56,6 +55,5 @@ sseclient-py<2.0.0
 tabulate<1.0.0
 termcolor<3.0.0
 urllib3<3.0.0
-uvicorn # todo: rm once whd is factored-out to separate package
 websockets
 yamllint
