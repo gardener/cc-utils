@@ -207,6 +207,7 @@ class OciImageManifest:
     layers: typing.Sequence[OciBlobRef]
     mediaType: str = OCI_MANIFEST_SCHEMA_V2_MIME
     schemaVersion: int = 2
+    annotations: dict = dataclasses.field(default_factory=dict)
 
     def as_dict(self) -> dict:
         return {
@@ -214,6 +215,7 @@ class OciImageManifest:
             'layers': [layer.as_dict() for layer in self.layers],
             'mediaType': self.mediaType,
             'schemaVersion': self.schemaVersion,
+            'annotations': self.annotations,
         }
 
     def blobs(self) -> typing.Sequence[OciBlobRef]:
@@ -314,10 +316,12 @@ class OciImageManifestList:
     mediaType: str = DOCKER_MANIFEST_LIST_MIME  # or OCI_IMAGE_INDEX_MIME. Keep previous default for
                                                 # backwards compatibility
     schemaVersion: int = 2
+    annotations: dict = dataclasses.field(default_factory=dict)
 
     def as_dict(self):
         return {
             'manifests': [le.as_dict() for le in self.manifests],
             'mediaType': self.mediaType,
             'schemaVersion': self.schemaVersion,
+            'annotations': self.annotations,
         }
