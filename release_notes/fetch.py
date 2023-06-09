@@ -161,6 +161,8 @@ def fetch_release_notes(
     source = cnudie.util.determine_main_source_for_component(component)
     github_helper = ghrnu.github_helper_from_github_access(source.access)
     git_helper = ghrnu.git_helper_from_github_access(source.access, repo_path)
+    # make sure _all_ tags are available locally
+    git_helper.fetch_tags()
 
     # find all available versions
     component_versions: dict[semver.VersionInfo, str] = {}
