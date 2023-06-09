@@ -263,6 +263,11 @@ class GitHelper:
                 fetch_result = remote.fetch(ref)[0]
                 return fetch_result.commit
 
+    def fetch_tags(self):
+        with self._authenticated_remote() as (cmd_env, remote):
+            with remote.repo.git.custom_environment(**cmd_env):
+                remote.fetch(tag=True)
+
 
 def url_with_credentials(
     github_cfg: GithubConfig,
