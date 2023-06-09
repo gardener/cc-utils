@@ -27,12 +27,23 @@ from concourse.model.base import (
 from concourse.model.job import (
   JobVariant,
 )
+from concourse.model.traits.release import (
+    ReleaseNotesHandling,
+)
 
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='preprocess',
         default='finalize',
         doc='version processing operation to set effective version',
+    ),
+    AttributeSpec.optional(
+        name='release_notes_handling',
+        default=ReleaseNotesHandling.DEFAULT.value,
+        doc='''
+        configures which iteration of the code to use when generating release notes.
+        ''',
+        type=ReleaseNotesHandling,
     ),
 )
 
@@ -50,6 +61,9 @@ class DraftReleaseTrait(Trait):
 
     def _preprocess(self):
         return self.raw['preprocess']
+
+    def release_notes_handling(self) -> ReleaseNotesHandling:
+        return ReleaseNotesHandling(self.raw['release_notes_handling'])
 
     def validate(self):
         super().validate()
