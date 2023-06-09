@@ -55,5 +55,6 @@ sseclient-py<2.0.0
 tabulate<1.0.0
 termcolor<3.0.0
 urllib3<3.0.0
+uvicorn
 websockets
 yamllint
