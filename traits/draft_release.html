@@ -113,13 +113,48 @@
 <td><p>str</p></td>
 <td><p>version processing operation to set effective version</p></td>
 </tr>
+<tr class="row-odd"><td><p>release_notes_handling</p></td>
+<td><p>no</p></td>
+<td><p>default</p></td>
+<td><p>ReleaseNotesHandling</p></td>
+<td><p>configures which iteration of the code to use when generating release notes.</p></td>
+</tr>
+</tbody>
+</table>
+<h2>release_notes_handling Enumeration Values<a class="headerlink" href="#trait-draft-release" title="Permalink to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>default</p></td>
+<td><p><blockquote>
+<div><p>Use default version of release note creation code. Use this if you are interested in
+stability rather than the latest features.</p>
+</div></blockquote>
+</p></td>
+</tr>
+<tr class="row-odd"><td><p>preview</p></td>
+<td><p><blockquote>
+<div><p>Use preview version of release note creation code. Use this to join new features and
+feature-rollouts.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>if no features are being tested/rolled-out, using this value is the same as using
+<code class="code docutils literal notranslate"><span class="pre">default</span></code>.</p>
+</div>
+</div></blockquote>
+</p></td>
+</tr>
 </tbody>
 </table>
 <h2>Dependencies<a class="headerlink" href="#trait-draft-release" title="Permalink to this heading"></a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 <li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
+<li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 </ul>
 </section>
 <p>Declaring jobs will create or update draft-release-notes that will automatically be collected for
