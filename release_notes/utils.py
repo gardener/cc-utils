@@ -78,7 +78,17 @@ def find_next_smallest_version(
         current_version: semver.VersionInfo
 ) -> typing.Optional[semver.VersionInfo]:
     # find version before the requested version and sort by semver
-    return max((v for v in sorted(available_versions) if v < current_version), default=None)
+    # If no version requested, return greatest version
+    sorted_versions =  sorted(available_versions, reverse=True)
+    if not sorted_versions:
+        return None
+
+    if current_version:
+        # TODO: the desired version is always the first hit, so this can be optimised further.
+        # Do so in a way that keeps readability.
+        return max(v for v in sorted_versions if v < current_version)
+    else:
+        return sorted_versions[0]
 
 
 def _find_git_notes_for_commit(

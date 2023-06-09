@@ -38,6 +38,24 @@ def _list_commits_between_tags(
     return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{merge_commit.hexsha}'))
 
 
+def _list_commits_since_tag(
+        repo: git.Repo,
+        tag: git.TagReference,
+) -> tuple[git.Commit]:
+    '''Return a list of between the given tag and HEAD
+
+    :return: a tuple of commits'''
+    if repo.is_ancestor(tag.commit, 'HEAD'):
+        return tuple(repo.iter_commits(f'HEAD...{tag.commit.hexsha}'))
+
+    if (
+        not (merge_commit_list := repo.merge_base('HEAD', tag))
+        or not (merge_commit := merge_commit_list.pop())
+    ):
+        raise RuntimeError('cannot find merge base')
+    return tuple(repo.iter_commits(f'HEAD...{merge_commit.hexsha}'))
+
+
 def _get_release_note_commits_tuple_for_minor_release(
         previous_version: semver.VersionInfo,
         component_versions: dict[semver.VersionInfo, str],
@@ -116,6 +134,13 @@ def get_release_note_commits_tuple(
         # just return all commits starting from the current_version_tag
         return tuple(git_helper.repo.iter_commits(current_version_tag)), tuple()
 
+    if not current_version:
+        logger.info('No current version specified. Start fetching of release notes at HEAD')
+        return _list_commits_since_tag(
+            repo=git_helper.repo,
+            tag=previous_version_tag,
+        ), tuple()
+
     # new major release (not supported yet)
     if current_version.major != previous_version.major:
         raise NotImplementedError(
@@ -155,7 +180,11 @@ def fetch_release_notes(
 
     :param component: An instance of the Component class from the GCI component model.
     :param repo_path: The (local) path to the git-repository.
-    :param current_version: Optional argument to retrieve release notes for a specific version.
+    :param current_version: Optional argument to retrieve release notes up to a specific version.
+        If not given, the current `HEAD` is used.
+    :param previous_version: Optional argument to retrieve release notes starting at a specific
+        version. If not given, the closest version to `current_version` is used
+
     :return: A set of ReleaseNote objects for the specified component.
     '''
     source = cnudie.util.determine_main_source_for_component(component)
@@ -176,16 +205,11 @@ def fetch_release_notes(
         component_versions[parsed_version] = ver
 
     if not current_version:
-        if not source.version:
-            raise ValueError('current_version not passed and not found in component source')
-        current_version = version.parse_to_semver(source.version)
-        # access tag from component
-        current_version_tag = git_helper.repo.tag(source.access.ref)
+        current_version_tag = None
     else:
         current_version_tag = git_helper.repo.tag(component_versions[current_version])
-
-    if not current_version_tag:
-        raise RuntimeError(f'cannot find ref {source.access.ref} in repo')
+        if not current_version_tag:
+            raise RuntimeError(f'cannot find ref {source.access.ref} in repo')
 
     if not previous_version:
         previous_version = rnu.find_next_smallest_version(
