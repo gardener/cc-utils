@@ -52,6 +52,7 @@ import sys
 import dacite
 
 import ci.util
+import concourse.model.traits.release
 import concourse.model.traits.update_component_deps
 import ctx
 import gci.componentmodel
@@ -96,7 +97,7 @@ merge_policy_and_filters = {
         exclude_regexes=(),
     ) for p in merge_policy_configs
 }
-release_notes_handling = concourse.model.traits.update_component_deps.ReleaseNotesHandling(
+release_notes_handling = concourse.model.traits.release.ReleaseNotesHandling(
     '${release_notes_handling.value}'
 )
 # indicates whether or not an upstream component was defined as a reference
