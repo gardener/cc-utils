@@ -297,7 +297,7 @@ upload_image_lock = threading.Lock()
 
 # uploads a single OCI artifact and returns the content digest
 def process_upload_request(
-    upload_request: processing_model.ContainerImageUploadRequest,
+    processing_job: processing_model.ProcessingJob,
     upload_mode_images=product.v2.UploadMode.SKIP,
     replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
     platform_filter: typing.Callable[[om.OciPlatform], bool] = None,
@@ -310,6 +310,7 @@ def process_upload_request(
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
+    upload_request = processing_job.upload_request
     tgt_ref = upload_request.target_ref
 
     # if event is present, upload might still be in progress (done if event is "set")
@@ -350,6 +351,9 @@ def process_upload_request(
     logger.info(f'start processing {src_ref} -> {tgt_ref=}')
     logger.info(f'{tgt_ref=} {upload_request.remove_files=} {replication_mode=} {platform_filter=}')
 
+    component = processing_job.component
+    resource = processing_job.resource
+
     _, _, raw_manifest = container.util.filter_image(
         source_ref=src_ref,
         target_ref=tgt_ref,
@@ -357,6 +361,10 @@ def process_upload_request(
         mode=replication_mode,
         platform_filter=platform_filter,
         oci_client=oci_client,
+        oci_manifest_annotations={
+            'cloud.gardener/ocm-component': f'{component.name}:{component.version}',
+            'cloud.gardener/ocm-resource': f'{resource.name}:{resource.version}',
+        },
     )
 
     logger.info(f'finished processing {src_ref} -> {tgt_ref=}')
@@ -486,7 +494,7 @@ def process_images(
             raise NotImplementedError(processing_mode)
 
         docker_content_digest = process_upload_request(
-            upload_request=processing_job.upload_request,
+            processing_job=processing_job,
             upload_mode_images=upload_mode_images,
             replication_mode=replication_mode,
             platform_filter=platform_filter,
