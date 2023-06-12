@@ -266,7 +266,7 @@ class GitHelper:
     def fetch_tags(self):
         with self._authenticated_remote() as (cmd_env, remote):
             with remote.repo.git.custom_environment(**cmd_env):
-                remote.fetch(tag=True)
+                remote.fetch(tags=True, recurse_submodules='no')
 
 
 def url_with_credentials(
