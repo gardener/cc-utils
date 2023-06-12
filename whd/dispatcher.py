@@ -100,9 +100,8 @@ class GithubWebhookDispatcher:
             logger.info(f'ignored create event with type {ref_type}')
             return
 
-        # todo: rename parameter
         self._update_pipeline_definition(
-            push_event=create_event,
+            event=create_event,
             delivery_id=delivery_id,
             repository=repository,
             hostname=hostname,
@@ -122,7 +121,7 @@ class GithubWebhookDispatcher:
         if self._pipeline_definition_changed(push_event):
             try:
                 self._update_pipeline_definition(
-                    push_event=push_event,
+                    event=push_event,
                     delivery_id=delivery_id,
                     repository=repository,
                     hostname=hostname,
@@ -180,7 +179,7 @@ class GithubWebhookDispatcher:
 
     def _update_pipeline_definition(
         self,
-        push_event,
+        event,
         delivery_id: str,
         repository: str,
         hostname: str,
@@ -195,7 +194,7 @@ class GithubWebhookDispatcher:
             dispatch_start_time: datetime.datetime,
             es_client: ccc.elasticsearch.ElasticSearchClient,
         ):
-            repo_url = push_event.repository().repository_url()
+            repo_url = event.repository().repository_url()
             job_mapping_set = self.cfg_set.job_mapping()
             job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
 
