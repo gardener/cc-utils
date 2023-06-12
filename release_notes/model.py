@@ -32,6 +32,7 @@ _source_block_pattern = re.compile(
    flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
 )
 
+
 @dataclasses.dataclass(frozen=True)
 class Author:
     # for pull requests
