@@ -26,12 +26,11 @@ release note blocks.
 _source_block_pattern = re.compile(
     pattern=(
         r'\x60{3}\s*(?P<category>\w+)\s+(?P<target_group>\w+)\s*'
-        r'(?P<source_component_name>\S+)?\s?(?P<reference_str>\S+)?\s?(?P<author>\S+)?'
+        r'(?P<source_component_name>\S+)?\s?(?P<reference_str>\S+)?\s?(?P<author>\S+)?\s*'
         r'\n(?P<note>.+?)\n\x60{3}'
     ),
    flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
 )
-
 
 @dataclasses.dataclass(frozen=True)
 class Author:
