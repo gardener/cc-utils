@@ -100,14 +100,18 @@ class GithubWebhookDispatcher:
             logger.info(f'ignored create event with type {ref_type}')
             return
 
-        self._update_pipeline_definition(
-            event=create_event,
-            delivery_id=delivery_id,
-            repository=repository,
-            hostname=hostname,
-            es_client=es_client,
-            dispatch_start_time=dispatch_start_time,
+        thread = threading.Thread(
+            target=self._update_pipeline_definition,
+            kwargs={
+                'event': create_event,
+                'delivery_id': delivery_id,
+                'repository': repository,
+                'hostname': hostname,
+                'es_client': es_client,
+                'dispatch_start_time': dispatch_start_time,
+            }
         )
+        thread.start()
 
     def dispatch_push_event(
         self,
@@ -118,54 +122,64 @@ class GithubWebhookDispatcher:
         es_client: ccc.elasticsearch.ElasticSearchClient,
         dispatch_start_time: datetime.datetime,
     ):
-        if self._pipeline_definition_changed(push_event):
-            try:
-                self._update_pipeline_definition(
-                    event=push_event,
-                    delivery_id=delivery_id,
-                    repository=repository,
-                    hostname=hostname,
-                    es_client=es_client,
-                    dispatch_start_time=dispatch_start_time,
-                )
-            except ValueError as e:
-                logger.warning(
-                    f'Received error updating pipeline-definitions: "{e}". '
-                    'Will still abort running jobs (if configured) and trigger resource checks.'
-                )
+        def process_push_event(
+            delivery_id,
+            hostname,
+            es_client,
+            repository,
+            dispatch_start_time,
+            event,
+            event_type,
+        ):
+            if self._pipeline_definition_changed(event):
+                try:
+                    self._update_pipeline_definition(
+                        event=event,
+                        delivery_id=delivery_id,
+                        repository=repository,
+                        hostname=hostname,
+                        es_client=es_client,
+                        dispatch_start_time=dispatch_start_time,
+                    )
+                except ValueError as e:
+                    logger.warning(
+                        f'Received error updating pipeline-definitions: "{e}". '
+                        'Will still abort running jobs (if configured) and trigger resource checks.'
+                    )
 
-        self.abort_running_jobs_if_configured(push_event)
+            self.abort_running_jobs_if_configured(event)
 
-        def _check_resources(**kwargs):
             for concourse_api in self.concourse_clients():
                 logger.debug(f'using concourse-api: {concourse_api}')
                 resources = self._matching_resources(
                     concourse_api=concourse_api,
-                    event=push_event,
+                    event=event,
                 )
                 logger.debug('triggering resource-check')
                 whd.util.trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
             process_end_time = datetime.datetime.now()
             process_total_seconds = (
-                process_end_time - kwargs.get('dispatch_start_time')
+                process_end_time - dispatch_start_time
             ).total_seconds()
             webhook_delivery_metric = whd.metric.WebhookDelivery.create(
-                delivery_id=kwargs.get('delivery_id'),
-                event_type=kwargs.get('event_type'),
-                repository=kwargs.get('repository'),
-                hostname=kwargs.get('hostname'),
+                delivery_id=delivery_id,
+                event_type=event_type,
+                repository=repository,
+                hostname=hostname,
                 process_total_seconds=process_total_seconds,
             )
-            if (es_client := kwargs.get('es_client')):
-                ccc.elasticsearch.metric_to_es(
-                    es_client=es_client,
-                    metric=webhook_delivery_metric,
-                    index_name=whd.metric.index_name(webhook_delivery_metric),
-                )
+            if not es_client:
+                return
+
+            ccc.elasticsearch.metric_to_es(
+                es_client=es_client,
+                metric=webhook_delivery_metric,
+                index_name=whd.metric.index_name(webhook_delivery_metric),
+            )
 
         thread = threading.Thread(
-            target=_check_resources,
+            target=process_push_event,
             kwargs={
                 'delivery_id': delivery_id,
                 'hostname': hostname,
@@ -173,6 +187,7 @@ class GithubWebhookDispatcher:
                 'repository': repository,
                 'event_type': 'push',
                 'dispatch_start_time': dispatch_start_time,
+                'event': push_event,
             }
         )
         thread.start()
