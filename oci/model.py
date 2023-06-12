@@ -313,15 +313,18 @@ class OciImageManifestList:
         (https://github.com/opencontainers/image-spec/blob/main/image-index.md)
     '''
     manifests: list[OciImageManifestListEntry]
-    mediaType: str = DOCKER_MANIFEST_LIST_MIME  # or OCI_IMAGE_INDEX_MIME. Keep previous default for
-                                                # backwards compatibility
+    mediaType: str = DOCKER_MANIFEST_LIST_MIME
     schemaVersion: int = 2
     annotations: dict = dataclasses.field(default_factory=dict)
 
     def as_dict(self):
-        return {
+        raw = {
             'manifests': [le.as_dict() for le in self.manifests],
             'mediaType': self.mediaType,
             'schemaVersion': self.schemaVersion,
-            'annotations': self.annotations,
         }
+
+        if self.mediaType == OCI_IMAGE_INDEX_MIME:
+            raw['annotations'] = self.annotations
+
+        return raw
