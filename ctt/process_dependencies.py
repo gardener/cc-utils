@@ -589,7 +589,7 @@ def process_images(
             )
         )
 
-    return processing_job
+        return processing_job
 
     jobs = executor.map(process_job, jobs)
 
