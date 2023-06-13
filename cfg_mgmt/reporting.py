@@ -1,4 +1,3 @@
-import dataclasses
 import logging
 import typing
 
@@ -17,29 +16,8 @@ ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass
-class CfgElementStatusReport:
-    '''
-    represents the current status of a configuration element
-
-    primarily targeted for creating reports for human consumers
-    '''
-    element_storage: str # e.g. a github-url - not intended to be machine-readable
-    element_type: str
-    element_name: str
-
-    policy: typing.Optional[cmm.CfgPolicy]
-    rule: typing.Optional[cmm.CfgRule]
-    responsible: typing.Optional[cmm.CfgResponsibleMapping]
-    status: typing.Optional[cmm.CfgStatus]
-
-    @property
-    def name(self) -> str:
-        return f'{self.element_storage}/{self.element_type}/{self.element_name}'
-
-
 def evaluate_cfg_element_status(
-    cfg_element_status: CfgElementStatusReport,
+    cfg_element_status: cmm.CfgElementStatusReport,
 ) -> cmm.CfgStatusEvaluationResult:
 
     fully_compliant = True
@@ -109,7 +87,7 @@ def evaluate_cfg_element_status(
 
 
 def cfg_element_statuses_responsible_summaries(
-    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
 ) -> typing.Generator[cmm.CfgResponsibleSummary, None, None]:
 
     responsible_summaries = dict()
@@ -152,7 +130,7 @@ def cfg_element_statuses_responsible_summaries(
 
 
 def cfg_element_statuses_storage_summaries(
-    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
 ) -> typing.Generator[cmm.CfgStorageSummary, None, None]:
 
     storage_summaries = dict()
@@ -210,7 +188,7 @@ def cfg_element_statuses_storage_summaries(
 
 
 def create_report(
-    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
 ):
     no_rule_assigned = []
     no_status = []
@@ -247,7 +225,7 @@ def create_report(
         if evaluation_result.fullyCompliant:
             fully_compliant.append(cfg_element_status)
 
-    def print_paragraph(header: str, statuses: typing.List[CfgElementStatusReport]):
+    def print_paragraph(header: str, statuses: typing.List[cmm.CfgElementStatusReport]):
         print(f'({len(statuses)}) {header}')
         print(2*'\n')
 
@@ -327,7 +305,7 @@ def cfg_compliance_storage_responsibles_to_es(
 
 def cfg_compliance_responsibles_to_es(
     es_client: ccc.elasticsearch.ElasticSearchClient,
-    cfg_element_statuses: typing.Iterable[CfgElementStatusReport],
+    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
 ):
     for cfg_element_status in cfg_element_statuses:
 
@@ -357,7 +335,7 @@ def determine_status(
     responsibles: list[cmm.CfgResponsibleMapping],
     statuses: list[cmm.CfgStatus],
     element_storage: str=None,
-) -> CfgElementStatusReport:
+) -> cmm.CfgElementStatusReport:
     for rule in rules:
         if rule.matches(element=element):
             break
@@ -387,7 +365,7 @@ def determine_status(
     else:
         status = None
 
-    return CfgElementStatusReport(
+    return cmm.CfgElementStatusReport(
         element_storage=element_storage,
         element_type=element._type_name,
         element_name=element._name,
@@ -446,7 +424,7 @@ def iter_cfg_elements_requiring_rotation(
 def generate_cfg_element_status_reports(
     cfg_dir: str,
     element_storage: str | None=None,
-) -> list[CfgElementStatusReport]:
+) -> list[cmm.CfgElementStatusReport]:
     '''
     If not passed explicitly, the element_storage defaults to cfg_dir.
     '''

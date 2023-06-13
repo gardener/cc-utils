@@ -5,7 +5,6 @@ import functools
 import typing
 
 import cfg_mgmt.model as cmm
-import cfg_mgmt.reporting as cmr
 import cnudie.iter
 import gci.componentmodel as cm
 import unixutil.model
@@ -76,7 +75,7 @@ class ScanState(enum.Enum):
     FAILED = 'failed'
 
 
-Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode | cmr.CfgElementStatusReport
+Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode | cmm.CfgElementStatusReport
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -246,7 +245,7 @@ class ScanResultGroupCollection:
             if is_ocm_artefact_node(result.scanned_element):
                 artifact = artifact_from_node(result.scanned_element)
                 group_name = f'{result.scanned_element.component.name}:{artifact.name}'
-            elif isinstance(result.scanned_element, cmr.CfgElementStatusReport):
+            elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
                 group_name = result.scanned_element.name
             else:
                 raise TypeError(result)

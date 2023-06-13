@@ -10,7 +10,7 @@ import github3.issues.issue
 import github3.issues.milestone
 import github3.repos
 
-import cfg_mgmt.reporting as cmr
+import cfg_mgmt.model as cmm
 import ci.log
 import github.compliance.model as gcm
 import github.retry
@@ -47,7 +47,7 @@ def prefix_for_element(
     if gcm.is_ocm_artefact_node(scanned_element):
         return _label_prefix_ocm_artefact
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return _label_prefix_cicd_cfg_element
 
     else:
@@ -61,7 +61,7 @@ def name_for_element(
         artifact = gcm.artifact_from_node(scanned_element)
         return f'{scanned_element.component.name}:{artifact.name}'
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return scanned_element.name
 
     else:

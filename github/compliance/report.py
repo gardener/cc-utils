@@ -23,7 +23,6 @@ import ccc.delivery
 import ccc.github
 import checkmarx.model
 import cfg_mgmt.model as cmm
-import cfg_mgmt.reporting as cmr
 import ci.util
 import clamav.model
 import cnudie.util
@@ -386,7 +385,7 @@ def _template_vars(
             delivery_dashboard_url=delivery_dashboard_url,
         )
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         template_variables = {
             'cfg_element_name': scanned_element.element_name,
             'cfg_element_type': scanned_element.element_type,
@@ -448,7 +447,7 @@ def _scanned_element_repository(
 
         return gh_api.repository(org, name)
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         gh_api = ccc.github.github_api(repo_url=scanned_element.element_storage)
 
         parsed_url = ci.util.urlparse(scanned_element.element_storage)
@@ -520,7 +519,7 @@ def _scanned_element_assignees(
             else:
                 raise
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         if not scanned_element.responsible:
             return set()
 
@@ -546,7 +545,7 @@ def _scanned_element_title(
         artifact = gcm.artifact_from_node(scanned_element)
         return f'[{issue_type}] - {scanned_element.component.name}:{artifact.name}'
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return f'[{issue_type}] - {scanned_element.name}'
 
     else:
@@ -559,7 +558,7 @@ def _scanned_element_ctx_label(
     if gcm.is_ocm_artefact_node(scanned_element):
         return ()
 
-    elif isinstance(scanned_element, cmr.CfgElementStatusReport):
+    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         digest_label = github.compliance.issue.digest_label(
             prefix=_ctx_label_prefix,
             digest_str=scanned_element.element_storage,
@@ -784,7 +783,7 @@ def create_or_update_github_issues(
                             a = gcm.artifact_from_node(result.scanned_element)
                             header = f'**{a.name}:{a.version}**\n'
 
-                        elif isinstance(result.scanned_element, cmr.CfgElementStatusReport):
+                        elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
                             header = '**Policy Violations**\n'
 
                         else:
@@ -798,7 +797,7 @@ def create_or_update_github_issues(
                             a = gcm.artifact_from_node(result.scanned_element)
                             result_str = f'{c.name}:{c.version}/{a.name}:{a.version}'
 
-                        elif isinstance(result.scanned_element, cmr.CfgElementStatusReport):
+                        elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
                             result_str = result.scanned_element.name
 
                         else:

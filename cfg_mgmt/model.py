@@ -238,6 +238,27 @@ class CfgStorageSummary:
     noncompliantElementsCount: int = 0
 
 
+@dataclasses.dataclass
+class CfgElementStatusReport:
+    '''
+    represents the current status of a configuration element
+
+    primarily targeted for creating reports for human consumers
+    '''
+    element_storage: str # e.g. a github-url - not intended to be machine-readable
+    element_type: str
+    element_name: str
+
+    policy: typing.Optional[CfgPolicy]
+    rule: typing.Optional[CfgRule]
+    responsible: typing.Optional[CfgResponsibleMapping]
+    status: typing.Optional[CfgStatus]
+
+    @property
+    def name(self) -> str:
+        return f'{self.element_storage}/{self.element_type}/{self.element_name}'
+
+
 cfg_policies_fname = 'config_policies.yaml'
 cfg_responsibles_fname = 'config_responsibles.yaml'
 cfg_status_fname = 'config_status.yaml'
