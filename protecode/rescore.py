@@ -54,6 +54,8 @@ def rescore(
         key=lambda c: c.name()
     )
 
+    is_fetch_required = False
+
     for c in components_with_vulnerabilities:
         if not c.version():
             continue # do not inject dummy-versions in fully automated mode, yet
@@ -88,6 +90,7 @@ def rescore(
 
         if vulns_to_assess:
             logger.info(f'{len(vulns_to_assess)=}: {[v.cve() for v in vulns_to_assess]}')
+            is_fetch_required = True
             bdba_client.add_triage_raw({
                 'component': c.name(),
                 'version': c.version(),
@@ -98,10 +101,10 @@ def rescore(
                 'product_id': product_id,
             })
 
-    if vulns_to_assess:
+    if is_fetch_required:
         logger.info('retrieving result again from bdba (this may take a while)')
         scan_result = bdba_client.wait_for_scan_result(
-            product_id=scan_result.product_id()
+            product_id=product_id,
         )
 
     return scan_result
