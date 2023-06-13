@@ -40,7 +40,10 @@ resource_registry = pipeline_definition._resource_registry
 
 github = config_set.github()
 
-default_container_registry = config_set.container_registry()
+try:
+  default_container_registry = config_set.container_registry()
+except ValueError:
+  default_container_registry = None
 
 # expose secrets_server endpoint to all jobs
 secrets_server_cfg = config_set.secrets_server()
