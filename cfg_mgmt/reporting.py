@@ -328,54 +328,6 @@ def cfg_compliance_responsibles_to_es(
         )
 
 
-def determine_status(
-    element: model.NamedModelElement,
-    policies: list[cmm.CfgPolicy],
-    rules: list[cmm.CfgRule],
-    responsibles: list[cmm.CfgResponsibleMapping],
-    statuses: list[cmm.CfgStatus],
-    element_storage: str=None,
-) -> cmm.CfgElementStatusReport:
-    for rule in rules:
-        if rule.matches(element=element):
-            break
-    else:
-        rule = None # no rule was configured
-
-    rule: typing.Optional[cmm.CfgRule]
-
-    if rule:
-        for policy in policies:
-            if policy.name == rule.policy:
-                break
-        else:
-            rule = None # inconsistent cfg: rule with specified name does not exist
-    else:
-        policy = None
-
-    for responsible in responsibles:
-        if responsible.matches(element=element):
-            break
-    else:
-        responsible = None
-
-    for status in statuses:
-        if status.matches(element):
-            break
-    else:
-        status = None
-
-    return cmm.CfgElementStatusReport(
-        element_storage=element_storage,
-        element_type=element._type_name,
-        element_name=element._name,
-        policy=policy,
-        rule=rule,
-        status=status,
-        responsible=responsible,
-    )
-
-
 def iter_cfg_elements_requiring_rotation(
     cfg_elements: typing.Iterable[model.NamedModelElement],
     cfg_metadata: cmm.CfgMetadata,
@@ -390,7 +342,7 @@ def iter_cfg_elements_requiring_rotation(
         if element_filter and not element_filter(cfg_element):
             continue
 
-        status = determine_status(
+        status = cmu.determine_status(
             element=cfg_element,
             policies=cfg_metadata.policies,
             rules=cfg_metadata.rules,
@@ -446,7 +398,7 @@ def generate_cfg_element_status_reports(
         element_storage = cfg_dir
 
     return [
-        determine_status(
+        cmu.determine_status(
             element=element,
             policies=policies,
             rules=rules,
