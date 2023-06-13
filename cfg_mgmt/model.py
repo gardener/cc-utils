@@ -32,6 +32,7 @@ class CfgPolicy:
     type: PolicyType = PolicyType.MAX_AGE
     rotation_method: RotationMethod = RotationMethod.MANUAL
     grace_period: str | None = '1d'
+    delete_after_period: str | None = '7d'
     comment: typing.Optional[str] = None
 
     def check(

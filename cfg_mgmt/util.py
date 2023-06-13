@@ -4,6 +4,7 @@ import logging
 import os
 import typing
 
+import pytimeparse
 import ruamel.yaml
 import ruamel.yaml.scalarstring
 
@@ -55,13 +56,17 @@ def iter_cfg_queue_entries_to_be_deleted(
 def create_config_queue_entry(
     queue_entry_config_element: model.NamedModelElement,
     queue_entry_data: dict,
+    delete_after_period: str,
 ) -> cmm.CfgQueueEntry:
     return cmm.CfgQueueEntry(
         target=cmm.CfgTarget(
             name=queue_entry_config_element.name(),
             type=queue_entry_config_element._type_name,
         ),
-        deleteAfter=(datetime.datetime.today() + datetime.timedelta(days=7)).date().isoformat(),
+        deleteAfter=(
+            datetime.datetime.today()
+            + datetime.timedelta(seconds=pytimeparse.parse(delete_after_period))
+        ).date().isoformat(),
         secretId=queue_entry_data,
     )
 
@@ -157,6 +162,7 @@ def write_named_element(
 def write_changes_to_local_dir(
     cfg_element: model.NamedModelElement,
     secret_id: dict,
+    delete_after_period: str,
     cfg_metadata: cmm.CfgMetadata,
     cfg_factory: model.ConfigFactory,
     cfg_dir: str,
@@ -175,6 +181,7 @@ def write_changes_to_local_dir(
         create_config_queue_entry(
             queue_entry_config_element=cfg_element,
             queue_entry_data=secret_id,
+            delete_after_period=delete_after_period,
         )
     )
     write_config_queue(
@@ -230,6 +237,14 @@ def rotate_config_element_and_persist_in_cfg_repo(
     else:
         return False
 
+    status = determine_status(
+        element=cfg_element,
+        policies=cfg_metadata.policies,
+        rules=cfg_metadata.rules,
+        responsibles=cfg_metadata.responsibles,
+        statuses=cfg_metadata.statuses,
+    )
+
     try:
         write_changes_to_local_dir(
             cfg_element=updated_elem,
@@ -237,6 +252,7 @@ def rotate_config_element_and_persist_in_cfg_repo(
             secret_id=secret_id,
             cfg_metadata=cfg_metadata,
             cfg_dir=cfg_dir,
+            delete_after_period=status.policy.delete_after_period,
         )
         git_helper.add_and_commit(
             message=f'rotate secret for {cfg_element._type_name}/{cfg_element.name()}',
