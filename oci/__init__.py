@@ -386,7 +386,7 @@ def replicate_artifact(
                 manifest_dirty = True
 
         if manifest_dirty:
-            raw_manifest = json.dumps(manifest_dict)
+            raw_manifest = json.dumps(manifest.as_dict())
 
     res = client.put_manifest(
         image_reference=tgt_image_reference,
