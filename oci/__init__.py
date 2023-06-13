@@ -245,16 +245,22 @@ def replicate_artifact(
                     annotations=annotations,
                 )
 
+                # switch to OCI-mimetype to allow for `annotations` attributer
+                if media_type == om.DOCKER_MANIFEST_SCHEMA_V2_MIME:
+                    entry_media_type = om.OCI_MANIFEST_SCHEMA_V2_MIME
+                else:
+                    entry_media_type = media_type
+
                 manifest_list = om.OciImageManifestList(
                     manifests=[
                         om.OciImageManifestListEntry(
                             digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
-                            mediaType=media_type,
+                            mediaType=entry_media_type,
                             size=len(manifest_bytes),
                             platform=platform,
                         ),
                     ],
-                    mediaType=om.DOCKER_MANIFEST_LIST_MIME,
+                    mediaType=om.OCI_IMAGE_INDEX_MIME,
                 )
 
                 manifest_list_bytes = json.dumps(

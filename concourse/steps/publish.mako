@@ -72,6 +72,12 @@ def to_manifest_list_entry(image_ref_template: str, oci_client=oci_client):
   manifest = oci_client.manifest(image_reference)
   cfg_blob = oci_client.blob(image_reference, manifest.config.digest).json()
 
+  # use more modern mimetype to support `annotations` attribute
+  if manifest.mediaType == om.DOCKER_MANIFEST_SCHEMA_V2_MIME:
+    entry_mimetype = om.OCI_MANIFEST_SCHEMA_V2_MIME
+  else:
+    entry_mimetype = manifest.mediaType
+
   os_id = cfg_blob.get('os', 'linux')
   if isinstance(os_id, dict):
     os_id = 'linux' # hardcode fallback to linux
@@ -81,7 +87,7 @@ def to_manifest_list_entry(image_ref_template: str, oci_client=oci_client):
   return om.OciImageManifestListEntry(
     digest=manifest_digest,
     size=manifest_size,
-    mediaType=manifest.mediaType,
+    mediaType=entry_mimetype,
     platform=om.OciPlatform(
       architecture=arch,
       os=os_id,

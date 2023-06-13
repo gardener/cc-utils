@@ -182,14 +182,12 @@ additional_tags = ${image_descriptor.additional_tags()}
 
 print(f'publishing to {image_ref=}, {additional_tags=}')
 
-manifest_mimetype = om.DOCKER_MANIFEST_SCHEMA_V2_MIME
-
 oci.publish_container_image_from_kaniko_tarfile(
   image_tarfile_path=image_outfile,
   oci_client=oci_client,
   image_reference=image_ref,
   additional_tags=additional_tags,
-  manifest_mimetype=manifest_mimetype,
+  manifest_mimetype=om.OCI_MANIFEST_SCHEMA_V2_MIME,
 )
 % elif oci_builder in (cm_publish.OciBuilder.DOCKER, cm_publish.OciBuilder.DOCKER_BUILDX):
 import tempfile
