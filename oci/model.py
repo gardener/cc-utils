@@ -313,7 +313,7 @@ class OciImageManifestList:
         (https://github.com/opencontainers/image-spec/blob/main/image-index.md)
     '''
     manifests: list[OciImageManifestListEntry]
-    mediaType: str = DOCKER_MANIFEST_LIST_MIME
+    mediaType: str = OCI_IMAGE_INDEX_MIME
     schemaVersion: int = 2
     annotations: dict = dataclasses.field(default_factory=dict)
 
