@@ -310,10 +310,13 @@ def filter_image(
         target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
 
     if oci_manifest_annotations:
-        if not 'annotations' in manifest_raw:
-            manifest_raw['annotations'] = {}
+        manifest_dict = json.loads(manifest_raw)
+        if not 'annotations' in manifest_dict:
+            manifest_dict['annotations'] = {}
 
-        manifest_raw |= oci_manifest_annotations
+        manifest_dict |= oci_manifest_annotations
+
+        manifest_raw = json.dumps(manifest_dict)
 
     res = oci_client.put_manifest(
         image_reference=target_ref,
