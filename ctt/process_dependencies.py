@@ -351,9 +351,6 @@ def process_upload_request(
     logger.info(f'start processing {src_ref} -> {tgt_ref=}')
     logger.info(f'{tgt_ref=} {upload_request.remove_files=} {replication_mode=} {platform_filter=}')
 
-    component = processing_job.component
-    resource = processing_job.resource
-
     _, _, raw_manifest = container.util.filter_image(
         source_ref=src_ref,
         target_ref=tgt_ref,
@@ -361,10 +358,6 @@ def process_upload_request(
         mode=replication_mode,
         platform_filter=platform_filter,
         oci_client=oci_client,
-        oci_manifest_annotations={
-            'cloud.gardener/ocm-component': f'{component.name}:{component.version}',
-            'cloud.gardener/ocm-resource': f'{resource.name}:{resource.version}',
-        },
     )
 
     logger.info(f'finished processing {src_ref} -> {tgt_ref=}')
