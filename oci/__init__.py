@@ -202,7 +202,7 @@ def replicate_artifact(
             if annotations:
                 # try to avoid unnecessary changes by x-serialisation - only add values if
                 # they are either new or different
-                for k, v in annotations:
+                for k, v in annotations.items():
                     if manifest.annotations.get(k) == v:
                         continue
                     else:
