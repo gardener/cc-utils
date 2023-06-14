@@ -431,7 +431,7 @@ class ReplicationResultProcessor:
         if failed_count > 0:
             self.remove_pipelines = False
             logger.info(
-                'Failures occurred during pipeline-replication. Will not rcleanup pipelines.'
+                'Failures occurred during pipeline-replication. Will not cleanup pipelines.'
             )
 
         for concourse_target_key, concourse_results in concourse_target_results.items():
