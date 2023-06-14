@@ -90,9 +90,11 @@ def _get_release_note_commits_tuple_for_minor_release(
 
     # otherwise, use the new method
     # find start of previous minor-release tag
+    default_head = git_helper.fetch_head(f'refs/heads/{github_repo.default_branch}')
     if not (previous_branch_starts := git_helper.repo.merge_base(
-        github_repo.default_branch,
-        previous_version_tag_commit_sha)):
+        default_head,
+        previous_version_tag_commit_sha,
+    )):
         raise RuntimeError('cannot find the branch start for the previous version')
 
     previous_branch_start: git.Commit = previous_branch_starts.pop()
