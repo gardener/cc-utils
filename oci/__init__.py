@@ -1,3 +1,4 @@
+import dataclasses
 import enum
 import hashlib
 import json
@@ -174,9 +175,9 @@ def replicate_artifact(
             manifest_dirty = False
 
             # cp manifests to tuple, because we _might_ modify if there is a platform_filter
-            for sub_manifest in tuple(manifest.manifests):
+            for idx, sub_manifest in enumerate(tuple(manifest.manifests)):
                 src_reference = f'{src_name}@{sub_manifest.digest}'
-                tgt_reference = f'{tgt_name}@{sub_manifest.digest}'
+                tgt_reference = f'{tgt_name}'
 
                 if platform_filter:
                     platform = op.from_single_image(
@@ -192,12 +193,22 @@ def replicate_artifact(
 
                 logger.info(f'replicating to {tgt_reference=}')
 
-                replicate_artifact(
+                res, ref, submanifest_bytes = replicate_artifact(
                     src_image_reference=src_reference,
                     tgt_image_reference=tgt_reference,
                     oci_client=client,
                     annotations=annotations,
                 )
+
+                submanifest_digest = f'sha256:{hashlib.sha256(submanifest_bytes).hexdigest()}'
+                if submanifest_digest != sub_manifest.digest:
+                    patched_sub_manifest = dataclasses.replace(
+                        sub_manifest,
+                        digest=submanifest_digest,
+                    )
+                    manifest.manifests.remove(sub_manifest)
+                    manifest.manifests.insert(idx, patched_sub_manifest)
+                    manifest_dirty = True
 
             if annotations:
                 # try to avoid unnecessary changes by x-serialisation - only add values if
@@ -211,6 +222,12 @@ def replicate_artifact(
 
             if manifest_dirty:
                 raw_manifest = json.dumps(manifest.as_dict())
+
+            if not tgt_image_reference.has_tag:
+                digest = f'sha256:{hashlib.sha256(raw_manifest.encode("utf-8")).hexdigest()}'
+                tgt_image_reference = om.OciImageReference(
+                    f'{tgt_image_reference.ref_without_tag}@{digest}',
+                )
 
             res = client.put_manifest(
                 image_reference=tgt_image_reference,
@@ -387,6 +404,10 @@ def replicate_artifact(
 
         if manifest_dirty:
             raw_manifest = json.dumps(manifest.as_dict())
+
+    if not tgt_image_reference.has_tag:
+        digest = f'sha256:{hashlib.sha256(raw_manifest.encode("utf-8")).hexdigest()}'
+        tgt_image_reference = f'{tgt_image_reference.ref_without_tag}@{digest}'
 
     res = client.put_manifest(
         image_reference=tgt_image_reference,
