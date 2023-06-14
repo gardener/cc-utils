@@ -106,7 +106,6 @@ elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         repo_path=repo_dir,
         component=component,
-        current_version=version.parse_to_semver(processed_version),
     )
     release_notes_md = '\n'.join(
         str(i) for i in release_notes.markdown.render(release_note_blocks)
