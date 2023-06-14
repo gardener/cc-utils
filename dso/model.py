@@ -49,10 +49,20 @@ def component_artefact_id_from_ocm(
         artefact_type=artefact.type,
         artefact_extra_id=artefact.extraIdentity,
     )
+
+    if isinstance(artefact, cm.Resource):
+        artefact_kind = 'resource'
+    elif isinstance(artefact, cm.ComponentSource):
+        artefact_kind = 'source'
+    else:
+        # should not occur
+        raise TypeError(artefact)
+
     return ComponentArtefactId(
         component_name=component.name,
         component_version=component.version,
         artefact=local_artefact,
+        artefact_kind=artefact_kind,
     )
 
 
