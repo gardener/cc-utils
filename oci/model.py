@@ -205,7 +205,7 @@ class OciBlobRef:
 class OciImageManifest:
     config: OciBlobRef
     layers: typing.Sequence[OciBlobRef]
-    mediaType: str = OCI_MANIFEST_SCHEMA_V2_MIME
+    mediaType: str = DOCKER_MANIFEST_LIST_MIME
     schemaVersion: int = 2
     annotations: dict = dataclasses.field(default_factory=dict)
 

@@ -92,9 +92,10 @@ def to_manifest_list_entry(image_ref_template: str, oci_client=oci_client):
 
 % for target_ref, variant_refs in image_ref_groups.items():
 target_ref = eval_tag_template(template='${target_ref}')
-manifest_list = om.OciImageManifestList(manifests=[
-  to_manifest_list_entry(img_ref_template) for img_ref_template in ${variant_refs}
-])
+manifest_list = om.OciImageManifestList(
+  manifests=[to_manifest_list_entry(img_ref_template) for img_ref_template in ${variant_refs}],
+  mediaType=om.DOCKER_MANIFEST_LIST_MIME,
+)
 manifest_bytes = json.dumps(manifest_list.as_dict()).encode('utf-8')
 
 manifest_digest = hashlib.sha256(manifest_bytes).hexdigest()
