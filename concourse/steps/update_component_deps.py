@@ -84,12 +84,13 @@ def upgrade_pr_exists(
     component_reference: gci.componentmodel.ComponentReference,
     component_version: str,
     upgrade_requests: typing.Iterable[github.util.UpgradePullRequest],
+    request_filter: typing.Callable[[github.util.UpgradePullRequest], bool] = lambda rq: True,
 ) -> github.util.UpgradePullRequest | None:
     if any(
         (matching_rq := upgrade_rq).target_matches(
             reference=component_reference,
             reference_version=component_version,
-        )
+        ) and request_filter(upgrade_rq)
         for upgrade_rq in upgrade_requests
     ):
         return matching_rq
@@ -189,7 +190,7 @@ def determine_upgrade_prs(
     for greatest_component_reference in product.v2.greatest_references(
         references=current_component().componentReferences,
     ):
-        greatest_versions_to_consider = determine_reference_versions(
+        versions_to_consider = determine_reference_versions(
             component_name=greatest_component_reference.componentName,
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
@@ -197,46 +198,68 @@ def determine_upgrade_prs(
             ctx_repo=ctx_repo,
             ignore_prerelease_versions=ignore_prerelease_versions,
         )
-        if greatest_versions_to_consider:
+        if versions_to_consider:
             logger.info(
-                f'Found possible version{"s" if len(greatest_versions_to_consider)>1 else ""} to '
-                f'upgrade to: {greatest_versions_to_consider} for '
+                f"Found possible version(s) to up- or downgrade to: '{versions_to_consider}' for "
                 f'{greatest_component_reference.componentName=}'
             )
         else:
             logger.warning(
-                'No component versions found for '
-                f'{greatest_component_reference.componentName=}'
+                f'No component versions found for {greatest_component_reference.componentName=}'
             )
-        for greatest_version in greatest_versions_to_consider:
+        for candidate_version in versions_to_consider:
             # we might have found 'None' as version to consider.
-            if not greatest_version:
+            if not candidate_version:
                 continue
 
-            greatest_version_semver = version.parse_to_semver(greatest_version)
-            logger.info(f'{greatest_version=}, ours: {greatest_component_reference} {ctx_repo=}')
-            if greatest_version_semver <= version.parse_to_semver(
-                greatest_component_reference.version
-            ):
-                logger.info(
-                    f'skipping (outdated) {greatest_component_reference=}; '
-                    f'our {greatest_component_reference.version=}, '
-                    f'found: {greatest_version=}'
-                )
-                continue
-            elif matching_pr := upgrade_pr_exists(
+            candidate_version_semver = version.parse_to_semver(candidate_version)
+            reference_version_semver = version.parse_to_semver(greatest_component_reference.version)
+            logger.info(f'{candidate_version=}, ours: {greatest_component_reference} {ctx_repo=}')
+
+            if candidate_version_semver <= reference_version_semver:
+                downgrade_pr = True
+                # downgrades are permitted iff the version is tracking a _dependency_ of another
+                # component and we are to follow strictly
+                if (
+                    candidate_version == reference_version_semver or
+                    not upstream_component_name
+                    or upstream_update_policy is not UpstreamUpdatePolicy.STRICTLY_FOLLOW
+                ):
+                    logger.info(
+                        f'skipping (outdated) {greatest_component_reference=}; '
+                        f'our {greatest_component_reference.version=}, '
+                        f'found: {candidate_version=}'
+                    )
+                    continue
+            else:
+                downgrade_pr = False
+
+            if not downgrade_pr and (matching_pr := upgrade_pr_exists(
                 component_reference=greatest_component_reference,
-                component_version=greatest_version,
+                component_version=candidate_version,
                 upgrade_requests=upgrade_pull_requests,
-            ):
+                request_filter=lambda rq: not rq.is_downgrade(),
+            )):
                 logger.info(
                     'skipping upgrade (PR already exists): '
                     f'{greatest_component_reference=} '
-                    f'to {greatest_version=} ({matching_pr.pull_request.html_url})'
+                    f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
+                )
+                continue
+            elif downgrade_pr and (matching_pr := upgrade_pr_exists(
+                component_reference=greatest_component_reference,
+                component_version=candidate_version,
+                upgrade_requests=upgrade_pull_requests,
+                request_filter=lambda rq: rq.is_downgrade(),
+            )):
+                logger.info(
+                    'skipping downgrade (PR already exists): '
+                    f'{greatest_component_reference=} '
+                    f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
                 )
                 continue
             else:
-                yield(greatest_component_reference, greatest_version)
+                yield(greatest_component_reference, candidate_version)
 
 
 def _import_release_notes(
