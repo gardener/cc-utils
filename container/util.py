@@ -302,13 +302,6 @@ def filter_image(
 
     manifest_raw = json.dumps(manifest.as_dict()).encode('utf-8')
 
-    if target_ref.has_tag:
-        target_ref = str(target_ref)
-    else:
-        # if tgt does not bear a tag, calculate hash digest as tgt
-        manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
-        target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
-
     if oci_manifest_annotations:
         manifest_dict = json.loads(manifest_raw)
         if not 'annotations' in manifest_dict:
@@ -316,7 +309,14 @@ def filter_image(
 
         manifest_dict |= oci_manifest_annotations
 
-        manifest_raw = json.dumps(manifest_dict)
+        manifest_raw = json.dumps(manifest_dict).encode('utf-8')
+
+    if target_ref.has_tag:
+        target_ref = str(target_ref)
+    else:
+        # if tgt does not bear a tag, calculate hash digest as tgt
+        manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+        target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
 
     res = oci_client.put_manifest(
         image_reference=target_ref,
