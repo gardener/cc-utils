@@ -196,6 +196,8 @@ def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None
                 reference_identifier=res.group('reference_str'),
                 component_name=res.group('source_component_name')
             )
+            if not block.target_group.lower() in ['user', 'operator', 'developer', 'dependency']:
+                continue
             if block.has_content():
                 yield block
         except IndexError as e:
