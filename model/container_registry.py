@@ -161,7 +161,15 @@ class GcrCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
     def _optional_attributes(self):
-        return {'image_reference_prefixes', 'host'}
+        return {
+            'email',
+            'host',
+            'image_reference_prefixes',
+        }
+
+    def email(self):
+        # used by KubernetesSecretsHelper's create_gcr_secret
+        return self.raw.get('email')
 
     def host(self):
         # used in lss
