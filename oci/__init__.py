@@ -205,6 +205,7 @@ def replicate_artifact(
                     patched_sub_manifest = dataclasses.replace(
                         sub_manifest,
                         digest=submanifest_digest,
+                        size=len(submanifest_bytes),
                     )
                     manifest.manifests.remove(sub_manifest)
                     manifest.manifests.insert(idx, patched_sub_manifest)
