@@ -49,6 +49,7 @@ class DiffArguments:
     ctx_repo_url: str
     exclude_component_names: list[str] = None
     exclude_component_resource_names: list[ComponentResourceNames] = None
+    resource_types: list[str] = None
     name_template: str = None
     name_template_expr: str = None
     outfile_prefix: str = 'resource-diff'
@@ -61,6 +62,7 @@ def diff(
     right_version: str=None,
     name_template: str=None,
     name_template_expr: str=None,
+    resource_types: [str]=None,
     ctx_repo_url: str=None,
     cache_dir: str=_cfg.ctx.cache_dir,
     defaults_file: str=None,
@@ -85,6 +87,8 @@ def diff(
         params['name_template'] = name_template
     if name_template_expr:
         params['name_template_expr'] = name_template
+    if resource_types:
+        params['resource_types'] = resource_types
 
     try:
         parsed = dacite.from_dict(
@@ -151,6 +155,15 @@ def diff(
     def iter_resources_with_ids(components):
         for c in components:
             for r in c.resources:
+                if parsed.resource_types:
+                    if isinstance(r.type, cm.ResourceType):
+                        resource_type = r.type.value
+                    else:
+                        resource_type = r.type
+
+                    if not resource_type in parsed.resource_types:
+                        continue
+
                 if parsed.exclude_component_resource_names:
                     skip = True
                     for component_resource_name in parsed.exclude_component_resource_names:
