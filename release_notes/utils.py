@@ -86,7 +86,11 @@ def find_next_smallest_version(
     if current_version:
         # TODO: the desired version is always the first hit, so this can be optimised further.
         # Do so in a way that keeps readability.
-        return max(v for v in sorted_versions if v < current_version)
+        candidate_versions = [v for v in sorted_versions if v < current_version]
+        if not candidate_versions:
+            return None
+        return max(candidate_versions)
+
     else:
         return sorted_versions[0]
 
