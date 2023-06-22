@@ -171,11 +171,6 @@ class UpgradePullRequest:
         else:
             raise NotImplementedError(from_ref.type)
 
-    def is_downgrade(self) -> bool:
-        from_ver = version.parse_to_semver(self.from_ref.version)
-        to_ver = version.parse_to_semver(self.to_ref.version)
-        return from_ver > to_ver
-
     def is_obsolete(
         self,
         reference_component: gci.componentmodel.Component,
