@@ -702,7 +702,6 @@ def process_images(
                 )
                 raise
 
-        src_ctx_repo_base_url = component_descriptor.component.repositoryContexts[-2].baseUrl
         if processing_mode is ProcessingMode.REGULAR:
             if component.name == source_comp.name and component.version == source_comp.version:
                 # we must differentiate whether the input component descriptor (1) exists in the
@@ -710,7 +709,7 @@ def process_images(
                 # file is used).
                 # for case (2) the copying of resources isn't supported by the coding.
                 cd_exists_in_src_ctx = product.v2.download_component_descriptor_v2(
-                    ctx_repo_base_url=src_ctx_repo_base_url,
+                    ctx_repo_base_url=src_ctx_base_url,
                     component_name=component_descriptor.component.name,
                     component_version=component_descriptor.component.version,
                     absent_ok=True,
@@ -718,7 +717,7 @@ def process_images(
 
                 if cd_exists_in_src_ctx:
                     cnudie.replicate.replicate_oci_artifact_with_patched_component_descriptor(
-                        src_ctx_repo_base_url=src_ctx_repo_base_url,
+                        src_ctx_repo_base_url=src_ctx_base_url,
                         src_name=component_descriptor.component.name,
                         src_version=component_descriptor.component.version,
                         patched_component_descriptor=component_descriptor,
@@ -733,7 +732,7 @@ def process_images(
                     )
             else:
                 cnudie.replicate.replicate_oci_artifact_with_patched_component_descriptor(
-                    src_ctx_repo_base_url=src_ctx_repo_base_url,
+                    src_ctx_repo_base_url=src_ctx_base_url,
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
                     patched_component_descriptor=component_descriptor,
