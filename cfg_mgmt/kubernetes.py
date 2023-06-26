@@ -4,10 +4,12 @@ import logging
 import time
 import typing
 
+import kubernetes.client
+import kubernetes.config
+
 import cfg_mgmt
 import cfg_mgmt.util
 import ci.util
-import kube.ctx
 import model
 import model.kubernetes
 
@@ -40,8 +42,8 @@ def rotate_cfg_element(
         name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
     )
 
-    kube_ctx = kube.ctx.Ctx(cfg_element.kubeconfig())
-    core_api = kube_ctx.create_core_api()
+    api_client = kubernetes.config.new_client_from_config_dict(cfg_element.kubeconfig())
+    core_api = CoreV1Api(api_client)
 
     # find service-account
     service_account_config = cfg_to_rotate.service_account()
@@ -228,8 +230,8 @@ def delete_config_secret(
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
 ):
-    kube_ctx = kube.ctx.Ctx(cfg_element.kubeconfig())
-    core_api = kube_ctx.create_core_api()
+    api_client = kubernetes.config.new_client_from_config_dict(cfg_element.kubeconfig())
+    core_api = CoreV1Api(api_client)
 
     for token in cfg_queue_entry.secretId['old_tokens']:
         _delete_sa_token(
