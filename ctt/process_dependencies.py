@@ -81,6 +81,7 @@ class ProcessingPipeline:
         component: cm.Component,
         resource: cm.Resource,
         processing_mode: ProcessingMode,
+        inject_ocm_coordinates_into_oci_manifests: bool = False,
     ) -> processing_model.ProcessingJob:
         if not self.matches(component, resource):
             return None
@@ -98,6 +99,7 @@ class ProcessingPipeline:
                 target_ref=None,  # must be set by a later step
                 remove_files=None,  # _may_ be set by a later step
             ),
+            inject_ocm_coordinates_into_oci_manifest=inject_ocm_coordinates_into_oci_manifests,
         )
 
         job = self._processor.process(processing_job=job)
@@ -232,6 +234,7 @@ def create_jobs(
     processing_cfg_path,
     component_descriptor_v2: cm.ComponentDescriptor,
     processing_mode,
+    inject_ocm_coordinates_into_oci_manifests,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById = None,
 ):
     processing_cfg = parse_processing_cfg(processing_cfg_path)
@@ -354,6 +357,14 @@ def process_upload_request(
     component = processing_job.component
     resource = processing_job.resource
 
+    if processing_job.inject_ocm_coordinates_info_oci_manifest:
+        oci_manifest_annotations = {
+            'cloud.gardener/ocm-component': f'{component.name}:{component.version}',
+            'cloud.gardener/ocm-resource': f'{resource.name}:{resource.version}',
+        }
+    else:
+        oci_manifest_annotations = None
+
     _, _, raw_manifest = container.util.filter_image(
         source_ref=src_ref,
         target_ref=tgt_ref,
@@ -361,10 +372,7 @@ def process_upload_request(
         mode=replication_mode,
         platform_filter=platform_filter,
         oci_client=oci_client,
-        oci_manifest_annotations={
-            'cloud.gardener/ocm-component': f'{component.name}:{component.version}',
-            'cloud.gardener/ocm-resource': f'{resource.name}:{resource.version}',
-        },
+        oci_manifest_annotations=oci_manifest_annotations,
     )
 
     logger.info(f'finished processing {src_ref} -> {tgt_ref=}')
@@ -441,6 +449,7 @@ def process_images(
     upload_mode_cd=product.v2.UploadMode.SKIP,
     upload_mode_images=product.v2.UploadMode.SKIP,
     replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
+    inject_ocm_coordinates_into_oci_manifests=False,
     replace_resource_tags_with_digests=False,
     skip_cd_validation=False,
     generate_cosign_signatures=False,
@@ -482,6 +491,7 @@ def process_images(
         processing_cfg_path,
         component_descriptor_v2=component_descriptor_v2,
         processing_mode=processing_mode,
+        inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
         component_descriptor_lookup=component_descriptor_lookup,
     )
 
