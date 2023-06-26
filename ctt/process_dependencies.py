@@ -357,7 +357,7 @@ def process_upload_request(
     component = processing_job.component
     resource = processing_job.resource
 
-    if processing_job.inject_ocm_coordinates_info_oci_manifest:
+    if processing_job.inject_ocm_coordinates_into_oci_manifest:
         oci_manifest_annotations = {
             'cloud.gardener/ocm-component': f'{component.name}:{component.version}',
             'cloud.gardener/ocm-resource': f'{resource.name}:{resource.version}',
