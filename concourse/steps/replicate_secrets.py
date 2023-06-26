@@ -4,15 +4,17 @@ import typing
 import pprint
 import re
 
+import kubernetes.client
+import kubernetes.config
+
 import ccc.delivery
+import ccc.github
+import ccc.secrets_server
 import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
 import cfg_mgmt.util as cmu
-import ccc.github
-import ccc.secrets_server
 import ci.log
 import ci.util
-import kube.ctx
 import model
 import model.concourse
 
@@ -95,6 +97,51 @@ def rotate_secrets(
             break
 
 
+def _put_secret(
+        core_api: kubernetes.client.CoreV1Api,
+        name: str,
+        data: dict = None,
+        namespace: str='default',
+        raw_data: dict = None,
+    ):
+        '''creates or updates (replaces) the specified secret.
+        the secret's contents are expected in a dictionary containing only scalar values.
+        In particular, each value is converted into a str; the result returned from
+        to-str conversion is encoded as a utf-8 byte array. Thus such a conversion must
+        not have done before.
+        '''
+        if not bool(data) ^ bool(raw_data):
+            raise ValueError('Exactly one data or raw data has to be set')
+
+        metadata = kubernetes.client.V1ObjectMeta(
+            name=ci.util.not_empty(name),
+            namespace=ci.util.not_empty(namespace),
+        )
+
+        if data:
+            raw_data = {
+                k: base64.b64encode(str(v).encode('utf-8')).decode('utf-8')
+                for k,v in data.items()
+            }
+
+        secret = kubernetes.client.V1Secret(metadata=metadata, data=raw_data)
+
+        # find out whether we have to replace or to create
+        try:
+            core_api.read_namespaced_secret(name=name, namespace=namespace)
+            secret_exists = True
+        except kubernetes.client.ApiException as ae:
+            # only 404 is expected
+            if not ae.status == 404:
+                raise ae
+            secret_exists = False
+
+        if secret_exists:
+            core_api.replace_namespaced_secret(name=name, namespace=namespace, body=secret)
+        else:
+            core_api.create_namespaced_secret(namespace=namespace, body=secret)
+
+
 def replicate_secrets(
     cfg_factory: model.ConfigFactory,
     cfg_set: model.ConfigurationSet,
@@ -122,10 +169,10 @@ def replicate_secrets(
 
     serialiser = model.ConfigSetSerialiser(cfg_sets=cfg_sets, cfg_factory=cfg_factory)
 
-    kube_ctx = kube.ctx.Ctx(kubeconfig_dict=kubeconfig)
-    secrets_helper = kube_ctx.secret_helper()
+    api_client = kubernetes.config.new_client_from_config_dict(kubeconfig)
+    core_api = kubernetes.client.CoreV1Api(api_client)
 
-    logger.info(f'deploying indexed secrets on cluster {kube_ctx.kubeconfig.host}')
+    logger.info(f'deploying indexed secrets on cluster {api_client.configuration.host}')
     for (k,v) in future_secrets.items():
         m = re.match(r'key[-](\d+)', k)
         if m:
@@ -138,7 +185,8 @@ def replicate_secrets(
             )
             encoded_cipher_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
             logger.info(f'deploying secret {f_name} in namespace {target_secret_namespace}')
-            secrets_helper.put_secret(
+            _put_secret(
+                core_api=core_api,
                 name=f_name,
                 raw_data={target_secret_cfg_name: encoded_cipher_data},
                 namespace=target_secret_namespace,
