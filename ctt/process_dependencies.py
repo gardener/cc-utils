@@ -91,7 +91,7 @@ class ProcessingPipeline:
             f'{component.name}:{resource.type}:{resource.access}'
         )
 
-        job = processing_model.ProcessingJob( # noqa:E1123
+        job = processing_model.ProcessingJob(
             component=component,
             resource=resource,
             upload_request=processing_model.ContainerImageUploadRequest(

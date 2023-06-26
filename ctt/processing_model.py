@@ -21,4 +21,4 @@ class ProcessingJob:
     resource: cm.Resource
     upload_request: ContainerImageUploadRequest
     processed_resource: cm.Resource = None  # added after re-upload
-    inject_ocm_coordinates_info_oci_manifest: bool = False
+    inject_ocm_coordinates_into_oci_manifest: bool = False
