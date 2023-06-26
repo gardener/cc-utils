@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import logging
+import os
 import subprocess
 import sys
 import tarfile
@@ -69,7 +70,7 @@ def edit(
     # component-descriptor must be first entry in tarfile
     component_descriptor_info = tar.next()
 
-    with tempfile.NamedTemporaryFile() as tf:
+    with tempfile.NamedTemporaryFile(delete=False) as tf:
         reader = tar.extractfile(component_descriptor_info)
         digest = hashlib.sha256()
 
@@ -84,11 +85,14 @@ def edit(
 
         subprocess.run((editor, tf.name))
 
-        tf.seek(0)
+    # vi (re)creates files on write (with default backup/write settings), -> (re)open filehandle
+    with open(tf.name, 'rb') as tf:
         raw = tf.read()
         if (content_digest := hashlib.sha256(raw).hexdigest()) == old_content_digest:
             print('no changes - early-exiting')
             exit(0)
+
+    os.unlink(tf.name)
 
     logger.info(f'uploading changed component-descriptor {content_digest=}')
 
