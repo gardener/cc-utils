@@ -189,6 +189,15 @@ def fetch_release_notes(
 
     :return: A set of ReleaseNote objects for the specified component.
     '''
+
+    if current_version and previous_version:
+        if current_version < previous_version:
+            logger.info(
+                f'{current_version=} is a predecessor to {previous_version=}. '
+                'Will not generate release-notes.'
+            )
+            return set()
+
     source = cnudie.util.determine_main_source_for_component(component)
     github_helper = ghrnu.github_helper_from_github_access(source.access)
     git_helper = ghrnu.git_helper_from_github_access(source.access, repo_path)
