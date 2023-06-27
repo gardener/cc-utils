@@ -16,17 +16,14 @@
 import os
 
 import mako.template
-
-import ci.util
-
+import mako.lookup
 
 steps_dir = os.path.abspath(os.path.dirname(__file__))
+template_lookup = mako.lookup.TemplateLookup(directories=(steps_dir,))
 
 
 def step_template(name):
-    step_file = ci.util.existing_file(os.path.join(steps_dir, name + '.mako'))
-
-    return mako.template.Template(filename=step_file)
+    return template_lookup.get_template(f'/{name}.mako')
 
 
 def step_def(name):
