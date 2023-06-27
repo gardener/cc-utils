@@ -103,43 +103,43 @@ def _put_secret(
         data: dict = None,
         namespace: str='default',
         raw_data: dict = None,
-    ):
-        '''creates or updates (replaces) the specified secret.
-        the secret's contents are expected in a dictionary containing only scalar values.
-        In particular, each value is converted into a str; the result returned from
-        to-str conversion is encoded as a utf-8 byte array. Thus such a conversion must
-        not have done before.
-        '''
-        if not bool(data) ^ bool(raw_data):
-            raise ValueError('Exactly one data or raw data has to be set')
+):
+    '''creates or updates (replaces) the specified secret.
+    the secret's contents are expected in a dictionary containing only scalar values.
+    In particular, each value is converted into a str; the result returned from
+    to-str conversion is encoded as a utf-8 byte array. Thus such a conversion must
+    not have done before.
+    '''
+    if not bool(data) ^ bool(raw_data):
+        raise ValueError('Exactly one data or raw data has to be set')
 
-        metadata = kubernetes.client.V1ObjectMeta(
-            name=ci.util.not_empty(name),
-            namespace=ci.util.not_empty(namespace),
-        )
+    metadata = kubernetes.client.V1ObjectMeta(
+        name=ci.util.not_empty(name),
+        namespace=ci.util.not_empty(namespace),
+    )
 
-        if data:
-            raw_data = {
-                k: base64.b64encode(str(v).encode('utf-8')).decode('utf-8')
-                for k,v in data.items()
-            }
+    if data:
+        raw_data = {
+            k: base64.b64encode(str(v).encode('utf-8')).decode('utf-8')
+            for k,v in data.items()
+        }
 
-        secret = kubernetes.client.V1Secret(metadata=metadata, data=raw_data)
+    secret = kubernetes.client.V1Secret(metadata=metadata, data=raw_data)
 
-        # find out whether we have to replace or to create
-        try:
-            core_api.read_namespaced_secret(name=name, namespace=namespace)
-            secret_exists = True
-        except kubernetes.client.ApiException as ae:
-            # only 404 is expected
-            if not ae.status == 404:
-                raise ae
-            secret_exists = False
+    # find out whether we have to replace or to create
+    try:
+        core_api.read_namespaced_secret(name=name, namespace=namespace)
+        secret_exists = True
+    except kubernetes.client.ApiException as ae:
+        # only 404 is expected
+        if not ae.status == 404:
+            raise ae
+        secret_exists = False
 
-        if secret_exists:
-            core_api.replace_namespaced_secret(name=name, namespace=namespace, body=secret)
-        else:
-            core_api.create_namespaced_secret(namespace=namespace, body=secret)
+    if secret_exists:
+        core_api.replace_namespaced_secret(name=name, namespace=namespace, body=secret)
+    else:
+        core_api.create_namespaced_secret(namespace=namespace, body=secret)
 
 
 def replicate_secrets(
