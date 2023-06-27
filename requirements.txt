@@ -47,7 +47,7 @@ python-swiftclient
 pytimeparse
 pyyaml
 requests<3.0.0
-ruamel.yaml
+ruamel.yaml==0.17.21
 semver<4.0.0
 slackclient<3.0.0
 sphinx_rtd_theme<2.0.0
