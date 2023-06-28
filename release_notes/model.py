@@ -235,6 +235,8 @@ class ReleaseNote:
         author = (
             src_blk.author or self.author.username or self.author.display_name.replace(' ', '-')
         )
+        if not author.startswith('@'):
+            author = '@' + author
         return (
             f'```{src_blk.category} {src_blk.target_group} {self.source_component.name} '
             f'{self.reference_str} {author}\n'
