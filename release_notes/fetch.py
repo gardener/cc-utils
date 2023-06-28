@@ -265,7 +265,7 @@ def fetch_release_notes(
     if commit_pulls:
         logger.info(f'Found {len(commit_pulls)} commits with associated pull requests.')
         for sha, pr_list in commit_pulls.items():
-            logger.info(f"\t{sha:.6} -> {','.join(pr.number for pr in pr_list)}")
+            logger.info(f"\t{sha:.6} -> {','.join(str(pr.number) for pr in pr_list)}")
 
     # contains release notes which should be filtered out
     blacklisted_source_blocks: set[rnm.SourceBlock] = set()
