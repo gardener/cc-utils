@@ -249,8 +249,10 @@ def fetch_release_notes(
         github_repo=github_repo
     )
 
-    logger.info(f'requesting associated pull requests for {len(filter_in_commits)} ' +
-                f'filter in and {len(filter_out_commits)} filter out commits')
+    logger.info(
+        f'Found {len(filter_in_commits)} relevant commits for release notes '
+        f'({len(filter_out_commits)} filtered out).'
+    )
 
     # find associated pull requests for commits
     commit_pulls = rnu.request_pull_requests_from_api(
@@ -260,7 +262,10 @@ def fetch_release_notes(
         repo_name=github_repo.name,
         commits=[*filter_in_commits, *filter_out_commits]
     )
-    logger.info(f'commit_pulls: {len(commit_pulls)}')
+    if commit_pulls:
+        logger.info(f'Found {len(commit_pulls)} commits with associated pull requests.')
+        for sha, pr_list in commit_pulls.items():
+            logger.info(f"\t{sha:.6} -> {','.join(pr.number for pr in pr_list)}")
 
     # contains release notes which should be filtered out
     blacklisted_source_blocks: set[rnm.SourceBlock] = set()
@@ -268,7 +273,9 @@ def fetch_release_notes(
         blacklisted_source_blocks.update(rnm.iter_source_blocks(filter_out_commit.message))
         for pr in commit_pulls[filter_out_commit.hexsha]:
             blacklisted_source_blocks.update(rnm.iter_source_blocks(pr.body))
-    logger.info(f'added {len(blacklisted_source_blocks)} blacklisted source blocks')
+
+    if blacklisted_source_blocks:
+        logger.info(f'added {len(blacklisted_source_blocks)} blacklisted source blocks')
 
     release_notes: set[rnm.ReleaseNote] = set()
     for filter_in_commit in filter_in_commits:
