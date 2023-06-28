@@ -38,6 +38,7 @@ import ccc.concourse
 import ccc.github
 import concourse.client.model
 import concourse.paths
+import makoutil
 import model.concourse
 
 logger = logging.getLogger(__name__)
@@ -209,10 +210,11 @@ class Renderer:
                 )
             pipeline_metadata['pipeline_name'] = definition_descriptor.effective_pipeline_name()
 
-            t = mako.template.Template(template_contents, lookup=self.lookup)
+        with makoutil.template_lock:
+            template = mako.template.Template(template_contents, lookup=self.lookup)
 
         try:
-            definition_descriptor.pipeline = t.render(
+            definition_descriptor.pipeline = template.render(
                     config_set=self.cfg_set,
                     pipeline=pipeline_metadata,
             )

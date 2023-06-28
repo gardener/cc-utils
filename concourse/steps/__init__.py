@@ -18,12 +18,15 @@ import os
 import mako.template
 import mako.lookup
 
+import makoutil
+
 steps_dir = os.path.abspath(os.path.dirname(__file__))
 template_lookup = mako.lookup.TemplateLookup(directories=(steps_dir,))
 
 
 def step_template(name):
-    return template_lookup.get_template(f'/{name}.mako')
+    with makoutil.template_lock:
+        return template_lookup.get_template(f'/{name}.mako')
 
 
 def step_def(name):
