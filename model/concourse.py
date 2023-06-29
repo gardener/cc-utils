@@ -49,6 +49,19 @@ class ConcourseOAuthConfig(NamedModelElement):
 
 
 @dataclasses.dataclass
+class TeamWorkersCfg:
+    '''
+    Allows to configure dedicated workers per team, per platform.
+
+    Useful to segregate worker nodes of critical jobs.
+    This provides additional isolation on worker node level in case of worker node escape.
+    '''
+    team_name: str # must match concourse team name
+    platform_name: str # must match a platform
+    worker: int # count of workers
+
+
+@dataclasses.dataclass
 class Platform:
     '''
     a slightly opinionated platform name, describing a combination of an operating system and
@@ -111,6 +124,7 @@ class WorkerNodeConfig:
     '''
     default_platform_name: str = None
     platforms: typing.List[Platform] | None = None
+    team_workers_cfgs: typing.List[TeamWorkersCfg] | None = None
 
     def platform_for_oci_platform(self, oci_platform_name: str, absent_ok=True) -> Platform | None:
         if absent_ok and not self.platforms:
@@ -122,6 +136,17 @@ class WorkerNodeConfig:
         if absent_ok:
             return None
         raise ValueError(f'no platform for {oci_platform_name=} found')
+
+    def platform_for_name(self, platform_name: str, absent_ok=True) -> Platform | None:
+        if absent_ok and not self.platforms:
+            return None
+
+        for platform in self.platforms:
+            if platform.name == platform_name:
+                return platform
+        if absent_ok:
+            return None
+        raise ValueError(f'no platform for {platform_name=} found')
 
     @property
     def default_platform(self):
