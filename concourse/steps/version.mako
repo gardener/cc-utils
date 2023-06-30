@@ -93,18 +93,6 @@ effective_version = version.process_version(
 logger.info('version preprocessing operation: ${version_operation}')
 logger.info(f'effective version: {effective_version}')
 
-cc_version = '/metadata/VERSION'
-if os.path.isfile(cc_version):
-  with open(cc_version) as f:
-    logger.info(f'cc-utils version: {f.read()}')
-if os.path.isdir(os.path.join(ci.paths.repo_root, '.git')):
-  import git
-  repo = git.Repo(ci.paths.repo_root)
-  try:
-    logger.info(f'cc-utils-commit: {repo.head.commit.hexsha=}')
-  except:
-    pass
-
 write_callback = '${write_callback}' ## Either a path or an empty string
 if version_interface is version_trait.VersionInterface.CALLBACK and write_callback:
   write_version(
