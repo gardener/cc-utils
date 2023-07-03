@@ -114,6 +114,24 @@ def list_item_header_from_notes(
     )
 
 
+def list_item_from_note(
+        message: str,
+        note: rnm.ReleaseNote,
+        group: Title,
+) -> ListItem:
+    # Replace newlines with two spaces _followed by_ newlines, as this is the proper way to do
+    # a line-break in a list-item.
+    # Also indent the next line, of course.
+    message = message.replace('\n', '  \n  ')
+    return ListItem(
+        level=1,
+        text=(
+            f'`[{group.display}]` {message} by '
+            f'{note.source_block.author or note.author} [{get_reference_for_note(note)}]'
+        ),
+    )
+
+
 def render(notes: set[rnm.ReleaseNote]):
     objs = []
 
@@ -148,8 +166,6 @@ def render(notes: set[rnm.ReleaseNote]):
 
             for group, notes in groups.items():
                 for note in notes:
-                    lines = note.source_block.note_message.splitlines()
-                    objs.append(list_item_header_from_notes(lines[0], note, cat, group))
-                    if len(lines) > 1:
-                        objs.extend(list_item_from_lines(lines[1:]))
+                    message = note.source_block.note_message
+                    objs.append(list_item_from_note(message, note, group))
     return objs
