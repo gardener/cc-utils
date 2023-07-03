@@ -39,7 +39,7 @@ ATTRIBUTES = (
     ),
     AttributeSpec.optional(
         name='release_notes_handling',
-        default=ReleaseNotesHandling.DEFAULT.value,
+        default=ReleaseNotesHandling.PREVIEW.value,
         doc='''
         configures which iteration of the code to use when generating release notes.
         ''',
