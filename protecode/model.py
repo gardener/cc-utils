@@ -118,6 +118,12 @@ class AnalysisResult(ModelBase):
         '''
         return self.raw.get('rescan-possible')
 
+    def creation_time(self) -> str:
+        return self.raw.get('created')
+
+    def scanned_bytes(self) -> int:
+        return self.raw.get('scanned_bytes')
+
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
