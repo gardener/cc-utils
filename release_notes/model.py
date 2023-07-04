@@ -14,20 +14,24 @@ import cnudie.retrieve
 
 logger = logging.getLogger(__name__)
 
-'''
+r'''
 This pattern matches code-blocks in the following format:
 ```{category} {note_message} [source component name] [reference-dependent str] [author]
 {note_message}
 ```
 with the three groups in "[]" being optional by virtue of not being present for commit-attached
 release note blocks.
+
+Note: [^\S\n] is "all whitespaces except \n" (or "not [all non-whitespaces and newline]") to
+approxmiate the as-of-yet unsupported \h ([:blank:]) aka "horizontal whitespace"
+
 \x60 -> `
 '''
 _source_block_pattern = re.compile(
     pattern=(
-        r'\x60{3}\s*(?P<category>\w+)\s+(?P<target_group>\w+)\s*'
-        r'(?P<source_component_name>\S+)?\s?(?P<reference_str>\S+)?\s?(?P<author>\S+)?\s*'
-        r'\n(?P<note>.+?)\n\x60{3}'
+        r'\x60{3}[^\S\n]*(?P<category>\w+)[^\S\n]+(?P<target_group>\w+)[^\S\n]*'
+        r'(?P<source_component_name>\S+)?[^\S\n]?(?P<reference_str>\S+)'
+        r'?[^\S\n]?(?P<author>\S+)?[^\S\n]*\n(?P<note>.+?)\n\x60{3}'
     ),
    flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
 )
