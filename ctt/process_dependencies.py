@@ -86,6 +86,7 @@ class ProcessingPipeline:
         if not self.matches(component, resource):
             return None
 
+        logging.info(f'{inject_ocm_coordinates_into_oci_manifests=}')
         logging.info(
             f'{self._name} will process: '
             f'{component.name}:{resource.type}:{resource.access}'
@@ -364,6 +365,8 @@ def process_upload_request(
         }
     else:
         oci_manifest_annotations = None
+
+    logging.info(f'{oci_manifest_annotations=}')
 
     _, _, raw_manifest = container.util.filter_image(
         source_ref=src_ref,
