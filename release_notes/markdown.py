@@ -1,4 +1,5 @@
 import dataclasses
+import functools
 import logging
 import typing
 from collections import defaultdict
@@ -8,10 +9,12 @@ import release_notes.model as rnm
 logger = logging.getLogger(__name__)
 
 
+@functools.total_ordering
 @dataclasses.dataclass
 class Title:
     display: str
     identifiers: list[str]
+    priority: int
 
     def __hash__(self):
         return hash(self.display)
@@ -23,18 +26,23 @@ class Title:
             and (other == self or hash(other) == hash(self))
         )
 
+    def __lt__(self, other):
+        if not isinstance(other, Title):
+            raise ValueError(other)
+        return self.priority < other.priority
+
 
 def _simple_title(display: str) -> Title:
-    return Title(display, [display.lower()])
+    return Title(display=display, identifiers=[display.lower()], priority=0)
 
 
 categories = [
-    Title('⚠️ Breaking Changes', ['action', 'breaking']),
-    Title('📰 Noteworthy', ['noteworthy']),
-    Title('🏃 Others', ['improvement', 'other']),
-    Title('✨ New Features', ['feature']),
-    Title('🐛 Bug Fixes', ['bugfix', 'fix']),
-    Title('📖 Documentation', ['doc']),
+    Title(display='⚠️ Breaking Changes', identifiers=['action', 'breaking'], priority=0),
+    Title(display='📰 Noteworthy', identifiers=['noteworthy'], priority=1),
+    Title(display='✨ New Features', identifiers=['feature'], priority=2),
+    Title(display='🐛 Bug Fixes', identifiers=['bugfix', 'fix'], priority=3),
+    Title(display='🏃 Others', identifiers=['improvement', 'other'], priority=4),
+    Title(display='📖 Documentation', identifiers=['doc'], priority=5),
 ]
 
 target_groups = [
@@ -152,7 +160,8 @@ def render(notes: set[rnm.ReleaseNote]):
                 continue
             cats[cat_title].append(note)
 
-        for cat, notes in cats.items():
+        # sort by category-priority, ascending. This will keep the order stable.
+        for cat, notes in sorted(cats.items(), key=lambda tuple: tuple[0]):
             objs.append(Header(level=2, title=cat.display))
 
             # group by target group
