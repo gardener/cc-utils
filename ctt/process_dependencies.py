@@ -281,6 +281,7 @@ def create_jobs(
                 component=component,
                 resource=oci_resource,
                 processing_mode=processing_mode,
+                inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
             )
 
             if not job:
