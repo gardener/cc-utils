@@ -31,6 +31,10 @@ def traverse(
     if not ctx_base_url:
         ctx_base_url = _cfg.ctx.ocm_repo_base_url
 
+    if not ctx_base_url:
+        print('must pass --ctx-base-url')
+        exit(1)
+
     if not version:
         name, version = name.rsplit(':', 1)
 
