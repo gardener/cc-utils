@@ -13,6 +13,9 @@ import yaml
 from github3.exceptions import (
     ConnectionError,
 )
+from git.exc import (
+    GitCommandError
+)
 
 import gci.componentmodel as cm
 
@@ -311,6 +314,7 @@ class CreateTagsStep(TransactionalStep):
     def validate(self):
         tags_to_set = [self.github_release_tag] + self.git_tags
         existing_tags = set()
+        logger.info(f'Validating that tags {tags_to_set} are not already set ...')
         for tag_name in tags_to_set:
             if self.github_helper.tag_exists(tag_name):
                 existing_tags.add(tag_name)
@@ -343,7 +347,16 @@ class CreateTagsStep(TransactionalStep):
                 self.tags_created.append(tag)
 
             for tag in [self.github_release_tag] + self.git_tags:
-                _push_tag(tag)
+                try:
+                    _push_tag(tag)
+                except GitCommandError:
+                    logger.error(
+                        f"Error when trying to push to tag {tag}. Please check whether the tag "
+                        'already exists in the repository and consider incrementing the Version '
+                        'if it does.\n'
+                        'Re-raising error ...'
+                    )
+                    raise
 
         else:
             raise NotImplementedError
