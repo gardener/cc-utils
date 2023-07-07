@@ -70,6 +70,15 @@ def author_from_pull_request(pull_request: github3.pulls.ShortPullRequest) -> Au
     )
 
 
+def author_from_source(source: git.Commit | github3.pulls.ShortPullRequest) -> Author:
+    if isinstance(source, git.Commit):
+        return author_from_commit(source)
+    elif isinstance(source, github3.pulls.ShortPullRequest):
+        return author_from_pull_request(source)
+    else:
+        raise NotImplementedError(type(source))
+
+
 @dataclasses.dataclass(frozen=True)
 class _ReferenceType:
     identifier: str  # identifier for release note block
@@ -134,6 +143,7 @@ class SourceBlock:
     with the triple of componentname, reference identifier, and author only being present for code-
     blocks being attached to pull requests
     '''
+    source: object
     category: str
     target_group: str
     note_message: str
@@ -182,7 +192,7 @@ def create_pull_request_ref(
     )
 
 
-def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None]:
+def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, None, None]:
     ''' Searches for code blocks in release note notation and returns all found.
     Only valid note blocks are returned, which means that the format has been followed.
     However, it does not check if the category / group exists.
@@ -193,6 +203,7 @@ def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None
     for res in _source_block_pattern.finditer(content.replace('\r\n', '\n')):
         try:
             block = SourceBlock(
+                source=source,
                 category=res.group('category'),
                 target_group=res.group('target_group'),
                 note_message=res.group('note'),
@@ -212,10 +223,8 @@ def iter_source_blocks(content: str) -> typing.Generator[SourceBlock, None, None
 
 @dataclasses.dataclass(frozen=True)
 class ReleaseNote:
-    source_commit: git.Commit  # the commit where the release notes were initially gathered from
     source_block: SourceBlock
 
-    raw_body: str  # the raw body of the commit / pull request
     author: typing.Optional[Author]  # the author of the commit / pull request
     reference: _Reference
 
@@ -280,19 +289,20 @@ def _source_component(
 
 def create_release_note_obj(
         source_block: SourceBlock,
-        source_commit: git.Commit,
-        raw_body: str,
-        author: Author,
-        target: typing.Union[git.Commit, github3.pulls.ShortPullRequest],
         source_component: gci.componentmodel.Component,
         current_component: gci.componentmodel.Component
 ) -> ReleaseNote:
+    target = source_block.source
     if isinstance(target, git.Commit):
         ref = create_commit_ref(target, source_block)
     elif isinstance(target, github3.pulls.ShortPullRequest):
         ref = create_pull_request_ref(target, source_block)
     else:
-        raise ValueError('either target pull request or commit has to be passed')
+        raise NotImplementedError(
+            f"Release note creation not implemented for target-type {type(target)}"
+        )
+
+    author = author_from_source(target)
 
     if source_block.component_name:
         source_component = _source_component(
@@ -315,9 +325,7 @@ def create_release_note_obj(
     is_current_repo = current_component.name == source_component.name
 
     return ReleaseNote(
-        source_commit=source_commit,
         source_block=source_block,
-        raw_body=raw_body,
         author=author,
         reference=ref,
         source_component=source_component,

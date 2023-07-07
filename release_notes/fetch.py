@@ -41,19 +41,23 @@ def _list_commits_between_tags(
 def _list_commits_since_tag(
         repo: git.Repo,
         tag: git.TagReference,
-) -> tuple[git.Commit]:
+) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''Return a list of between the given tag and HEAD
 
     :return: a tuple of commits'''
     if repo.is_ancestor(tag.commit, 'HEAD'):
-        return tuple(repo.iter_commits(f'HEAD...{tag.commit.hexsha}'))
+        logger.info(f"Commit tagged '{tag.name}' is a direct ancestor of HEAD")
+        return tuple(repo.iter_commits(f'HEAD...{tag.commit.hexsha}')), tuple()
 
     if (
         not (merge_commit_list := repo.merge_base('HEAD', tag))
         or not (merge_commit := merge_commit_list.pop())
     ):
         raise RuntimeError('cannot find merge base')
-    return tuple(repo.iter_commits(f'HEAD...{merge_commit.hexsha}'))
+    return (
+        tuple(repo.iter_commits(f'HEAD...{merge_commit.hexsha}')),
+        tuple(repo.iter_commits(f'{merge_commit.hexsha}...{tag.commit.hexsha}'))
+    )
 
 
 def _get_release_note_commits_tuple_for_minor_release(
@@ -141,8 +145,7 @@ def get_release_note_commits_tuple(
         return _list_commits_since_tag(
             repo=git_helper.repo,
             tag=previous_version_tag,
-        ), tuple()
-
+        )
     # new major release (not supported yet)
     if current_version.major != previous_version.major:
         raise NotImplementedError(
@@ -267,41 +270,53 @@ def fetch_release_notes(
         for sha, pr_list in commit_pulls.items():
             logger.info(f"\t{sha:.6} -> {','.join(str(pr.number) for pr in pr_list)}")
 
+    source_blocks_to_be_included: set[rnm.SourceBlock] = set()
+    for filter_in_commit in filter_in_commits:
+        source_blocks_to_be_included.update(rnm.iter_source_blocks(
+            source=filter_in_commit,
+            content=filter_in_commit.message,
+        ))
+        for pr in commit_pulls[filter_in_commit.hexsha]:
+            if pr.body is None:
+                continue
+            source_blocks_to_be_included.update(rnm.iter_source_blocks(
+                source=pr,
+                content=pr.body,
+            ))
+
+    logger.info(f'added {len(source_blocks_to_be_included)} source blocks')
+
     # contains release notes which should be filtered out
     blacklisted_source_blocks: set[rnm.SourceBlock] = set()
     for filter_out_commit in filter_out_commits:
-        blacklisted_source_blocks.update(rnm.iter_source_blocks(filter_out_commit.message))
+        blacklisted_source_blocks.update(rnm.iter_source_blocks(
+            source=filter_out_commit,
+            content=filter_out_commit.message,
+        ))
         for pr in commit_pulls[filter_out_commit.hexsha]:
-            blacklisted_source_blocks.update(rnm.iter_source_blocks(pr.body))
+            if pr.body is None:
+                continue
+            blacklisted_source_blocks.update(rnm.iter_source_blocks(
+                source=pr,
+                content=pr.body,
+            ))
 
     if blacklisted_source_blocks:
         logger.info(f'added {len(blacklisted_source_blocks)} blacklisted source blocks')
 
-    release_notes: set[rnm.ReleaseNote] = set()
-    for filter_in_commit in filter_in_commits:
-        # by associated pull requests
-        for pr in commit_pulls[filter_in_commit.hexsha]:
-            if pr.body is None:
-                continue
-            release_notes.update(
-                rnm.create_release_note_obj(
-                    source_block=z,
-                    source_commit=filter_in_commit,
-                    raw_body=pr.body,
-                    author=rnm.author_from_pull_request(pr),
-                    target=pr,
-                    source_component=component,
-                    current_component=component,
-                ) for z in rnm.iter_source_blocks(pr.body)
-            )
-        # by commit
-        release_notes.update(rnm.create_release_note_obj(
-            source_block=z,
-            source_commit=filter_in_commit,
-            raw_body=filter_in_commit.message,
-            author=rnm.author_from_commit(filter_in_commit),
-            target=filter_in_commit,
+        source_blocks_to_be_included -= blacklisted_source_blocks
+
+        logger.info(
+            f'Got {len(source_blocks_to_be_included)} source blocks to consider after '
+            'removing duplicates.'
+        )
+
+    release_notes: set[rnm.ReleaseNote] = {
+        rnm.create_release_note_obj(
+            source_block=source_block,
             source_component=component,
             current_component=component,
-        ) for z in rnm.iter_source_blocks(filter_in_commit.message))
+        ) for source_block in source_blocks_to_be_included
+    }
+
     return release_notes
