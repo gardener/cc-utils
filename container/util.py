@@ -308,7 +308,7 @@ def filter_image(
         if not 'annotations' in manifest_dict:
             manifest_dict['annotations'] = {}
 
-        manifest_dict |= oci_manifest_annotations
+        manifest_dict['annotations'] |= oci_manifest_annotations
 
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
 
