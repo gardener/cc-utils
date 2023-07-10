@@ -29,6 +29,7 @@ from ci.util import (
 )
 import cnudie.iter
 import cnudie.retrieve
+import cnudie.upload
 import cnudie.util
 import cnudie.validate
 import dockerutil
@@ -685,7 +686,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
                 tgt_ref = product.v2._target_oci_ref(component=component)
 
                 logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
-                product.v2.upload_component_descriptor_v2_to_oci_registry(
+                cnudie.upload.upload_component_descriptor(
                     component_descriptor_v2=component,
                 )
 
