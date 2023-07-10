@@ -96,9 +96,10 @@ def filter_image(
                     image_reference=source_ref,
                     oci_client=oci_client,
                     base_platform=sub_manifest.platform,
-                    )
+                )
                 if not platform_filter(platform):
                     logger.info(f'skipping {platform=} for {source_ref=}')
+                    manifest.manifests.remove(sub_manifest)
                     continue
 
             logger.info(f'filtering to {tgt_name=}')
