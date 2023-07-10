@@ -22,7 +22,7 @@ after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
 component_descriptor_trait = job_variant.trait('component_descriptor')
-ctx_repo = component_descriptor_trait.ctx_repository()
+ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
 set_version_script_image_cfg = \
     update_component_deps_trait.set_dependency_version_script_container_image()
@@ -31,17 +31,6 @@ if set_version_script_image_cfg:
 else:
     set_version_script_image = None
 
-def enum_to_value(v):
-  if isinstance(v, enum.Enum):
-    return v.value
-  return v
-
-ctx_repo_dict = {
-  k: enum_to_value(v) for k,v in dataclasses.asdict(ctx_repo).items()
-}
-
-if not isinstance(ctx_repo, cm.OciRepositoryContext):
-  raise NotImplementedError(ctx_repo)
 %>
 import logging
 import os
@@ -51,12 +40,14 @@ import sys
 import dacite
 
 import ci.util
+import cnudie.util
 import concourse.model.traits.release
 import concourse.model.traits.update_component_deps
 import ctx
 import gci.componentmodel
 import github.util
 import gitutil
+import oci.auth as oa
 
 logger = logging.getLogger('step.update_component_deps')
 
@@ -135,15 +126,8 @@ upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUp
     '${upstream_update_policy.value}'
 )
 
-# we checked for ctx_repository to be of type OciRepositoryContext above
-ctx_repo = dacite.from_dict(
-  data_class=gci.componentmodel.OciRepositoryContext,
-  data=${ctx_repo_dict},
-  config=dacite.Config(
-    cast=[
-        gci.componentmodel.AccessType,
-    ]
-  )
+mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
+    raw_mappings = ${ocm_repository_mappings},
 )
 
 # we at most need to do this once
@@ -154,7 +138,7 @@ for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    ctx_repo=ctx_repo,
+    mapping_config=mapping_config,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
     applicable_merge_policy = [
@@ -186,7 +170,7 @@ for from_ref, to_version in determine_upgrade_prs(
         githubrepobranch=githubrepobranch,
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
-        ctx_repo=ctx_repo,
+        mapping_config=mapping_config,
         merge_policy=merge_policy,
         merge_method=merge_method,
 % if after_merge_callback:
