@@ -24,7 +24,19 @@ class OciManifestChoice(enum.Enum):
     MULTIARCH = 'multiarch'
 
 
-def cp(src:str, tgt:str):
+def cp(
+    src:str,
+    tgt:str,
+    annotations:[str]=list(),
+):
+    if annotations:
+        annotations_dict = {}
+        for a in annotations:
+            k, v = a.split('=')
+            annotations_dict[k] = v
+    else:
+        annotations_dict = None
+
     oci_client = ccc.oci.oci_client()
 
     oci.replicate_artifact(
@@ -32,6 +44,7 @@ def cp(src:str, tgt:str):
         tgt_image_reference=tgt,
         oci_client=oci_client,
         mode=oci.ReplicationMode.PREFER_MULTIARCH,
+        annotations=annotations_dict,
     )
 
 
