@@ -18,7 +18,7 @@ dockerfile-parse>=1.2
 docutils>=0.15,<0.20.0
 elasticsearch<8.0.0,>=7.13
 ensure>=0.8,<2.0.0
-flake8>=3.9
+flake8
 gardener-component-model==v0.0.94
 gardener-oci
 github3.py<5.0.0
@@ -51,8 +51,8 @@ semver<4.0.0
 slackclient<3.0.0
 sphinx_rtd_theme<2.0.0
 sseclient-py<2.0.0
-tabulate<1.0.0
-termcolor<3.0.0
+tabulate
+termcolor
 urllib3<3.0.0
 websockets
 yamllint
