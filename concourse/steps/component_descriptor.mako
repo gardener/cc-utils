@@ -16,6 +16,7 @@ main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_
 other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
 ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
 retention_policy = descriptor_trait.retention_policy()
+ocm_repository_mappings = descriptor_trait.ocm_repository_mappings()
 
 snapshot_ctx_repository_base_url = descriptor_trait.snapshot_ctx_repository_base_url() or ""
 
@@ -52,7 +53,9 @@ import yaml
 import ccc.oci
 import cnudie.purge
 import cnudie.retrieve
+import cnudie.util
 import gci.componentmodel as cm
+import oci.auth as oa
 import version
 # required for deserializing labels
 Label = cm.Label
@@ -80,6 +83,10 @@ component_labels = ${descriptor_trait.component_labels()}
 component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
 
+mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
+    raw_mappings = ${ocm_repository_mappings},
+)
+
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
 commit_hash = head_commit_hexsha(main_repo_path)
 
@@ -106,20 +113,21 @@ if not 'cloud.gardener/cicd/source' in [label.name for label in repo_labels]:
   )
 
 if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.resource_name()}'))):
-  logger.warning('Could not determine commit hash')
+    logger.warning('Could not determine commit hash')
+
 component_v2.sources.append(
-  cm.ComponentSource(
-    name='${repository.logical_name().replace('/', '_').replace('.', '_')}',
-    type=cm.SourceType.GIT,
-    access=cm.GithubAccess(
-      type=cm.AccessType.GITHUB,
-      repoUrl='${repository.repo_hostname()}/${repository.repo_path()}',
-      ref='${repository.branch()}',
-      commit=repo_commit_hash,
-    ),
-    version=effective_version,
-    labels=repo_labels,
-  )
+    cm.ComponentSource(
+        name='${repository.logical_name().replace('/', '_').replace('.', '_')}',
+        type=cm.SourceType.GIT,
+        access=cm.GithubAccess(
+            type=cm.AccessType.GITHUB,
+            repoUrl='${repository.repo_hostname()}/${repository.repo_path()}',
+            ref='${repository.branch()}',
+            commit=repo_commit_hash,
+        ),
+        version=effective_version,
+        labels=repo_labels,
+    )
 )
 % endfor
 
@@ -254,7 +262,7 @@ if snapshot_ctx_repository_base_url:
 try:
   bom_diff = component_diff_since_last_release(
       component_descriptor=descriptor_v2,
-      ctx_repo_url=ctx_repository_base_url,
+      mapping_config=mapping_config,
   )
 except:
   logger.warning('failed to determine component-diff')
@@ -293,8 +301,8 @@ component = descriptor_v2.component
 oci_client = ccc.oci.oci_client()
 
 lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-  default_ctx_repo=component.current_repository_ctx(),
-  default_absent_ok=True,
+    default_ctx_repo=component.current_repository_ctx(),
+    mapping_config=mapping_config,
 )
 
 for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
