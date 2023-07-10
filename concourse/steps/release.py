@@ -312,11 +312,19 @@ class CreateTagsStep(TransactionalStep):
         return 'Create Tags'
 
     def validate(self):
-        tags_to_set = [self.github_release_tag] + self.git_tags
+        tags_to_set: list[str] = [self.github_release_tag] + self.git_tags
         existing_tags = set()
         logger.info(f'Validating that tags {tags_to_set} are not already set ...')
         for tag_name in tags_to_set:
-            if self.github_helper.tag_exists(tag_name):
+            if tag_name.startswith('refs/tags/'):
+                # our helper expects only the tag-name here
+                tag_name_to_check = tag_name[10:]
+            else:
+                # assume that only a tag name was given.
+                tag_name_to_check = tag_name
+
+            logger.info(f'Checking for existence of a tag with name {tag_name_to_check} ...')
+            if self.github_helper.tag_exists(tag_name_to_check):
                 existing_tags.add(tag_name)
 
         if(existing_tags):
