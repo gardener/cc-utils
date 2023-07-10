@@ -2,10 +2,14 @@ import dataclasses
 import graphlib
 import typing
 
+import dacite
 import deprecated
+import yaml
 
 import ci.util
+import ctx
 import gci.componentmodel as cm
+import model.container_registry
 import oci.model as om
 import product.v2
 
@@ -497,3 +501,177 @@ def diff_resources(
             _add_if_not_duplicate(resource_diff.resource_refs_only_right, i)
 
     return resource_diff
+
+
+@dataclasses.dataclass
+class OcmRepositoryConfig:
+    baseurl: str
+    subpath: str | None = None
+    type: str = 'OCIRegistry'
+
+
+@dataclasses.dataclass
+class OcmSoftwareResolverConfig:
+    repository: OcmRepositoryConfig
+    prefix: str
+    priority: int
+
+
+@dataclasses.dataclass
+class OcmSoftwareConfig:
+    resolvers: list[OcmSoftwareResolverConfig]
+    aliases: typing.Optional[dict[str, dict]] = None
+    type: str = 'credentials.config.ocm.software'
+
+
+@dataclasses.dataclass
+class OcmCredentials:
+    username: str
+    password: str
+
+
+@dataclasses.dataclass
+class OcmCredentialsCredentialsConfig:
+    properties: OcmCredentials
+    type: str = 'Credentials'
+
+
+@dataclasses.dataclass
+class OcmCredentialsConsumerConfig:
+    identity: OcmRepositoryConfig
+    credentials: list[OcmCredentialsCredentialsConfig]
+
+
+@dataclasses.dataclass
+class OcmCredentialsConfig:
+    consumers: list[OcmCredentialsConsumerConfig]
+    type: str = 'credentials.config.ocm.software'
+
+
+@dataclasses.dataclass
+class OcmGenericConfig:
+    configurations: list[OcmSoftwareConfig | OcmCredentialsConfig]
+    type: str = 'generic.config.ocm.software/v1'
+
+
+@dataclasses.dataclass
+class OcmLookupMapping:
+    ocm_repo_url: str
+    prefix: str
+    priority: int | None = 10
+
+
+class OcmLookupMappingConfig:
+    def __init__(
+        self,
+        mappings: list[OcmLookupMapping],
+    ):
+        self.mappings: list[OcmLookupMapping] = sorted(
+            sorted(
+                mappings,
+                key=lambda m: len(m.prefix),
+                reverse=True,
+            ),
+            key=lambda m: m.priority,
+            reverse=True,
+        )
+
+    def find_ocm_repository(
+        self,
+        component_name: str,
+    ) -> typing.Iterable[cm.OciRepositoryContext]:
+        for mapping in self.mappings:
+            if component_name.startswith(mapping.prefix):
+                yield cm.OciRepositoryContext(baseUrl=mapping.ocm_repo_url)
+
+    def to_ocm_software_config(
+        self,
+        cfg_factory=None,
+    ) -> str:
+        if not cfg_factory:
+            cfg_factory = ctx.cfg_factory()
+
+        consumers = []
+        resolvers = []
+        for m in self.mappings:
+            container_registry_config = model.container_registry.find_config(
+                image_reference=m.ocm_repo_url,
+                cfg_factory=cfg_factory,
+            )
+            if container_registry_config:
+                credentials = container_registry_config.credentials()
+                consumer_credentials = [
+                    OcmCredentialsCredentialsConfig(
+                        properties=OcmCredentials(
+                            username=credentials.username(),
+                            password=credentials.passwd()
+                        ),
+                    ),
+                ]
+            else:
+                consumer_credentials = []
+
+            consumer = OcmCredentialsConsumerConfig(
+                identity=OcmRepositoryConfig(baseurl=m.ocm_repo_url),
+                credentials=consumer_credentials,
+            )
+
+            resolver = OcmSoftwareResolverConfig(
+                repository=OcmRepositoryConfig(baseurl=m.ocm_repo_url),
+                prefix=m.prefix,
+                priority=m.priority,
+            )
+            consumers.append(consumer)
+            resolvers.append(resolver)
+
+        config = OcmGenericConfig(
+            configurations=[
+                OcmSoftwareConfig(resolvers=resolvers),
+                OcmCredentialsConfig(consumers=consumers)
+            ]
+        )
+
+        return yaml.dump(dataclasses.asdict(config))
+
+    @staticmethod
+    def from_ocm_config(
+        config: OcmGenericConfig,
+    ) -> 'OcmLookupMappingConfig':
+        for c in config.configurations:
+            if isinstance(c, OcmSoftwareConfig):
+                mappings = [
+                    OcmLookupMapping(
+                        ocm_repo_url=(
+                            f'{resolver.repository.baseurl}' if not resolver.repository.subpath
+                            else f'{resolver.repository.baseurl}/{resolver.repository.subpath}'
+                        ),
+                        prefix=resolver.prefix,
+                        priority=resolver.priority,
+                    ) for resolver in c.resolvers
+                ]
+                return OcmLookupMappingConfig(mappings)
+        else:
+            raise RuntimeError("No resolvers found in OCM config.")
+
+    @staticmethod
+    def from_ocm_config_dict(
+        ocm_config_dict: dict,
+    ) -> 'OcmLookupMappingConfig':
+        ocm_config = dacite.from_dict(
+            data_class=OcmGenericConfig,
+            data=ocm_config_dict,
+        )
+        return OcmLookupMappingConfig.from_ocm_config(ocm_config)
+
+    @staticmethod
+    def from_dict(
+        raw_mappings: dict,
+    ) -> 'OcmLookupMappingConfig':
+        mappings = [
+            dacite.from_dict(
+                data_class=OcmLookupMapping,
+                data=e,
+            ) for e in raw_mappings
+        ]
+
+        return OcmLookupMappingConfig(mappings)
