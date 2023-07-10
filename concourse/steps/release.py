@@ -283,50 +283,24 @@ class ReleaseCommitStep(TransactionalStep):
 class CreateTagsStep(TransactionalStep):
     def __init__(
         self,
-        github_release_tag,
-        git_tags,
+        tags_to_set,
         github_helper: GitHubRepositoryHelper,
         git_helper: GitHelper,
-        release_version,
-        publishing_policy: ReleaseCommitPublishingPolicy
+        publishing_policy: ReleaseCommitPublishingPolicy,
     ):
         self.github_helper = github_helper
         self.git_helper = git_helper
 
         self.publishing_policy = publishing_policy
 
-        self.release_version = release_version
-
-        tag_template_vars = {'VERSION': self.release_version}
-
-        # render tag-templates
-        self.github_release_tag = github_release_tag['ref_template'].format(
-            **tag_template_vars
-        )
-        self.git_tags = [
-            tag_template['ref_template'].format(**tag_template_vars)
-            for tag_template in git_tags
-        ]
+        self.tags_to_set = tags_to_set
 
     def name(self):
         return 'Create Tags'
 
     def validate(self):
-        tags_to_set: list[str] = [self.github_release_tag] + self.git_tags
-        existing_tags = set()
-        logger.info(f'Validating that tags {tags_to_set} are not already set ...')
-        for tag_name in tags_to_set:
-            # our helper expects only the tag-name here
-            tag_name_to_check = tag_name.removeprefix('/refs/tags')
-            logger.info(f'Checking for existence of a tag with name {tag_name_to_check} ...')
-            if self.github_helper.tag_exists(tag_name_to_check):
-                existing_tags.add(tag_name)
-
-        if(existing_tags):
-            ci.util.fail(
-                'Cannot create the following tags as they already exist in the '
-                f'repository: {", ".join(existing_tags)}'
-            )
+        # already happened before the transaction started
+        pass
 
     def apply(
         self,
@@ -349,7 +323,7 @@ class CreateTagsStep(TransactionalStep):
                 )
                 self.tags_created.append(tag)
 
-            for tag in [self.github_release_tag] + self.git_tags:
+            for tag in self.tags_to_set:
                 try:
                     _push_tag(tag)
                 except GitCommandError:
@@ -365,8 +339,8 @@ class CreateTagsStep(TransactionalStep):
             raise NotImplementedError
 
         return {
-            'release_tag': self.github_release_tag,
-            'tags': self.git_tags,
+            'release_tag': self.tags_to_set[0],
+            'tags': self.tags_to_set[1:],
         }
 
 
@@ -859,6 +833,36 @@ def _calculate_next_cycle_dev_version(
     )
 
 
+def _calculate_tags(
+    release_version: str,
+    github_release_tag: dict,
+    git_tags: list,
+) -> typing.Sequence[str]:
+    tag_template_vars = {'VERSION': release_version}
+
+     # render tag-templates
+    github_release_tag_candidate = github_release_tag['ref_template'].format(
+        **tag_template_vars
+    )
+    git_tag_candidates = [
+        tag_template['ref_template'].format(**tag_template_vars)
+        for tag_template in git_tags
+    ]
+
+    return [github_release_tag_candidate] + git_tag_candidates
+
+
+def _conflicting_tags(
+    tags_to_set: typing.Sequence[str],
+    github_helper,
+):
+    return set(
+        tag
+        for tag in tags_to_set
+        if github_helper.tag_exists(tag.removeprefix('refs/tags/'))
+    )
+
+
 def release_and_prepare_next_dev_cycle(
     component_name: str,
     githubrepobranch: GitHubRepoBranch,
@@ -874,6 +878,7 @@ def release_and_prepare_next_dev_cycle(
     component_descriptor_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
+    increment_on_tag_collision: bool=False,
     prerelease_suffix: str="dev",
     rebase_before_release: bool=False,
     release_on_github: bool=True,
@@ -915,6 +920,31 @@ def release_and_prepare_next_dev_cycle(
         repo_path=repo_dir,
     )
 
+    # make sure that desired tag(s) do not already exist. If configured to do so, increment
+    # in case of collisions
+
+    tags_to_set = _calculate_tags(release_version, github_release_tag, git_tags)
+    logger.info(f'Making sure that required tags {tags_to_set} can be created ...')
+    if (existing_tags := _conflicting_tags(tags_to_set, github_helper)):
+        if increment_on_tag_collision:
+            logger.warning(
+                f"Detected tag-conflicts with tags {existing_tags}. Will attempt to increment "
+                'release version _once_ as configured.'
+            )
+            release_version = version.process_version(
+                version_str=release_version,
+                operation=version_operation,
+            )
+            logger.info(f'New version: {release_version}')
+            tags_to_set = _calculate_tags(release_version, github_release_tag, git_tags)
+            if _conflicting_tags(tags_to_set, github_helper):
+                raise RuntimeError('Can not create requested tags.')
+        else:
+            raise RuntimeError(
+                f"Detected tag-conflicts with tags '{existing_tags}'. Please increment the version "
+                'or delete the conflicting tags.'
+            )
+
     step_list = []
 
     if rebase_before_release:
@@ -938,11 +968,9 @@ def release_and_prepare_next_dev_cycle(
     step_list.append(release_commit_step)
 
     create_tag_step = CreateTagsStep(
-        git_tags=git_tags,
-        github_release_tag=github_release_tag,
+        tags_to_set=tags_to_set,
         git_helper=git_helper,
         github_helper=github_helper,
-        release_version=release_version,
         publishing_policy=release_commit_publishing_policy,
     )
     step_list.append(create_tag_step)

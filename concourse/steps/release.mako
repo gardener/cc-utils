@@ -18,6 +18,7 @@ if (release_commit_callback_image_reference := release_trait.release_callback_im
 
 version_trait = job_variant.trait('version')
 version_op = release_trait.nextversion()
+emergency_increment_version = release_trait.increment_version_on_tag_collision()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
 next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
 
@@ -101,6 +102,7 @@ concourse.steps.release.release_and_prepare_next_dev_cycle(
   repository_version_file_path='${version_trait.versionfile_relpath()}',
   release_version=version_str,
   version_operation='${version_op}',
+  increment_on_tag_collision=${emergency_increment_version},
   release_notes_policy='${release_trait.release_notes_policy().value}',
   release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
   release_commit_callback_image_reference=release_commit_callback_image_reference,
