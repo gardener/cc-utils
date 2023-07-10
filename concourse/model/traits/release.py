@@ -214,6 +214,16 @@ ATTRIBUTES = (
         ''',
         type=ReleaseNotesHandling,
     ),
+    AttributeSpec.optional(
+        name='increment_version_on_tag_collision',
+        default=False,
+        doc='''
+        If `True`, the pipeline will automatically increment the version _once_ if the tag
+        corresponding to the desired version already exists.
+        This incrementation follows the semantics set by the `nextversion` attribute.
+        ''',
+        type=bool,
+    ),
 )
 
 
@@ -254,6 +264,9 @@ class ReleaseTrait(Trait):
 
     def next_cycle_commit_message_prefix(self) -> str:
         return self.raw.get('next_version_commit_message_prefix')
+
+    def increment_version_on_tag_collision(self) -> bool:
+        return self.raw['increment_version_on_tag_collision']
 
     def git_tags(self):
         '''
