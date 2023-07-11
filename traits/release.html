@@ -197,6 +197,14 @@ placeholders are available:</p>
 <td><p>ReleaseNotesHandling</p></td>
 <td><p>configures which iteration of the code to use when generating release notes.</p></td>
 </tr>
+<tr class="row-even"><td><p>increment_version_on_tag_collision</p></td>
+<td><p>no</p></td>
+<td><p>False</p></td>
+<td><p>bool</p></td>
+<td><p>If <code class="code docutils literal notranslate"><span class="pre">True</span></code>, the pipeline will automatically increment the version _once_ if the tag
+corresponding to the desired version already exists.
+This incrementation follows the semantics set by the <code class="code docutils literal notranslate"><span class="pre">nextversion</span></code> attribute.</p></td>
+</tr>
 </tbody>
 </table>
 <h2>nextversion Enumeration Values<a class="headerlink" href="#trait-release" title="Permalink to this heading"></a></h2>
