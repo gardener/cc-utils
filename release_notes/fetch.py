@@ -60,7 +60,7 @@ def _list_commits_since_tag(
     )
 
 
-def _get_release_note_commits_tuple_for_minor_release(
+def _get_release_note_commits_tuple_for_release(
         previous_version: semver.VersionInfo,
         component_versions: dict[semver.VersionInfo, str],
         git_helper: gitutil.GitHelper,
@@ -71,19 +71,19 @@ def _get_release_note_commits_tuple_for_minor_release(
     :return: a tuple of commits which should be included in the release notes
     and a tuple of commits which should not be included in the release notes
     '''
-    logger.info('creating new minor release')
-    # previous minor version with patch, prerelease, build, ... set to 0 / None
-    previous_minor_version = semver.VersionInfo(major=previous_version.major,
-                                                minor=previous_version.minor)
-    previous_minor_version_tag = git_helper.repo.tag(component_versions[previous_minor_version])
-    if not previous_minor_version_tag:
-        raise RuntimeError('cannot find previous minor version in component versions / tags')
-    logger.info(f'found previous minor tag: {previous_minor_version_tag}')
+    logger.info('creating new release')
+
+    previous_version_tag = git_helper.repo.tag(component_versions[previous_version])
+    if not previous_version_tag:
+        raise RuntimeError(
+            f"cannot find previous version '{previous_version!s}' in component versions / tags."
+        )
+    logger.info(f'found previous minor tag: {previous_version_tag}')
 
     # if the current version tag and the previous minor tag are ancestors, just
     # add the range (old method)
     previous_version_tag_commit_sha = git_helper.fetch_head(
-        f'refs/tags/{previous_minor_version_tag}'
+        f'refs/tags/{previous_version_tag}'
     )
     current_tag_commit_sha = git_helper.fetch_head(f'refs/tags/{current_version_tag}')
     if git_helper.repo.is_ancestor(previous_version_tag_commit_sha, current_tag_commit_sha):
@@ -146,16 +146,28 @@ def get_release_note_commits_tuple(
             repo=git_helper.repo,
             tag=previous_version_tag,
         )
-    # new major release (not supported yet)
+    # new major release
     if current_version.major != previous_version.major:
-        raise NotImplementedError(
-            'generating release notes for new major releases is not supported yet.'
+        previous_minor_version = semver.VersionInfo(
+            major=previous_version.major,
+            minor=previous_version.minor
+        )
+        return _get_release_note_commits_tuple_for_release(
+            previous_version=previous_minor_version,
+            component_versions=component_versions,
+            git_helper=git_helper,
+            github_repo=github_repo,
+            current_version_tag=current_version_tag
         )
 
     # new minor release
     if current_version.minor != previous_version.minor:
-        return _get_release_note_commits_tuple_for_minor_release(
-            previous_version=previous_version,
+        previous_minor_version = semver.VersionInfo(
+            major=previous_version.major,
+            minor=previous_version.minor
+        )
+        return _get_release_note_commits_tuple_for_release(
+            previous_version=previous_minor_version,
             component_versions=component_versions,
             git_helper=git_helper,
             github_repo=github_repo,
