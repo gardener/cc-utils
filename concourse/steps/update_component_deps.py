@@ -267,7 +267,6 @@ def _import_release_notes(
     component: gci.componentmodel.Component,
     to_version: str,
     pull_request_util,
-    release_notes_handling: ReleaseNotesHandling = ReleaseNotesHandling.DEFAULT,
 ):
     if not component.sources:
         logger.warning(
@@ -288,7 +287,6 @@ def _import_release_notes(
         from_repo_owner=org_name,
         from_repo_name=repository_name,
         to_version=to_version,
-        release_notes_handling=release_notes_handling,
     )
 
     if not release_notes:
@@ -313,7 +311,6 @@ def create_upgrade_pr(
     merge_method: MergeMethod,
     after_merge_callback=None,
     container_image:str=None,
-    release_notes_handling: ReleaseNotesHandling=ReleaseNotesHandling.DEFAULT,
 ) -> github.util.UpgradePullRequest:
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
@@ -406,7 +403,6 @@ def create_upgrade_pr(
             component=from_component,
             to_version=to_version,
             pull_request_util=pull_request_util,
-            release_notes_handling=release_notes_handling,
         )
     except Exception:
         logger.warning('failed to retrieve release-notes')
@@ -519,7 +515,6 @@ def create_release_notes(
     from_repo_owner: str,
     from_repo_name: str,
     to_version: str,
-    release_notes_handling: ReleaseNotesHandling = ReleaseNotesHandling.DEFAULT,
 ):
     from_version = from_component.version
     try:
@@ -529,36 +524,15 @@ def create_release_notes(
                 github_cfg=from_github_cfg,
                 github_repo_path=f'{from_repo_owner}/{from_repo_name}'
             )
-            if release_notes_handling is ReleaseNotesHandling.DEFAULT:
-                commit_range = '{from_version}..{to_version}'.format(
-                    from_version=from_version,
-                    to_version=to_version,
-                )
-                release_notes = ReleaseNotes(
-                    component=from_component,
-                    repo_dir=temp_dir,
-                )
-                release_notes.create(
-                    start_ref=None, # the repo's default branch
-                    commit_range=commit_range
-                )
-                release_note_blocks = release_notes.release_note_blocks()
-                if release_note_blocks:
-                    return f'**Release Notes**:\n{release_note_blocks}'
-
-            elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
-                release_note_blocks = release_notes_fetch.fetch_release_notes(
-                    repo_path=temp_dir,
-                    component=from_component,
-                    current_version=version.parse_to_semver(to_version),
-                    previous_version=version.parse_to_semver(from_version),
-                )
-                if release_note_blocks:
-                    n = '\n'
-                    return f'**Release Notes**:\n{n.join(r.block_str for r in release_note_blocks)}'
-
-            else:
-                raise NotImplementedError(release_notes_handling)
+            release_note_blocks = release_notes_fetch.fetch_release_notes(
+                repo_path=temp_dir,
+                component=from_component,
+                current_version=version.parse_to_semver(to_version),
+                previous_version=version.parse_to_semver(from_version),
+            )
+            if release_note_blocks:
+                n = '\n'
+                return f'**Release Notes**:\n{n.join(r.block_str for r in release_note_blocks)}'
 
     except:
         logger.warning('an error occurred during release notes processing (ignoring)')

@@ -41,7 +41,6 @@ from github.util import (
 )
 import product.v2
 from github.release_notes.util import (
-    fetch_release_notes,
     post_to_slack,
 )
 from concourse.model.traits.release import (
@@ -636,48 +635,6 @@ class UploadComponentDescriptorStep(TransactionalStep):
             upload_component_descriptor_as_release_asset()
 
 
-class PublishReleaseNotesStep(TransactionalStep):
-    def name(self):
-        return "Publish Release Notes"
-
-    def __init__(
-        self,
-        githubrepobranch: GitHubRepoBranch,
-        github_helper: GitHubRepositoryHelper,
-        component: cm.Component,
-        release_version: str,
-        repo_dir: str,
-    ):
-        self.githubrepobranch = not_none(githubrepobranch)
-        self.github_helper = not_none(github_helper)
-        self.component = component
-        self.release_version = release_version
-        self.repo_dir = os.path.abspath(not_empty(repo_dir))
-
-    def validate(self):
-        pass
-
-    def apply(self):
-        create_release_step_output = self.context().step_output('Create Release')
-        release_tag = create_release_step_output['release_tag_name']
-
-        release_notes = fetch_release_notes(
-            self.component,
-            repo_dir=self.repo_dir,
-            repository_branch=self.githubrepobranch.branch(),
-        )
-        release_notes_md = release_notes.to_markdown(force_link_generation=True)
-        self.github_helper.update_release_notes(
-            tag_name=release_tag,
-            body=release_notes_md,
-            component_name=self.component.name,
-        )
-        return {
-            'release notes': release_notes,
-            'release notes markdown': release_notes_md,
-        }
-
-
 class TryCleanupDraftReleasesStep(TransactionalStep):
     def name(self):
         return "Try to Cleanup Draft Releases"
@@ -874,7 +831,6 @@ def release_and_prepare_next_dev_cycle(
     git_tags: list,
     github_release_tag: dict,
     release_commit_callback_image_reference: str,
-    release_notes_handling: str,
     component_descriptor_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
@@ -913,7 +869,6 @@ def release_and_prepare_next_dev_cycle(
     release_commit_publishing_policy = ReleaseCommitPublishingPolicy(
         release_commit_publishing_policy
     )
-    release_notes_handling = ReleaseNotesHandling(release_notes_handling)
     github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
     git_helper = GitHelper.from_githubrepobranch(
         githubrepobranch=githubrepobranch,
@@ -1037,58 +992,23 @@ def release_and_prepare_next_dev_cycle(
         raise NotImplementedError(release_notes_policy)
 
     if release_on_github:
-        if release_notes_handling is ReleaseNotesHandling.DEFAULT:
-            publish_release_notes_step = PublishReleaseNotesStep(
-                githubrepobranch=githubrepobranch,
-                github_helper=github_helper,
-                component=component,
-                release_version=release_version,
-                repo_dir=repo_dir,
-            )
-            release_notes_transaction = Transaction(
-                ctx=transaction_ctx,
-                steps=(publish_release_notes_step,),
-            )
-            release_notes_transaction.validate()
-            if not release_notes_transaction.execute():
-                raise RuntimeError('An error occurred while publishing the release notes.')
-        elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
-            release_note_blocks = release_notes.fetch.fetch_release_notes(
-                repo_path=repo_dir,
-                component=component,
-                current_version=version.parse_to_semver(release_version),
-            )
-            release_notes_markdown = '\n'.join(
-                str(i) for i in release_notes.markdown.render(release_note_blocks)
-            ) or 'no release notes available'
-            github_helper.update_release_notes(
-                tag_name=release_version,
-                body=release_notes_markdown,
-                component_name=component.name,
-            )
-        else:
-            raise NotImplementedError(release_notes_handling)
+        release_note_blocks = release_notes.fetch.fetch_release_notes(
+            repo_path=repo_dir,
+            component=component,
+            current_version=version.parse_to_semver(release_version),
+        )
+        release_notes_markdown = '\n'.join(
+            str(i) for i in release_notes.markdown.render(release_note_blocks)
+        ) or 'no release notes available'
+        github_helper.update_release_notes(
+            tag_name=release_version,
+            body=release_notes_markdown,
+            component_name=component.name,
+        )
 
     if slack_channel_configs:
         if not release_on_github:
             raise RuntimeError('Cannot post to slack without a github release')
-
-        if release_notes_handling is ReleaseNotesHandling.DEFAULT:
-            release_notes_raw = transaction_ctx.step_output(
-                publish_release_notes_step.name()
-            ).get('release notes')
-            # slack can't auto link pull requests, commits or users
-            # hence we force the link generation when building the markdown string
-            logger.info('Creating release-note markdown before posting to Slack')
-            release_notes_markdown = release_notes_raw.to_markdown(
-                force_link_generation=True
-            )
-        elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
-            # release_notes_markdown already prepared earlier albeit without special link
-            # preparation for Slack.
-            pass
-        else:
-            raise NotImplementedError(release_notes_handling)
 
         all_slack_releases_successful = True
         for slack_cfg in slack_channel_configs:
