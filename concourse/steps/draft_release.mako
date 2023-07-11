@@ -32,8 +32,6 @@ import release_notes.markdown
 from gitutil import GitHelper
 from github.release_notes.util import (
     draft_release_name_for_version,
-    ReleaseNotes,
-    github_repo_path,
 )
 from github.util import (
     GitHubRepositoryHelper,

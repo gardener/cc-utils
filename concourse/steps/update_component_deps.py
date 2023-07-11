@@ -31,7 +31,6 @@ from concourse.model.traits.update_component_deps import (
 from github.util import (
     GitHubRepoBranch,
 )
-from github.release_notes.util import ReleaseNotes
 
 logger = logging.getLogger('step.update_component_deps')
 
