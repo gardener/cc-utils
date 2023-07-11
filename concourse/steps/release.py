@@ -45,7 +45,6 @@ from github.release_notes.util import (
 )
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
-    ReleaseNotesHandling,
     ReleaseNotesPolicy,
 )
 import model.container_registry as cr

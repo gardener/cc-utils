@@ -24,9 +24,6 @@ import model.container_registry as cr
 import product.v2
 import release_notes.fetch as release_notes_fetch
 import version
-from concourse.model.traits.release import (
-    ReleaseNotesHandling,
-)
 from concourse.model.traits.update_component_deps import (
     MergePolicy,
     MergeMethod,
