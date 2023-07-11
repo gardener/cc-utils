@@ -29,7 +29,6 @@ import gci.componentmodel as cm
 import release_notes.fetch
 import release_notes.markdown
 
-from concourse.model.traits.release import ReleaseNotesHandling
 from gitutil import GitHelper
 from github.release_notes.util import (
     draft_release_name_for_version,

@@ -31,9 +31,6 @@ from concourse.model.base import (
 from concourse.model.job import (
     JobVariant,
 )
-from concourse.model.traits.release import (
-    ReleaseNotesHandling,
-)
 from model.base import ModelValidationError
 
 import concourse.model.traits.component_descriptor
@@ -168,14 +165,6 @@ ATTRIBUTES = (
         doc='env vars to pass to after_merge_callback (similar to step\'s vars)',
         type=dict,
     ),
-    AttributeSpec.optional(
-        name='release_notes_handling',
-        default=ReleaseNotesHandling.PREVIEW.value,
-        doc='''
-        configures which iteration of the code to use when generating release notes.
-        ''',
-        type=ReleaseNotesHandling,
-    ),
 )
 
 
@@ -233,9 +222,6 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def ignore_prerelease_versions(self):
         return self.raw.get('ignore_prerelease_versions')
-
-    def release_notes_handling(self) -> ReleaseNotesHandling:
-        return ReleaseNotesHandling(self.raw['release_notes_handling'])
 
     def vars(self):
         return self.raw['vars']
