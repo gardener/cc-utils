@@ -162,7 +162,6 @@ cc-utils:
           release_commit_publishing_policy: tag_only
           release_notes_policy: disabled
           release_on_github: False
-          release_notes_handling: preview
 
     create_upgrade_prs:
       traits:
