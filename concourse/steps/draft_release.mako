@@ -18,7 +18,6 @@ component_descriptor_path = os.path.join(
     job_step.input('component_descriptor_dir'),
     cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
-release_notes_handling=draft_release_trait.release_notes_handling().value
 %>
 import version
 import os
@@ -87,29 +86,13 @@ githubrepobranch = GitHubRepoBranch(
 github_helper = GitHubRepositoryHelper.from_githubrepobranch(
     githubrepobranch=githubrepobranch,
 )
-
-release_notes_handling = ReleaseNotesHandling(
-    '${release_notes_handling}'
+release_note_blocks = release_notes.fetch.fetch_release_notes(
+    repo_path=repo_dir,
+    component=component,
 )
-
-if release_notes_handling is ReleaseNotesHandling.DEFAULT:
-    release_notes = ReleaseNotes(
-        component=component,
-        repo_dir=repo_dir,
-    )
-    release_notes.create(
-        start_ref='${repo.branch()}'
-    )
-    release_notes_md = release_notes.to_markdown()
-
-elif release_notes_handling is ReleaseNotesHandling.PREVIEW:
-    release_note_blocks = release_notes.fetch.fetch_release_notes(
-        repo_path=repo_dir,
-        component=component,
-    )
-    release_notes_md = '\n'.join(
-        str(i) for i in release_notes.markdown.render(release_note_blocks)
-    ) or 'no release notes available'
+release_notes_md = '\n'.join(
+    str(i) for i in release_notes.markdown.render(release_note_blocks)
+) or 'no release notes available'
 
 draft_name = draft_release_name_for_version(processed_version)
 draft_release = github_helper.draft_release_with_name(draft_name)
