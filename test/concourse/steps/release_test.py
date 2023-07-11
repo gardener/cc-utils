@@ -170,50 +170,6 @@ class TestGitHubReleaseStep:
             examinee(release_version='invalid_semver').validate()
 
 
-class TestPublishReleaseNotesStep:
-    @pytest.fixture()
-    def examinee(self, tmp_path):
-        cd_v2 = cm.ComponentDescriptor(
-            component=cm.Component(
-                name='example.com/a_name',
-                version='1.2.3',
-                repositoryContexts=[],
-                provider={
-                    'name': 'some provider',
-                },
-                sources=[],
-                componentReferences=[],
-                resources=[],
-            ),
-            meta=cm.Metadata(),
-        )
-
-        def _examinee(
-            github_helper=MagicMock(),
-            githubrepobranch=GitHubRepoBranch(
-                github_config='test_config',
-                repo_owner='test_owner',
-                repo_name='test_name',
-                branch='master',
-            ),
-            repository_hostname="example.com",
-            repository_path="a_name",
-            repo_dir=str(tmp_path),
-            release_version='1.0.0',
-        ):
-            return concourse.steps.release.PublishReleaseNotesStep(
-                component=cd_v2.component,
-                github_helper=github_helper,
-                githubrepobranch=githubrepobranch,
-                repo_dir=repo_dir,
-                release_version=release_version,
-            )
-        return _examinee
-
-    def test_validation(self, examinee):
-        examinee().validate()
-
-
 class TestTryCleanupDraftReleaseStep:
     @pytest.fixture()
     def examinee(self):
