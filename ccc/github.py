@@ -92,7 +92,7 @@ def github_api_ctor(
                 },
             )
         except:
-            logger.warning('unable to log github api request to Elasticsearch, '
+            logger.debug('unable to log github api request to Elasticsearch, '
                 'will disable logging for future requests')
             session.request = original_request
 
