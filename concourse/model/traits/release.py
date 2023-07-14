@@ -176,7 +176,7 @@ ATTRIBUTES = (
         ''',
         type=str,
     ),
-        AttributeSpec.optional(
+    AttributeSpec.optional(
         name='next_version_commit_message_prefix',
         default=None,
         doc='''
