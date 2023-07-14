@@ -16,6 +16,7 @@ from github3.exceptions import (
 from git.exc import (
     GitCommandError
 )
+import git.types
 
 import gci.componentmodel as cm
 
@@ -265,7 +266,10 @@ class ReleaseCommitStep(TransactionalStep):
                 from_ref=release_commit.hexsha,
                 to_ref=self.repository_branch
             )
-        elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+        elif self.publishing_policy in (
+            ReleaseCommitPublishingPolicy.TAG_ONLY,
+            ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK,
+        ):
             # handled when creating all release tags
             pass
         else:
@@ -283,6 +287,7 @@ class CreateTagsStep(TransactionalStep):
         github_helper: GitHubRepositoryHelper,
         git_helper: GitHelper,
         publishing_policy: ReleaseCommitPublishingPolicy,
+        repository_branch: str,
     ):
         self.github_helper = github_helper
         self.git_helper = git_helper
@@ -290,6 +295,9 @@ class CreateTagsStep(TransactionalStep):
         self.publishing_policy = publishing_policy
 
         self.tags_to_set = tags_to_set
+
+        self.repository_branch = repository_branch
+        self.release_tag = tags_to_set[0]
 
     def name(self):
         return 'Create Tags'
@@ -311,6 +319,7 @@ class CreateTagsStep(TransactionalStep):
         if self.publishing_policy in [
             ReleaseCommitPublishingPolicy.TAG_ONLY,
             ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
+            ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK,
         ]:
             def _push_tag(tag):
                 self.git_helper.push(
@@ -334,8 +343,57 @@ class CreateTagsStep(TransactionalStep):
         else:
             raise NotImplementedError
 
+        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+            def create_merge_commit(head: git.types.Commit_ish):
+                merge_base = self.git_helper.repo.merge_base(
+                    head,
+                    self.context().release_commit,
+                )
+
+                self.git_helper.repo.index.merge_tree(
+                    rhs=self.context().release_commit,
+                    base=merge_base,
+                )
+
+                return self.git_helper.index_to_commit(
+                    message=f'Merge release-commit from tag {self.release_tag}',
+                    parent_commits=(
+                        head,
+                        self.context().release_commit,
+                    ),
+                )
+
+            def merge_release_into_current_target_branch_head():
+                head = self.git_helper.fetch_head(
+                    f'refs/heads/{self.repository_branch}'
+                ) # reduce risks of conflicts
+
+                merge_commit = create_merge_commit(head)
+                self.context().merge_release_back_to_default_branch_commit = merge_commit
+
+                self.git_helper.push(
+                    from_ref=merge_commit.hexsha,
+                    to_ref=self.repository_branch
+                )
+
+                self.git_helper.repo.head.reset(
+                    commit=merge_commit.hexsha,
+                    index=True,
+                    working_tree=True,
+                ) # make sure next dev-cycle commit does not undo the merge-commit
+
+            try:
+                merge_release_into_current_target_branch_head()
+
+            except GitCommandError:
+                # should only occur on merge conflicts
+                logger.warning(f'Merging release-commit from tag {self.release_tag} failed.')
+                traceback.print_exc()
+                # do not fail release-step here as release-tag is created already and next dev-cycle
+                # commit must still be processed
+
         return {
-            'release_tag': self.tags_to_set[0],
+            'release_tag': self.release_tag,
             'tags': self.tags_to_set[1:],
         }
 
@@ -407,6 +465,8 @@ class NextDevCycleCommitStep(TransactionalStep):
                 reset_to = self.context().release_commit
             elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
                 reset_to = 'HEAD'
+            elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+                reset_to = self.context().merge_release_back_to_default_branch_commit
             else:
                 raise NotImplementedError
 
@@ -441,6 +501,8 @@ class NextDevCycleCommitStep(TransactionalStep):
             parent_commits = [self.context().release_commit]
         elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
             parent_commits = None # default to current branch head
+        elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+            parent_commits = [self.context().merge_release_back_to_default_branch_commit]
 
         next_cycle_commit = self.git_helper.index_to_commit(
             message=self._next_dev_cycle_commit_message(
@@ -924,6 +986,7 @@ def release_and_prepare_next_dev_cycle(
         git_helper=git_helper,
         github_helper=github_helper,
         publishing_policy=release_commit_publishing_policy,
+        repository_branch=githubrepobranch.branch(),
     )
     step_list.append(create_tag_step)
 

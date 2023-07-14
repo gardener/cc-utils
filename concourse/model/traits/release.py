@@ -85,6 +85,12 @@ class ReleaseCommitPublishingPolicy(EnumWithDocumentation):
         doc='publish release tag to dead-end',
     )
 
+    TAG_AND_MERGE_BACK = EnumValueWithDocumentation(
+        value='tag_and_merge_back',
+        doc='publish release tag to dead-end and merge back release commit to default branch',
+    )
+
+
 
 ATTRIBUTES = (
     AttributeSpec.optional(
