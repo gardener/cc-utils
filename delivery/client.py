@@ -111,15 +111,26 @@ class DeliveryServiceClient:
         self,
         data: dso.model.ArtefactMetadata,
     ):
+        data_raw = dataclasses.asdict(
+            data,
+            dict_factory=ci.util.dict_to_json_factory
+        )
+
+        # following attributes are about to be removed from artefact-extra-id
+        IMAGE_VECTOR_REPO = 'imagevector-gardener-cloud+repository'
+        IMAGE_VECTOR_TAG = 'imagevector-gardener-cloud+tag'
+
+        artefact_extra_id = data_raw['artefact']['artefact']['artefact_extra_id']
+
+        if artefact_extra_id.get(IMAGE_VECTOR_REPO):
+            del artefact_extra_id[IMAGE_VECTOR_REPO]
+
+        if artefact_extra_id.get(IMAGE_VECTOR_TAG):
+            del artefact_extra_id[IMAGE_VECTOR_TAG]
+
         res = requests.post(
             url=self._routes.upload_metadata(),
-            json={'entries': [
-                    dataclasses.asdict(
-                        data,
-                        dict_factory=ci.util.dict_to_json_factory
-                    )
-                ]
-            },
+            json={'entries': [data_raw]},
         )
 
         res.raise_for_status()
