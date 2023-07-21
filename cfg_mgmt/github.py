@@ -62,8 +62,11 @@ def rotate_cfg_element(
     old_public_keys = []
     new_public_keys = dict()
     for credential in technical_user_credentials:
+        if not (private_key := credential.private_key()):
+            logger.warn(f'{credential.username()=} did not have private-key - skipping')
+            continue
 
-        key_algorithm = _determine_key_algorithm(credential.private_key())
+        key_algorithm = _determine_key_algorithm(private_key)
 
         old_public_keys.append({
             'name': credential.username(),
