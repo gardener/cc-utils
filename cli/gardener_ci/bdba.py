@@ -12,6 +12,7 @@ from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import ccc.oci
 import ccc.protecode
 import ci.util
+import cnudie.iter
 import cnudie.retrieve as cr
 import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
@@ -26,6 +27,40 @@ import protecode.model as pm
 
 __cmd_name__ = 'bdba'
 logger = logging.getLogger(__name__)
+
+
+def ls_products(
+    ocm_component: str,
+    bdba_cfg_name='gardener',
+    group_id=407,
+    ocm_repo: str=None,
+):
+    if not ocm_repo:
+        ocm_repo = ctx.cfg.ctx.ocm_repo_base_url
+
+    client = ccc.protecode.client(bdba_cfg_name)
+
+    if not ':' in ocm_component:
+        raise ValueError('ocm_component must have form <name>:<version>')
+
+    ocm_lookup = cr.create_default_component_descriptor_lookup(default_ctx_repo=ocm_repo)
+
+    root_component_descriptor = ocm_lookup(ocm_component)
+
+    for ocm_node in cnudie.iter.iter(
+        component=root_component_descriptor,
+        lookup=ocm_lookup,
+        node_filter=cnudie.iter.Filter.components,
+    ):
+        component = ocm_node.component
+
+        metadata = {
+            'COMPONENT_NAME': component.name,
+            'COMPONENT_VERSION': component.version,
+        }
+
+        for app in client.list_apps(group_id=group_id, custom_attribs=metadata):
+            print(app.product_id())
 
 
 def rescore(
