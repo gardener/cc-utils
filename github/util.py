@@ -129,12 +129,14 @@ class RepositoryHelperBase:
             )
             return repository
         except NotFoundError as nfe:
+            try:
+                gh_user = self.github.me().name
+            except:
+                gh_user = 'failed to determine current user'
+
             raise RuntimeError(
-                'failed to retrieve repository {o}/{r}'.format(
-                    o=owner,
-                    r=name,
-                ),
-                nfe
+                f'failed to retrieve repository {owner}/{name} {gh_user=}',
+                nfe,
             )
 
 
