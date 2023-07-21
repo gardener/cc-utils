@@ -200,4 +200,9 @@ class GithubCredentials(BasicCredentials):
 
     def _required_attributes(self):
         required_attribs = set(super()._required_attributes())
-        return required_attribs | set(('authToken','privateKey', 'emailAddress'))
+        return required_attribs | set(('authToken', 'emailAddress'))
+
+    def _optional_attributes(self):
+        return (
+            'privateKey',
+        )
