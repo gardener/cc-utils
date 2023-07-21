@@ -36,9 +36,7 @@ def rescore(
     categorisation: str=None,
     assess: bool=False,
 ):
-    cfg_factory = ci.util.ctx().cfg_factory()
-    protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
-    client = ccc.protecode.client(protecode_cfg=protecode_cfg)
+    client = ccc.protecode.client(protecode_cfg_name)
 
     if categorisation and not os.path.isfile(categorisation):
         print(f'{categorisation} must point to an existing file w/ CveCategorisation')
