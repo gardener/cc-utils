@@ -158,6 +158,12 @@ class Component(ModelBase):
     def extended_objects(self) -> 'typing.Generator[ExtendedObject, None, None]':
         return (ExtendedObject(raw_dict=raw) for raw in self.raw.get('extended-objects'))
 
+    @property
+    def tags(self) -> tuple[str]:
+        if not (tags := self.raw.get('tags')):
+            return ()
+        return tuple(tags)
+
     def __repr__(self):
         return (
             f'{self.__class__.__name__}: {self.name()} '
