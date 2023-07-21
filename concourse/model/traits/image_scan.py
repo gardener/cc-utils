@@ -211,6 +211,15 @@ CLAMAV_ATTRS = (
         ''',
         type=str,
     ),
+    AttributeSpec.optional(
+        name='aws_cfg_name',
+        default='',
+        doc='''
+        aws-cfg used to retrieve resources of access-type "s3".
+        If not specified, default cfg-set aws-cfg is used.
+        ''',
+        type=str,
+    ),
 )
 
 
@@ -242,6 +251,9 @@ class ClamAVScanCfg(ModelBase):
 
     def timeout(self):
         return self.raw.get('timeout')
+
+    def aws_cfg_name(self):
+        return self.raw.get('aws_cfg_name')
 
     def validate(self):
         super().validate()
