@@ -288,9 +288,9 @@ def image_vector(argv):
   if not imagevector_label.value['images']:
     component.labels.remove(imagevector_label)
 
-  # XXXXX hack (purge signatures) - remove before committing
+  # "normalise" (match component-cli's behaviour)
+  # this could (and should) be removed
   component_descriptor_dict = dataclasses.asdict(component_descriptor)
-  component_descriptor_dict.pop('signatures')
   component_dict = component_descriptor_dict['component']
   component_dict.pop('creationTime', None)
   if not component_dict.get('labels'):
