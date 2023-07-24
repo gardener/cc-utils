@@ -197,10 +197,6 @@ def image_vector(argv):
       relation = 'external'
       is_local = False
 
-    # special-case: if images.yaml does not specify a tag, but resource is already present,
-    # use tag from existing resource, but otherwise replace it
-    # in this specific case, do not add extraIdentity to behave exactly as component-cli
-    suppress_extra_id = False
     resource_name = None
     resource = None
     if not tag:
@@ -216,7 +212,6 @@ def image_vector(argv):
 
         tag = resource.version
         component.resources.remove(resource)
-        suppress_extra_id = True # special-case for compatibility w/ component-cli; might be omitted
         if not 'relation' in image_dict:
           relation = resource.relation.value
           pass
@@ -227,11 +222,6 @@ def image_vector(argv):
       # component-level
       imagevector_label.value['images'].append(image_dict)
       continue
-
-    if not suppress_extra_id:
-      extra_identity |= {
-        'imagevector-gardener-cloud+tag': tag,
-      }
 
     is_current_component = source_repo == component.name
 
