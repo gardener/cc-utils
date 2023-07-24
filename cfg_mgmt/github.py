@@ -93,6 +93,10 @@ def rotate_cfg_element(
             'rolling back'
         )
         for credential in technical_user_credentials:
+            if not credential.private_key():
+                logger.warn(f'{credential.username()=} did not have private-key - skipping')
+                continue
+
             username = credential.username()
             logger.warning(f"Rolling back changes to user '{username}'")
             new_pub_key = new_public_keys[username]
