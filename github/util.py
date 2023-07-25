@@ -23,7 +23,6 @@ import sys
 
 import typing
 from typing import Iterable, Tuple
-from pydash import _
 
 import requests
 
@@ -718,7 +717,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         return buffer.getvalue().decode()
 
     def release_versions(self):
-        for tag_name in self.release_tags():
+        for tag_name in self._release_tags():
             try:
                 version.parse_to_semver(tag_name)
                 yield tag_name
@@ -726,16 +725,14 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             except ValueError:
                 pass # ignore
 
-    def release_tags(self):
-        return _.chain(
-            self.repository.releases()
-        ).filter(
-            lambda release: not release.draft and not release.prerelease
-        ).map(
-            'tag_name'
-        ).filter(
-            lambda tag: tag is not None
-        ).value()
+    def _release_tags(self):
+        for release in self.repository.releases():
+            if release.draft or release.prerelease:
+                continue
+            if not (tag := release.tag_name):
+                continue
+
+            yield tag
 
     def search_issues_in_repo(self, query: str):
         query = f'repo:{self.owner}/{self.repository_name} {query}'
