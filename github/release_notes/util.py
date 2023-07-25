@@ -248,7 +248,7 @@ class ReleaseNotes:
                 logger.warning('{tag} is not a valid SemVer string'.format(tag=tag_name))
                 return False
 
-        release_tags = self.github_helper.release_tags()
+        release_tags = tuple(self.github_helper.release_tags())
         tags = _ \
             .chain(self.git_helper.repo.tags) \
             .map(lambda tag: {"tag": tag.name, "commit": tag.commit.hexsha}) \
