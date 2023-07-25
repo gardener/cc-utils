@@ -24,11 +24,6 @@ import os
 import pkgutil
 import sys
 
-import ci.log
-# to overwrite cli.py log level, call
-# "configure_default_logging(force=True, stdout_level=logging.DEBUG)" in specific module cli
-ci.log.configure_default_logging(force=True)
-
 try:
     import ci.util
 except ModuleNotFoundError:
@@ -41,6 +36,12 @@ except ModuleNotFoundError:
     )
     sys.path.insert(1, repo_dir)
     import ci.util
+
+import ci.log
+# to overwrite cli.py log level, call
+# "configure_default_logging(force=True, stdout_level=logging.DEBUG)" in specific module cli
+ci.log.configure_default_logging(force=True)
+
 import ctx  # noqa: E402
 
 import_errs = []
