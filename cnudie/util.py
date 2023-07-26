@@ -144,6 +144,83 @@ def determine_component_name(
     return component_name.lower() # OCI demands lowercase
 
 
+def normalise_component_name(component_name: str) -> str:
+    return component_name.lower() # oci-spec demands lowercase
+
+
+def oci_artefact_reference(
+        component: (
+            cm.Component
+            | cm.ComponentIdentity
+            | cm.ComponentReference
+            | str # 'name:version'
+            | tuple[str, str] # (name, version)
+        ),
+        ocm_repository: str | cm.OciRepositoryContext = None
+) -> str:
+    if isinstance(component, cm.Component):
+        if not ocm_repository:
+            ocm_repository = component.current_repository_ctx()
+        component_name = component.name
+        component_version = component.version
+
+    elif isinstance(component, cm.ComponentIdentity):
+        component_name = component.name
+        component_version = component.version
+
+    elif isinstance(component, cm.ComponentReference):
+        component_name = component.componentName
+        component_version = component.version
+
+    elif isinstance(component, str):
+        component_name, component_version = component.split[':']
+
+    elif isinstance(component, tuple):
+        if not len(component) == 2 or not (
+            isinstance(component[0], str) and isinstance(component[1], str)
+        ):
+            raise TypeError("If a tuple is given as component, it must contain two strings.")
+        component_name, component_version = component
+    else:
+        raise TypeError(type(component))
+
+    if not ocm_repository:
+        raise ValueError('ocm_repository must be given unless a Component is passed.')
+    elif isinstance(ocm_repository, str):
+        repo_ctx = cm.OciRepositoryContext(baseUrl=ocm_repository)
+    elif isinstance(ocm_repository, cm.OciRepositoryContext):
+        repo_ctx = ocm_repository
+    else:
+        raise TypeError(type(ocm_repository))
+
+    return repo_ctx.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
+    )
+
+
+def target_oci_ref(
+    component: cm.Component,
+    component_ref: cm.ComponentReference=None,
+    component_version: str=None,
+):
+    if not component_ref:
+        component_ref = component
+        component_name = component_ref.name
+    else:
+        component_name = component_ref.componentName
+
+    component_name = normalise_component_name(component_name)
+    component_version = component_ref.version
+
+    last_ctx_repo = component.current_repository_ctx()
+
+    return last_ctx_repo.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
+    )
+
+
 def main_source(
     component: cm.Component,
     absent_ok: bool=True,
