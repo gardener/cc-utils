@@ -42,7 +42,6 @@ from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
-import product.v2
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
     ReleaseNotesPolicy,
@@ -683,11 +682,11 @@ class UploadComponentDescriptorStep(TransactionalStep):
 
                 component = components_by_id[component.identity()]
 
-                tgt_ref = product.v2._target_oci_ref(component=component)
+                tgt_ref = cnudie.util.target_oci_ref(component=component)
 
                 logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
                 cnudie.upload.upload_component_descriptor(
-                    component_descriptor_v2=component,
+                    component_descriptor=component,
                 )
 
         upload_component_descriptors(components=components)
