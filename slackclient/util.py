@@ -18,6 +18,7 @@ import logging
 import slack
 
 import ci.log
+import ci.util
 import model.slack
 
 
@@ -92,3 +93,48 @@ class SlackHelper:
         if not response['ok']:
             raise RuntimeError(f"failed to delete file with id {file_id}")
         return response
+
+def post_to_slack(
+    release_notes_markdown: str,
+    github_repository_name: str,
+    slack_cfg_name: str,
+    slack_channel: str,
+    release_version: str,
+    max_msg_size_bytes: int=20000,
+):
+    # XXX slack imposes a maximum msg size
+    # https://api.slack.com/changelog/2018-04-truncating-really-long-messages#
+
+    slack_cfg = ci.util.ctx().cfg_factory().slack(slack_cfg_name)
+    slack_helper = SlackHelper(slack_cfg)
+
+    idx = 0
+    i = 0
+
+    try:
+        while True:
+            title = f'[{github_repository_name}:{release_version} released'
+
+            # abort on last
+            if idx + max_msg_size_bytes > len(release_notes_markdown):
+                did_split = i > 0
+                if did_split:
+                    title += ' - final]'
+                else:
+                    title += ']'
+
+                msg = release_notes_markdown[idx:]
+                yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
+                break
+
+            # post part
+            title += f' - part {i} ]'
+            msg = release_notes_markdown[idx: idx+max_msg_size_bytes]
+            logger.info(f"Posting release-note '{title}'")
+            yield slack_helper.post_to_slack(channel=slack_channel, title=title, message=msg)
+
+            i += 1
+            idx += max_msg_size_bytes
+
+    except RuntimeError as e:
+        logger.warning(e)

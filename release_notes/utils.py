@@ -10,11 +10,14 @@ import github3
 import github3.exceptions as gh3e
 import github3.pulls as gh3p
 import github3.structs as gh3s
-import gitutil
 import semver
 import yaml
 import yaml.scanner
 
+import ccc
+import gci.componentmodel
+import github.util
+import gitutil
 import release_notes.model as rnm
 
 _meta_key = 'gardener.cloud/release-notes-metadata/v1'
@@ -229,3 +232,26 @@ def request_pull_requests_from_api(
                            f'{pending.keys()} is/are either not closed or cannot be found')
 
     return result
+
+
+def github_helper_from_github_access(
+    github_access=gci.componentmodel.GithubAccess,
+):
+    logger.info(f'Creating GH Repo-helper for {github_access.repoUrl}')
+    return github.util.GitHubRepositoryHelper(
+        github_api=ccc.github.github_api_from_gh_access(github_access),
+        owner=github_access.org_name(),
+        name=github_access.repository_name(),
+    )
+
+
+def git_helper_from_github_access(
+    github_access: gci.componentmodel.GithubAccess,
+    repo_path: str,
+):
+    logger.info(f'Creating Git-helper for {github_access.repoUrl}')
+    return gitutil.GitHelper(
+        repo=repo_path,
+        github_cfg=ccc.github.github_cfg_for_repo_url(github_access.repoUrl),
+        github_repo_path=f'{github_access.org_name()}/{github_access.repository_name()}',
+    )

@@ -33,6 +33,7 @@ import cnudie.validate
 import dockerutil
 import release_notes.fetch
 import release_notes.markdown
+import slackclient.util
 
 from gitutil import GitHelper
 from github.util import (
@@ -40,9 +41,6 @@ from github.util import (
     GitHubRepoBranch,
 )
 import product.v2
-from github.release_notes.util import (
-    post_to_slack,
-)
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
     ReleaseNotesPolicy,
@@ -679,7 +677,7 @@ class PostSlackReleaseStep(TransactionalStep):
         version.parse_to_semver(self.release_version)
 
     def apply(self):
-        responses = post_to_slack(
+        responses = slackclient.util.post_to_slack(
             release_notes_markdown=self.release_notes_markdown,
             github_repository_name=self.githubrepobranch.github_repo_path(),
             slack_cfg_name=self.slack_cfg_name,

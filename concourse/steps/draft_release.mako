@@ -30,9 +30,6 @@ import release_notes.fetch
 import release_notes.markdown
 
 from gitutil import GitHelper
-from github.release_notes.util import (
-    draft_release_name_for_version,
-)
 from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
@@ -91,7 +88,7 @@ release_notes_md = '\n'.join(
     str(i) for i in release_notes.markdown.render(release_note_blocks)
 ) or 'no release notes available'
 
-draft_name = draft_release_name_for_version(processed_version)
+draft_name = f'{processed_version}-draft'
 draft_release = github_helper.draft_release_with_name(draft_name)
 if not draft_release:
     github_helper.create_draft_release(

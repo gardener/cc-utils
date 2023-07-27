@@ -8,7 +8,6 @@ import semver
 
 import cnudie.retrieve
 import cnudie.util
-import github.release_notes.util as ghrnu
 import gitutil
 import release_notes.model as rnm
 import release_notes.utils as rnu
@@ -214,8 +213,9 @@ def fetch_release_notes(
             return set()
 
     source = cnudie.util.determine_main_source_for_component(component)
-    github_helper = ghrnu.github_helper_from_github_access(source.access)
-    git_helper = ghrnu.git_helper_from_github_access(source.access, repo_path)
+    github_helper = rnu.github_helper_from_github_access(source.access)
+    git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
+
     # make sure _all_ tags are available locally
     git_helper.fetch_tags()
 
