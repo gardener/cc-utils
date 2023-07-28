@@ -94,6 +94,7 @@ class SlackHelper:
             raise RuntimeError(f"failed to delete file with id {file_id}")
         return response
 
+
 def post_to_slack(
     release_notes_markdown: str,
     github_repository_name: str,
