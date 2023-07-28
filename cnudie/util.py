@@ -9,6 +9,33 @@ import gci.componentmodel as cm
 import oci.model as om
 import product.v2
 
+ComponentId = cm.Component, cm.ComponentDescriptor | cm.ComponentIdentity | str | tuple[str, str]
+
+
+def to_component_id(
+    component: ComponentId, /
+) -> cm.ComponentIdentity:
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+    if isinstance(component, cm.Component):
+        return cm.ComponentIdentity(
+            name=component.name,
+            version=component.version,
+        )
+    if isinstance(component, cm.ComponentIdentity):
+        return component
+
+    if isinstance(component, str):
+        name, version = component.split(':', 1)
+
+    if isinstance(component, tuple):
+        name, version = component
+
+    return cm.ComponentIdentity(
+        name=name,
+        version=version,
+    )
+
 
 def to_component_id_and_repository_url(
     component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,

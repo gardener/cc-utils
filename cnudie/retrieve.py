@@ -87,6 +87,12 @@ def in_memory_cache_component_descriptor_lookup(
         if not ctx_repo:
             raise ValueError(ctx_repo)
 
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.AccessType.OCI_REGISTRY,
+                baseUrl=ctx_repo,
+            )
+
         if not isinstance(ctx_repo, cm.OciRepositoryContext):
             raise NotImplementedError(ctx_repo)
 
@@ -149,14 +155,22 @@ def file_system_cache_component_descriptor_lookup(
     _writeback = WriteBack(writeback)
 
     def lookup(
-        component_id: cm.ComponentIdentity,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        component_id: cnudie.util.ComponentId,
+        ctx_repo: cm.RepositoryContext|str=default_ctx_repo,
     ):
         if not ctx_repo:
             raise ValueError(ctx_repo)
 
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.AccessType.OCI_REGISTRY,
+                baseUrl=ctx_repo,
+            )
+
         if not isinstance(ctx_repo, cm.OciRepositoryContext):
             raise NotImplementedError(ctx_repo)
+
+        component_id = cnudie.util.to_component_id(component_id)
 
         descriptor_path = os.path.join(
             cache_dir,
@@ -205,6 +219,8 @@ def delivery_service_component_descriptor_lookup(
         if not isinstance(ctx_repo, cm.OciRepositoryContext):
             raise NotImplementedError(ctx_repo)
 
+        component_id = cnudie.util.to_component_id(component_id)
+
         try:
             return delivery_client.component_descriptor(
                 name=component_id.name,
@@ -247,9 +263,16 @@ def oci_component_descriptor_lookup(
         if not ctx_repo:
             raise ValueError(ctx_repo)
 
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.OciAccess,
+                baseUrl=ctx_repo,
+            )
+
         if not isinstance(ctx_repo, cm.OciRepositoryContext):
             raise NotImplementedError(ctx_repo)
 
+        component_id = cnudie.util.to_component_id(component_id)
         component_name = component_id.name.lower() # oci-spec allows only lowercase
 
         target_ref = ci.util.urljoin(
@@ -317,7 +340,7 @@ def oci_component_descriptor_lookup(
 
 def composite_component_descriptor_lookup(
     lookups: typing.Tuple[ComponentDescriptorLookupById, ...],
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.RepositoryContext | str=None,
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -333,6 +356,7 @@ def composite_component_descriptor_lookup(
         ctx_repo: cm.OciRepositoryContext|str=default_ctx_repo,
         absent_ok=default_absent_ok,
     ):
+        component_id = cnudie.util.to_component_id(component_id)
         writebacks = []
         for lookup in lookups:
             res = None
@@ -403,6 +427,9 @@ def create_default_component_descriptor_lookup(
         ))
 
     lookups.append(oci_component_descriptor_lookup())
+
+    if not default_ctx_repo:
+        default_ctx_repo = ctx.cfg.ctx.ocm_repo_base_url
 
     return composite_component_descriptor_lookup(
         lookups=tuple(lookups),
