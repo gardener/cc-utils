@@ -240,15 +240,15 @@ def delivery_service_component_descriptor_lookup(
 
 def oci_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
-    oci_client: oc.Client=None,
+    oci_client: oc.Client | typing.Callable[[], oc.Client]=None,
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the oci-registry.
 
     @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
-    @param oci_client:       client to establish the connection to the oci-registry. If the \
-                             client cannot be created, a ValueError is raised
+    @param oci_client:       client or callback to establish the connection to the oci-registry. \
+                             If the client cannot be created, a ValueError is raised
     '''
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -281,7 +281,12 @@ def oci_component_descriptor_lookup(
             f'{component_name}:{component_id.version}',
         )
 
-        manifest = oci_client.manifest(
+        if isinstance(oci_client, typing.Callable):
+            local_oci_client = oci_client()
+        else:
+            local_oci_client = oci_client
+
+        manifest = local_oci_client.manifest(
             image_reference=target_ref,
             absent_ok=True,
         )
@@ -294,7 +299,7 @@ def oci_component_descriptor_lookup(
 
         try:
             cfg_dict = json.loads(
-                oci_client.blob(
+                local_oci_client.blob(
                     image_reference=target_ref,
                     digest=manifest.config.digest,
                 ).text
@@ -322,7 +327,7 @@ def oci_component_descriptor_lookup(
             logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
             # XXX: check for non-tar-variant
 
-        blob_res = oci_client.blob(
+        blob_res = local_oci_client.blob(
             image_reference=target_ref,
             digest=layer_digest,
             stream=False, # manifests are typically small - do not bother w/ streaming
