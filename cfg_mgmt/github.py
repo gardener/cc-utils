@@ -1,7 +1,9 @@
+import base64
 import copy
+import enum
+import hashlib
 import logging
 import typing
-import enum
 
 from Crypto.PublicKey import RSA, ECC
 
@@ -44,6 +46,28 @@ def _determine_key_algorithm(key: str) -> KeyAlgorithm:
     raise ValueError('Unsupported Key format. Currently, only RSA and ECC keys are supported.')
 
 
+def _rsa_sha256_fingerprint(key: str) -> str:
+    # Returns the fingerprint (as shown in the GitHub UI).
+    if not key.startswith('ssh-rsa '):
+        return ''
+    try:
+        # fingerprint is built from the raw decoded public key, so we need to strip the prefix when
+        # working with the string
+        key = key.lstrip('ssh-rsa ').encode()
+        key_raw = base64.b64decode(key)
+
+        key_hash = hashlib.sha256(key_raw).digest()
+        fingerprint = base64.b64encode(key_hash).decode()
+        # remove '=' used for padding (they are not present in GitHub/ssh-keygen when showing
+        # fingerprints)
+        fingerprint = fingerprint.rstrip('=')
+        return f'SHA256:{fingerprint}'
+    except:
+        # These fingerprints are intended to make our life easier when looking at the rotation
+        # queue, they are not important enough to raise any errors.
+        return ''
+
+
 def rotate_cfg_element(
     cfg_element: model.container_registry.ContainerRegistryConfig,
     cfg_factory: model.ConfigFactory,
@@ -68,12 +92,17 @@ def rotate_cfg_element(
 
         key_algorithm = _determine_key_algorithm(private_key)
 
+        old_public_key = _corresponding_public_key(
+            private_key=credential.private_key(),
+            key_algorithm=key_algorithm,
+        )
+
+        old_key_fingerprint = _rsa_sha256_fingerprint(old_public_key)
+
         old_public_keys.append({
             'name': credential.username(),
-            'public_key': _corresponding_public_key(
-                private_key=credential.private_key(),
-                key_algorithm=key_algorithm,
-            ),
+            'public_key': old_public_key,
+            'fingerprint': old_key_fingerprint,
         })
 
         new_public_keys.update({
