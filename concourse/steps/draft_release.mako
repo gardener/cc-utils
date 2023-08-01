@@ -80,13 +80,19 @@ githubrepobranch = GitHubRepoBranch(
 github_helper = GitHubRepositoryHelper.from_githubrepobranch(
     githubrepobranch=githubrepobranch,
 )
-release_note_blocks = release_notes.fetch.fetch_release_notes(
-    repo_path=repo_dir,
-    component=component,
-)
-release_notes_md = '\n'.join(
-    str(i) for i in release_notes.markdown.render(release_note_blocks)
-) or 'no release notes available'
+try:
+    release_note_blocks = release_notes.fetch.fetch_release_notes(
+        repo_path=repo_dir,
+        component=component,
+    )
+    release_notes_md = '\n'.join(
+        str(i) for i in release_notes.markdown.render(release_note_blocks)
+    ) or 'no release notes available'
+except ValueError as e:
+    ci.util.warning(f'Error when computing release notes: {e}')
+    # this will happen if a component-descriptor for a more recent version than what is available in the
+    # repository is already published - usually by steps that erroneously publish them before they should.
+    release_notes_md = 'no release notes available'
 
 draft_name = f'{processed_version}-draft'
 draft_release = github_helper.draft_release_with_name(draft_name)
