@@ -73,6 +73,9 @@ def remove_component_descriptor_and_referenced_artefacts(
             continue # we ignore source-nodes for now
 
         if isinstance(node, cnudie.iter.ResourceNode):
+            if not node.resource.relation is cm.ResourceRelation.LOCAL:
+                logger.info(f'skipping non-local {node.resource.name=}')
+                continue
             try:
                 did_remove = _remove_resource(
                     node=node,
