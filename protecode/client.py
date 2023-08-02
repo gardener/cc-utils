@@ -59,9 +59,9 @@ class ProtecodeApiRoutes:
     def _url(self, *parts):
         return urljoin(self._base_url, *parts)
 
-    def apps(self, group_id, custom_attribs={}):
+    def apps(self, group_id=None, custom_attribs={}):
         url = self._api_url('apps')
-        if group_id:
+        if group_id is not None:
             url = urljoin(url, str(group_id))
 
         search_query = ' '.join(['meta:' + str(k) + '=' + str(v) for k,v in custom_attribs.items()])
@@ -255,7 +255,7 @@ class ProtecodeApi:
             result = scan_finished()
         return result
 
-    def list_apps(self, group_id, custom_attribs={}) -> typing.List[Product]:
+    def list_apps(self, group_id=None, custom_attribs={}) -> typing.List[Product]:
         # Protecode checks for substring match only.
         def full_match(analysis_result_attribs):
             if not custom_attribs:
