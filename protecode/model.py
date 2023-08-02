@@ -253,9 +253,9 @@ class Vulnerability(ModelBase):
 
     @property
     def published(self) -> datetime.date:
-        if not (published := self.raw.get('published')):
+        if not (published := self.raw['vuln'].get('published')):
             return None
-        return dateutil.isoparse(published)
+        return dateutil.parser.isoparse(published)
 
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.cve()}'
