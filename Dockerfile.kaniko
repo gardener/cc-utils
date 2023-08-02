@@ -1,4 +1,4 @@
-ARG BASE_IMAGE_TAG=0.89.0
+ARG BASE_IMAGE_TAG=0.90.0
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG as builder
 RUN pip3 install --upgrade \
   pip \

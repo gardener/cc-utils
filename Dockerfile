@@ -1,4 +1,4 @@
-ARG BASE_IMAGE_TAG=0.89.0
+ARG BASE_IMAGE_TAG=0.90.0
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG as builder
 COPY VERSION /metadata/VERSION
 COPY . /cc/utils/
@@ -30,7 +30,7 @@ COPY VERSION /metadata/VERSION
 
 # XXX backards compatibility (remove eventually)
 ENV PATH /cc/utils/:/cc/utils/bin:$PATH
-ENV HELM_V3_VERSION=v3.8.0
+ENV HELM_V3_VERSION=v3.12.2
 ENV HELM_ARCH="${TARGETARCH}"
 
 # backwards-compatibility
