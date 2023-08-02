@@ -4,6 +4,7 @@ coreutils
 curl
 gcc
 git
+git-crypt
 git-lfs
 grep
 iptables
