@@ -45,21 +45,16 @@ class Sprint:
         )
 
 
-@dataclasses.dataclass(frozen=True) # deduplicate w/ modelclass in delivery-service/osinfo/model.py
+@dataclasses.dataclass(frozen=True)
 class OsReleaseInfo:
     name: str
+    reached_eol: bool
     greatest_version: str | None = None
     eol_date: datetime.date | None = None
 
     @property
     def parsed_version(self) -> awesomeversion.AwesomeVersion:
         return awesomeversion.AwesomeVersion(self.name)
-
-    def reached_eol(self, ref_date:datetime.date=None):
-        if not ref_date:
-            ref_date = datetime.date.today()
-
-        return self.eol_date < ref_date
 
     @staticmethod
     def from_dict(raw: dict):

@@ -56,7 +56,7 @@ def branch_reached_eol(
     if not branch_info:
         return False
 
-    return branch_info.reached_eol()
+    return branch_info.reached_eol
 
 
 def update_available(
