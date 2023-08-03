@@ -16,6 +16,7 @@
 import logging
 
 import slack
+import slack.errors
 
 import ci.log
 import ci.util
@@ -70,11 +71,16 @@ class SlackHelper:
             return response
         except slack.errors.SlackApiError as sae:
             error_code = sae.response.get('error')
+            error_status = sae.response.get('status')
             if retries < 1:
                 raise sae # no retries left (or none requested)
             if error_code == 'markdown_conversion_failed_because_of_read_failed':
                 logger.warning(f'received {error_code} - retrying {retries}')
                 return self._post_with_retry(client=client, retries=retries-1, **kwargs)
+            elif error_status == 503: # Service Unavailable
+                logger.warning(
+                    f"Slack responded with 'Service Unavailable' (503) - retrying ({retries})"
+                )
             else:
                 raise sae # only retry for known sporadic err
 
@@ -137,5 +143,9 @@ def post_to_slack(
             i += 1
             idx += max_msg_size_bytes
 
-    except RuntimeError as e:
-        logger.warning(e)
+    except (RuntimeError, slack.errors.SlackApiError) as e:
+        logger.warning(
+            f'Unable to post release notes to Slack: {e}. Will dump generated notes next to '
+            'enable manually posting them.'
+        )
+        print(release_notes_markdown)
