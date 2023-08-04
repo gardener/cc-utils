@@ -46,6 +46,8 @@ def remove_component_descriptor_and_referenced_artefacts(
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
 
+    logger.info(f'will try to purge {component.name}:{component.version} including local resources')
+
     current_component = None
     resources_with_removal_errors = []
     if not oci_client:
