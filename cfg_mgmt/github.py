@@ -69,7 +69,7 @@ def _rsa_sha256_fingerprint(key: str) -> str:
 
 
 def rotate_cfg_element(
-    cfg_element: model.container_registry.ContainerRegistryConfig,
+    cfg_element: model.github.GithubConfig,
     cfg_factory: model.ConfigFactory,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 

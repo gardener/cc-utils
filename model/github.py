@@ -182,7 +182,7 @@ class GithubCredentials(BasicCredentials):
     Not intended to be instantiated by users of this module
     '''
 
-    def auth_token(self):
+    def auth_token(self) -> str:
         tokens = self.raw.get('auth_tokens', None)
         if tokens:
             return random.choice(tokens)
