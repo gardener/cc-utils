@@ -272,13 +272,16 @@ This incrementation follows the semantics set by the <code class="code docutils 
 <tr class="row-odd"><td><p>tag_only</p></td>
 <td><p>publish release tag to dead-end</p></td>
 </tr>
+<tr class="row-even"><td><p>tag_and_merge_back</p></td>
+<td><p>publish release tag to dead-end and merge back release commit to default branch</p></td>
+</tr>
 </tbody>
 </table>
 <h2>Dependencies<a class="headerlink" href="#trait-release" title="Permalink to this heading"></a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 <li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
+<li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
 </ul>
 </section>
 <p>This trait add release job semantics to the declaring build job.</p>
