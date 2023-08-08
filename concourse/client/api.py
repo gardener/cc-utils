@@ -21,7 +21,6 @@ import typing
 import requests
 from ensure import ensure_annotations
 
-import ci.log
 from concourse.client.model import ResourceType
 from http_requests import AuthenticatedRequestBuilder
 
@@ -40,8 +39,6 @@ from concourse.client.model import (
 )
 from .routes import ConcourseApiRoutesBase, ConcourseApiRoutesV6_3_0
 
-
-ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 # Hard coded oauth user and password
