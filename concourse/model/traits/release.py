@@ -91,7 +91,6 @@ class ReleaseCommitPublishingPolicy(EnumWithDocumentation):
     )
 
 
-
 ATTRIBUTES = (
     AttributeSpec.optional(
         name='nextversion',
