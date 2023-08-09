@@ -52,7 +52,8 @@ def iter(
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
-    node_filter: typing.Callable[[Node], bool]=None
+    node_filter: typing.Callable[[Node], bool]=None,
+    ctx_repo: cm.RepositoryContext | str=None,
 ):
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
@@ -68,6 +69,7 @@ def iter(
                             component dependencies
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
+    @param ctx_repo:     optional ctx_repo to be used to override in the lookup
     '''
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
@@ -112,7 +114,10 @@ def iter(
                 name=cref.componentName,
                 version=cref.version,
             )
-            referenced_component_descriptor = lookup(cref_id)
+            if ctx_repo:
+                referenced_component_descriptor = lookup(cref_id, ctx_repo)
+            else:
+                referenced_component_descriptor = lookup(cref_id)
             referenced_component = referenced_component_descriptor.component
 
             yield from inner_iter(
