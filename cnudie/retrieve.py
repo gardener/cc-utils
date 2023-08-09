@@ -568,7 +568,8 @@ def greatest_component_versions(
     ctx_repo: cm.RepositoryContext,
     max_versions: int = 5,
     greatest_version: str = None,
-    oci_client: oc.Client=None,
+    oci_client: oc.Client = None,
+    ignore_prerelease_versions: bool = False,
 ) -> list[str]:
     if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
@@ -584,6 +585,9 @@ def greatest_component_versions(
 
     if not versions:
         return []
+
+    if ignore_prerelease_versions:
+        versions = [v for v in versions if not (pv := version.parse_to_semver(v)).prerelease and not pv.build]
 
     versions = sorted(versions, key=version.parse_to_semver)
 
