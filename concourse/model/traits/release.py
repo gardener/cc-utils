@@ -170,6 +170,15 @@ ATTRIBUTES = (
         type=str,
     ),
     AttributeSpec.optional(
+        name='merge_release_to_default_branch_commit_message_prefix',
+        default=None,
+        doc='''
+        an optional prefix for the merge-commit message when merging back release-commit from tag
+        to default branch
+        ''',
+        type=str,
+    ),
+    AttributeSpec.optional(
         name='git_tags',
         default=[{'ref_template': 'refs/tags/{VERSION}'}],
         doc='''
@@ -240,6 +249,9 @@ class ReleaseTrait(Trait):
 
     def next_cycle_commit_message_prefix(self) -> str:
         return self.raw.get('next_version_commit_message_prefix')
+
+    def merge_release_to_default_branch_commit_message_prefix(self) -> str:
+        return self.raw.get('merge_release_to_default_branch_commit_message_prefix')
 
     def increment_version_on_tag_collision(self) -> bool:
         return self.raw['increment_version_on_tag_collision']

@@ -21,6 +21,7 @@ version_op = release_trait.nextversion()
 emergency_increment_version = release_trait.increment_version_on_tag_collision()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
 next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
+merge_release_to_default_branch_commit_message_prefix = release_trait.merge_release_to_default_branch_commit_message_prefix()
 
 has_slack_trait = job_variant.has_trait('slack')
 if has_slack_trait:
@@ -108,6 +109,9 @@ concourse.steps.release.release_and_prepare_next_dev_cycle(
   release_commit_callback_image_reference=release_commit_callback_image_reference,
   % if release_commit_message_prefix:
   release_commit_message_prefix='${release_commit_message_prefix}',
+  % endif
+  % if merge_release_to_default_branch_commit_message_prefix:
+  merge_release_to_default_branch_commit_message_prefix='${merge_release_to_default_branch_commit_message_prefix}',
   % endif
   % if next_cycle_commit_message_prefix:
   next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',

@@ -288,6 +288,7 @@ class CreateTagsStep(TransactionalStep):
         git_helper: GitHelper,
         publishing_policy: ReleaseCommitPublishingPolicy,
         repository_branch: str,
+        merge_commit_message_prefix: str,
     ):
         self.github_helper = github_helper
         self.git_helper = git_helper
@@ -298,6 +299,8 @@ class CreateTagsStep(TransactionalStep):
 
         self.repository_branch = repository_branch
         self.release_tag = tags_to_set[0]
+
+        self.merge_commit_message_prefix = merge_commit_message_prefix
 
     def name(self):
         return 'Create Tags'
@@ -344,6 +347,16 @@ class CreateTagsStep(TransactionalStep):
             raise NotImplementedError
 
         if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+            def _merge_commit_message(
+                tag: str,
+                merge_commit_message_prefix: str='',
+            ) -> str:
+                message = f'Merge release-commit from tag {tag}',
+                if merge_commit_message_prefix:
+                    return f'{merge_commit_message_prefix} {message}'
+                else:
+                    return message
+
             def create_merge_commit(head: git.types.Commit_ish):
                 merge_base = self.git_helper.repo.merge_base(
                     head,
@@ -356,7 +369,10 @@ class CreateTagsStep(TransactionalStep):
                 )
 
                 return self.git_helper.index_to_commit(
-                    message=f'Merge release-commit from tag {self.release_tag}',
+                    message=_merge_commit_message(
+                        tag=self.release_tag,
+                        merge_commit_message_prefix=self.merge_commit_message_prefix,
+                    ),
                     parent_commits=(
                         head,
                         self.context().release_commit,
@@ -899,6 +915,7 @@ def release_and_prepare_next_dev_cycle(
     release_on_github: bool=True,
     release_commit_callback: str=None,
     release_commit_message_prefix: str=None,
+    merge_release_to_default_branch_commit_message_prefix: str=None,
     slack_channel_configs: list=[],
     version_operation: str='bump_minor',
 ):
@@ -987,6 +1004,7 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         publishing_policy=release_commit_publishing_policy,
         repository_branch=githubrepobranch.branch(),
+        merge_commit_message_prefix=merge_release_to_default_branch_commit_message_prefix,
     )
     step_list.append(create_tag_step)
 
