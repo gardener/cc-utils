@@ -351,7 +351,7 @@ class CreateTagsStep(TransactionalStep):
                 tag: str,
                 merge_commit_message_prefix: str='',
             ) -> str:
-                message = f'Merge release-commit from tag {tag}',
+                message = f'Merge release-commit from tag {tag}'
                 if merge_commit_message_prefix:
                     return f'{merge_commit_message_prefix} {message}'
                 else:
