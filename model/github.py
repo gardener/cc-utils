@@ -189,6 +189,9 @@ class GithubCredentials(BasicCredentials):
         # fallback to single token
         return self.raw.get('authToken')
 
+    def secondary_auth_token(self) -> str:
+        return self.raw.get('secondary_authToken')
+
     def set_auth_token(self, auth_token):
         self.raw['authToken'] = auth_token
 
@@ -205,4 +208,5 @@ class GithubCredentials(BasicCredentials):
     def _optional_attributes(self):
         return (
             'privateKey',
+            'secondary_authToken'
         )
