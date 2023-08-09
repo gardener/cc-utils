@@ -170,7 +170,14 @@ immediately after the release-commit.</p></td>
 <td><p>an optional prefix for the commit message of the commit bumping the release version
 immediately after the release-commit</p></td>
 </tr>
-<tr class="row-odd"><td><p>git_tags</p></td>
+<tr class="row-odd"><td><p>merge_release_to_default_branch_commit_message_prefix</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>an optional prefix for the merge-commit message when merging back release-commit from tag
+to default branch</p></td>
+</tr>
+<tr class="row-even"><td><p>git_tags</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">ref_template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">refs/tags/{VERSION}</span>
 </pre></div>
@@ -185,13 +192,13 @@ placeholders are available:</p>
 <p>The first tag will be used to create the GitHub-release.</p>
 </p></td>
 </tr>
-<tr class="row-even"><td><p>release_on_github</p></td>
+<tr class="row-odd"><td><p>release_on_github</p></td>
 <td><p>no</p></td>
 <td><p>True</p></td>
 <td><p>bool</p></td>
 <td><p>if true, a github release is published.</p></td>
 </tr>
-<tr class="row-odd"><td><p>increment_version_on_tag_collision</p></td>
+<tr class="row-even"><td><p>increment_version_on_tag_collision</p></td>
 <td><p>no</p></td>
 <td><p>False</p></td>
 <td><p>bool</p></td>
