@@ -127,11 +127,30 @@ def write_config_queue(
 def local_cfg_type_sources(
     cfg_element: model.NamedModelElement,
     cfg_factory: typing.Union[model.ConfigFactory, model.ConfigurationSet],
-) -> typing.Iterable[str]:
+) -> set[str]:
     cfg_type = cfg_factory._cfg_type(cfg_element._type_name)
     return {
         src.file for src in cfg_type.sources() if isinstance(src, model.LocalFileCfgSrc)
     }
+
+
+def _local_cfg_file(
+    cfg_element: model.NamedModelElement,
+    cfg_factory: typing.Union[model.ConfigFactory, model.ConfigurationSet],
+) -> str | None:
+    '''Return the local source file for the given config element from the given factory, or None
+    if it is not unambiguosly identifiable.
+    '''
+    local_cfg_files = local_cfg_type_sources(cfg_element, cfg_factory)
+
+    if len(local_cfg_files) > 1:
+        logger.warning("Config elements with more than one local source file are not supported")
+        return None
+    if not local_cfg_files:
+        logger.warning(f"No local source file known for cfg type '{cfg_element._type_name}'")
+        return None
+
+    return local_cfg_files.pop()
 
 
 def write_named_element(
@@ -167,13 +186,13 @@ def write_changes_to_local_dir(
     cfg_factory: model.ConfigFactory,
     cfg_dir: str,
 ):
-    local_cfg_files = local_cfg_type_sources(cfg_element, cfg_factory)
+    src_file = _local_cfg_file(cfg_element, cfg_factory)
 
-    if len(local_cfg_files) > 1:
-        raise RuntimeError("Config elements with more than one local source file are not supported")
-
-    if not (src_file := next((f for f in local_cfg_files), None)):
-        raise RuntimeError(f"No local source file known for cfg type '{cfg_element._type_name}'")
+    if not src_file:
+        raise RuntimeError(
+            f"Unable to determine local source file for cfg type '{cfg_element._type_name}. '"
+            'See previous warnings for more details.'
+        )
 
     write_named_element(cfg_element, cfg_dir, src_file)
 
@@ -220,14 +239,12 @@ def rotate_config_element_and_persist_in_cfg_repo(
         github_repo_path=github_repo_path,
     )
 
-    local_cfg_files = local_cfg_type_sources(cfg_element, cfg_factory)
-
-    if len(local_cfg_files) > 1:
-        logger.warning("Config elements with more than one local source file are not supported")
-        return False
-    if not local_cfg_files:
-        logger.warning(f"No local source file known for cfg type '{cfg_element._type_name}'")
-        return False
+    src_file = _local_cfg_file(cfg_element, cfg_factory)
+    if not src_file:
+        raise RuntimeError(
+            f"Unable to determine local source file for cfg type '{cfg_element._type_name}. '"
+            'See previous warnings for more details.'
+        )
 
     if ret_vals := cmro.rotate_cfg_element(
         cfg_factory=cfg_factory,
