@@ -245,8 +245,10 @@ def fetch_release_notes(
     if previous_version:
         previous_version_tag = git_helper.repo.tag(component_versions[previous_version])
 
-    logger.debug(f'current: {current_version=}, {current_version_tag=}, ' +
-                 f'previous: {previous_version=}, {previous_version_tag=}')
+    logger.info(
+        f'current: {current_version=}, {current_version_tag=}, '
+        f'previous: {previous_version=}, {previous_version_tag=}'
+    )
 
     github_repo: github3.repos.Repository = github_helper.github.repository(
         github_helper.owner,
