@@ -112,7 +112,7 @@ def delete_config_secret(
     cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
-):
+) -> model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount | None:
     logger.info('deleting old gcr secret')
     iam_client = ccc.gcp.create_iam_client(
         cfg_element=cfg_element,
@@ -121,3 +121,4 @@ def delete_config_secret(
         iam_client=iam_client,
         service_account_key_name=cfg_queue_entry.secretId['gcp_secret_key'],
     )
+    return None

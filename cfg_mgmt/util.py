@@ -307,18 +307,35 @@ def process_cfg_queue_and_persist_in_repo(
         github_repo_path=github_repo_path,
     )
 
-    if not cmro.delete_expired_secret(
+    updated_element, processing_successful = cmro.delete_expired_secret(
         cfg_element=cfg_element,
         cfg_queue_entry=cfg_queue_entry,
         cfg_factory=cfg_factory,
+    )
+
+    if (
+        not processing_successful
+        and not updated_element
     ):
+        # Nothing happened, return early
         return False
 
-    cfg_metadata.queue.remove(cfg_queue_entry)
-    write_config_queue(
-        cfg_dir=cfg_dir,
-        cfg_metadata=cfg_metadata,
-    )
+    if updated_element:
+        # processing the queue has lead to an update in the element in question. Write it back.
+        src_file = _local_cfg_file(cfg_element, cfg_factory)
+        if not src_file:
+            raise RuntimeError(
+                f"Unable to determine local source file for cfg type '{cfg_element._type_name}. '"
+                'See previous warnings for more details.'
+            )
+        write_named_element(updated_element, cfg_dir, src_file)
+
+    if processing_successful:
+        cfg_metadata.queue.remove(cfg_queue_entry)
+        write_config_queue(
+            cfg_dir=cfg_dir,
+            cfg_metadata=cfg_metadata,
+        )
 
     try:
         git_helper.add_and_commit(
@@ -329,7 +346,7 @@ def process_cfg_queue_and_persist_in_repo(
         logger.warning('failed to push processed config queue - reverting')
         git_helper.repo.git.reset('--hard', '@~')
 
-    return True
+    return processing_successful
 
 
 def determine_status(

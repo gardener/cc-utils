@@ -239,7 +239,7 @@ def delete_config_secret(
     cfg_element: BtpApplicationCertificate,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
-):
+) -> BtpApplicationCertificate | None:
     logger.info('Deleting old certificates')
     gbaas_auth = cfg_factory.btp_application_certificate(cfg_element.auth_application_certificate())
     gbaas_client = GBaasAppClient(gbaas_auth)
@@ -248,3 +248,5 @@ def delete_config_secret(
     for info in gbaas_client.list_certificates_by_base(base):
         if info.serial_no < serial_no:
             gbaas_client.delete_certificate(info.cn, info.id)
+
+    return None

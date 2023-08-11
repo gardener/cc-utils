@@ -209,10 +209,12 @@ def delete_config_secret(
     cfg_element: model.btp_service_binding.BtpServiceBinding,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
-):
+) -> model.btp_service_binding.BtpServiceBinding | None:
     logger.info('deleting old service binding')
     id = cfg_queue_entry.secretId.get('binding_id')
     if id:
         name = cfg_queue_entry.secretId['binding_name']
         client = _authenticate(cfg_element, cfg_factory)
         client.delete_service_binding(name, id)
+
+    return None

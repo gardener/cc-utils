@@ -113,10 +113,10 @@ def rotate_cfg_element(
 
 
 def delete_config_secret(
-    cfg_element: model.aws.AwsProfile,
+    cfg_element: model.alicloud.AlicloudConfig,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
-):
+) -> model.alicloud.AlicloudConfig | None:
     client = aliyunsdkcore.client.AcsClient(
         ak=cfg_element.access_key_id(),
         secret=cfg_element.access_key_secret(),
@@ -135,6 +135,8 @@ def delete_config_secret(
                 'the Account is configured to allow users to manage their own keys.'
             )
         raise
+
+    return None
 
 
 def validate_for_rotation(

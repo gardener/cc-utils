@@ -177,7 +177,7 @@ def delete_config_secret(
     cfg_element: model.azure.AzureServicePrincipal,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
-):
+) -> model.azure.AzureServicePrincipal | None:
     key_id = cfg_queue_entry.secretId['keyId']
     access_token = _get_access_token_for_principal(service_principal=cfg_element)
     _remove_password_credential(
@@ -185,3 +185,4 @@ def delete_config_secret(
         key_id=key_id,
         access_token=access_token,
     )
+    return None
