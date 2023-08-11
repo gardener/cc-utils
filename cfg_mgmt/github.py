@@ -163,8 +163,9 @@ def rotate_cfg_element(
         # first, try to update token (if possible, see _rotate_oauth_token())
         try:
             # We rotate by refreshing the secondary token and afterwards switching
-            # the primary and secondary tokens. In effect, the old primary token will
-            # still be valid until the next rotation happens.
+            # the primary and secondary tokens. In effect, the old primary token would still be
+            # valid until the next rotation happens, but we refresh the token when processing the
+            # queue later.
             # This is done to avoid breaking running jobs, since existing tokens are invalidated
             # immediately upon refresh.
             token_to_rotate = credential.secondary_auth_token()
@@ -274,7 +275,11 @@ def delete_config_secret(
     cfg_element: model.github.GithubConfig,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
-):
+) -> model.github.GithubConfig | None:
+    raw_cfg = copy.deepcopy(cfg_element.raw)
+    cfg_element = model.github.GithubConfig(
+        name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
+    )
     for entry in cfg_queue_entry.secretId['github_users']:
         username = entry['name']
         gh_api = ccc.github.github_api(cfg_element, username=username, cfg_factory=cfg_factory)
@@ -286,6 +291,14 @@ def delete_config_secret(
             logger.warning(
                 f'Old public key for {username} not known to github, nothing to delete.'
             )
+        if 'oAuthToken' in entry:
+            for credential in cfg_element._technical_user_credentials():
+                if credential.secondary_auth_token() == (token := entry['oAuthToken']):
+                    credential.raw['secondary_authToken'] = _rotate_oauth_token(
+                        github_api_url=cfg_element.api_url(),
+                        token_to_rotate=token,
+                    )
+    return cfg_element
 
 
 def _corresponding_public_key(

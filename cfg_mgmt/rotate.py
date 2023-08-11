@@ -23,11 +23,12 @@ def delete_expired_secret(
     cfg_element: model.NamedModelElement,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
-) -> bool:
+) -> tuple[model.NamedModelElement, bool]:
     '''Deletes the expired secret contained in the given cfg-queue entry, using the passed
     config element and config factory if necessary.
 
-    Returns `True` if the deletion was successful and `False` if no deletion was performed.
+    Returns a pair containing a potentially changed cfg-element and a boolean indicating whether
+    the deletion was successful.
     '''
 
     delete_func: typing.Callable[[model.NamedModelElement, str, cmm.CfgQueueEntry], None] = None
@@ -69,7 +70,7 @@ def delete_expired_secret(
             logger.warning(
                 f"Cannot rotate cfg-type '{type_name}' with name '{cfg_element.name()}': {e}"
             )
-            return None
+            return None, None
 
         delete_func = cmk.delete_config_secret
 
@@ -77,10 +78,10 @@ def delete_expired_secret(
         logger.warning(
             f'{type_name} is not (yet) supported for automated deletion'
         )
-        return False
+        return None, False
 
     try:
-        delete_func(
+        updated_cfg_element = delete_func(
             cfg_element=cfg_element,
             cfg_factory=cfg_factory,
             cfg_queue_entry=cfg_queue_entry,
@@ -92,7 +93,7 @@ def delete_expired_secret(
         )
         raise
 
-    return True
+    return updated_cfg_element, True
 
 
 def rotate_cfg_element(

@@ -88,7 +88,7 @@ def delete_config_secret(
     cfg_element: model.aws.AwsProfile,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
-):
+) -> model.aws.AwsProfile | None:
     iam_client = boto3.client(
         'iam',
         aws_access_key_id=cfg_element.access_key_id(),
@@ -97,6 +97,7 @@ def delete_config_secret(
     )
     access_key_id = cfg_queue_entry.secretId['accessKeyId']
     iam_client.delete_access_key(AccessKeyId=access_key_id)
+    return None
 
 
 def validate_for_rotation(

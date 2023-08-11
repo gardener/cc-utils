@@ -229,7 +229,7 @@ def delete_config_secret(
     cfg_element: model.kubernetes.KubernetesConfig,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
-):
+) -> model.kubernetes.KubernetesConfig | None:
     api_client = kubernetes.config.new_client_from_config_dict(cfg_element.kubeconfig())
     core_api = CoreV1Api(api_client)
 
@@ -239,6 +239,8 @@ def delete_config_secret(
             token_name=token['name'],
             namespace=cfg_element.service_account().namespace(),
         )
+
+    return None
 
 
 def validate_for_rotation(
