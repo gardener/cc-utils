@@ -44,6 +44,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import traceback
 
 import dacite
@@ -178,6 +179,11 @@ if os.path.isfile(descriptor_script):
   with open(base_descriptor_file_v2, 'w') as f:
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
 
+  ocm_config_out_dir = tempfile.TemporaryDirectory()
+  ocm_config_file = tempfile.NamedTemporaryFile(dir=ocm_config_out_dir.name, delete=False)
+  with open(ocm_config_file.name, 'w') as f:
+    f.write(mapping_config.to_ocm_software_config())
+
   subproc_env = os.environ.copy()
   subproc_env['${main_repo_path_env_var}'] = main_repo_path
   subproc_env['MAIN_REPO_DIR'] = main_repo_path
@@ -187,6 +193,7 @@ if os.path.isfile(descriptor_script):
   subproc_env['COMPONENT_VERSION'] = effective_version
   subproc_env['EFFECTIVE_VERSION'] = effective_version
   subproc_env['CURRENT_COMPONENT_REPOSITORY'] = ctx_repository_base_url
+  subproc_env['OCM_CONFIG_PATH'] = ocm_config_file.name
 
   # pass predefined command to add dependencies for convenience purposes
   add_dependencies_cmd = ' '.join((
