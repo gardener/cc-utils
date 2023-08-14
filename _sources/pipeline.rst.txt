@@ -117,7 +117,7 @@ Attributes
 +------------+---------------------------------------------------------------------------+
 | <cfg_name> | user-chosen configuration element name (ASCII-alphanumeric)               |
 +------------+---------------------------------------------------------------------------+
-| branches   | list of regular expcessions used to match branche names (at least one)    |
+| branches   | list of regular expressions used to match branche names (at least one)    |
 +------------+---------------------------------------------------------------------------+
 | inherit    | optional pipeline definition fragment; inherited into pipeline definition |
 +------------+---------------------------------------------------------------------------+
