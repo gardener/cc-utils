@@ -177,6 +177,7 @@ def rotate_cfg_element(
                     old_token = credential.auth_token()
                     credential.raw['secondary_authToken'] = old_token
                     credential.raw['authToken'] = new_token
+                    credential.raw['password'] = new_token
             else:
                 logger.info(
                     'No secondary oAuth token provided for credential with username '
