@@ -216,6 +216,12 @@ def delivery_service_component_descriptor_lookup(
         if not ctx_repo:
             raise ValueError(ctx_repo)
 
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.AccessType.OCI_REGISTRY,
+                baseUrl=ctx_repo,
+            )
+
         if not isinstance(ctx_repo, cm.OciRepositoryContext):
             raise NotImplementedError(ctx_repo)
 
@@ -399,6 +405,7 @@ def composite_component_descriptor_lookup(
 def create_default_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
     cache_dir: str=_cache_dir,
+    oci_client: oc.Client=None,
     delivery_client=None,
     default_absent_ok=False,
 ) -> ComponentDescriptorLookupById:
@@ -431,7 +438,7 @@ def create_default_component_descriptor_lookup(
             delivery_client=delivery_client,
         ))
 
-    lookups.append(oci_component_descriptor_lookup())
+    lookups.append(oci_component_descriptor_lookup(oci_client=oci_client))
 
     if not default_ctx_repo:
         default_ctx_repo = ctx.cfg.ctx.ocm_repo_base_url
