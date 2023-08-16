@@ -24,6 +24,7 @@ import os
 
 import ccc.github
 import ci.util
+import cnudie.retrieve
 import cnudie.util
 import gci.componentmodel as cm
 import release_notes.fetch
@@ -48,12 +49,6 @@ processed_version = version.process_version(
     operation='${version_operation}',
 )
 
-previous_version = version.parse_to_semver(processed_version)
-if previous_version.patch > 0:
-    previous_version = previous_version.replace(patch=previous_version.patch-1)
-else:
-    previous_version = None
-
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 
 have_cd = os.path.exists(component_descriptor_path := '${component_descriptor_path}')
@@ -75,6 +70,17 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
     '${repo.repo_path()}'
   ),
 )
+
+previous_version = cnudie.retrieve.greatest_component_version_with_matching_minor(
+    component_name=component.name,
+    ctx_repo=component.current_repository_ctx(),
+    reference_version=version_str,
+    ignore_prerelease_versions=True,
+)
+ci.util.info(f'Previous version determined as "{previous_version}"')
+
+if previous_version:
+    previous_version=version.parse_to_semver(previous_version)
 
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
