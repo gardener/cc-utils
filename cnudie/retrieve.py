@@ -594,7 +594,11 @@ def greatest_component_versions(
         return []
 
     if ignore_prerelease_versions:
-        versions = [v for v in versions if not (pv := version.parse_to_semver(v)).prerelease and not pv.build]
+        versions = [
+            v
+            for v in versions
+            if not (pv := version.parse_to_semver(v)).prerelease and not pv.build
+        ]
 
     versions = sorted(versions, key=version.parse_to_semver)
 
