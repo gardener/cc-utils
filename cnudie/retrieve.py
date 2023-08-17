@@ -295,7 +295,7 @@ def delivery_service_component_descriptor_lookup(
                     return delivery_client.component_descriptor(
                         name=component_id.name,
                         version=component_id.version,
-                        ctx_repo_url=ctx_repo.baseUrl,
+                        ctx_repo_url=ctx_repo.oci_ref,
                     )
                 except:
                     pass
@@ -380,7 +380,7 @@ def oci_component_descriptor_lookup(
         else:
             for ctx_repo in mapping_config.find_ocm_repository(component_name):
                 target_ref = ci.util.urljoin(
-                    ctx_repo.baseUrl,
+                    ctx_repo.oci_ref,
                     'component-descriptors',
                     f'{component_name}:{component_id.version}',
                 )
