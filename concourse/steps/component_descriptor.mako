@@ -308,7 +308,6 @@ component = descriptor_v2.component
 oci_client = ccc.oci.oci_client()
 
 lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    default_ctx_repo=component.current_repository_ctx(),
     mapping_config=mapping_config,
 )
 
