@@ -22,7 +22,6 @@ import ci.util
 import cnudie.util
 import cnudie.retrieve
 import cnudie.migrate
-import version
 
 import gci.componentmodel as cm
 
@@ -116,36 +115,29 @@ def base_component_descriptor_v2(
 
 
 def component_diff_since_last_release(
-    component_descriptor: cm.ComponentDescriptor,
-    mapping_config: cnudie.util.OcmLookupMappingConfig,
+    component_descriptor,
+    ctx_repo_url,
 ):
-    component: cm.Component = ci.util.not_none(
+    component = ci.util.not_none(
         component_descriptor.component,
     )
+    component: cm.Component
 
-    version_lookup = cnudie.retrieve.version_lookup(
-        mapping_config=mapping_config,
-    )
-    versions = version_lookup(
-        component.identity()
-    )
-
-    greatest_release_version = version.greatest_version_before(
-        reference_version=component.version,
-        versions=versions,
-        ignore_prerelease_versions=True,
+    greatest_release_version = cnudie.retrieve.greatest_version_before(
+        component_name=component.name,
+        component_version=component.version,
+        ctx_repo=component.current_repository_ctx(),
     )
 
     if not greatest_release_version:
         logger.warning('could not determine last release version')
         return None
-
     greatest_release_version = str(greatest_release_version)
     logger.info('last released version: ' + str(greatest_release_version))
 
+    ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_url)
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        mapping_config=mapping_config,
-        default_absent_ok=False,
+        default_ctx_repo=ctx_repo,
     )
 
     greatest_released_cd = component_descriptor_lookup(cm.ComponentIdentity(

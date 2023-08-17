@@ -22,7 +22,6 @@ import dacite
 from ci.util import not_none
 from gci.componentmodel import Label
 import ci.util
-import cnudie.util
 import gci.componentmodel as cm
 import version
 
@@ -179,39 +178,7 @@ ATTRIBUTES = (
         default=[],
         type=typing.List[StepInput],
         doc='inputs to expose to component-descriptor step',
-    ),
-    AttributeSpec.optional(
-        name='ocm_repository_mappings',
-        default=[], # cannot define a proper default here because this depends on another (optional)
-                    # config-value. At least not in a way that would be represented in our
-                    # rendered documentation.
-        type=typing.List[cnudie.util.OcmLookupMapping],
-        doc='''
-            used to explicitly configure where to lookup component descriptors. Example:
-
-            .. code-block:: yaml
-
-                - ocm_repo_url: ocm_repo_url
-                  prefix: github.com/some-org/
-                - ocm_repo_url: ocm_repo_url
-                  prefix: github.com/another-org/
-                  priority: 10 # default
-                - ocm_repo_url: another_ocm_repo_url
-                  component_names: github.com/yet-another-org/
-
-            If not given, a default mapping will be applied that is equivalent to the following:
-
-            .. code-block:: yaml
-
-                - ocm_repo_url: <ctx_repository_base_url>
-                  prefix: ''
-
-            .. note::
-                If multiple mappings match a component name, they will be tried in order of priority
-                with longest matching prefix first.
-
-        '''
-    ),
+    )
 )
 
 
@@ -329,19 +296,6 @@ class ComponentDescriptorTrait(Trait):
 
     def component_labels(self):
         return self.raw['component_labels']
-
-    def ocm_repository_mappings(self) -> list:
-        ctx_repository_url = self.ctx_repository_base_url()
-        if ctx_repository_url is None:
-            return []
-        if not (ocm_repository_mappings := self.raw['ocm_repository_mappings']):
-            ocm_repository_mappings = [{
-                'ocm_repo_url': ctx_repository_url,
-                'prefix': '',
-                'use_for': 'readonly',
-            }]
-
-        return ocm_repository_mappings
 
     def inputs(self) -> typing.List[StepInput]:
         return [

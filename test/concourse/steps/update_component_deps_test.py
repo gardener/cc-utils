@@ -5,8 +5,6 @@ import os
 import pathlib
 
 import gci.componentmodel as cm
-import cnudie.util
-import concourse.steps.update_component_deps
 
 import test_utils
 
@@ -78,118 +76,110 @@ def test_determine_reference_versions():
     # Case 1: No Upstream
     greatest_version = '2.1.1'
     component_name = 'example.org/foo/bar'
-    mapping_config = cnudie.util.OcmLookupMappingConfig(
-        [cnudie.util.OcmLookupMapping(ocm_repo_url='foo', prefix='', priority=10)]
-    )
+    base_url = "foo" # actual value not relevant here
+    ctx_repo = cm.OciRepositoryContext(baseUrl=base_url)
 
     examinee = functools.partial(
         determine_reference_versions,
         component_name=component_name,
-        mapping_config=mapping_config,
+        ctx_repo=ctx_repo,
     )
-    greatest_component_version_mock = unittest.mock.Mock()
-    concourse.steps.update_component_deps.greatest_component_version = (
-        greatest_component_version_mock
-    )
-    greatest_component_version_mock.return_value = greatest_version
+    with unittest.mock.patch('cnudie.retrieve') as cnudie_retrieve_mock:
+        cnudie_retrieve_mock.greatest_component_version.return_value = greatest_version
 
-    # no upstream component -> expect latest version to be returned
-    assert examinee(
-            reference_version='2.1.0',
-            upstream_component_name=None,
-        ) == (greatest_version,)
+        # no upstream component -> expect latest version to be returned
+        assert examinee(
+                reference_version='2.1.0',
+                upstream_component_name=None,
+            ) == (greatest_version,)
 
-    greatest_component_version_mock.assert_called_with(
-        component_name=component_name,
-        mapping_config=mapping_config,
-        ignore_prerelease_versions=False,
-    )
+        cnudie_retrieve_mock.greatest_component_version.assert_called_with(
+            component_name=component_name,
+            ctx_repo=ctx_repo,
+            ignore_prerelease_versions=False,
+        )
 
-    greatest_component_version_mock.reset_mock()
+        cnudie_retrieve_mock.greatest_component_version.reset_mock()
 
-    assert examinee(
-            reference_version='2.2.0', # same result, if our version is already greater
-            upstream_component_name=None,
-        ) == (greatest_version,)
+        assert examinee(
+                reference_version='2.2.0', # same result, if our version is already greater
+                upstream_component_name=None,
+            ) == (greatest_version,)
 
-    greatest_component_version_mock.assert_called_with(
-        component_name=component_name,
-        mapping_config=mapping_config,
-        ignore_prerelease_versions=False,
-    )
+        cnudie_retrieve_mock.greatest_component_version.assert_called_with(
+            component_name=component_name,
+            ctx_repo=ctx_repo,
+            ignore_prerelease_versions=False,
+        )
 
     # Case 2: Upstream component defined
     examinee = functools.partial(
         determine_reference_versions,
         component_name='example.org/foo/bar',
         upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
+        ctx_repo=ctx_repo,
     )
 
-    latest_component_version_mock = unittest.mock.Mock()
-    concourse.steps.update_component_deps.latest_component_version_from_upstream = (
-        latest_component_version_mock
-    )
+    with unittest.mock.patch(
+        'concourse.steps.update_component_deps.latest_component_version_from_upstream'
+    ) as upstream_version_mock:
 
-    upstream_version = '2.2.0'
-    UUP = update_component_deps.UpstreamUpdatePolicy
+        upstream_version = '2.2.0'
+        UUP = update_component_deps.UpstreamUpdatePolicy
 
-    latest_component_version_mock.return_value = upstream_version
+        upstream_version_mock.return_value = upstream_version
 
-    # should return upstream version, by default (default to strict-following)
-    assert examinee(
-        reference_version='1.2.3', # does not matter
-    ) == (upstream_version,)
+        # should return upstream version, by default (default to strict-following)
+        assert examinee(
+            reference_version='1.2.3', # does not matter
+        ) == (upstream_version,)
 
-    latest_component_version_mock.assert_called_once_with(
-        component_name=component_name,
-        upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
-        ignore_prerelease_versions=False,
-    )
+        upstream_version_mock.assert_called_once_with(
+            component_name=component_name,
+            upstream_component_name='example.org/foo/bar',
+            ctx_repo=ctx_repo,
+            ignore_prerelease_versions=False,
+        )
 
-    latest_component_version_mock.reset_mock()
+        upstream_version_mock.reset_mock()
 
-    # same behaviour if explicitly configured
-    assert examinee(
-        reference_version='1.2.3', # does not matter
-        upstream_update_policy=UUP.STRICTLY_FOLLOW,
-    ) == (upstream_version,)
+        # same behaviour if explicitly configured
+        assert examinee(
+            reference_version='1.2.3', # does not matter
+            upstream_update_policy=UUP.STRICTLY_FOLLOW,
+        ) == (upstream_version,)
 
-    latest_component_version_mock.assert_called_once_with(
-        component_name=component_name,
-        upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
-        ignore_prerelease_versions=False,
-    )
+        upstream_version_mock.assert_called_once_with(
+            component_name=component_name,
+            upstream_component_name='example.org/foo/bar',
+            ctx_repo=ctx_repo,
+            ignore_prerelease_versions=False,
+        )
 
-    latest_component_version_mock.reset_mock()
+        upstream_version_mock.reset_mock()
 
-    greatest_component_version_with_matching_minor_mock = unittest.mock.Mock()
-    concourse.steps.update_component_deps.greatest_component_version_with_matching_minor = (
-        greatest_component_version_with_matching_minor_mock
-    )
+        with unittest.mock.patch('cnudie.retrieve') as cnudie_retrieve_mock:
+            # if not strictly following, should consider hotfix
+            reference_version = '1.2.3'
+            upstream_hotfix_version = '2.2.3'
+            cnudie_retrieve_mock.greatest_component_version_with_matching_minor.return_value = \
+                upstream_hotfix_version
 
-    # if not strictly following, should consider hotfix
-    reference_version = '1.2.3'
-    upstream_hotfix_version = '2.2.3'
-    greatest_component_version_with_matching_minor_mock.return_value = \
-        upstream_hotfix_version
+            assert examinee(
+                reference_version=reference_version, # does not matter
+                upstream_update_policy=UUP.ACCEPT_HOTFIXES,
+            ) == (upstream_hotfix_version, upstream_version)
 
-    assert examinee(
-        reference_version=reference_version, # does not matter
-        upstream_update_policy=UUP.ACCEPT_HOTFIXES,
-    ) == (upstream_hotfix_version, upstream_version)
-
-    latest_component_version_mock.assert_called_once_with(
-        component_name=component_name,
-        upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
-        ignore_prerelease_versions=False,
-    )
-    greatest_component_version_with_matching_minor_mock.assert_called_once_with(
-        component_name=component_name,
-        mapping_config=mapping_config,
-        reference_version=reference_version,
-        ignore_prerelease_versions=False,
-    )
+            upstream_version_mock.assert_called_once_with(
+                component_name=component_name,
+                upstream_component_name='example.org/foo/bar',
+                ctx_repo=ctx_repo,
+                ignore_prerelease_versions=False,
+            )
+            cnudie_retrieve_mock.greatest_component_version_with_matching_minor.\
+                assert_called_once_with(
+                component_name=component_name,
+                ctx_repo=ctx_repo,
+                reference_version=reference_version,
+                ignore_prerelease_versions=False,
+            )

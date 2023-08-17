@@ -40,14 +40,12 @@ component_descriptor_path = os.path.join(
 
 component_descriptor_trait = job_variant.trait('component_descriptor')
 component_name = component_descriptor_trait.component_name()
-ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 %>
 import ccc.github
 import ci.util
-import cnudie.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import github.util
@@ -70,10 +68,6 @@ githubrepobranch = github.util.GitHubRepoBranch(
     repo_owner='${repo.repo_owner()}',
     repo_name='${repo.repo_name()}',
     branch=repository_branch,
-)
-
-mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
-    raw_mappings = ${ocm_repository_mappings},
 )
 
 try:
@@ -124,6 +118,5 @@ concourse.steps.release.release_and_prepare_next_dev_cycle(
   % endif
   github_release_tag=${github_release_tag},
   git_tags=${git_tags},
-  mapping_config=mapping_config,
 )
 </%def>

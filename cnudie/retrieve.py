@@ -32,11 +32,6 @@ ComponentDescriptorLookupById = typing.Callable[
     cm.ComponentDescriptor
 ]
 
-VersionLookupById = typing.Callable[
-    [cm.ComponentIdentity, cm.RepositoryContext],
-    typing.Sequence[str]
-]
-
 
 class WriteBack:
     '''
@@ -60,7 +55,6 @@ class WriteBack:
 def in_memory_cache_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
     cache_ctor: cachetools.Cache=cachetools.LRUCache,
-    mapping_config: cnudie.util.OcmLookupMappingConfig = None,
     **cache_kwargs,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -74,12 +68,6 @@ def in_memory_cache_component_descriptor_lookup(
     '''
     cache_kwargs['maxsize'] = cache_kwargs.get('maxsize', 2048)
     cache = cache_ctor(**cache_kwargs)
-
-    if mapping_config and default_ctx_repo:
-        raise ValueError(
-            "Both 'default_ctx_repo' and 'mapping_config' must not be set "
-            'at the same time.'
-        )
 
     def writeback(
         component_id: cm.ComponentIdentity,
@@ -96,31 +84,23 @@ def in_memory_cache_component_descriptor_lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.RepositoryContext=default_ctx_repo,
     ):
-        if not mapping_config:
-            if not ctx_repo:
-                raise ValueError(ctx_repo)
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
 
-            if isinstance(ctx_repo, str):
-                ctx_repo = cm.OciRepositoryContext(
-                    type=cm.AccessType.OCI_REGISTRY,
-                    baseUrl=ctx_repo,
-                )
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.AccessType.OCI_REGISTRY,
+                baseUrl=ctx_repo,
+            )
 
-            if not isinstance(ctx_repo, cm.OciRepositoryContext):
-                raise NotImplementedError(ctx_repo)
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
 
-            try:
-                if (component_descriptor := cache.get((component_id, ctx_repo))):
-                    return component_descriptor
-            except KeyError:
-                pass
-        else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_id.name):
-                try:
-                    if (component_descriptor := cache.get((component_id, ctx_repo))):
-                        return component_descriptor
-                except KeyError:
-                    pass
+        try:
+            if (component_descriptor := cache.get((component_id, ctx_repo))):
+                return component_descriptor
+        except KeyError:
+            pass
 
         # component descriptor not found in lookup
         return _writeback
@@ -130,7 +110,6 @@ def in_memory_cache_component_descriptor_lookup(
 
 def file_system_cache_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
-    mapping_config: cnudie.util.OcmLookupMappingConfig=None,
     cache_dir: str=_cache_dir,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -179,48 +158,32 @@ def file_system_cache_component_descriptor_lookup(
         component_id: cnudie.util.ComponentId,
         ctx_repo: cm.RepositoryContext|str=default_ctx_repo,
     ):
-        if not mapping_config:
-            if not ctx_repo:
-                raise ValueError(ctx_repo)
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
 
-            if isinstance(ctx_repo, str):
-                ctx_repo = cm.OciRepositoryContext(
-                    type=cm.AccessType.OCI_REGISTRY,
-                    baseUrl=ctx_repo,
-                )
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.AccessType.OCI_REGISTRY,
+                baseUrl=ctx_repo,
+            )
 
-            if not isinstance(ctx_repo, cm.OciRepositoryContext):
-                raise NotImplementedError(ctx_repo)
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
 
-            component_id = cnudie.util.to_component_id(component_id)
+        component_id = cnudie.util.to_component_id(component_id)
 
-            descriptor_path = os.path.join(
-                cache_dir,
-                ctx_repo.oci_ref.replace('/', '-'),
-                f'{component_id.name}-{component_id.version}',
+        descriptor_path = os.path.join(
+            cache_dir,
+            ctx_repo.oci_ref.replace('/', '-'),
+            f'{component_id.name}-{component_id.version}',
+        )
+        if os.path.isfile(descriptor_path):
+            return cm.ComponentDescriptor.from_dict(
+                ci.util.parse_yaml_file(descriptor_path)
             )
         else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_id.name):
-                descriptor_path = os.path.join(
-                    cache_dir,
-                    ctx_repo.oci_ref.replace('/', '-'),
-                    f'{component_id.name}-{component_id.version}',
-                )
-                if os.path.isfile(descriptor_path):
-                    break
-            else:
-                descriptor_path = None
-
-            if descriptor_path and os.path.isfile(descriptor_path):
-                return cm.ComponentDescriptor.from_dict(
-                    ci.util.parse_yaml_file(descriptor_path)
-                )
-            elif descriptor_path:
-                base_dir = os.path.dirname(descriptor_path)
-                os.makedirs(name=base_dir, exist_ok=True)
-            else:
-                # no mapping was applicable
-                pass
+            base_dir = os.path.dirname(descriptor_path)
+            os.makedirs(name=base_dir, exist_ok=True)
 
         # component descriptor not found in lookup
         return _writeback
@@ -232,75 +195,46 @@ def delivery_service_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
     delivery_client=None,
     default_absent_ok=True,
-    mapping_config: cnudie.util.OcmLookupMappingConfig = None,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the delivery-service.
 
-    @param default_ctx_repo:    ctx_repo to be used if none is specified in the lookup function
-    @param delivery_client:     client to establish the connection to the delivery-service. If \
-                                the client cannot be created, a ValueError is raised
-    @param default_absent_ok:   sets the default behaviour in case of absent component \
-                                descriptors for the returned lookup function
-    @param mapping_config:      config to use to determine in which ocm repository to look for the \
-                                given component-descriptor. Must not be given if `default_ctx_repo` \
-                                is already given.
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param delivery_client:  client to establish the connection to the delivery-service. If \
+                             the client cannot be created, a ValueError is raised
     '''
     if not delivery_client:
         delivery_client = ccc.delivery.default_client_if_available()
     if not delivery_client:
         raise ValueError(delivery_client)
 
-    if default_ctx_repo and mapping_config:
-        raise ValueError(
-            "Both 'default_ctx_repo' and 'mapping_config' must not be set "
-            'at the same time.'
-        )
-
     def lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.RepositoryContext=default_ctx_repo,
         absent_ok=default_absent_ok,
     ):
-        component_name = component_id.name
-        # since we already checked that not both are set, ocm_repository_mappings not being set
-        # here means that we have a ctx-repo
-        if not mapping_config:
-            if not ctx_repo:
-                raise ValueError(ctx_repo)
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
 
-            if isinstance(ctx_repo, str):
-                ctx_repo = cm.OciRepositoryContext(
-                    type=cm.AccessType.OCI_REGISTRY,
-                    baseUrl=ctx_repo,
-                )
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.AccessType.OCI_REGISTRY,
+                baseUrl=ctx_repo,
+            )
 
-            if not isinstance(ctx_repo, cm.OciRepositoryContext):
-                raise NotImplementedError(ctx_repo)
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
 
-            component_id = cnudie.util.to_component_id(component_id)
+        component_id = cnudie.util.to_component_id(component_id)
 
-            try:
-                return delivery_client.component_descriptor(
-                    name=component_id.name,
-                    version=component_id.version,
-                    ctx_repo_url=ctx_repo.oci_ref,
-                )
-            except:
-                pass
-
-        else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_name):
-                try:
-                    return delivery_client.component_descriptor(
-                        name=component_id.name,
-                        version=component_id.version,
-                        ctx_repo_url=ctx_repo.oci_ref,
-                    )
-                except:
-                    pass
-
-        logger.info(f'{component_id.name}:{component_id.version} not found in delivery-svc')
+        try:
+            return delivery_client.component_descriptor(
+                name=component_id.name,
+                version=component_id.version,
+                ctx_repo_url=ctx_repo.oci_ref,
+            )
+        except:
+            logger.info(f'{component_id.name}:{component_id.version} not found in delivery-svc')
 
         # component descriptor not found in lookup
         if absent_ok:
@@ -314,84 +248,54 @@ def oci_component_descriptor_lookup(
     default_ctx_repo: cm.RepositoryContext=None,
     oci_client: oc.Client | typing.Callable[[], oc.Client]=None,
     default_absent_ok=True,
-    mapping_config: cnudie.util.OcmLookupMappingConfig = None,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the oci-registry.
 
-    @param default_ctx_repo:    ctx_repo to be used if none is specified in the lookup function
-    @param oci_client:          client to establish the connection to the oci-registry. If the \
-                                client cannot be created, a ValueError is raised
-    @param default_absent_ok:   sets the default behaviour in case of absent component \
-                                descriptors for the returned lookup function
-    @param mapping_config:      config to use to determine in which ocm repository to look for the \
-                                given component-descriptor. Must not be given if `default_ctx_repo` \
-                                is already given.
+    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param oci_client:       client or callback to establish the connection to the oci-registry. \
+                             If the client cannot be created, a ValueError is raised
     '''
     if not oci_client:
         oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
 
-    if default_ctx_repo and mapping_config:
-        raise ValueError(
-            "Both 'default_ctx_repo' and 'mapping_config' must not be set at the same time."
-        )
-
     def lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.RepositoryContext=default_ctx_repo,
         absent_ok=default_absent_ok,
     ):
+        if not ctx_repo:
+            raise ValueError(ctx_repo)
+
+        if isinstance(ctx_repo, str):
+            ctx_repo = cm.OciRepositoryContext(
+                type=cm.OciAccess,
+                baseUrl=ctx_repo,
+            )
+
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
+
         component_id = cnudie.util.to_component_id(component_id)
         component_name = component_id.name.lower() # oci-spec allows only lowercase
+
+        target_ref = ci.util.urljoin(
+            ctx_repo.oci_ref,
+            'component-descriptors',
+            f'{component_name}:{component_id.version}',
+        )
 
         if isinstance(oci_client, typing.Callable):
             local_oci_client = oci_client()
         else:
             local_oci_client = oci_client
 
-        # since we already checked whether both are not set, mapping_config not being set
-        # here means that we have a ctx-repo
-        if not mapping_config:
-            if isinstance(ctx_repo, str):
-                ctx_repo = cm.OciRepositoryContext(
-                    type=cm.OciAccess,
-                    baseUrl=ctx_repo,
-                )
-
-            if not ctx_repo:
-                raise ValueError(ctx_repo)
-
-            if not isinstance(ctx_repo, cm.OciRepositoryContext):
-                raise NotImplementedError(ctx_repo)
-
-            target_ref = ci.util.urljoin(
-                ctx_repo.oci_ref,
-                'component-descriptors',
-                f'{component_name}:{component_id.version}',
-            )
-
-            manifest = local_oci_client.manifest(
-                image_reference=target_ref,
-                absent_ok=True,
-            )
-
-        else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_name):
-                target_ref = ci.util.urljoin(
-                    ctx_repo.oci_ref,
-                    'component-descriptors',
-                    f'{component_name}:{component_id.version}',
-                )
-                manifest = local_oci_client.manifest(
-                    image_reference=target_ref,
-                    absent_ok=True,
-                )
-                if manifest:
-                    break
-            else:
-                manifest = None
+        manifest = local_oci_client.manifest(
+            image_reference=target_ref,
+            absent_ok=True,
+        )
 
         # check if component descriptor not found in lookup
         if not manifest and absent_ok:
@@ -441,60 +345,6 @@ def oci_component_descriptor_lookup(
         )
 
         return component_descriptor
-
-    return lookup
-
-
-def version_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
-    oci_client: oc.Client=None,
-    default_absent_ok=True,
-    mapping_config: cnudie.util.OcmLookupMappingConfig = None,
-) -> VersionLookupById:
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
-    if not oci_client:
-        raise ValueError(oci_client)
-
-    if default_ctx_repo and mapping_config:
-        raise ValueError(
-            "Both 'default_ctx_repo' and 'mapping_config' must not be set at the same time."
-        )
-
-    def lookup(
-        component_id: cm.ComponentIdentity,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
-        absent_ok: bool=default_absent_ok,
-    ):
-        component_name = component_id.name.lower()
-        # since we already checked whether both default_ctx_repo and mapping_config are set,
-        # mapping_config not being set here means that we have a ctx-repo
-        if not mapping_config:
-            if not isinstance(ctx_repo, cm.OciRepositoryContext):
-                raise NotImplementedError(ctx_repo)
-
-            image_tags = component_versions(
-                component_name=component_name,
-                ctx_repo=ctx_repo,
-                oci_client=oci_client,
-            )
-        else:
-            for ocm_repo_ctx in mapping_config.find_ocm_repository(component_name):
-                image_tags = component_versions(
-                    component_name=component_name,
-                    ctx_repo=ocm_repo_ctx,
-                    oci_client=oci_client,
-                )
-                if image_tags:
-                    break
-            else:
-                image_tags = {}
-
-        # component_versions will return an empty list for non-existant images
-        if not image_tags and not absent_ok:
-            raise om.OciImageNotFoundException()
-
-        return image_tags
 
     return lookup
 
@@ -558,7 +408,6 @@ def create_default_component_descriptor_lookup(
     oci_client: oc.Client=None,
     delivery_client=None,
     default_absent_ok=False,
-    mapping_config: cnudie.util.OcmLookupMappingConfig = None,
 ) -> ComponentDescriptorLookupById:
     '''
     This is a convenience function combining commonly used/recommended lookups, using global
@@ -571,17 +420,8 @@ def create_default_component_descriptor_lookup(
     @param delivery_client:  client to establish the connection to the delivery-service. If the \
                              client cannot be created, the delivery-service based lookup is not \
                              included in the returned lookup
-    @param mapping_config:   config to use to determine in which ocm repository to look for the \
-                             given component-descriptor. Must not be given if `default_ctx_repo` \
-                             is already given.
     '''
-
-    if default_ctx_repo and mapping_config:
-        raise ValueError(
-            "Both 'default_ctx_repo' and 'mapping_config' must not be set at the same time."
-        )
-
-    lookups = [in_memory_cache_component_descriptor_lookup(mapping_config=mapping_config)]
+    lookups = [in_memory_cache_component_descriptor_lookup()]
     if not cache_dir:
         if ctx and ctx.cfg:
             cache_dir = ctx.cfg.ctx.cache_dir
@@ -589,7 +429,6 @@ def create_default_component_descriptor_lookup(
     if cache_dir:
         lookups.append(file_system_cache_component_descriptor_lookup(
             cache_dir=cache_dir,
-            mapping_config=mapping_config,
         ))
 
     if not delivery_client:
@@ -597,15 +436,9 @@ def create_default_component_descriptor_lookup(
     if delivery_client:
         lookups.append(delivery_service_component_descriptor_lookup(
             delivery_client=delivery_client,
-            mapping_config=mapping_config,
         ))
 
-    lookups.append(
-        oci_component_descriptor_lookup(
-            oci_client=oci_client,
-            mapping_config=mapping_config,
-        ),
-    )
+    lookups.append(oci_component_descriptor_lookup(oci_client=oci_client))
 
     if not default_ctx_repo:
         default_ctx_repo = ctx.cfg.ctx.ocm_repo_base_url
@@ -723,7 +556,7 @@ def greatest_component_version(
     oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False,
 ) -> str:
-    if not isinstance(ctx_repo, (cm.OciRepositoryContext, list)):
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
@@ -734,7 +567,6 @@ def greatest_component_version(
         ctx_repo=ctx_repo,
         oci_client=oci_client,
     )
-
     return version.find_latest_version(image_tags, ignore_prerelease_versions)
 
 
