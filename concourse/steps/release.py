@@ -29,6 +29,7 @@ from ci.util import (
 )
 import cnudie.iter
 import cnudie.retrieve
+import cnudie.upload
 import cnudie.util
 import cnudie.validate
 import dockerutil
@@ -41,7 +42,6 @@ from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
-import product.v2
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
     ReleaseNotesPolicy,
@@ -602,15 +602,19 @@ class UploadComponentDescriptorStep(TransactionalStep):
         github_helper: GitHubRepositoryHelper,
         components: tuple[cm.Component],
         release_on_github: bool,
+        mapping_config: cnudie.util.OcmLookupMappingConfig,
     ):
         self.github_helper = not_none(github_helper)
         self.components = components
         self.release_on_github = release_on_github
+        self.mapping_config = mapping_config
 
     def name(self):
         return "Upload Component Descriptor"
 
     def validate(self):
+        lookup = cnudie.retrieve.oci_component_descriptor_lookup(mapping_config=self.mapping_config)
+
         components: tuple[cm.Component] = tuple(
             cnudie.util.iter_sorted(
                 self.components,
@@ -623,6 +627,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
         def iter_components():
             for component in components:
                 yield from cnudie.iter.iter(
+                    lookup=lookup,
                     component=component,
                     recursion_depth=0,
                 )
@@ -643,6 +648,10 @@ class UploadComponentDescriptorStep(TransactionalStep):
         exit(1)
 
     def apply(self):
+        lookup = cnudie.retrieve.oci_component_descriptor_lookup(
+            mapping_config=self.mapping_config,
+            default_absent_ok=False,
+        )
         if self.release_on_github:
             create_release_step_output = self.context().step_output('Create Release')
             release_tag_name = create_release_step_output['release_tag_name']
@@ -655,10 +664,13 @@ class UploadComponentDescriptorStep(TransactionalStep):
 
         # todo: mv to `validate`
         def resolve_dependencies(component: cm.Component):
-            for _ in cnudie.retrieve.components(component=component):
+            for _ in cnudie.retrieve.components(
+                component=component,
+                component_descriptor_lookup=lookup,
+            ):
                 pass
 
-        def upload_component_descriptors(components):
+        def upload_component_descriptors(components: tuple[cm.Component]):
             for component in components:
                 try:
                     resolve_dependencies(component=component)
@@ -670,11 +682,11 @@ class UploadComponentDescriptorStep(TransactionalStep):
 
                 component = components_by_id[component.identity()]
 
-                tgt_ref = product.v2._target_oci_ref(component=component)
+                tgt_ref = cnudie.util.target_oci_ref(component=component)
 
                 logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
-                product.v2.upload_component_descriptor_v2_to_oci_registry(
-                    component_descriptor_v2=component,
+                cnudie.upload.upload_component_descriptor(
+                    component_descriptor=component,
                 )
 
         upload_component_descriptors(components=components)
@@ -906,6 +918,7 @@ def release_and_prepare_next_dev_cycle(
     git_tags: list,
     github_release_tag: dict,
     release_commit_callback_image_reference: str,
+    mapping_config,
     component_descriptor_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
@@ -1037,6 +1050,7 @@ def release_and_prepare_next_dev_cycle(
         github_helper=github_helper,
         components=components,
         release_on_github=release_on_github,
+        mapping_config=mapping_config,
     )
 
     step_list.append(upload_component_descriptor_step)
@@ -1073,6 +1087,7 @@ def release_and_prepare_next_dev_cycle(
         release_note_blocks = release_notes.fetch.fetch_release_notes(
             repo_path=repo_dir,
             component=component,
+            mapping_config=mapping_config,
             current_version=version.parse_to_semver(release_version),
         )
         release_notes_markdown = '\n'.join(

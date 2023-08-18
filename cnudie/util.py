@@ -2,10 +2,14 @@ import dataclasses
 import graphlib
 import typing
 
+import dacite
 import deprecated
+import yaml
 
 import ci.util
+import ctx
 import gci.componentmodel as cm
+import model.container_registry
 import oci.model as om
 import product.v2
 
@@ -138,6 +142,83 @@ def determine_component_name(
         repository_path,
     ))
     return component_name.lower() # OCI demands lowercase
+
+
+def normalise_component_name(component_name: str) -> str:
+    return component_name.lower() # oci-spec demands lowercase
+
+
+def oci_artefact_reference(
+        component: (
+            cm.Component
+            | cm.ComponentIdentity
+            | cm.ComponentReference
+            | str # 'name:version'
+            | tuple[str, str] # (name, version)
+        ),
+        ocm_repository: str | cm.OciRepositoryContext = None
+) -> str:
+    if isinstance(component, cm.Component):
+        if not ocm_repository:
+            ocm_repository = component.current_repository_ctx()
+        component_name = component.name
+        component_version = component.version
+
+    elif isinstance(component, cm.ComponentIdentity):
+        component_name = component.name
+        component_version = component.version
+
+    elif isinstance(component, cm.ComponentReference):
+        component_name = component.componentName
+        component_version = component.version
+
+    elif isinstance(component, str):
+        component_name, component_version = component.split[':']
+
+    elif isinstance(component, tuple):
+        if not len(component) == 2 or not (
+            isinstance(component[0], str) and isinstance(component[1], str)
+        ):
+            raise TypeError("If a tuple is given as component, it must contain two strings.")
+        component_name, component_version = component
+    else:
+        raise TypeError(type(component))
+
+    if not ocm_repository:
+        raise ValueError('ocm_repository must be given unless a Component is passed.')
+    elif isinstance(ocm_repository, str):
+        repo_ctx = cm.OciRepositoryContext(baseUrl=ocm_repository)
+    elif isinstance(ocm_repository, cm.OciRepositoryContext):
+        repo_ctx = ocm_repository
+    else:
+        raise TypeError(type(ocm_repository))
+
+    return repo_ctx.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
+    )
+
+
+def target_oci_ref(
+    component: cm.Component,
+    component_ref: cm.ComponentReference=None,
+    component_version: str=None,
+):
+    if not component_ref:
+        component_ref = component
+        component_name = component_ref.name
+    else:
+        component_name = component_ref.componentName
+
+    component_name = normalise_component_name(component_name)
+    component_version = component_ref.version
+
+    last_ctx_repo = component.current_repository_ctx()
+
+    return last_ctx_repo.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
+    )
 
 
 def main_source(
@@ -497,3 +578,177 @@ def diff_resources(
             _add_if_not_duplicate(resource_diff.resource_refs_only_right, i)
 
     return resource_diff
+
+
+@dataclasses.dataclass
+class OcmRepositoryConfig:
+    baseurl: str
+    subpath: str | None = None
+    type: str = 'OCIRegistry'
+
+
+@dataclasses.dataclass
+class OcmSoftwareResolverConfig:
+    repository: OcmRepositoryConfig
+    prefix: str
+    priority: int
+
+
+@dataclasses.dataclass
+class OcmSoftwareConfig:
+    resolvers: list[OcmSoftwareResolverConfig]
+    aliases: typing.Optional[dict[str, dict]] = None
+    type: str = 'credentials.config.ocm.software'
+
+
+@dataclasses.dataclass
+class OcmCredentials:
+    username: str
+    password: str
+
+
+@dataclasses.dataclass
+class OcmCredentialsCredentialsConfig:
+    properties: OcmCredentials
+    type: str = 'Credentials'
+
+
+@dataclasses.dataclass
+class OcmCredentialsConsumerConfig:
+    identity: OcmRepositoryConfig
+    credentials: list[OcmCredentialsCredentialsConfig]
+
+
+@dataclasses.dataclass
+class OcmCredentialsConfig:
+    consumers: list[OcmCredentialsConsumerConfig]
+    type: str = 'credentials.config.ocm.software'
+
+
+@dataclasses.dataclass
+class OcmGenericConfig:
+    configurations: list[OcmSoftwareConfig | OcmCredentialsConfig]
+    type: str = 'generic.config.ocm.software/v1'
+
+
+@dataclasses.dataclass
+class OcmLookupMapping:
+    ocm_repo_url: str
+    prefix: str
+    priority: int | None = 10
+
+
+class OcmLookupMappingConfig:
+    def __init__(
+        self,
+        mappings: list[OcmLookupMapping],
+    ):
+        self.mappings: list[OcmLookupMapping] = sorted(
+            sorted(
+                mappings,
+                key=lambda m: len(m.prefix),
+                reverse=True,
+            ),
+            key=lambda m: m.priority,
+            reverse=True,
+        )
+
+    def find_ocm_repository(
+        self,
+        component_name: str,
+    ) -> typing.Iterable[cm.OciRepositoryContext]:
+        for mapping in self.mappings:
+            if component_name.startswith(mapping.prefix):
+                yield cm.OciRepositoryContext(baseUrl=mapping.ocm_repo_url)
+
+    def to_ocm_software_config(
+        self,
+        cfg_factory=None,
+    ) -> str:
+        if not cfg_factory:
+            cfg_factory = ctx.cfg_factory()
+
+        consumers = []
+        resolvers = []
+        for m in self.mappings:
+            container_registry_config = model.container_registry.find_config(
+                image_reference=m.ocm_repo_url,
+                cfg_factory=cfg_factory,
+            )
+            if container_registry_config:
+                credentials = container_registry_config.credentials()
+                consumer_credentials = [
+                    OcmCredentialsCredentialsConfig(
+                        properties=OcmCredentials(
+                            username=credentials.username(),
+                            password=credentials.passwd()
+                        ),
+                    ),
+                ]
+            else:
+                consumer_credentials = []
+
+            consumer = OcmCredentialsConsumerConfig(
+                identity=OcmRepositoryConfig(baseurl=m.ocm_repo_url),
+                credentials=consumer_credentials,
+            )
+
+            resolver = OcmSoftwareResolverConfig(
+                repository=OcmRepositoryConfig(baseurl=m.ocm_repo_url),
+                prefix=m.prefix,
+                priority=m.priority,
+            )
+            consumers.append(consumer)
+            resolvers.append(resolver)
+
+        config = OcmGenericConfig(
+            configurations=[
+                OcmSoftwareConfig(resolvers=resolvers),
+                OcmCredentialsConfig(consumers=consumers)
+            ]
+        )
+
+        return yaml.dump(dataclasses.asdict(config))
+
+    @staticmethod
+    def from_ocm_config(
+        config: OcmGenericConfig,
+    ) -> 'OcmLookupMappingConfig':
+        for c in config.configurations:
+            if isinstance(c, OcmSoftwareConfig):
+                mappings = [
+                    OcmLookupMapping(
+                        ocm_repo_url=(
+                            f'{resolver.repository.baseurl}' if not resolver.repository.subpath
+                            else f'{resolver.repository.baseurl}/{resolver.repository.subpath}'
+                        ),
+                        prefix=resolver.prefix,
+                        priority=resolver.priority,
+                    ) for resolver in c.resolvers
+                ]
+                return OcmLookupMappingConfig(mappings)
+        else:
+            raise RuntimeError("No resolvers found in OCM config.")
+
+    @staticmethod
+    def from_ocm_config_dict(
+        ocm_config_dict: dict,
+    ) -> 'OcmLookupMappingConfig':
+        ocm_config = dacite.from_dict(
+            data_class=OcmGenericConfig,
+            data=ocm_config_dict,
+        )
+        return OcmLookupMappingConfig.from_ocm_config(ocm_config)
+
+    @staticmethod
+    def from_dict(
+        raw_mappings: dict,
+    ) -> 'OcmLookupMappingConfig':
+        mappings = [
+            dacite.from_dict(
+                data_class=OcmLookupMapping,
+                data=e,
+            ) for e in raw_mappings
+        ]
+
+        return OcmLookupMappingConfig(mappings)
