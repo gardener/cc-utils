@@ -20,7 +20,7 @@ class Node:
 
 @dataclasses.dataclass
 class ComponentNode(Node):
-    pass
+    comp_refs: tuple[tuple[cm.Component]] = dataclasses.field(default_factory=lambda: tuple(tuple()))
 
 
 @dataclasses.dataclass
@@ -54,6 +54,7 @@ def iter(
     prune_unique: bool=True,
     node_filter: typing.Callable[[Node], bool]=None,
     ctx_repo: cm.RepositoryContext | str=None,
+    include_comp_refs: bool=False,
 ):
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
@@ -70,6 +71,10 @@ def iter(
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
     @param ctx_repo:     optional ctx_repo to be used to override in the lookup
+    @param include_comp_refs: if true, each component node will also have a attribute which
+                              specifies in which components it is referenced. This will slow
+                              down execution time as this can only be calculated if all
+                              nodes have been traversed
     '''
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
@@ -78,6 +83,9 @@ def iter(
 
     if not lookup and not recursion_depth == 0:
         raise ValueError('lookup is required if recusion is not disabled (recursion_depth==0)')
+
+    if include_comp_refs:
+        nodes = list()
 
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
@@ -136,10 +144,33 @@ def iter(
         if node_filter and not node_filter(node):
             continue
 
+        if include_comp_refs and isinstance(node, ComponentNode):
+            # check if same component was already appended with another component ref
+            comp_refs = next((n.comp_refs for n in nodes if node.component.name == n.component.name and node.component.version == n.component.version and isinstance(n, ComponentNode)), tuple())
+            if node.path not in comp_refs:
+                comp_refs = (*comp_refs, node.path)
+            node.comp_refs = comp_refs
+
+            # update component refs property for already appended component nodes as well
+            nodes = [
+                n if node.component.name != n.component.name or node.component.version != n.component.version or not isinstance(n, ComponentNode)
+                else ComponentNode(
+                    path=n.path,
+                    comp_refs=comp_refs,
+                )
+                for n in nodes
+            ]
+
         if prune_unique and isinstance(node, ComponentNode):
             if node.component.identity() in seen_component_ids:
                 continue
             else:
                 seen_component_ids.add(node.component_id)
 
-        yield node
+        if include_comp_refs:
+            nodes.append(node)
+        else:
+            yield node
+
+    if include_comp_refs:
+        yield from nodes
