@@ -192,7 +192,10 @@ def manifest(
             accept=accept,
         )
 
-        pprint.pprint(manifest.as_dict())
+        if isinstance(manifest, om.OciImageManifest):
+            pprint.pprint(manifest.as_dict())
+        else:
+            pprint.pprint(manifest_raw.json())
 
         if isinstance(manifest, om.OciImageManifest):
             total_size = sum(blob.size for blob in manifest.blobs())
