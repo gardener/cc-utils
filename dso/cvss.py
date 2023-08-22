@@ -322,7 +322,7 @@ def matching_rescore_rules(
 def rescore(
     rescoring_rules: typing.Iterable[RescoringRule],
     severity: CVESeverity,
-    minimum_severity: int=CVESeverity.LOW,
+    minimum_severity: int=CVESeverity.NONE,
 ) -> CVESeverity:
     for rule in rescoring_rules:
         if rule.rescore is Rescore.NO_CHANGE:
