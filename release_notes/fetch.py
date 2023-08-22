@@ -229,7 +229,7 @@ def fetch_release_notes(
             continue
         component_versions[parsed_version] = ver
 
-    if not current_version:
+    if not current_version or current_version not in component_versions:
         current_version_tag = None
     else:
         current_version_tag = git_helper.repo.tag(component_versions[current_version])
