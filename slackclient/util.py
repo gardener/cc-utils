@@ -44,7 +44,7 @@ class SlackHelper:
         if not (api_token := self.slack_cfg.api_token()):
             raise RuntimeError("can't post to slack as there is no slack api token in config")
 
-        logger.info(f"posting message '{title}' to slack channel '{channel}'")
+        logger.info(f'posting message {title=} to slack {channel=} using {self.slack_cfg.name()}')
         client = slack.WebClient(token=api_token)
         # We expect rather long messages, so we do not use incoming webhooks etc. to post
         # messages as those get truncated, see
