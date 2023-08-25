@@ -41,9 +41,7 @@ class SlackHelper:
         message: str,
         filetype: str='post'
     ):
-        api_token = self.slack_cfg.api_token()
-
-        if not api_token:
+        if not (api_token := self.slack_cfg.api_token()):
             raise RuntimeError("can't post to slack as there is no slack api token in config")
 
         logger.info(f"posting message '{title}' to slack channel '{channel}'")
