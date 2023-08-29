@@ -466,6 +466,17 @@ def _scanned_element_assignees(
     repository: github3.repos.repo.Repository,
     gh_api: github3.GitHub | github3.GitHubEnterprise,
 ) -> set[str]:
+    '''
+    Determines assignees for scanned-element based on its type.
+        ocm-node:
+        retrieve component-responsibles via delivery-service
+
+        cfg-element:
+        resolve cfg responsible mapping to github users
+
+    Assignees are returned as set of GitHub usernames.
+    GitHub instance (for username determination) is taken from `repository`.
+    '''
 
     def iter_gh_usernames_from_responsibles_mapping(
         gh_api: github3.GitHub | github3.GitHubEnterprise,
