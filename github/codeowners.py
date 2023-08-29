@@ -177,8 +177,8 @@ def resolve_team_members(
     Return generator yielding usernames resolved recursively from given team.
     If no team found for given team, no users are returned.
     '''
-    organisation = github_api.organization(team.org_name)
     try:
+        organisation = github_api.organization(team.org_name)
         team = organisation.team_by_name(team.name)
         team: github3.orgs.Team
     except NotFoundError:
