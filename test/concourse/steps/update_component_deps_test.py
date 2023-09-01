@@ -6,6 +6,7 @@ import pathlib
 
 import gci.componentmodel as cm
 import cnudie.util
+import cnudie.retrieve
 import concourse.steps.update_component_deps
 
 import test_utils
@@ -82,10 +83,18 @@ def test_determine_reference_versions():
         [cnudie.util.OcmLookupMapping(ocm_repo_url='foo', prefix='', priority=10)]
     )
 
+    ocm_lookup = cnudie.retrieve.in_memory_cache_component_descriptor_lookup(
+        ocm_repository_lookup=mapping_config,
+    )
+    version_lookup = cnudie.retrieve.version_lookup(
+        ocm_repository_lookup=mapping_config,
+    )
+
     examinee = functools.partial(
         determine_reference_versions,
         component_name=component_name,
-        mapping_config=mapping_config,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
     )
     greatest_component_version_mock = unittest.mock.Mock()
     concourse.steps.update_component_deps.greatest_component_version = (
@@ -101,7 +110,7 @@ def test_determine_reference_versions():
 
     greatest_component_version_mock.assert_called_with(
         component_name=component_name,
-        mapping_config=mapping_config,
+        version_lookup=version_lookup,
         ignore_prerelease_versions=False,
     )
 
@@ -114,7 +123,7 @@ def test_determine_reference_versions():
 
     greatest_component_version_mock.assert_called_with(
         component_name=component_name,
-        mapping_config=mapping_config,
+        version_lookup=version_lookup,
         ignore_prerelease_versions=False,
     )
 
@@ -123,7 +132,8 @@ def test_determine_reference_versions():
         determine_reference_versions,
         component_name='example.org/foo/bar',
         upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
     )
 
     latest_component_version_mock = unittest.mock.Mock()
@@ -144,7 +154,8 @@ def test_determine_reference_versions():
     latest_component_version_mock.assert_called_once_with(
         component_name=component_name,
         upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
         ignore_prerelease_versions=False,
     )
 
@@ -159,7 +170,8 @@ def test_determine_reference_versions():
     latest_component_version_mock.assert_called_once_with(
         component_name=component_name,
         upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
         ignore_prerelease_versions=False,
     )
 
@@ -184,12 +196,13 @@ def test_determine_reference_versions():
     latest_component_version_mock.assert_called_once_with(
         component_name=component_name,
         upstream_component_name='example.org/foo/bar',
-        mapping_config=mapping_config,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
         ignore_prerelease_versions=False,
     )
     greatest_component_version_with_matching_minor_mock.assert_called_once_with(
         component_name=component_name,
-        mapping_config=mapping_config,
+        version_lookup=version_lookup,
         reference_version=reference_version,
         ignore_prerelease_versions=False,
     )

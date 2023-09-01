@@ -22,6 +22,9 @@ def print_release_notes(
     ctx_repo = cm.OciRepositoryContext(baseUrl=ocm_repo_base_url)
 
     lookup = cnudie.retrieve.oci_component_descriptor_lookup()
+    version_lookup = cnudie.retrieve.version_lookup(
+        default_ctx_repo=ctx_repo,
+    )
 
     # We need a component. Fetch one with given information (assuming the relevant information
     # is still correct if no version was given).
@@ -62,6 +65,7 @@ def print_release_notes(
     component = component_descriptor.component
     blocks = release_notes.fetch.fetch_release_notes(
         component=component,
+        version_lookup=version_lookup,
         repo_path=repo_path,
         current_version=current_version,
         previous_version=previous_version,

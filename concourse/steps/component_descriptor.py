@@ -124,7 +124,7 @@ def component_diff_since_last_release(
     )
 
     version_lookup = cnudie.retrieve.version_lookup(
-        mapping_config=mapping_config,
+        ocm_repository_lookup=mapping_config,
     )
     versions = version_lookup(
         component.identity()
@@ -144,7 +144,7 @@ def component_diff_since_last_release(
     logger.info('last released version: ' + str(greatest_release_version))
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        mapping_config=mapping_config,
+        ocm_repository_lookup=mapping_config,
         default_absent_ok=False,
     )
 

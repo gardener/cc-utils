@@ -1,4 +1,3 @@
-import functools
 import logging
 import os
 import subprocess
@@ -36,13 +35,6 @@ logger = logging.getLogger('step.update_component_deps')
 
 
 UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
-
-
-@functools.cache
-def component_descriptor_lookup(
-    mapping_config: cnudie.util.OcmLookupMappingConfig
-) -> cnudie.retrieve.ComponentDescriptorLookupById:
-    return cnudie.retrieve.create_default_component_descriptor_lookup(mapping_config=mapping_config)
 
 
 def current_product_descriptor():
@@ -97,14 +89,10 @@ def upgrade_pr_exists(
 
 def greatest_component_version(
     component_name,
-    mapping_config,
+    version_lookup,
     ignore_prerelease_versions,
 ) -> str | None:
-    lookup = cnudie.retrieve.version_lookup(
-        mapping_config=mapping_config,
-    )
-
-    versions = lookup(
+    versions = version_lookup(
         gci.componentmodel.ComponentIdentity(
             name=component_name,
             version='dont_care',
@@ -126,15 +114,11 @@ def greatest_component_version(
 
 def greatest_component_version_with_matching_minor(
     component_name,
-    mapping_config,
+    version_lookup,
     reference_version,
     ignore_prerelease_versions,
 ) -> str | None:
-    lookup = cnudie.retrieve.version_lookup(
-        mapping_config=mapping_config,
-    )
-
-    versions = lookup(
+    versions = version_lookup(
         gci.componentmodel.ComponentIdentity(
             name=component_name,
             version='dont_care',
@@ -158,12 +142,13 @@ def greatest_component_version_with_matching_minor(
 def latest_component_version_from_upstream(
     component_name: str,
     upstream_component_name: str,
-    mapping_config,
+    ocm_lookup,
+    version_lookup,
     ignore_prerelease_versions: bool=False,
 ):
     upstream_component_version = greatest_component_version(
         component_name=upstream_component_name,
-        mapping_config=mapping_config,
+        version_lookup=version_lookup,
         ignore_prerelease_versions=ignore_prerelease_versions,
     )
 
@@ -172,8 +157,8 @@ def latest_component_version_from_upstream(
             f'did not find any versions for {upstream_component_name=}'
         )
 
-    upstream_component_descriptor = component_descriptor_lookup(mapping_config)(
-        component_id=gci.componentmodel.ComponentIdentity(
+    upstream_component_descriptor = ocm_lookup(
+        gci.componentmodel.ComponentIdentity(
             name=upstream_component_name,
             version=upstream_component_version,
         ),
@@ -189,7 +174,8 @@ def latest_component_version_from_upstream(
 def determine_reference_versions(
     component_name: str,
     reference_version: str,
-    mapping_config,
+    version_lookup,
+    ocm_lookup,
     upstream_component_name: str=None,
     upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=False,
@@ -198,7 +184,7 @@ def determine_reference_versions(
         # no upstream component defined - look for greatest released version
         latest_component_version = greatest_component_version(
             component_name=component_name,
-            mapping_config=mapping_config,
+            version_lookup=version_lookup,
             ignore_prerelease_versions=ignore_prerelease_versions,
         )
         if not latest_component_version:
@@ -213,7 +199,8 @@ def determine_reference_versions(
     version_candidate = latest_component_version_from_upstream(
         component_name=component_name,
         upstream_component_name=upstream_component_name,
-        mapping_config=mapping_config,
+        version_lookup=version_lookup,
+        ocm_lookup=ocm_lookup,
         ignore_prerelease_versions=ignore_prerelease_versions,
     )
 
@@ -223,7 +210,7 @@ def determine_reference_versions(
     elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         hotfix_candidate = greatest_component_version_with_matching_minor(
             component_name=component_name,
-            mapping_config=mapping_config,
+            version_lookup=version_lookup,
             reference_version=reference_version,
             ignore_prerelease_versions=ignore_prerelease_versions,
         )
@@ -240,7 +227,8 @@ def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
     upgrade_pull_requests: typing.Iterable[github.util.UpgradePullRequest],
-    mapping_config: cnudie.util.OcmLookupMappingConfig,
+    version_lookup,
+    ocm_lookup,
     ignore_prerelease_versions=False,
 ) -> typing.Iterable[typing.Tuple[
     gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
@@ -253,7 +241,8 @@ def determine_upgrade_prs(
             reference_version=greatest_component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
-            mapping_config=mapping_config,
+            version_lookup=version_lookup,
+            ocm_lookup=ocm_lookup,
             ignore_prerelease_versions=ignore_prerelease_versions,
         )
         if versions_to_consider:
@@ -364,7 +353,8 @@ def create_upgrade_pr(
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
-    mapping_config: cnudie.util.OcmLookupMappingConfig,
+    version_lookup,
+    ocm_lookup,
     merge_policy: MergePolicy,
     merge_method: MergeMethod,
     after_merge_callback=None,
@@ -375,15 +365,12 @@ def create_upgrade_pr(
 
     ls_repo = pull_request_util.repository
 
-    lookup = cnudie.retrieve.oci_component_descriptor_lookup(
-        mapping_config=mapping_config,
-        default_absent_ok=False,
-    )
-    from_component_descriptor = lookup(
+    from_component_descriptor = ocm_lookup(
         component_id=gci.componentmodel.ComponentIdentity(
             name=from_ref.componentName,
             version=from_ref.version,
         ),
+        absent_ok=False,
     )
     from_component = from_component_descriptor.component
 
@@ -578,6 +565,12 @@ def create_release_notes(
     to_version: str,
 ):
     from_version = from_component.version
+
+    ocm_repo = from_component.current_repository_ctx()
+    ocm_version_lookup = cnudie.retrieve.version_lookup(
+        default_ctx_repo=ocm_repo,
+    )
+
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             gitutil.GitHelper.clone_into(
@@ -586,8 +579,9 @@ def create_release_notes(
                 github_repo_path=f'{from_repo_owner}/{from_repo_name}'
             )
             release_note_blocks = release_notes_fetch.fetch_release_notes(
-                repo_path=temp_dir,
                 component=from_component,
+                version_lookup=ocm_version_lookup,
+                repo_path=temp_dir,
                 current_version=version.parse_to_semver(to_version),
                 previous_version=version.parse_to_semver(from_version),
             )

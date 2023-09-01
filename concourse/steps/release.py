@@ -607,14 +607,14 @@ class UploadComponentDescriptorStep(TransactionalStep):
         self.github_helper = not_none(github_helper)
         self.components = components
         self.release_on_github = release_on_github
-        self.mapping_config = mapping_config
+        self.ocm_lookup = cnudie.retrieve.oci_component_descriptor_lookup(
+            ocm_repository_lookup=mapping_config,
+        )
 
     def name(self):
         return "Upload Component Descriptor"
 
     def validate(self):
-        lookup = cnudie.retrieve.oci_component_descriptor_lookup(mapping_config=self.mapping_config)
-
         components: tuple[cm.Component] = tuple(
             cnudie.util.iter_sorted(
                 self.components,
@@ -627,7 +627,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
         def iter_components():
             for component in components:
                 yield from cnudie.iter.iter(
-                    lookup=lookup,
+                    lookup=self.ocm_lookup,
                     component=component,
                     recursion_depth=0,
                 )
@@ -648,10 +648,6 @@ class UploadComponentDescriptorStep(TransactionalStep):
         exit(1)
 
     def apply(self):
-        lookup = cnudie.retrieve.oci_component_descriptor_lookup(
-            mapping_config=self.mapping_config,
-            default_absent_ok=False,
-        )
         if self.release_on_github:
             create_release_step_output = self.context().step_output('Create Release')
             release_tag_name = create_release_step_output['release_tag_name']
@@ -666,7 +662,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
         def resolve_dependencies(component: cm.Component):
             for _ in cnudie.retrieve.components(
                 component=component,
-                component_descriptor_lookup=lookup,
+                component_descriptor_lookup=self.ocm_lookup,
             ):
                 pass
 
@@ -1084,10 +1080,14 @@ def release_and_prepare_next_dev_cycle(
         raise NotImplementedError(release_notes_policy)
 
     if release_on_github:
+        version_lookup = cnudie.retrieve.version_lookup(
+            ocm_repository_lookup=mapping_config,
+        )
+
         release_note_blocks = release_notes.fetch.fetch_release_notes(
             repo_path=repo_dir,
             component=component,
-            mapping_config=mapping_config,
+            version_lookup=version_lookup,
             current_version=version.parse_to_semver(release_version),
         )
         release_notes_markdown = '\n'.join(
