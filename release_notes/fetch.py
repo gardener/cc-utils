@@ -187,11 +187,11 @@ def get_release_note_commits_tuple(
 
 
 def fetch_release_notes(
-        component: gci.componentmodel.Component,
-        repo_path: str,
-        current_version: typing.Optional[semver.VersionInfo] = None,
-        previous_version: typing.Optional[semver.VersionInfo] = None,
-        mapping_config: cnudie.util.OcmLookupMappingConfig | None = None,
+    component: gci.componentmodel.Component,
+    version_lookup,
+    repo_path: str,
+    current_version: typing.Optional[semver.VersionInfo] = None,
+    previous_version: typing.Optional[semver.VersionInfo] = None,
 ) -> set[rnm.ReleaseNote]:
     ''' Fetches and returns a set of release notes for the specified component.
 
@@ -201,9 +201,6 @@ def fetch_release_notes(
         If not given, the current `HEAD` is used.
     :param previous_version: Optional argument to retrieve release notes starting at a specific \
         version. If not given, the closest version to `current_version` is used.
-    :param mapping_config: An optional `OcmLookupMappingConfig` that will be used when fetching \
-        component descriptors. If none is given, the ocm repository context of the passed \
-        component will be used.
 
     :return: A set of ReleaseNote objects for the specified component.
     '''
@@ -225,15 +222,6 @@ def fetch_release_notes(
 
     # find all available versions
     component_versions: dict[semver.VersionInfo, str] = {}
-
-    if not mapping_config:
-        version_lookup = cnudie.retrieve.version_lookup(
-            default_ctx_repo=component.current_repository_ctx(),
-        )
-    else:
-        version_lookup = cnudie.retrieve.version_lookup(
-            mapping_config=mapping_config,
-        )
 
     for ver in version_lookup(component.identity()):
         parsed_version = version.parse_to_semver(ver)

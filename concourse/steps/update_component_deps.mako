@@ -41,6 +41,7 @@ import dacite
 
 import ci.util
 import cnudie.util
+import cnudie.retrieve
 import concourse.model.traits.release
 import concourse.model.traits.update_component_deps
 import ctx
@@ -130,6 +131,13 @@ mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
     raw_mappings = ${ocm_repository_mappings},
 )
 
+ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    ocm_repository_lookup=mapping_config,
+)
+version_lookup = cnudie.retrieve.version_lookup(
+    ocm_repository_lookup=mapping_config,
+)
+
 # we at most need to do this once
 os.environ['DOCKERD_STARTED'] = 'no'
 
@@ -138,7 +146,8 @@ for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
-    mapping_config=mapping_config,
+    ocm_lookup=ocm_lookup,
+    version_lookup=version_lookup,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
     applicable_merge_policy = [
@@ -170,7 +179,8 @@ for from_ref, to_version in determine_upgrade_prs(
         githubrepobranch=githubrepobranch,
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
-        mapping_config=mapping_config,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
         merge_policy=merge_policy,
         merge_method=merge_method,
 % if after_merge_callback:

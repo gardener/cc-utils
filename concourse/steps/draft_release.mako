@@ -71,9 +71,14 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
   ),
 )
 
+ocm_repo = component.current_repository_ctx()
+ocm_version_lookup = cnudie.retrieve.version_lookup(
+    default_ctx_repo=ocm_repo,
+)
+
 previous_version = cnudie.retrieve.greatest_component_version_with_matching_minor(
     component_name=component.name,
-    ctx_repo=component.current_repository_ctx(),
+    ctx_repo=ocm_repo,
     reference_version=version_str,
     ignore_prerelease_versions=True,
 )
@@ -96,6 +101,7 @@ try:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         repo_path=repo_dir,
         component=component,
+        version_lookup=ocm_version_lookup,
         previous_version=previous_version,
     )
     release_notes_md = '\n'.join(

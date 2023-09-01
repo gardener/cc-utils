@@ -308,7 +308,7 @@ component = descriptor_v2.component
 oci_client = ccc.oci.oci_client()
 
 lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    mapping_config=mapping_config,
+    ocm_repository_lookup=mapping_config,
 )
 
 for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
