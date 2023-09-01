@@ -653,10 +653,10 @@ class OcmLookupMappingConfig:
             reverse=True,
         )
 
-    def find_ocm_repository(
+    def iter_ocm_repositories(
         self,
         component_name: str,
-    ) -> typing.Iterable[cm.OciRepositoryContext]:
+    ) -> typing.Generator[cm.OciRepositoryContext, None, None]:
         for mapping in self.mappings:
             if component_name.startswith(mapping.prefix):
                 yield cm.OciRepositoryContext(baseUrl=mapping.ocm_repo_url)

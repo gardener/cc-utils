@@ -115,7 +115,7 @@ def in_memory_cache_component_descriptor_lookup(
             except KeyError:
                 pass
         else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_id.name):
+            for ctx_repo in mapping_config.iter_ocm_repositories(component_id.name):
                 try:
                     if (component_descriptor := cache.get((component_id, ctx_repo))):
                         return component_descriptor
@@ -200,7 +200,7 @@ def file_system_cache_component_descriptor_lookup(
                 f'{component_id.name}-{component_id.version}',
             )
         else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_id.name):
+            for ctx_repo in mapping_config.iter_ocm_repositories(component_id.name):
                 descriptor_path = os.path.join(
                     cache_dir,
                     ctx_repo.oci_ref.replace('/', '-'),
@@ -292,7 +292,7 @@ def delivery_service_component_descriptor_lookup(
                 pass
 
         else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_name):
+            for ctx_repo in mapping_config.iter_ocm_repositories(component_name):
                 try:
                     return delivery_client.component_descriptor(
                         name=component_id.name,
@@ -380,7 +380,7 @@ def oci_component_descriptor_lookup(
             )
 
         else:
-            for ctx_repo in mapping_config.find_ocm_repository(component_name):
+            for ctx_repo in mapping_config.iter_ocm_repositories(component_name):
                 target_ref = ci.util.urljoin(
                     ctx_repo.oci_ref,
                     'component-descriptors',
@@ -481,7 +481,7 @@ def version_lookup(
                 oci_client=oci_client,
             )
         else:
-            for ocm_repo_ctx in mapping_config.find_ocm_repository(component_name):
+            for ocm_repo_ctx in mapping_config.iter_ocm_repositories(component_name):
                 image_tags = component_versions(
                     component_name=component_name,
                     ctx_repo=ocm_repo_ctx,
