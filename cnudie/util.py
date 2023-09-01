@@ -637,6 +637,14 @@ class OcmLookupMapping:
     prefix: str
     priority: int | None = 10
 
+    def matches(self, component):
+        if isinstance(component, cm.Component):
+            component = component.name
+        elif isinstance(component, cm.ComponentIdentity):
+            component = component.name
+
+        return component.startswith(self.prefix)
+
 
 class OcmLookupMappingConfig:
     def __init__(
@@ -658,7 +666,7 @@ class OcmLookupMappingConfig:
         component_name: str,
     ) -> typing.Generator[cm.OciRepositoryContext, None, None]:
         for mapping in self.mappings:
-            if component_name.startswith(mapping.prefix):
+            if mapping.matches(component_name):
                 yield cm.OciRepositoryContext(baseUrl=mapping.ocm_repo_url)
 
     def to_ocm_software_config(
