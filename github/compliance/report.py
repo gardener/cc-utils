@@ -741,6 +741,8 @@ def create_or_update_github_issues(
                         sprint=target_sprint,
                     )
                 except Exception as e:
+                    import traceback
+                    traceback.print_exc()
                     logger.warning(f'{e=}')
                     target_milestone = None
 
