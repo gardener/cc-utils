@@ -106,7 +106,10 @@ def iter_ocm_repositories(
             return
 
         for cfg in _iter_ocm_repositories(component, repository_cfg):
-            yield from cfg
+            if hasattr(cfg, '__iter__'):
+                yield from cfg
+            else:
+                yield cfg
 
 
 def ocm_repository_lookup(*repository_cfgs: OcmRepositoryCfg):
