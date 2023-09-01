@@ -179,9 +179,9 @@ def in_memory_cache_component_descriptor_lookup(
 
         else:
             ocm_repos = iter_ocm_repositories(
+                component_id,
                 ocm_repository_lookup,
                 default_ctx_repo,
-                component_id,
             )
 
         for ocm_repo in ocm_repos:
