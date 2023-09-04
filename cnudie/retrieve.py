@@ -900,7 +900,9 @@ def greatest_component_version_by_name(
         oci_client = ccc.oci.oci_client()
 
     if not component_descriptor_lookup:
-        component_descriptor_lookup = create_default_component_descriptor_lookup()
+        component_descriptor_lookup = create_default_component_descriptor_lookup(
+            default_ctx_repo=ctx_repo,
+        )
 
     greatest_version = greatest_component_version(
         component_name=component_name,
@@ -913,6 +915,5 @@ def greatest_component_version_by_name(
             name=component_name,
             version=greatest_version,
         ),
-        ctx_repo=ctx_repo,
     )
     return component_descriptor.component
