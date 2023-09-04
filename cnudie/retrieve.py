@@ -705,7 +705,6 @@ def components(
                     name=component_ref.componentName,
                     version=component_ref.version,
                 ),
-                ctx_repo=component.current_repository_ctx(),
             )
 
             yield from resolve_component_dependencies(
