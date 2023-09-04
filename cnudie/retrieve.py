@@ -780,7 +780,7 @@ def greatest_component_version(
     oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False,
 ) -> str:
-    if not isinstance(ctx_repo, (cm.OciRepositoryContext, list)):
+    if not isinstance(ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
