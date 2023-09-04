@@ -54,7 +54,7 @@ def iter(
     prune_unique: bool=True,
     node_filter: typing.Callable[[Node], bool]=None,
     ctx_repo: cm.RepositoryContext | str=None,
-):
+) -> typing.Generator[Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
 
