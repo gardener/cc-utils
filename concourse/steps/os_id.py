@@ -111,6 +111,7 @@ def scan_result_group_collection_for_outdated_os_ids(
         elif delivery.util.update_available(
             os_id=os_id,
             os_infos=os_infos[os_id.ID],
+            ignore_if_patchlevel_is_next_to_greatest=True,
         ):
             return gcm.Severity.MEDIUM
         else:
@@ -138,6 +139,7 @@ def scan_result_group_collection_for_outdated_os_ids(
         elif delivery.util.update_available(
             os_id=os_id,
             os_infos=os_infos[os_id.ID],
+            ignore_if_patchlevel_is_next_to_greatest=True,
         ):
             return True
         else:

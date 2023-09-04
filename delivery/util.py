@@ -62,6 +62,7 @@ def branch_reached_eol(
 def update_available(
     os_id: um.OperatingSystemId,
     os_infos: list[delivery.model.OsReleaseInfo],
+    ignore_if_patchlevel_is_next_to_greatest=False,
 ) -> bool:
     branch_info = find_branch_info(
         os_id=os_id,
@@ -73,4 +74,18 @@ def update_available(
     if not branch_info.greatest_version:
         return False
 
-    return branch_info.greatest_version > awesomeversion.AwesomeVersion(os_id.VERSION_ID)
+    version = awesomeversion.AwesomeVersion(os_id.VERSION_ID)
+
+    greater_version_available = (gv := branch_info.greatest_version) > version
+
+    if not greater_version_available or not ignore_if_patchlevel_is_next_to_greatest:
+        return greater_version_available
+
+    # there is greated version; check whether difference is not more than one patchlevel
+    # check whether both versions actually _have_ patchlevel
+    if not gv.patch or not version.patch:
+        return greater_version_available
+
+    # assume "next-to-greatest" patch-level to be "great enogh"
+    patch_diff = int(gv.patch) - int(version.patch)
+    return patch_diff < 2
