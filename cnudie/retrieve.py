@@ -597,8 +597,13 @@ def composite_component_descriptor_lookup(
                 baseUrl=ctx_repo,
             )
 
+        if ctx_repo:
+            component_url = ctx_repo.component_version_oci_ref(component_id),
+        else:
+            component_url = f'<no ocm-repo given>: {str(component_id)}'
+
         raise om.OciImageNotFoundException(
-            ctx_repo.component_version_oci_ref(component_id),
+            component_url,
         )
 
     return lookup
