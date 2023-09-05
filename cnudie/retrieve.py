@@ -294,11 +294,6 @@ def file_system_cache_component_descriptor_lookup(
         elif descriptor_path:
             base_dir = os.path.dirname(descriptor_path)
             os.makedirs(name=base_dir, exist_ok=True)
-        else:
-            # no mapping was applicable - cannot construct a path
-            raise NotImplementedError(
-                f"No matching ocm repo found for '{component_id.name}' in given ocm-repo mappings"
-            )
 
         # component descriptor not found in lookup
         return _writeback
