@@ -673,7 +673,6 @@ def create_default_component_descriptor_lookup(
 def components(
     component: typing.Union[cm.ComponentDescriptor, cm.Component],
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
-    ocm_repository=None,
 ):
     component = cnudie.util.to_component(component)
 
@@ -706,7 +705,6 @@ def components(
                     name=component_ref.componentName,
                     version=component_ref.version,
                 ),
-                ctx_repo=ocm_repository,
             )
 
             yield from resolve_component_dependencies(
@@ -723,7 +721,6 @@ def component_diff(
     right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
     ignore_component_names=(),
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
-    ocm_repository=None,
 ):
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
@@ -736,7 +733,6 @@ def component_diff(
         components(
             component=left_component,
             component_descriptor_lookup=component_descriptor_lookup,
-            ocm_repository=ocm_repository,
         )
         if c.name not in ignore_component_names
     )
@@ -745,7 +741,6 @@ def component_diff(
         components(
             component=right_component,
             component_descriptor_lookup=component_descriptor_lookup,
-            ocm_repository=ocm_repository,
         )
         if c.name not in ignore_component_names
     )
