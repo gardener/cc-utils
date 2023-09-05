@@ -75,17 +75,18 @@ def update_available(
         return False
 
     version = awesomeversion.AwesomeVersion(os_id.VERSION_ID)
+    greatest_version = awesomeversion.AwesomeVersion(branch_info.greatest_version)
 
-    greater_version_available = (gv := branch_info.greatest_version) > version
+    greater_version_available = greatest_version > version
 
     if not greater_version_available or not ignore_if_patchlevel_is_next_to_greatest:
         return greater_version_available
 
     # there is greated version; check whether difference is not more than one patchlevel
     # check whether both versions actually _have_ patchlevel
-    if not gv.patch or not version.patch:
+    if not greatest.patch or not version.patch:
         return greater_version_available
 
     # assume "next-to-greatest" patch-level to be "great enogh"
-    patch_diff = int(gv.patch) - int(version.patch)
+    patch_diff = int(greatest_version.patch) - int(version.patch)
     return patch_diff < 2
