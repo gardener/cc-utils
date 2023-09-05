@@ -126,17 +126,19 @@ def scan_result_group_collection_for_outdated_os_ids(
             return None
 
         relation = result.scanned_element.resource.relation
-        if not relation is cm.ResourceRelation.LOCAL:
-            logger.info(f'{result.scanned_element.resource.name=} '
-                f'is not "local" - will ignore findings')
-            return False
 
         if delivery.util.branch_reached_eol(
             os_id=os_id,
             os_infos=os_infos[os_id.ID],
         ):
             return True
-        elif delivery.util.update_available(
+
+        if not relation is cm.ResourceRelation.LOCAL:
+            logger.info(f'{result.scanned_element.resource.name=} '
+                f'is not "local" - will ignore findings')
+            return False
+
+        if delivery.util.update_available(
             os_id=os_id,
             os_infos=os_infos[os_id.ID],
             ignore_if_patchlevel_is_next_to_greatest=True,
