@@ -84,7 +84,7 @@ def update_available(
 
     # there is greated version; check whether difference is not more than one patchlevel
     # check whether both versions actually _have_ patchlevel
-    if not greatest.patch or not version.patch:
+    if not greatest_version.patch or not version.patch:
         return greater_version_available
 
     # assume "next-to-greatest" patch-level to be "great enogh"
