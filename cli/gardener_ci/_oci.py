@@ -278,22 +278,21 @@ def sanitise(image_reference: str):
 def osinfo(image_reference: str):
     oci_client = ccc.oci.oci_client()
 
+    manifest = oci_client.manifest(
+        image_reference=image_reference,
+        accept=om.MimeTypes.prefer_multiarch,
+    )
+    if isinstance(manifest, om.OciImageManifestList):
+        img_ref = om.OciImageReference(image_reference)
+        sub_img_ref = f'{img_ref.ref_without_tag}@{manifest.manifests[0].digest}'
+
+        manifest = oci_client.manifest(sub_img_ref)
+    first_layer_blob = oci_client.blob(
+        image_reference=image_reference,
+        digest=manifest.layers[0].digest,
+    )
+
     with tempfile.TemporaryFile() as tmpf:
-        manifest = oci_client.manifest(
-            image_reference=image_reference,
-            accept=om.MimeTypes.prefer_multiarch,
-        )
-
-        if isinstance(manifest, om.OciImageManifestList):
-            img_ref = om.OciImageReference(image_reference)
-            sub_img_ref = f'{img_ref.ref_without_tag}@{manifest.manifests[0].digest}'
-
-            manifest = oci_client.manifest(sub_img_ref)
-
-        first_layer_blob = oci_client.blob(
-            image_reference=image_reference,
-            digest=manifest.layers[0].digest,
-        )
         for chunk in first_layer_blob.iter_content(chunk_size=4096):
             tmpf.write(chunk)
 
