@@ -595,7 +595,7 @@ def _target_milestone(
 def _target_sprint(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
     latest_processing_date: datetime.date,
-):
+) -> delivery.model.Sprint:
     try:
         target_sprint = delivery_svc_client.sprint_current(before=latest_processing_date)
     except requests.HTTPError as http_error:
