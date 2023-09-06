@@ -3,12 +3,16 @@ import enum
 import hashlib
 import pprint
 import sys
+import tabulate
 import tarfile
 import tempfile
 
 import requests
 
 import ccc.oci
+import ctx
+import delivery.client
+import delivery.util
 import oci
 import oci.model as om
 import oci.workarounds as ow
@@ -275,8 +279,24 @@ def sanitise(image_reference: str):
     print(patched_ref)
 
 
-def osinfo(image_reference: str):
+def osinfo(
+    image_reference: str,
+    delivery_cfg_name: str=None,
+):
     oci_client = ccc.oci.oci_client()
+    if not delivery_cfg_name:
+        delivery_cfg_name = ctx.cfg.ctx.delivery_cfg_name
+    if delivery_cfg_name:
+        cfg_factory = ctx.cfg_factory()
+        delivery_cfg = cfg_factory.delivery_endpoints(delivery_cfg_name)
+
+        delivery_client = delivery.client.DeliveryServiceClient(
+            routes=delivery.client.DeliveryServiceRoutes(
+                base_url=delivery_cfg.base_url(),
+            ),
+        )
+    else:
+        delivery_client = None
 
     manifest = oci_client.manifest(
         image_reference=image_reference,
@@ -299,6 +319,66 @@ def osinfo(image_reference: str):
         tmpf.seek(0)
         tf = tarfile.open(fileobj=tmpf, mode='r')
 
-        osi_info = us.determine_osinfo(tf)
+        os_info = us.determine_osinfo(tf)
 
-    pprint.pprint(osi_info)
+    pprint.pprint(os_info)
+
+    if not delivery_client:
+        print('no delivery-cfg found (use --delivery-cfg-name to configure)')
+        print('will exit now')
+        exit(0)
+
+    os_infos = delivery_client.os_release_infos(
+        os_id=os_info.ID,
+        absent_ok=True,
+    )
+
+    if not os_infos:
+        print(f'did not find os-infos for {os_info.ID=}')
+        exit(0)
+
+    branch_info = delivery.util.find_branch_info(
+        os_id=os_info,
+        os_infos=os_infos,
+    )
+
+    if not branch_info:
+        print(f'did not find branch-info for {os_info.ID=} {os_info.VERSION=}')
+        exit(1)
+
+    print()
+    print('Branch-Info:')
+    print()
+    pprint.pprint(branch_info)
+
+    eol = delivery.util.branch_reached_eol(
+        os_id=os_info,
+        os_infos=os_infos,
+    )
+
+    have_update = delivery.util.update_available(
+        os_id=os_info,
+        os_infos=os_infos,
+        ignore_if_patchlevel_is_next_to_greatest=False,
+    )
+
+    almost_up_to_date = not delivery.util.update_available(
+        os_id=os_info,
+        os_infos=os_infos,
+        ignore_if_patchlevel_is_next_to_greatest=True,
+    )
+
+    print(
+        tabulate.tabulate(
+            headers=('info', 'value'),
+            tabular_data=(
+                ('eol', eol,),
+                ('update-available', have_update,),
+                ('(almost)-up-to-date', almost_up_to_date,),
+            ),
+        )
+    )
+
+    if have_update and almost_up_to_date:
+        print()
+        print('almost-up-to-date: not more than one patchlevel behind')
