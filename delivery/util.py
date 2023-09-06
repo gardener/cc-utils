@@ -87,6 +87,5 @@ def update_available(
     if not greatest_version.patch or not version.patch:
         return greater_version_available
 
-    # assume "next-to-greatest" patch-level to be "great enogh"
     patch_diff = int(greatest_version.patch) - int(version.patch)
-    return patch_diff < 2
+    return patch_diff > 1
