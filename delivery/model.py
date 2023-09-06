@@ -26,13 +26,31 @@ class GithubUser:
     github_hostname: str
 
 
+@dataclasses.dataclass(frozen=True)
+class SprintDate:
+    name: str
+    display_name: str
+    value: datetime.datetime
+
+
 @dataclasses.dataclass(frozen=True) # TODO: deduplicate w/ modelclass in delivery-service/yp.py
 class Sprint:
     name: str
-    end_date: datetime.datetime
-    release_decision: datetime.datetime
-    rtc: datetime.datetime
-    canary_freeze: datetime.datetime
+    dates: list[SprintDate]
+
+    def find_sprint_date(
+        self,
+        name: str,
+        absent_ok: bool = False,
+    ) -> SprintDate | None:
+        for sprint_date in self.dates:
+            if sprint_date.name == name:
+                return sprint_date
+
+        if absent_ok:
+            return None
+
+        raise RuntimeError(f'did not find {name=} in {self=}')
 
     @staticmethod
     def from_dict(raw: dict):

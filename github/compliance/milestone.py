@@ -25,11 +25,16 @@ def find_or_create_sprint_milestone(
         return ms
 
     title = _milestone_title(sprint=sprint)
+
+    sprint_release_decision = sprint.find_sprint_date(
+        name='release_decision',
+    )
+
     ms = repo.create_milestone(
         title=title,
         state='open',
         description=f'used to track issues for upcoming sprint {title}',
-        due_on=sprint.release_decision.isoformat(),
+        due_on=sprint_release_decision.value.isoformat(),
     )
 
     return ms
