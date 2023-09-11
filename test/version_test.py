@@ -174,20 +174,6 @@ def test_set_verbatim_with_verbatim_version():
     assert parsed == 'master'
 
 
-def test_skip_patchlevel_zero():
-    assert version.process_version(
-        version_str='1.2.0',
-        operation='noop',
-        skip_patchlevel_zero=True,
-    ) == '1.2.1'
-
-    assert version.process_version(
-        version_str='1.2.0',
-        operation='noop',
-        skip_patchlevel_zero=False,
-    ) == '1.2.0'
-
-
 def test_bumping():
     # major
     parsed = version.process_version(version_str='2.4.6', operation='bump_major')

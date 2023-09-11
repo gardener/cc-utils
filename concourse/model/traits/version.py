@@ -78,8 +78,6 @@ class VersionTrait(Trait):
     PREPROCESS_OPS = {
         'finalise',
         'finalize',
-        'finalise-skip-patchlevel-zero',
-        'finalize-skip-patchlevel-zero',
         'inject-branch-name',
         'inject-commit-hash',
         'noop',
@@ -89,15 +87,14 @@ class VersionTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.preprocess in self.PREPROCESS_OPS:
+        if not self._preprocess() in self.PREPROCESS_OPS:
             raise ValueError('preprocess must be one of: ' + ', '.join(self.PREPROCESS_OPS))
 
     @classmethod
     def _attribute_specs(cls):
         return ATTRIBUTES
 
-    @property
-    def preprocess(self):
+    def _preprocess(self):
         return self.raw['preprocess']
 
     def versionfile_relpath(self):

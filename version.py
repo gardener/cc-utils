@@ -291,7 +291,6 @@ def process_version(
     # as we usually use git commit hashes
     build_metadata_length: int=12,
     verbatim_version: str=None,
-    skip_patchlevel_zero=False,
 ):
     if operation in [SET_PRERELEASE,SET_PRERELEASE_AND_BUILD,APPEND_PRERELEASE] and not prerelease:
         raise ValueError('Prerelease must be given when replacing or appending.')
@@ -328,11 +327,6 @@ def process_version(
         if operation in [SET_BUILD_METADATA, SET_PRERELEASE_AND_BUILD]:
             parsed_version = parsed_version.replace(build=build_metadata[:build_metadata_length])
         processed_version = str(parsed_version)
-
-    if skip_patchlevel_zero:
-        parsed_version = parse_to_semver(processed_version)
-        if parsed_version.patch == 0:
-            processed_version = str(parsed_version.replace(patch=1))
 
     if prefix:
         return prefix + processed_version

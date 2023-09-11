@@ -22,7 +22,7 @@ if (read_callback := version_trait.read_callback()):
 if (write_callback := version_trait.write_callback() or ''):
   write_callback = os.path.join(main_repo.resource_name(), write_callback)
 
-version_operation = version_trait.preprocess
+version_operation = version_trait._preprocess()
 branch_name = main_repo.branch()
 
 version_operation_kwargs = dict()
@@ -32,9 +32,6 @@ if version_operation == 'inject-commit-hash':
   version_operation_kwargs['operation'] = 'set_prerelease'
 elif version_operation in ('finalize', 'finalise'):
   version_operation_kwargs['operation'] = 'finalize_version'
-elif version_operation in ('finalize-skip-patchlevel-zero', 'finalise-skip-patchlevel-zero'):
-  version_operation_kwargs['operation'] = 'finalize_version'
-  version_operation_kwargs['skip_patchlevel_zero'] = True
 elif version_operation == 'noop':
   version_operation_kwargs['operation'] = 'noop'
 elif version_operation == 'inject-branch-name':
