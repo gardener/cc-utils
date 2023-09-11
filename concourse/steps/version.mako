@@ -32,6 +32,9 @@ if version_operation == 'inject-commit-hash':
   version_operation_kwargs['operation'] = 'set_prerelease'
 elif version_operation in ('finalize', 'finalise'):
   version_operation_kwargs['operation'] = 'finalize_version'
+elif version_operation in ('finalize-skip-patchlevel-zero', 'finalise-skip-patchlevel-zero'):
+  version_operation_kwargs['operation'] = 'finalize_version'
+  version_operation_kwargs['skip_patchlevel_zero'] = True
 elif version_operation == 'noop':
   version_operation_kwargs['operation'] = 'noop'
 elif version_operation == 'inject-branch-name':

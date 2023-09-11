@@ -78,6 +78,8 @@ class VersionTrait(Trait):
     PREPROCESS_OPS = {
         'finalise',
         'finalize',
+        'finalise-skip-patchlevel-zero',
+        'finalize-skip-patchlevel-zero',
         'inject-branch-name',
         'inject-commit-hash',
         'noop',
