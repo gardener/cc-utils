@@ -36,7 +36,7 @@ class SprintDate:
 @dataclasses.dataclass(frozen=True) # TODO: deduplicate w/ modelclass in delivery-service/yp.py
 class Sprint:
     name: str
-    dates: list[SprintDate]
+    dates: frozenset[SprintDate]
 
     def find_sprint_date(
         self,
@@ -59,6 +59,7 @@ class Sprint:
             data=raw,
             config=dacite.Config(
                 type_hooks={datetime.datetime: _parse_datetime_if_present},
+                cast=[frozenset],
             ),
         )
 
