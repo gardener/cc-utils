@@ -22,7 +22,7 @@ if (read_callback := version_trait.read_callback()):
 if (write_callback := version_trait.write_callback() or ''):
   write_callback = os.path.join(main_repo.resource_name(), write_callback)
 
-version_operation = version_trait._preprocess()
+version_operation = version_trait.preprocess
 branch_name = main_repo.branch()
 
 version_operation_kwargs = dict()
