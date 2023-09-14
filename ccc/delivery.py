@@ -23,7 +23,7 @@ def _current_cfg_set(
 
 def default_client_if_available(
     cfg_factory=None,
-):
+) -> delivery.client.DeliveryServiceClient:
     if not cfg_factory:
         cfg_factory = ctx.cfg_factory()
 
