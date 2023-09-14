@@ -184,7 +184,7 @@ def _decrypt_cipher_text(encrypted_cipher_text: bytes, secret: model.secret.Secr
 @ensure.ensure_annotations
 def encrypt_data(
     key: bytes,
-    cipher_algorithm: str,
+    cipher_algorithm: str | model.secret.Cipher,
     serialized_secret_data: bytes,
 ) -> bytes:
     cipher_algorithm = model.secret.Cipher(cipher_algorithm)

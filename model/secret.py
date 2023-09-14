@@ -57,8 +57,8 @@ class Secret(NamedModelElement):
     def cipher_algorithm(self):
         return Cipher(self.raw.get('cipher_algorithm'))
 
-    def generation(self):
-        return self.raw.get('generation')
+    def generation(self) -> int:
+        return int(self.raw.get('generation'))
 
     def _required_attributes(self):
         return ['cipher_algorithm',]
