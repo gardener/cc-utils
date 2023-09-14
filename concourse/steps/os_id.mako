@@ -76,6 +76,7 @@ results = []
 for result in determine_os_ids(
   component_descriptor=component_descriptor,
   oci_client=oci_client,
+  delivery_service_client=delivery_db_client,
 ):
   component = result.scanned_element.component
   resource = github.compliance.model.artifact_from_node(result.scanned_element)
