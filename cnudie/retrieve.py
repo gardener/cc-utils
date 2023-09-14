@@ -15,7 +15,6 @@ import dacite
 import gci.componentmodel as cm
 import gci.oci
 
-import ccc.delivery
 import ccc.oci
 import ci.util
 import cnudie.util
@@ -317,6 +316,7 @@ def delivery_service_component_descriptor_lookup(
                                 descriptors for the returned lookup function
     '''
     if not delivery_client:
+        import ccc.delivery
         delivery_client = ccc.delivery.default_client_if_available()
     if not delivery_client:
         raise ValueError(delivery_client)
@@ -644,6 +644,7 @@ def create_default_component_descriptor_lookup(
         )
 
     if not delivery_client:
+        import ccc.delivery
         delivery_client = ccc.delivery.default_client_if_available()
     if delivery_client:
         lookups.append(delivery_service_component_descriptor_lookup(
