@@ -380,12 +380,7 @@ class CreateTagsStep(TransactionalStep):
                 )
 
             def merge_release_into_current_target_branch_head():
-                upstream_commit = self.git_helper.fetch_head(
-                    f'refs/heads/{self.repository_branch}'
-                )
-                self.git_helper.rebase(commit_ish=upstream_commit.hexsha)
-
-                merge_commit = create_merge_commit(upstream_commit)
+                merge_commit = create_merge_commit(self.git_helper.repo.head.commit)
                 self.context().merge_release_back_to_default_branch_commit = merge_commit
 
                 self.git_helper.push(
