@@ -380,11 +380,7 @@ class CreateTagsStep(TransactionalStep):
                 )
 
             def merge_release_into_current_target_branch_head():
-                head = self.git_helper.fetch_head(
-                    f'refs/heads/{self.repository_branch}'
-                ) # reduce risks of conflicts
-
-                merge_commit = create_merge_commit(head)
+                merge_commit = create_merge_commit(self.git_helper.repo.head.commit)
                 self.context().merge_release_back_to_default_branch_commit = merge_commit
 
                 self.git_helper.push(
@@ -398,13 +394,21 @@ class CreateTagsStep(TransactionalStep):
                     working_tree=True,
                 ) # make sure next dev-cycle commit does not undo the merge-commit
 
+            head_before_merge = self.git_helper.repo.head
             try:
                 merge_release_into_current_target_branch_head()
 
             except (GitCommandError, RuntimeError):
-                # should only occur on merge conflicts
+                # should only occur on merge conflicts or head-update during release
                 logger.warning(f'Merging release-commit from tag {self.release_tag} failed.')
                 traceback.print_exc()
+
+                self.git_helper.repo.head.reset(
+                    commit=head_before_merge.commit.hexsha,
+                    index=True,
+                    working_tree=True,
+                ) # clean repo for subsequent steps
+
                 # do not fail release-step here as release-tag is created already and next dev-cycle
                 # commit must still be processed
 
