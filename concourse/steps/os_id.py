@@ -1,7 +1,6 @@
 import datetime
 import logging
 import tarfile
-import tempfile
 import typing
 
 import gci.componentmodel as cm
@@ -13,13 +12,14 @@ import delivery.client
 import delivery.model
 import delivery.util
 import dso.model as dm
-import github.compliance.model as gcm
 import github.compliance.issue as gciss
+import github.compliance.model as gcm
 import oci.client
 import oci.model
 import product.v2
-import unixutil.scan as us
+import tarutil
 import unixutil.model as um
+import unixutil.scan as us
 
 logger = logging.getLogger('os-id')
 ci.log.configure_default_logging()
@@ -92,20 +92,24 @@ def base_image_os_id(
         image_reference = oci.model.OciImageReference(image_reference)
         manifest = oci_client.manifest(image_reference.ref_without_tag + '@' + manifest.digest)
 
-    first_layer_blob = oci_client.blob(
-        image_reference=image_reference,
-        digest=manifest.layers[0].digest,
-    )
+    last_os_info = None
 
-    # workaround streaming issues -> always write to tempfile :/
-    with tempfile.TemporaryFile() as tempf:
-        for chunk in first_layer_blob.iter_content(chunk_size=4096):
-            tempf.write(chunk)
-        tempf.seek(0)
+    for layer in manifest.layers:
+        layer_blob = oci_client.blob(
+            image_reference=image_reference,
+            digest=layer.digest,
+        )
+        fileproxy = tarutil.FilelikeProxy(
+            layer_blob.iter_content(chunk_size=tarfile.BLOCKSIZE)
+        )
+        tf = tarfile.open(fileobj=fileproxy, mode='r|*')
+        if (os_info := us.determine_osinfo(tf)):
+            last_os_info = os_info
 
-        tf = tarfile.open(fileobj=tempf, mode='r')
-
-        os_info = us.determine_osinfo(tarfh=tf)
+    if not last_os_info:
+        # if we could not determine os-info, upload a dummy os-info (with all entries set to None)
+        # to keep track of the failed scan attempt
+        last_os_info = um.OperatingSystemId()
 
     # pylint: disable=E1123
     return gcm.OsIdScanResult(
@@ -113,7 +117,7 @@ def base_image_os_id(
             path=(component,),
             resource=resource,
         ),
-        os_id=os_info,
+        os_id=last_os_info,
     )
 
 
