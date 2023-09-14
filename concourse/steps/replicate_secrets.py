@@ -1,8 +1,5 @@
 import base64
 import logging
-import typing
-import pprint
-import re
 
 import kubernetes.client
 import kubernetes.config
@@ -17,9 +14,13 @@ import ci.log
 import ci.util
 import model
 import model.concourse
+import model.config_repo
+import model.secret
+import model.secrets_server
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
+
 
 
 def process_config_queue(
@@ -142,56 +143,104 @@ def _put_secret(
         core_api.create_namespaced_secret(namespace=namespace, body=secret)
 
 
-def replicate_secrets(
+def _put_k8s_secret(
     cfg_factory: model.ConfigFactory,
-    cfg_set: model.ConfigurationSet,
-    kubeconfig: typing.Dict,
-    secret_key: str,
-    secret_cipher_algorithm: str,
-    future_secrets: typing.Dict[str, str],
-    team_name: str,
-    target_secret_name: str,
-    target_secret_namespace: str,
-    target_secret_cfg_name: str,
+    target: model.config_repo.KubernetesSecretTarget,
+    cfg_sets: list[model.ConfigurationSet],
 ):
-    logger.info(f'replicating replication cfg set {cfg_set.name()}')
+    kubernetes_config = cfg_factory.kubernetes(target.kubernetes_config_name)
+    target_kubeconfig = kubernetes_config.kubeconfig()
 
-    # force cfg_set serialiser to include referenced cfg_sets
-    cfg_sets = list(cfg_set._cfg_elements('cfg_set')) + [cfg_set]
-
-    for cfg_set in cfg_sets:
-        logger.info(f'config subset {cfg_set.name()=} with keys')
-        for cfg_mapping in [cfg_set._cfg_mappings()]:
-            for cfg_type_name, _ in cfg_mapping:
-                pprint.pprint(
-                    {cfg_type_name: cfg_set._cfg_element_names(cfg_type_name=cfg_type_name)}
-                )
+    secret_name = target.secret_name
+    secret_namespace = target.secret_namespace
+    secret_key = target.secret_key
 
     serialiser = model.ConfigSetSerialiser(cfg_sets=cfg_sets, cfg_factory=cfg_factory)
+    serialised = serialiser.serialise().encode('utf-8')
+    secret_data = base64.b64encode(serialised).decode('utf-8')
 
-    api_client = kubernetes.config.new_client_from_config_dict(kubeconfig)
+    api_client = kubernetes.config.new_client_from_config_dict(target_kubeconfig)
     core_api = kubernetes.client.CoreV1Api(api_client)
 
-    logger.info(f'deploying indexed secrets on cluster {api_client.configuration.host}')
-    for (k,v) in future_secrets.items():
-        m = re.match(r'key[-](\d+)', k)
-        if m:
-            f_name = model.concourse.secret_name_from_team(team_name, m.group(1))
+    logger.info(
+        f"deploying config into k8s-secret '{secret_name}' in namespace "
+        f"'{secret_namespace}' on cluster '{api_client.configuration.host}'"
+    )
+    _put_secret(
+        core_api=core_api,
+        name=secret_name,
+        raw_data={secret_key: secret_data},
+        namespace=secret_namespace,
+    )
 
-            encrypted_cipher_data = ccc.secrets_server.encrypt_data(
-                key=v.encode('utf-8'),
-                cipher_algorithm=secret_cipher_algorithm,
-                serialized_secret_data=serialiser.serialise().encode('utf-8')
+
+def _put_secrets_server_secret(
+    cfg_factory: model.ConfigFactory,
+    target: model.config_repo.SecretsServerTarget,
+    cfg_sets: list[model.ConfigurationSet],
+):
+    kubernetes_config = cfg_factory.kubernetes(target.kubernetes_config_name)
+    target_kubeconfig = kubernetes_config.kubeconfig()
+
+    secret_config: model.secret.Secret = cfg_factory.secret(target.secret_config)
+    secrets_server_config: model.secrets_server.SecretsServerConfig = cfg_factory.secrets_server(target.secrets_server_config)
+    logger.info(
+        f'secret cfg: {secret_config.name()} '
+        f'and key: {secret_config.key().decode("utf-8")[:3]}...'
+    )
+
+    team_cfg = cfg_factory.concourse_team_cfg(target.team_config)
+    concourse_team_name = team_cfg.team_name()
+
+    secret_name = model.concourse.secret_name_from_team(
+        team_name=concourse_team_name,
+        key_generation=secret_config.generation(),
+    )
+    secret_namespace = secrets_server_config.namespace()
+    secret_key = model.concourse.secret_cfg_name_for_team(concourse_team_name)
+
+    serialiser = model.ConfigSetSerialiser(cfg_sets=cfg_sets, cfg_factory=cfg_factory)
+    encrypted_cipher_data = ccc.secrets_server.encrypt_data(
+        key=secret_config.key(),
+        cipher_algorithm=secret_config.cipher_algorithm(),
+        serialized_secret_data=serialiser.serialise().encode('utf-8')
+    )
+    secret_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
+
+    api_client = kubernetes.config.new_client_from_config_dict(target_kubeconfig)
+    core_api = kubernetes.client.CoreV1Api(api_client)
+
+    logger.info(
+        f"deploying encrypted secret '{secret_name}' in namespace '{secret_namespace}' "
+        f"on cluster '{api_client.configuration.host}'"
+    )
+    _put_secret(
+        core_api=core_api,
+        name=secret_name,
+        raw_data={secret_key: secret_data},
+        namespace=secret_namespace,
+    )
+
+
+def replicate_secrets(
+    cfg_factory: model.ConfigFactory,
+    replication_target_config: model.config_repo.ReplicationTargetConfig,
+):
+    for mapping in replication_target_config.replication_mappings:
+        cfg_set = cfg_factory.cfg_set(mapping.cfg_set)
+        # force cfg_set serialiser to include referenced cfg_sets
+        cfg_sets = list(cfg_set._cfg_elements('cfg_set')) + [cfg_set]
+        if isinstance(target := mapping.target, model.config_repo.KubernetesSecretTarget):
+            _put_k8s_secret(
+                cfg_factory=cfg_factory,
+                target=target,
+                cfg_sets=cfg_sets,
             )
-            encoded_cipher_data = base64.b64encode(encrypted_cipher_data).decode('utf-8')
-            logger.info(f'deploying secret {f_name} in namespace {target_secret_namespace}')
-            _put_secret(
-                core_api=core_api,
-                name=f_name,
-                raw_data={target_secret_cfg_name: encoded_cipher_data},
-                namespace=target_secret_namespace,
+        elif isinstance(target, model.config_repo.SecretsServerTarget):
+            _put_secrets_server_secret(
+                cfg_factory=cfg_factory,
+                target=target,
+                cfg_sets=cfg_sets,
             )
         else:
-            logger.warning(f'ignoring unmatched key: {k}')
-
-    logger.info(f'deployed encrypted secret for team: {team_name}')
+            raise NotImplementedError(type(mapping))
