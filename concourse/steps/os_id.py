@@ -28,6 +28,7 @@ ci.log.configure_default_logging()
 def determine_os_ids(
     component_descriptor: cm.ComponentDescriptor,
     oci_client: oci.client.Client,
+    delivery_service_client: delivery.client.DeliveryServiceClient,
 ) -> typing.Generator[gcm.OsIdScanResult, None, None]:
     component_resources: typing.Generator[tuple[cm.Component, cm.Resource], None, None] = \
         product.v2.enumerate_oci_resources(component_descriptor=component_descriptor)
@@ -35,6 +36,7 @@ def determine_os_ids(
     for component, resource in component_resources:
         yield base_image_os_id(
             oci_client=oci_client,
+            delivery_service_client=delivery_service_client,
             component=component,
             resource=resource,
         )
@@ -42,9 +44,40 @@ def determine_os_ids(
 
 def base_image_os_id(
     oci_client: oci.client.Client,
+    delivery_service_client: delivery.client.DeliveryServiceClient,
     component: cm.Component,
     resource: cm.Resource,
 ) -> gcm.OsIdScanResult:
+    # shortcut scan if there is already a scan-result
+    if delivery_service_client:
+        scan_result = delivery_service_client.metadata(
+            component=component,
+            artefact=resource,
+            types=('os_ids',),
+        )
+        scan_result = tuple(scan_result)
+        if len(scan_result) > 1:
+            logger.warning(
+                f'found more than one scanresult for {component.name}:{resource.name}'
+            )
+            scan_result = scan_result[0]
+        if scan_result:
+            scan_result = scan_result[0]
+
+            if not isinstance(scan_result.data, dm.OsID):
+                logger.warning('unexpected scan-result-type: {scan_result=}')
+            else:
+                scan_result.data: dm.OsID
+
+                return gcm.OsIdScanResult(
+                    scanned_element=cnudie.iter.ResourceNode(
+                        path=(component,),
+                        resource=resource,
+                    ),
+                    os_id=scan_result.data.os_info,
+                )
+
+    # there was no scanresult, so we have to scan
     image_reference = resource.access.imageReference
 
     manifest = oci_client.manifest(
