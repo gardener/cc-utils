@@ -7,7 +7,6 @@ extra_args = step._extra_args
 cfg_repo_relpath = extra_args['cfg_repo_relpath']
 kubeconfig = extra_args['kubeconfig']
 target_secret_namespace = extra_args['target_secret_namespace']
-raw_secret_cfg = extra_args['secret_cfg']
 raw_job_mapping = extra_args['raw_job_mapping']
 job_mapping_name = extra_args['job_mapping_name']
 secrets_repo_url = extra_args['secrets_repo_url']
@@ -22,6 +21,7 @@ import ccc.github
 import cfg_mgmt.reporting as cmr
 import model
 import model.concourse
+import model.config_repo
 
 cfg_dir = '${cfg_repo_relpath}'
 
@@ -77,24 +77,14 @@ cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(
   cfg_dir=cfg_dir,
 )
 cfg_set = cfg_factory.cfg_set(org_job_mapping.replication_ctx_cfg_set())
+replication_target_config = model.config_repo.replication_config_from_cfg_dir(cfg_dir)
 
 ## use logger from step_lib
 logger.info(f'replicating team {team_name}')
 
-raw_secret_cfg = ${raw_secret_cfg}
-future_secrets =  {k:v for (k,v) in raw_secret_cfg.items() if k.startswith('key-')}
-
 replicate_secrets(
-  cfg_factory=cfg_factory,
-  cfg_set=cfg_set,
-  kubeconfig=dict(${kubeconfig}),
-  secret_key=raw_secret_cfg.get('key'),
-  future_secrets=future_secrets,
-  secret_cipher_algorithm=raw_secret_cfg.get('cipher_algorithm'),
-  team_name=team_name,
-  target_secret_name=org_job_mapping.target_secret_name(),
-  target_secret_namespace='${target_secret_namespace}',
-  target_secret_cfg_name=org_job_mapping.target_secret_cfg_name(),
+    cfg_factory=cfg_factory,
+    replication_target_config=replication_target_config,
 )
 
 logger.info('generating cfg element status report')
