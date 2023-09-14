@@ -401,7 +401,7 @@ class CreateTagsStep(TransactionalStep):
             try:
                 merge_release_into_current_target_branch_head()
 
-            except GitCommandError:
+            except (GitCommandError, RuntimeError):
                 # should only occur on merge conflicts
                 logger.warning(f'Merging release-commit from tag {self.release_tag} failed.')
                 traceback.print_exc()
