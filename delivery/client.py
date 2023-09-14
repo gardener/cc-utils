@@ -7,6 +7,8 @@ import typing
 import gci.componentmodel as cm
 
 import ci.util
+import cnudie.iter
+import cnudie.retrieve
 import cnudie.util
 import delivery.model as dm
 import dso.model
@@ -313,6 +315,51 @@ class DeliveryServiceClient:
                 continue
 
             yield component_metadata
+
+    def metadata(
+        self,
+        component: cnudie.retrieve.ComponentName=None,
+        artefact: str=None,
+        node: cnudie.iter.Node=None,
+        types: typing.Iterable[str]=None,
+    ) -> typing.Generator[dm.ArtefactMetadata, None, None]:
+        if component:
+            component = cnudie.util.to_component_id(component)
+
+        if types:
+            types = tuple(types)
+
+        if not (bool(component) ^ bool(node)):
+            raise ValueError('exactly one of component, node must be passed')
+
+        if node:
+            component = node.component
+            artefact = node.artefact
+
+        if isinstance(artefact, cm.Artifact):
+            artefact_name = artefact.name
+            artefact_version = artefact.version
+        elif isinstance(artefact, str):
+            artefact_name = artefact
+            artefact_version = None
+
+        for metadata in self.components_metadata(
+            component_name=component.name,
+            component_version=component.version,
+            metadata_types=types,
+        ):
+            if not artefact:
+                yield metadata
+                continue
+
+            # todo: also check for artefact-type + consider version is an optional attr
+            #       + consider extra-id (keep it simple for now)
+            artefact_id = metadata.artefactId
+            if artefact_name and artefact_id.artefactName != artefact_name:
+                continue
+            if artefact_version and artefact_id.artefactVersion != artefact_version:
+                continue
+            yield metadata
 
 
 def _normalise_github_hostname(github_url: str):
