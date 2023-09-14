@@ -75,6 +75,7 @@ def base_image_os_id(
                         resource=resource,
                     ),
                     os_id=scan_result.data.os_info,
+                    skip_upload_to_deliverydb=True, # no need to re-upload (got it from there)
                 )
 
     # there was no scanresult, so we have to scan

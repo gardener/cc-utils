@@ -92,6 +92,7 @@ class ScanResult:
 @dataclasses.dataclass
 class OsIdScanResult(ScanResult):
     os_id: unixutil.model.OperatingSystemId
+    skip_upload_to_deliverydb: bool = False
 
 
 @dataclasses.dataclass

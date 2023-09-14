@@ -80,9 +80,14 @@ for result in determine_os_ids(
 ):
   component = result.scanned_element.component
   resource = github.compliance.model.artifact_from_node(result.scanned_element)
+  artefact = f'{component.name}:{component.version}/{resource.name}'
+
+  if result.skip_upload_to_deliverydb:
+    logger.info(f'skipping re-upload to delivery-db of existing os-info {artefact}')
+    continue
   os_info = result.os_id
 
-  logger.info(f'uploading os-info for {component.name} {resource.name}')
+  logger.info(f'uploading os-info for {artefact}')
   upload_to_delivery_db(
     db_client=delivery_db_client,
         resource=resource,
