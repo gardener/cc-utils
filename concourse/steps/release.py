@@ -486,7 +486,11 @@ class NextDevCycleCommitStep(TransactionalStep):
             elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
                 reset_to = 'HEAD'
             elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
-                reset_to = self.context().merge_release_back_to_default_branch_commit
+                reset_to = getattr(
+                    self.context(),
+                    'merge_release_back_to_default_branch_commit',
+                    'HEAD',
+                ) # release continues even if merging-back release-commit fails
             else:
                 raise NotImplementedError
 
@@ -522,7 +526,16 @@ class NextDevCycleCommitStep(TransactionalStep):
         elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
             parent_commits = None # default to current branch head
         elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
-            parent_commits = [self.context().merge_release_back_to_default_branch_commit]
+            parent_commit = getattr(
+                self.context(),
+                'merge_release_back_to_default_branch_commit',
+                None,
+            ) # release continues even if merging-back release-commit fails
+
+            if parent_commit:
+                parent_commits = [parent_commit]
+            else:
+                parent_commits = None # default to current branch head
 
         next_cycle_commit = self.git_helper.index_to_commit(
             message=self._next_dev_cycle_commit_message(
