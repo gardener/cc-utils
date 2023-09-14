@@ -84,6 +84,7 @@ for result in determine_os_ids(
 
   if result.skip_upload_to_deliverydb:
     logger.info(f'skipping re-upload to delivery-db of existing os-info {artefact}')
+    results.append(result)
     continue
   os_info = result.os_id
 
