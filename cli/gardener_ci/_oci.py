@@ -5,7 +5,6 @@ import pprint
 import sys
 import tabulate
 import tarfile
-import tempfile
 
 import requests
 
@@ -16,6 +15,7 @@ import delivery.util
 import oci
 import oci.model as om
 import oci.workarounds as ow
+import tarutil
 import unixutil.scan as us
 import version
 
@@ -307,20 +307,22 @@ def osinfo(
         sub_img_ref = f'{img_ref.ref_without_tag}@{manifest.manifests[0].digest}'
 
         manifest = oci_client.manifest(sub_img_ref)
-    first_layer_blob = oci_client.blob(
-        image_reference=image_reference,
-        digest=manifest.layers[0].digest,
-    )
 
-    with tempfile.TemporaryFile() as tmpf:
-        for chunk in first_layer_blob.iter_content(chunk_size=4096):
-            tmpf.write(chunk)
+    last_os_info = None
 
-        tmpf.seek(0)
-        tf = tarfile.open(fileobj=tmpf, mode='r')
+    for layer in manifest.layers:
+        layer_blob = oci_client.blob(
+            image_reference=image_reference,
+            digest=layer.digest,
+        )
+        fileproxy = tarutil.FilelikeProxy(
+            layer_blob.iter_content(chunk_size=tarfile.BLOCKSIZE)
+        )
+        tf = tarfile.open(fileobj=fileproxy, mode='r|*')
+        if (os_info := us.determine_osinfo(tf)):
+            last_os_info = os_info
 
-        os_info = us.determine_osinfo(tf)
-
+    os_info = last_os_info
     pprint.pprint(os_info)
 
     if not delivery_client:
