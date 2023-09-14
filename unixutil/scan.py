@@ -44,7 +44,7 @@ def _parse_debian_version(contents: str):
     yield ('VERSION_ID', lines[0])
 
 
-def determine_osinfo(tarfh: tarfile.TarFile) -> um.OperatingSystemId:
+def determine_osinfo(tarfh: tarfile.TarFile) -> um.OperatingSystemId | None:
     '''
     tries to determine the operating system identification, roughly as specified by
         https://www.freedesktop.org/software/systemd/man/os-release.html
@@ -110,6 +110,9 @@ def determine_osinfo(tarfh: tarfile.TarFile) -> um.OperatingSystemId:
                 os_info[k] = v
         else:
             raise NotImplementedError(fname)
+
+    if not os_info:
+        return None
 
     return dacite.from_dict(
         data_class=um.OperatingSystemId,
