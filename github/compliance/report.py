@@ -132,7 +132,7 @@ def _compliance_status_summary(
 
     artifact_versions = ', '.join((r.version for r in artifacts))
 
-    artifact_urls = ' '.join(url for artefact in artefacts if (url := _artifact_url(artefact)))
+    artifact_urls = ' '.join(url for artefact in artifacts if (url := _artifact_url(artefact)))
 
     report_urls = '\n- '.join(report_urls)
 
