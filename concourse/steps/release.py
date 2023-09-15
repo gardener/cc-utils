@@ -258,6 +258,10 @@ class ReleaseCommitStep(TransactionalStep):
             ),
         )
 
+        # clean up after ourselves
+        if self.git_helper._changed_file_paths():
+            self.git_helper.repo.head.reset(working_tree=True)
+
         self.context().release_commit = release_commit # pass to other steps
 
         if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
@@ -380,7 +384,12 @@ class CreateTagsStep(TransactionalStep):
                 )
 
             def merge_release_into_current_target_branch_head():
-                merge_commit = create_merge_commit(self.git_helper.repo.head.commit)
+                upstream_commit = self.git_helper.fetch_head(
+                    f'refs/heads/{self.repository_branch}'
+                )
+                self.git_helper.rebase(commit_ish=upstream_commit.hexsha)
+
+                merge_commit = create_merge_commit(upstream_commit)
                 self.context().merge_release_back_to_default_branch_commit = merge_commit
 
                 self.git_helper.push(
