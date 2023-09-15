@@ -107,6 +107,17 @@ def _pluralise(prefix: str, count: int):
     return f'{prefix}s'
 
 
+def _artifact_url(artifact: cm.Artifact) -> str | None:
+    access = artifact.access
+
+    if access.type is cm.AccessType.OCI_REGISTRY:
+        return access.imageReference
+    elif access.type is cm.AccessType.S3:
+        return f'http://{access.bucketName}.s3.amazonaws.com/{access.objectKey}'
+    elif access.type is cm.AccessType.GITHUB:
+        return access.repoUrl
+
+
 def _compliance_status_summary(
     component: cm.Component,
     artifacts: typing.Sequence[cm.Artifact],
@@ -121,6 +132,8 @@ def _compliance_status_summary(
 
     artifact_versions = ', '.join((r.version for r in artifacts))
 
+    artifact_urls = ' '.join(url for artefact in artefacts if (url := _artifact_url(artefact)))
+
     report_urls = '\n- '.join(report_urls)
 
     summary = textwrap.dedent(f'''\
@@ -133,6 +146,7 @@ def _compliance_status_summary(
         | Artifact  | {artifacts[0].name} |
         | {_pluralise('Artifact-Version', len(artifacts))}  | {artifact_versions} |
         | Artifact-Type | {artifact_type} |
+        | URLs | {artifact_urls} |
         | {issue_description} | {issue_value} |
 
         The aforementioned {_pluralise(artifact_type, len(artifacts))} yielded findings
