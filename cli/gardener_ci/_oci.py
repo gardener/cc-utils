@@ -370,6 +370,8 @@ def osinfo(
         ignore_if_patchlevel_is_next_to_greatest=True,
     )
 
+    distroless = os_info.is_distroless
+
     print(
         tabulate.tabulate(
             headers=('info', 'value'),
@@ -377,6 +379,7 @@ def osinfo(
                 ('eol', eol,),
                 ('update-available', have_update,),
                 ('(almost)-up-to-date', almost_up_to_date,),
+                ('distroless', distroless,),
             ),
         )
     )
