@@ -141,8 +141,6 @@ class Component(ModelBase):
                 yield Vulnerability(raw_dict=raw)
                 continue
 
-            print(f'skipping {raw=} due to empty cve identifier')
-
     def greatest_cve_score(self) -> float:
         greatest_cve_score = -1
 
