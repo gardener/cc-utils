@@ -224,6 +224,7 @@ def find_config(
                 image_reference=oci.util.normalise_image_reference(image_reference=image_reference),
                 privileges=privileges,
                 _normalised_image_reference=True,
+                cfg_factory=cfg_factory,
             )
 
     # return first match (because they are sorted, this will be the one with least privileges)
