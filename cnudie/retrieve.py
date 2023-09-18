@@ -772,44 +772,69 @@ def component_versions(
 
 def greatest_component_version(
     component_name: str,
-    ctx_repo: cm.RepositoryContext,
+    ctx_repo: cm.RepositoryContext=None,
     oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False,
+    version_lookup: VersionLookupById=None,
 ) -> str:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
-        raise NotImplementedError(ctx_repo)
+    if not ctx_repo and not version_lookup:
+        raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
 
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
+    if ctx_repo:
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
 
-    image_tags = component_versions(
-        component_name=component_name,
-        ctx_repo=ctx_repo,
-        oci_client=oci_client,
-    )
+        if not oci_client:
+            oci_client = ccc.oci.oci_client()
+
+        image_tags = component_versions(
+            component_name=component_name,
+            ctx_repo=ctx_repo,
+            oci_client=oci_client,
+        )
+    else:
+        image_tags = version_lookup(
+            component_id=cm.ComponentIdentity(
+                name=component_name,
+                version=None
+            ),
+        )
+        
 
     return version.find_latest_version(image_tags, ignore_prerelease_versions)
 
 
 def greatest_component_versions(
     component_name: str,
-    ctx_repo: cm.RepositoryContext,
+    ctx_repo: cm.RepositoryContext=None,
     max_versions: int = 5,
     greatest_version: str = None,
     oci_client: oc.Client = None,
     ignore_prerelease_versions: bool = False,
+    version_lookup: VersionLookupById=None,
 ) -> list[str]:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
-        raise NotImplementedError(ctx_repo)
+    if not ctx_repo and not version_lookup:
+        raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
 
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
+    if ctx_repo:
+        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+            raise NotImplementedError(ctx_repo)
 
-    versions = component_versions(
-        component_name=component_name,
-        ctx_repo=ctx_repo,
-        oci_client=oci_client,
-    )
+        if not oci_client:
+            oci_client = ccc.oci.oci_client()
+
+        versions = component_versions(
+            component_name=component_name,
+            ctx_repo=ctx_repo,
+            oci_client=oci_client,
+        )
+    else:
+        versions = version_lookup(
+            component_id=cm.ComponentIdentity(
+                name=component_name,
+                version=None
+            ),
+        )
 
     if not versions:
         return []
