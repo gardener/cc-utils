@@ -241,6 +241,9 @@ def file_system_cache_component_descriptor_lookup(
                 ctx_repo.oci_ref.replace('/', '-'),
                 f'{component_id.name}-{component_id.version}',
             )
+            if not os.path.isfile(descriptor_path):
+                base_dir = os.path.dirname(descriptor_path)
+                os.makedirs(name=base_dir, exist_ok=True)
             shutil.move(f.name, descriptor_path)
         except:
             os.unlink(f.name)
@@ -282,17 +285,10 @@ def file_system_cache_component_descriptor_lookup(
                 ocm_repo.oci_ref.replace('/', '-'),
                 f'{component_id.name}-{component_id.version}',
             )
-            break
-        else:
-            descriptor_path = None
-
-        if descriptor_path and os.path.isfile(descriptor_path):
-            return cm.ComponentDescriptor.from_dict(
-                ci.util.parse_yaml_file(descriptor_path)
-            )
-        elif descriptor_path:
-            base_dir = os.path.dirname(descriptor_path)
-            os.makedirs(name=base_dir, exist_ok=True)
+            if os.path.isfile(descriptor_path):
+                return cm.ComponentDescriptor.from_dict(
+                    ci.util.parse_yaml_file(descriptor_path)
+                )
 
         # component descriptor not found in lookup
         return _writeback
