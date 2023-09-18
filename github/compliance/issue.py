@@ -2,10 +2,13 @@ import datetime
 import hashlib
 import logging
 import re
+import traceback
 import typing
 
+import concourse.util
 import github3
 import github3.issues
+import github3.issues.comment
 import github3.issues.issue
 import github3.issues.milestone
 import github3.repos
@@ -226,6 +229,43 @@ def _update_issue(
     return issue
 
 
+def _create_or_update_problems_comment(
+    issue: github3.github.issues.ShortIssue,
+    message: str,
+):
+    '''
+    Create or update a comment on an issue stating encountered problems.
+    '''
+
+    job_url = concourse.util.own_running_build_url()
+    now = datetime.datetime.now()
+
+    issue_problems_comment_header = (
+        'An error occurred when updating this issue:'
+    )
+
+    def find_existing_comment() -> github3.issues.comment.IssueComment | None:
+        for comment in issue.comments(number=32):
+            if issue_problems_comment_header in comment.body:
+                return comment
+
+    problems_comment = find_existing_comment()
+
+    comment_body = (
+        f'{issue_problems_comment_header}\n\n'
+        f'{message}\n\n'
+        f'Job url: {job_url}\n'
+        f'Date of occurrence: `{now.isoformat(timespec="minutes")}`'
+    )
+
+    if not problems_comment:
+        # Create new comment containing the message
+        issue.create_comment(comment_body)
+    else:
+        # Update comment replacing old message
+        problems_comment.edit(comment_body)
+
+
 def create_or_update_issue(
     scanned_element: gcm.Target,
     issue_type: str,
@@ -303,17 +343,25 @@ def create_or_update_issue(
             extra_labels = set(extra_labels) | set(labels_to_preserve())
         else:
             extra_labels = labels_to_preserve()
+        try:
+            return _update_issue(
+                scanned_element=scanned_element,
+                issue_type=issue_type,
+                extra_labels=extra_labels,
+                body=body,
+                title=title,
+                assignees=assignees,
+                milestone=milestone,
+                issue=open_issue,
+            )
+        except Exception as e:
+            message = f'```\n{traceback.format_exc()}\n```'
+            if isinstance(e, github3.exceptions.GitHubError) and e.errors: # noqa: E1101
+                # also add much more helpful "errors", if available
+                message += f'Additional error-details supplied by github: \n{e.errors}' # noqa: E1101
+            _create_or_update_problems_comment(issue=open_issue, message=message)
+            raise
 
-        return _update_issue(
-            scanned_element=scanned_element,
-            issue_type=issue_type,
-            extra_labels=extra_labels,
-            body=body,
-            title=title,
-            assignees=assignees,
-            milestone=milestone,
-            issue=open_issue,
-        )
     else:
         raise RuntimeError('this line should never be reached') # all cases should be handled before
 
