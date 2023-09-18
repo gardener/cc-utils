@@ -172,6 +172,7 @@ def usernames_from_email_address(
 def resolve_team_members(
     team: Team,
     github_api: GitHub,
+    absent_ok: bool=True,
 ) -> typing.Generator[Username, None, None]:
     '''
     Return generator yielding usernames resolved recursively from given team.
@@ -183,7 +184,10 @@ def resolve_team_members(
         team: github3.orgs.Team
     except NotFoundError:
         logger.warning('failed to lookup team {t}'.format(t=team.name))
-        return
+        if absent_ok:
+            return
+
+        raise
 
     yield from (
         Username(member.login)
