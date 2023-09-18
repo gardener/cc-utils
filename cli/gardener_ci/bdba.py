@@ -1,6 +1,7 @@
 import itertools
 import logging
 import os
+import pprint
 import typing
 
 import tabulate
@@ -27,6 +28,19 @@ import protecode.model as pm
 
 __cmd_name__ = 'bdba'
 logger = logging.getLogger(__name__)
+
+
+def retrieve(
+    product_id: str,
+    bdba_cfg_name='gardener',
+):
+    client = ccc.protecode.client(bdba_cfg_name)
+
+    scan_result = client.wait_for_scan_result(
+        product_id=product_id,
+    )
+
+    pprint.pprint(scan_result.raw)
 
 
 def ls_products(
