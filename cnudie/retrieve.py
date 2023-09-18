@@ -78,7 +78,7 @@ def _iter_ocm_repositories(
         return
 
     if isinstance(repository_cfg, cnudie.util.OcmLookupMappingConfig):
-        yield repository_cfg.iter_ocm_repositories(component)
+        yield from repository_cfg.iter_ocm_repositories(component)
 
     # recurse into elements in case repository_cfg is iterable
     if hasattr(repository_cfg, '__iter__'):
