@@ -79,7 +79,7 @@ def iter_artefact_metadata(
             type=dso.model.Datatype.LICENSES_AGGREGATED,
             creation_date=datetime.datetime.now()
         )
-        license_names = result.license_names
+        license_names = list(result.license_names)
 
         license = dso.model.LicenseSummary(
             licenses=license_names,
