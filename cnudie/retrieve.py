@@ -795,7 +795,6 @@ def greatest_component_version(
                 version=None
             ),
         )
-        
 
     return version.find_latest_version(image_tags, ignore_prerelease_versions)
 
