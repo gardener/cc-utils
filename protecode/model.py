@@ -338,8 +338,9 @@ class BDBA_ScanResult(gcm.ScanResult):
     @property
     def license_names(self) -> typing.Iterable[str]:
         license_names = set()
-        for license in self.licenses:
-            license_names.add(license.name)
+        for licenses in self.licenses:
+            for license in licenses:
+                license_names.add(license.name)
         return license_names
 
     @property
