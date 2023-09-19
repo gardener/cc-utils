@@ -17,9 +17,11 @@ import dataclasses
 import datetime
 import dso.labels
 import enum
+import itertools
 import traceback
 import typing
 
+import dacite
 import dateutil.parser
 
 import gci.componentmodel as cm
@@ -128,30 +130,11 @@ class AnalysisResult(ModelBase):
         return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
 
-class License(ModelBase):
-    def name(self):
-        return self.raw.get('name')
-
-    def license_type(self):
-        return self.raw.get('type')
-
-    def url(self):
-        return self.raw.get('url')
-
-    def __eq__(self, other):
-        if not isinstance(other, License):
-            return False
-
-        return self.name() == other.name() \
-            and self.license_type() == other.license_type() \
-            and self.url() == other.url()
-
-    def __hash__(self):
-        return hash((
-            self.name(),
-            self.url(),
-            self.license_type(),
-        ))
+@dataclasses.dataclass
+class License:
+    name: str
+    type: str | None = None
+    url: str | None = None
 
 
 class Component(ModelBase):
@@ -178,11 +161,24 @@ class Component(ModelBase):
 
         return greatest_cve_score
 
-    def license(self) -> License:
-        license_raw = self.raw.get('license', None)
-        if not license_raw:
-            return None
-        return License(raw_dict=license_raw)
+    @property
+    def licenses(self) -> typing.Generator[License, None, None]:
+        if not (licenses := self.raw.get('licenses')):
+            license_raw = self.raw.get('license')
+            if not license_raw:
+                return
+            yield dacite.from_dict(
+                data_class=License,
+                data=license_raw,
+            )
+            return
+
+        yield from (
+            dacite.from_dict(
+                data_class=License,
+                data=license_raw,
+            ) for license_raw in licenses.get('licenses')
+        )
 
     def extended_objects(self) -> 'typing.Generator[ExtendedObject, None, None]':
         return (ExtendedObject(raw_dict=raw) for raw in self.raw.get('extended-objects'))
@@ -341,11 +337,13 @@ class BDBA_ScanResult(gcm.ScanResult):
 
     @property
     def license_names(self) -> typing.Iterable[str]:
-        return {l.name() for l in self.licenses}
+        return {l.name for l in self.licenses}
 
     @property
     def licenses(self) -> typing.Sequence[License]:
-        return [c.license() for c in self.result.components() if c.license()]
+        return tuple(
+            itertools.chain(c.licenses for c in self.result.components())
+        )
 
     @property
     def greatest_cve_score(self) -> float:

@@ -81,9 +81,9 @@ def iter_artefact_metadata(
         )
         license_names = list(dict.fromkeys(
             [
-                component.license().name()
+                component.license.name
                 for component in result.result.components()
-                if component.license()
+                if component.license
             ]
         ))
         license = dso.model.LicenseSummary(
