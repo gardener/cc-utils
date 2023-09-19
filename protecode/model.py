@@ -128,6 +128,32 @@ class AnalysisResult(ModelBase):
         return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
 
+class License(ModelBase):
+    def name(self):
+        return self.raw.get('name')
+
+    def license_type(self):
+        return self.raw.get('type')
+
+    def url(self):
+        return self.raw.get('url')
+
+    def __eq__(self, other):
+        if not isinstance(other, License):
+            return False
+
+        return self.name() == other.name() \
+            and self.license_type() == other.license_type() \
+            and self.url() == other.url()
+
+    def __hash__(self):
+        return hash((
+            self.name(),
+            self.url(),
+            self.license_type(),
+        ))
+
+
 class Component(ModelBase):
     def name(self) -> str:
         return self.raw.get('lib')
@@ -152,7 +178,7 @@ class Component(ModelBase):
 
         return greatest_cve_score
 
-    def license(self) -> 'License':
+    def license(self) -> License:
         license_raw = self.raw.get('license', None)
         if not license_raw:
             return None
@@ -180,32 +206,6 @@ class ExtendedObject(ModelBase):
 
     def sha1(self):
         return self.raw.get('sha1')
-
-
-class License(ModelBase):
-    def name(self):
-        return self.raw.get('name')
-
-    def license_type(self):
-        return self.raw.get('type')
-
-    def url(self):
-        return self.raw.get('url')
-
-    def __eq__(self, other):
-        if not isinstance(other, License):
-            return False
-
-        return self.name() == other.name() \
-            and self.license_type() == other.license_type() \
-            and self.url() == other.url()
-
-    def __hash__(self):
-        return hash((
-            self.name(),
-            self.url(),
-            self.license_type(),
-        ))
 
 
 class Vulnerability(ModelBase):
