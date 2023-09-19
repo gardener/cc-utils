@@ -203,10 +203,13 @@ def traverse(
         if filter_expr:
             if is_component_node:
                 typestr = 'component'
+                artefact = None
             elif is_source_node:
                 typestr = node.source.type
+                artefact = node.source
             elif is_resource_node:
                 typestr = node.resource.type
+                artefact = node.resource
 
             if isinstance(typestr, enum.Enum):
                 typestr = typestr.value
@@ -214,6 +217,7 @@ def traverse(
             if not eval(filter_expr, {
                 'node': node,
                 'type': typestr,
+                'artefact': artefact,
             }):
                 continue
 
@@ -222,18 +226,18 @@ def traverse(
                 prefix = 'c'
                 print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
             else:
-                print(eval(print_expr, {'node': node}))
+                print(eval(print_expr, {'node': node, 'artefact': None}))
         if isinstance(node, cnudie.iter.ResourceNode):
             if not print_expr:
                 prefix = 'r'
                 indent += 1
                 print(f'{prefix}{" " * indent}{node.resource.name}')
             else:
-                print(eval(print_expr, {'node': node}))
+                print(eval(print_expr, {'node': node, 'artefact': node.resource}))
         if isinstance(node, cnudie.iter.SourceNode):
             if not print_expr:
                 prefix = 'r'
                 indent += 1
                 print(f'{prefix}{" " * indent}{node.source.name}')
             else:
-                print(eval(print_expr, {'node': node}))
+                print(eval(print_expr, {'node': node, 'artefact': node.source}))
