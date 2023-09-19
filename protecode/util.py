@@ -79,13 +79,8 @@ def iter_artefact_metadata(
             type=dso.model.Datatype.LICENSES_AGGREGATED,
             creation_date=datetime.datetime.now()
         )
-        license_names = list(dict.fromkeys(
-            [
-                component.license.name
-                for component in result.result.components()
-                if component.license
-            ]
-        ))
+        license_names = result.license_names
+
         license = dso.model.LicenseSummary(
             licenses=license_names,
             reportUrl=result.result.report_url(),
