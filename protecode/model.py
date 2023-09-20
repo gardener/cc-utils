@@ -17,7 +17,6 @@ import dataclasses
 import datetime
 import dso.labels
 import enum
-import itertools
 import traceback
 import typing
 
@@ -336,18 +335,13 @@ class BDBA_ScanResult(gcm.ScanResult):
     result: AnalysisResult
 
     @property
-    def license_names(self) -> typing.Iterable[str]:
-        license_names = set()
-        for licenses in self.licenses:
-            for license in licenses:
-                license_names.add(license.name)
-        return license_names
+    def license_names(self) -> set[str]:
+        return {license.name for license in self.licenses}
 
     @property
-    def licenses(self) -> typing.Sequence[License]:
-        return tuple(
-            itertools.chain(c.licenses for c in self.result.components())
-        )
+    def licenses(self) -> typing.Generator[License, None, None]:
+        for component in self.result.components():
+            yield from component.licenses
 
     @property
     def greatest_cve_score(self) -> float:

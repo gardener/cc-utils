@@ -96,8 +96,8 @@ def scan_result_group_collection_for_licenses(
         if not license_cfg:
             logger.warning('no license-cfg - will not report license-issues')
             return False
-        for license in result.licenses:
-            if not license_cfg.is_allowed(license.name()):
+        for license_name in result.license_names:
+            if not license_cfg.is_allowed(license_name):
                 return True
         else:
             return False
