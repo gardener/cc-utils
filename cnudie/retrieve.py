@@ -718,7 +718,7 @@ def component_diff(
     right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
     ignore_component_names=(),
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
-):
+) -> cnudie.util.ComponentDiff:
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
 
