@@ -9,7 +9,6 @@ import ci.util
 import concourse.steps.component_descriptor_util as cdu
 import gci.componentmodel
 import os
-import product.v2
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 
