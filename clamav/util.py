@@ -1,6 +1,5 @@
 import concurrent.futures
 import datetime
-import functools
 import logging
 import socket
 import tarfile
@@ -16,7 +15,6 @@ import clamav.model
 import gci.componentmodel
 import oci.client as oc
 import oci.model as om
-import product
 import tarutil
 
 
@@ -149,41 +147,6 @@ def _try_scan_image(
                 scan_state=clamav.model.MalwareScanState.FINISHED_WITH_ERRORS,
                 findings=[warning],
             )
-
-
-def virus_scan_images(
-    component_descriptor_v2: gci.componentmodel.ComponentDescriptor,
-    filter_function,
-    clamav_client: clamav.client.ClamAVClient,
-    oci_client: oc.Client=None,
-    max_workers=8,
-) -> typing.Generator[clamav.model.MalwareScanResult, None, None]:
-    '''Scans components of the given Component Descriptor using ClamAV
-
-    Used by image-scan-trait
-    '''
-    resources = [
-        resource for component, resource
-        in product.v2.enumerate_oci_resources(component_descriptor=component_descriptor_v2)
-        if filter_function(component, resource)
-    ]
-
-    logger.info(f'will scan {len(resources)=} OCI Images')
-
-    try_scan_func = functools.partial(
-        _try_scan_image,
-        clamav_client=clamav_client,
-        oci_client=oci_client,
-    )
-
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-
-    results = executor.map(
-        try_scan_func,
-        resources,
-    )
-
-    yield from results
 
 
 def resource_url_from_resource_access(
