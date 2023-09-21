@@ -718,16 +718,18 @@ def process_images(
 
         if processing_mode is ProcessingMode.REGULAR:
             if component.name == source_comp.name and component.version == source_comp.version:
+                source_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+                    default_ctx_repo=src_ctx_base_url,
+                    default_absent_ok=True,
+                )
                 # we must differentiate whether the input component descriptor (1) exists in the
                 # source context or (2) not (e.g. if a component descriptor from a local
                 # file is used).
                 # for case (2) the copying of resources isn't supported by the coding.
-                cd_exists_in_src_ctx = product.v2.download_component_descriptor_v2(
-                    ctx_repo_base_url=src_ctx_base_url,
-                    component_name=component_descriptor.component.name,
-                    component_version=component_descriptor.component.version,
-                    absent_ok=True,
-                ) is not None
+                if source_lookup(component_descriptor):
+                    cd_exists_in_src_ctx = True
+                else:
+                    cd_exists_in_src_ctx = False
 
                 if cd_exists_in_src_ctx:
                     ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
