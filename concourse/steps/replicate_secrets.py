@@ -22,7 +22,6 @@ ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-
 def process_config_queue(
     cfg_dir: str,
     repo_url: str,
@@ -183,7 +182,8 @@ def _put_secrets_server_secret(
     target_kubeconfig = kubernetes_config.kubeconfig()
 
     secret_config: model.secret.Secret = cfg_factory.secret(target.secret_config)
-    secrets_server_config: model.secrets_server.SecretsServerConfig = cfg_factory.secrets_server(target.secrets_server_config)
+    secrets_server_config: model.secrets_server.SecretsServerConfig = \
+        cfg_factory.secrets_server(target.secrets_server_config)
     logger.info(
         f'secret cfg: {secret_config.name()} '
         f'and key: {secret_config.key().decode("utf-8")[:3]}...'
