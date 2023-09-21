@@ -54,6 +54,7 @@ import yaml
 import ccc.oci
 import cnudie.purge
 import cnudie.retrieve
+import cnudie.upload
 import cnudie.util
 import gci.componentmodel as cm
 import oci.auth as oa
@@ -62,7 +63,6 @@ import version
 Label = cm.Label
 
 from ci.util import fail, parse_yaml_file, ctx
-import product.v2
 
 logger = logging.getLogger('step.component_descriptor')
 
@@ -149,7 +149,7 @@ component_v2.resources.append(
 )
 % endfor
 
-logger.info('default component descriptor (v2):\n')
+logger.info('default component descriptor:\n')
 print(dump_component_descriptor_v2(base_descriptor_v2))
 print('\n' * 2)
 
@@ -256,13 +256,10 @@ if snapshot_ctx_repository_base_url:
       )
       snapshot_descriptor.component.repositoryContexts.append(repo_ctx)
 
-    product.v2.upload_component_descriptor_v2_to_oci_registry(
-      component_descriptor_v2=snapshot_descriptor,
+    cnudie.upload.upload_component_descriptor(
+      snapshot_descriptor,
     )
-    logger.info(
-      'Successfully uploaded snapshot Component Descriptor to '
-      f'{product.v2._target_oci_ref(snapshot_descriptor.component)}'
-    )
+    logger.info(f'uploaded component-descriptor to {ctx_repository_base_url}')
 % endif
 
 # determine "bom-diff" (changed component references)
