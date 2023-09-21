@@ -22,7 +22,6 @@ import checkmarx.tablefmt
 import ci.util
 import github.compliance.model
 import model.checkmarx as cmmmodel
-import product.util
 import reutil
 import dso.labels
 import dso.model
@@ -256,6 +255,52 @@ def upload_and_scan_gh_artifact(
     return scan_result
 
 
+def _guess_commit_from_source(
+    artifact_name: str,
+    github_repo: github3.repos.repo.Repository,
+    ref: str,
+    commit_hash: str=None,
+):
+    def in_repo(commit_ish):
+        try:
+            return github_repo.ref(commit_ish).object.sha
+        except github3.exceptions.NotFoundError:
+            pass
+
+        try:
+            return github_repo.commit(commit_ish).sha
+        except (github3.exceptions.UnprocessableEntity, github3.exceptions.NotFoundError):
+            return None
+
+    # first guess: look for commit hash if defined
+    if commit_hash:
+        commit = in_repo(commit_hash)
+        if commit:
+            return commit
+
+    # second guess: check for ref like 'refs/heads/main'
+    if ref.startswith('refs/'):
+        gh_ref = ref[len('refs/'):] # trim 'refs/' because of github3 api
+        commit = in_repo(gh_ref)
+        if commit:
+            return commit
+    else:
+        commit = in_repo(ref)
+        if commit:
+            return commit
+
+    # third guess: branch
+    try:
+        return github_repo.branch(ref).commit.sha
+    except github3.exceptions.NotFoundError:
+        pass
+
+    # still unknown commit-ish throw error
+    raise RuntimeError(
+        f'failed to guess on ref for {artifact_name=} with {ref=}'
+    )
+
+
 def scan_gh_artifact(
     cx_project: checkmarx.project.CheckmarxProject,
     scan_artifact: dso.model.ScanArtifact,
@@ -280,14 +325,14 @@ def scan_gh_artifact(
         raise e
 
     try:
-        commit_hash = product.util.guess_commit_from_source(
+        commit_hash = _guess_commit_from_source(
             artifact_name=scan_artifact.name,
             commit_hash=scan_artifact.source.access.commit,
             github_repo=gh_repo,
             ref=scan_artifact.source.access.ref,
         )
     except github3.exceptions.NotFoundError as e:
-        raise product.util.RefGuessingFailedError(e)
+        raise RuntimeError(e)
 
     if scan_artifact.label is not None:
         if scan_artifact.label.value.path_config is not None:
