@@ -7,6 +7,7 @@ import ccc.oci
 import cnudie.util
 import gci.componentmodel as cm
 import gci.oci
+import oci.client
 import oci.model as om
 
 
@@ -20,7 +21,11 @@ def upload_component_descriptor(
     component_descriptor: cm.ComponentDescriptor | cm.Component,
     on_exist=UploadMode.SKIP,
     ocm_repository: cm.OciRepositoryContext | str = None,
+    client: oci.client.Client=None,
 ):
+    if not client:
+        client = ccc.oci.oci_client()
+
     if isinstance(component_descriptor, cm.Component):
         component_descriptor = cm.ComponentDescriptor(
             component=component_descriptor,
@@ -31,8 +36,6 @@ def upload_component_descriptor(
     schema_version = component_descriptor.meta.schemaVersion
     if not schema_version is cm.SchemaVersion.V2:
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
-
-    client = ccc.oci.oci_client()
 
     if ocm_repository:
         if isinstance(ocm_repository, str):
