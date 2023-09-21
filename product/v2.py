@@ -351,58 +351,6 @@ def retrieve_component_descriptor_from_oci_ref(
     return component_descriptor
 
 
-def _resolve_dependency(
-    component: gci.componentmodel.Component,
-    component_ref: gci.componentmodel.ComponentReference,
-    ctx_repo: cm.RepositoryContext=None,
-    cache_dir: str=None,
-):
-    '''
-    resolves the given component version.
-
-    - the component version is searched in the component's current ctx-repo
-      if it is found, it is retrieved and returned
-    '''
-    if component_ref:
-        cname = component_ref.componentName
-        cversion = component_ref.version
-    else:
-        cname = component.name
-        cversion = component.version
-
-    return download_component_descriptor_v2(
-        component_name=cname,
-        component_version=cversion,
-        ctx_repo=ctx_repo or component.current_repository_ctx(),
-        cache_dir=cache_dir,
-        absent_ok=False,
-        validation_mode=cm.ValidationMode.NONE,
-    )
-
-
-@deprecated.deprecated
-def resolve_dependencies(
-    component: gci.componentmodel.Component,
-    include_component=True,
-    cache_dir=None,
-):
-  if include_component:
-    yield component
-  for component_ref in component.componentReferences:
-    resolved_component_descriptor = _resolve_dependency(
-      component=component,
-      component_ref=component_ref,
-      cache_dir=cache_dir,
-    )
-    yield resolved_component_descriptor.component
-    # XXX consider not resolving recursively, if immediate dependencies are present in ctx
-    yield from resolve_dependencies(
-        component=resolved_component_descriptor.component,
-        include_component=False,
-        cache_dir=cache_dir,
-    )
-
-
 @deprecated.deprecated
 def components(
     component_descriptor_v2: typing.Union[cm.ComponentDescriptor, cm.Component],
