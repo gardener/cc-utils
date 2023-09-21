@@ -3,7 +3,6 @@ import graphlib
 import typing
 
 import dacite
-import deprecated
 import yaml
 
 import ci.util
@@ -11,7 +10,6 @@ import ctx
 import gci.componentmodel as cm
 import model.container_registry
 import oci.model as om
-import product.v2
 
 ComponentId = cm.Component, cm.ComponentDescriptor | cm.ComponentIdentity | str | tuple[str, str]
 
@@ -274,53 +272,6 @@ class ComponentDiff:
     names_only_right: set = dataclasses.field(default_factory=set)
     # only set on update
     names_version_changed: set = dataclasses.field(default_factory=set)
-
-
-@deprecated.deprecated
-def diff_component_descriptors(
-    left_component: typing.Union[cm.ComponentDescriptor, cm.Component],
-    right_component: typing.Union[cm.ComponentDescriptor, cm.Component],
-    ignore_component_names=(),
-    cache_dir=None,
-    components_resolv_func: typing.Callable[
-        [cm.ComponentDescriptor, str], typing.Sequence[cm.Component]
-    ]=product.v2.components,
-) -> ComponentDiff:
-    if isinstance(left_component, cm.ComponentDescriptor):
-        left_component = left_component.component
-    if isinstance(right_component, cm.ComponentDescriptor):
-        right_component = right_component.component
-
-    if not isinstance(left_component, cm.Component):
-        raise TypeError(
-            f'left product unsupported type {type(left_component)=}.'
-        )
-    if not isinstance(right_component, cm.Component):
-        raise TypeError(
-            f'unsupported type {type(right_component)=}.'
-        )
-    # only take component references into account for now and assume
-    # that component versions are always identical content-wise
-    left_components: typing.Generator[cm.Component] = components_resolv_func(
-        component_descriptor_v2=left_component,
-        cache_dir=cache_dir,
-    )
-    right_components: typing.Generator[cm.Component] = components_resolv_func(
-        component_descriptor_v2=right_component,
-        cache_dir=cache_dir,
-    )
-    left_components = tuple(
-        c for c in left_components if c.name not in ignore_component_names
-    )
-    right_components = tuple(
-        c for c in right_components if c.name not in ignore_component_names
-    )
-
-    return diff_components(
-        left_components=left_components,
-        right_components=right_components,
-        ignore_component_names=ignore_component_names,
-    )
 
 
 def diff_labels(
