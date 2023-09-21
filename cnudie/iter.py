@@ -24,6 +24,12 @@ class ComponentNode(Node):
 
 
 class ArtefactNode:
+    '''
+    mixin class intended to be used for ResourceNode and SourceNode to add some convenience:
+
+    - artefact property (useful for iterating over mixed node-types)
+    - iterable (useful for pattern-matching, e.g. c,a = node)
+    '''
     @property
     def artefact(self) -> cm.Resource | cm.ComponentSource:
         if isinstance(self, ResourceNode):
@@ -33,6 +39,7 @@ class ArtefactNode:
         raise TypeError('must be of type ResourceNode or SourceNode')
 
     def __iter__(self) -> typing.Generator[cm.Component|cm.Resource|cm.ComponentSource, None, None]:
+        # pylint: disable=E1101
         yield self.component
         yield self.artefact
 
