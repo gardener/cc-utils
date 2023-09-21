@@ -29,6 +29,11 @@ def to_component_id(
     if isinstance(component, cm.ComponentIdentity):
         return component
 
+    if isinstance(component, cm.ComponentReference):
+        component: cm.ComponentReference
+        name = component.componentName
+        version = component.version
+
     if isinstance(component, str):
         name, version = component.split(':', 1)
 
