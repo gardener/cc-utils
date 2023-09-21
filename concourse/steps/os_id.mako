@@ -42,6 +42,13 @@ component_descriptor = parse_component_descriptor()
 delivery_db_client = ccc.delivery.default_client_if_available()
 oci_client = ccc.oci.oci_client()
 
+ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+  default_ctx_repo=component_descriptor.component.current_repository_ctx(),
+  oci_client=oci_client,
+  delifery_client=delivery_db_client,
+)
+
+
 max_processing_days = dacite.from_dict(
   data_class=github.compliance.model.MaxProcessingTimesDays,
   data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
@@ -76,6 +83,7 @@ results = []
 for result in determine_os_ids(
   component_descriptor=component_descriptor,
   oci_client=oci_client,
+  lookup=ocm_lookup,
   delivery_service_client=delivery_db_client,
 ):
   component = result.scanned_element.component

@@ -8,6 +8,7 @@ import gci.componentmodel as cm
 import ci.log
 import ci.util
 import cnudie.iter
+import cnudie.retrieve
 import delivery.client
 import delivery.model
 import delivery.util
@@ -16,7 +17,6 @@ import github.compliance.issue as gciss
 import github.compliance.model as gcm
 import oci.client
 import oci.model
-import product.v2
 import tarutil
 import unixutil.model as um
 import unixutil.scan as us
@@ -28,12 +28,13 @@ ci.log.configure_default_logging()
 def determine_os_ids(
     component_descriptor: cm.ComponentDescriptor,
     oci_client: oci.client.Client,
+    lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     delivery_service_client: delivery.client.DeliveryServiceClient,
 ) -> typing.Generator[gcm.OsIdScanResult, None, None]:
-    component_resources: typing.Generator[tuple[cm.Component, cm.Resource], None, None] = \
-        product.v2.enumerate_oci_resources(component_descriptor=component_descriptor)
-
-    for component, resource in component_resources:
+    for component, resource in cnudie.iter.iter_resources(
+        component=component_descriptor,
+        lookup=lookup,
+    ):
         yield base_image_os_id(
             oci_client=oci_client,
             delivery_service_client=delivery_service_client,
