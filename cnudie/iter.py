@@ -23,13 +23,27 @@ class ComponentNode(Node):
     pass
 
 
+class ArtefactNode:
+    @property
+    def artefact(self) -> cm.Resource | cm.ComponentSource:
+        if isinstance(self, ResourceNode):
+            return self.resource
+        if isinstance(self, SourceNode):
+            return self.source
+        raise TypeError('must be of type ResourceNode or SourceNode')
+
+    def __iter__(self) -> typing.Generator[cm.Component|cm.Resource|cm.ComponentSource, None, None]:
+        yield self.component
+        yield self.artefact
+
+
 @dataclasses.dataclass
-class ResourceNode(Node):
+class ResourceNode(Node, ArtefactNode):
     resource: cm.Resource
 
 
 @dataclasses.dataclass
-class SourceNode(Node):
+class SourceNode(Node, ArtefactNode):
     source: cm.ComponentSource
 
 
