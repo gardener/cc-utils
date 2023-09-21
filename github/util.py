@@ -38,7 +38,6 @@ import gci.componentmodel
 import gci.componentmodel as cm
 import ccc.github
 import ci.util
-import product.v2
 import version
 
 from model.github import GithubConfig
@@ -168,7 +167,7 @@ class UpgradePullRequest:
             else:
                 raise ValueError(from_ref.type)
         elif isinstance(from_ref, cm.ComponentReference):
-            self.reference_type_name = product.v2.COMPONENT_TYPE_NAME
+            self.reference_type_name = 'component'
         else:
             raise NotImplementedError(from_ref.type)
 
@@ -191,7 +190,7 @@ class UpgradePullRequest:
         if not isinstance(reference_component, gci.componentmodel.Component):
             raise TypeError(reference_component)
 
-        if self.reference_type_name == product.v2.COMPONENT_TYPE_NAME:
+        if self.reference_type_name == 'component':
             reference_refs = sorted(
                 [
                     rc for rc in reference_component.componentReferences
@@ -221,7 +220,7 @@ class UpgradePullRequest:
             raise TypeError(reference)
 
         if isinstance(reference, cm.ComponentReference):
-            if product.v2.COMPONENT_TYPE_NAME != self.reference_type_name:
+            if self.reference_type_name != 'component':
                 return False
             if reference.componentName != self.ref_name:
                 return False
@@ -312,7 +311,7 @@ class PullRequestUtil(RepositoryHelperBase):
         if not isinstance(reference, gci.componentmodel.ComponentReference):
             raise TypeError(reference)
 
-        type_name = product.v2.COMPONENT_TYPE_NAME
+        type_name = 'component'
         reference_name = reference.componentName
 
         return f'[ci:{type_name}:{reference_name}:{from_version}->{to_version}]'
