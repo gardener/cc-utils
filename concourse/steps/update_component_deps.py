@@ -377,7 +377,7 @@ def create_upgrade_pr(
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
     # TODO: Handle upgrades for types other than 'component'
-    cmd_env['DEPENDENCY_TYPE'] = product.v2.COMPONENT_TYPE_NAME
+    cmd_env['DEPENDENCY_TYPE'] = 'component'
     cmd_env['DEPENDENCY_NAME'] = to_ref.componentName
     cmd_env['LOCAL_DEPENDENCY_NAME'] = to_ref.name
     cmd_env['DEPENDENCY_VERSION'] = to_version

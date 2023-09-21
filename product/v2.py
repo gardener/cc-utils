@@ -30,9 +30,6 @@ import version
 logger = logging.getLogger(__name__)
 
 
-COMPONENT_TYPE_NAME = 'component'
-
-
 def _normalise_component_name(component_name:str) -> str:
     return component_name.lower()  # oci-spec allows only lowercase
 
