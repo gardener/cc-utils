@@ -21,10 +21,10 @@ def upload_component_descriptor(
     component_descriptor: cm.ComponentDescriptor | cm.Component,
     on_exist=UploadMode.SKIP,
     ocm_repository: cm.OciRepositoryContext | str = None,
-    client: oci.client.Client=None,
+    oci_client: oci.client.Client=None,
 ):
-    if not client:
-        client = ccc.oci.oci_client()
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
 
     if isinstance(component_descriptor, cm.Component):
         component_descriptor = cm.ComponentDescriptor(
@@ -52,7 +52,7 @@ def upload_component_descriptor(
 
     if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
         # check whether manifest exists (head_manifest does not return None)
-        if client.head_manifest(image_reference=target_ref, absent_ok=True):
+        if oci_client.head_manifest(image_reference=target_ref, absent_ok=True):
             if on_exist is UploadMode.SKIP:
                 return
             if on_exist is UploadMode.FAIL:
@@ -74,7 +74,7 @@ def upload_component_descriptor(
     cd_digest_with_alg = f'sha256:{cd_digest}'
     raw_fobj.seek(0)
 
-    client.put_blob(
+    oci_client.put_blob(
         image_reference=target_ref,
         digest=cd_digest_with_alg,
         octets_count=cd_octets,
@@ -92,7 +92,7 @@ def upload_component_descriptor(
     cfg_digest = hashlib.sha256(cfg_raw).hexdigest()
     cfg_digest_with_alg = f'sha256:{cfg_digest}'
 
-    client.put_blob(
+    oci_client.put_blob(
         image_reference=target_ref,
         digest=cfg_digest_with_alg,
         octets_count=cfg_octets,
@@ -115,7 +115,7 @@ def upload_component_descriptor(
     manifest_dict = manifest.as_dict()
     manifest_bytes = json.dumps(manifest_dict).encode('utf-8')
 
-    client.put_manifest(
+    oci_client.put_manifest(
         image_reference=target_ref,
         manifest=manifest_bytes,
     )
