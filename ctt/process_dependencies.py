@@ -18,7 +18,7 @@ import threading
 
 import ccc.oci
 import ci.util
-import cnudie.replicate
+import ctt.replicate
 import cnudie.retrieve
 import container.util
 import cosign.payload as cp
@@ -730,7 +730,7 @@ def process_images(
                 ) is not None
 
                 if cd_exists_in_src_ctx:
-                    cnudie.replicate.replicate_oci_artifact_with_patched_component_descriptor(
+                    ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
                         src_ctx_repo_base_url=src_ctx_base_url,
                         src_name=component_descriptor.component.name,
                         src_version=component_descriptor.component.version,
@@ -745,7 +745,7 @@ def process_images(
                         on_exist=upload_mode_cd,
                     )
             else:
-                cnudie.replicate.replicate_oci_artifact_with_patched_component_descriptor(
+                ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
                     src_ctx_repo_base_url=src_ctx_base_url,
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
