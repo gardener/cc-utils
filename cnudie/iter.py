@@ -157,3 +157,21 @@ def iter(
                 seen_component_ids.add(node.component_id)
 
         yield node
+
+
+def iter_resources(
+    component: cm.Component,
+    lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
+    recursion_depth: int=-1,
+    prune_unique: bool=True,
+) -> typing.Generator[ResourceNode, None, None]:
+    '''
+    curried version of `iter` w/ node-filter preset to yield only resource-nodes
+    '''
+    return iter(
+        component=component,
+        lookup=lookup,
+        recursion_depth=recursion_depth,
+        prune_unique=prune_unique,
+        node_filter=Filter.resources,
+    )
