@@ -37,18 +37,6 @@ def _normalise_component_name(component_name:str) -> str:
     return component_name.lower()  # oci-spec allows only lowercase
 
 
-def mangle_name(name: str):
-    '''
-    create an acceptable identity-name from something that is not (e.g. a component-name)
-    '''
-    return name.translate(
-        str.maketrans({
-            '/': '_',
-            '.': '_',
-        })
-    )
-
-
 def ensure_is_v2(
     component_descriptor_v2: cm.ComponentDescriptor,
 ):

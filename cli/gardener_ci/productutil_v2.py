@@ -13,7 +13,6 @@ import yaml
 import gci.componentmodel as cm
 
 import ci.util
-import product.v2
 
 CliHint = ci.util.CliHint
 
@@ -23,7 +22,7 @@ parse = yaml.safe_load
 def _raw_component_dep_to_v2(raw: dict):
   if not 'componentName' in raw:
     component_name = raw['name'].strip()
-    name = product.v2.mangle_name(component_name)
+    name = component_name.replace('/', '_').replace('.', '_')
   else:
     component_name = raw['componentName'].strip()
     name = raw['name'].strip()
