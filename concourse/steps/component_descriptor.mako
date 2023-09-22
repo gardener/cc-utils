@@ -8,6 +8,7 @@ import dataclasses
 from makoutil import indent_func
 from concourse.steps import step_lib
 import gci.componentmodel as cm
+import concourse.model.traits.component_descriptor as comp_descr_trait
 
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
@@ -243,7 +244,8 @@ else:
   print(f'XXX: did not find a component-descriptor at {v2_outfile=}')
   exit(1)
 
-% if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
+% if descriptor_trait.upload == comp_descr_trait.UploadMode.LEGACY:
+  % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
 if snapshot_ctx_repository_base_url:
   if have_cd:
     snapshot_descriptor = cm.ComponentDescriptor.from_dict(
@@ -260,6 +262,7 @@ if snapshot_ctx_repository_base_url:
       snapshot_descriptor,
     )
     logger.info(f'uploaded component-descriptor to {ctx_repository_base_url}')
+  % endif
 % endif
 
 # determine "bom-diff" (changed component references)

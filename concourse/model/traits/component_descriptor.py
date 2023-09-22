@@ -15,6 +15,7 @@
 
 import dataclasses
 import enum
+import textwrap
 import typing
 
 import dacite
@@ -51,6 +52,11 @@ class StepInput:
     type: str = 'step'
 
 
+class UploadMode(enum.StrEnum):
+    LEGACY = 'legacy'
+    NO_UPLOAD = 'no-upload'
+
+
 DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME = 'component_descriptor'
 
 ATTRIBUTES = (
@@ -65,6 +71,17 @@ ATTRIBUTES = (
         default=True,
         doc='Indicates whether or not unresolved component dependencies should be resolved',
         type=bool,
+    ),
+    AttributeSpec.optional(
+        name='upload',
+        default='legacy',
+        doc=textwrap.dedent('''\
+            Indicates whether or not to publish component-descriptor during Component-Descriptor
+            step. For backwards-compatibility reasons, defaults to "legacy", which is a mode
+            that depends on pipeline's context.
+            Should be configured to `no-upload` (which is the intended default behaviour)
+        '''),
+        type=UploadMode,
     ),
     AttributeSpec.optional(
         name='component_name',
@@ -235,6 +252,10 @@ class ComponentDescriptorTrait(Trait):
 
     def step_name(self):
         return self.raw['step']['name']
+
+    @property
+    def upload(self) -> UploadMode:
+        return UploadMode(self.raw['upload'])
 
     def retention_policy(self, raw=True) -> version.VersionRetentionPolicies | None:
         if not (policy := self.raw.get('retention_policy', None)):
