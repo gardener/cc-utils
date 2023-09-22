@@ -19,6 +19,7 @@ import threading
 import ccc.oci
 import ci.util
 import ctt.replicate
+import cnudie.iter
 import cnudie.retrieve
 import cnudie.upload
 import container.util
@@ -27,7 +28,6 @@ import gci.componentmodel as cm
 import oci
 import oci.client
 import oci.model as om
-import product.v2
 
 import ctt.cosign as cosign
 import ctt.filters as filters
@@ -248,26 +248,16 @@ def create_jobs(
         name: _uploader(cfg) for name, cfg in processing_cfg.get('uploaders', {}).items()
     }
 
-    components = cnudie.retrieve.components(
+    for component, resource in cnudie.iter.iter_resources(
         component=component_descriptor_v2,
-        component_descriptor_lookup=component_descriptor_lookup,
-    )
+        lookup=component_descriptor_lookup,
+    ):
+        resource: cm.Resource
+        # XXX only support OCI-resources for now
+        if not resource.type is cm.ArtefactType.OCI_IMAGE:
+            continue
 
-    def enumerate_component_and_oci_resources():
-        for component in components:
-            for oci_resource in product.v2.resources(
-                component=component,
-                resource_access_types=(
-                    cm.AccessType.OCI_REGISTRY,
-                    cm.AccessType.RELATIVE_OCI_REFERENCE,
-                ),
-                resource_types=None,  # yields all resource types
-                resource_policy=product.v2.ResourcePolicy.IGNORE_NONMATCHING_ACCESS_TYPES,
-            ):
-                yield component, oci_resource
-
-    # XXX only support OCI-resources for now
-    for component, oci_resource in enumerate_component_and_oci_resources():
+        oci_resource = resource
         for pipeline in enum_processing_cfgs(
             parse_processing_cfg(processing_cfg_path),
             shared_processors,
@@ -642,7 +632,12 @@ def process_images(
     processed_component_versions = {cname_version(c) for c in components}
 
     # hack: add all components w/o resources (those would otherwise be ignored)
-    for component in product.v2.components(component_descriptor_v2=component_descriptor_v2):
+    for component_node in cnudie.iter.iter(
+        component=component_descriptor_v2,
+        lookup=component_descriptor_lookup,
+        node_filter=cnudie.iter.Filter.components,
+    ):
+        component = component_node.component
         if not cname_version(component) in processed_component_versions:
             components.append(component)
             processed_component_versions.add(cname_version(component))
