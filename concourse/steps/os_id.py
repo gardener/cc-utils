@@ -35,6 +35,15 @@ def determine_os_ids(
         component=component_descriptor,
         lookup=lookup,
     ):
+        if resource.type != cm.ArtefactType.OCI_IMAGE:
+            continue
+
+        if not resource.access:
+            continue
+
+        if resource.access.type != cm.AccessType.OCI_REGISTRY:
+            continue
+
         yield base_image_os_id(
             oci_client=oci_client,
             delivery_service_client=delivery_service_client,
