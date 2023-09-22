@@ -244,7 +244,7 @@ else:
   print(f'XXX: did not find a component-descriptor at {v2_outfile=}')
   exit(1)
 
-% if descriptor_trait.upload == comp_descr_trait.UploadMode.LEGACY:
+% if descriptor_trait.upload is comp_descr_trait.UploadMode.LEGACY:
   % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
 if snapshot_ctx_repository_base_url:
   if have_cd:
