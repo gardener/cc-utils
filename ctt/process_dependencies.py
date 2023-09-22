@@ -20,6 +20,7 @@ import ccc.oci
 import ci.util
 import ctt.replicate
 import cnudie.retrieve
+import cnudie.upload
 import container.util
 import cosign.payload as cp
 import gci.componentmodel as cm
@@ -449,7 +450,7 @@ def process_images(
     tgt_ctx_base_url: str,
     processing_mode=ProcessingMode.REGULAR,
     upload_mode=None,
-    upload_mode_cd=product.v2.UploadMode.SKIP,
+    upload_mode_cd=None,
     upload_mode_images=None,
     replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests=False,
@@ -476,7 +477,6 @@ def process_images(
 
     if upload_mode:
         logger.warn('passing upload_mode is deprected - will ignore setting')
-        upload_mode_cd = upload_mode
 
     src_ctx_base_url = component_descriptor_v2.component.current_repository_ctx().baseUrl
 
@@ -730,14 +730,14 @@ def process_images(
                         src_name=component_descriptor.component.name,
                         src_version=component_descriptor.component.version,
                         patched_component_descriptor=component_descriptor,
-                        on_exist=upload_mode_cd,
                     )
                 else:
                     if component.resources:
                         raise NotImplementedError('cannot replicate resources of root component')
-                    product.v2.upload_component_descriptor_v2_to_oci_registry(
-                        component_descriptor_v2=component_descriptor,
-                        on_exist=upload_mode_cd,
+                    cnudie.upload.upload_component_descriptor(
+                        component_descriptor=component_descriptor,
+                        ocm_repository=tgt_ctx_base_url,
+                        on_exist=cnudie.upload.UploadMode.SKIP,
                     )
             else:
                 ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
@@ -745,7 +745,6 @@ def process_images(
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
                     patched_component_descriptor=component_descriptor,
-                    on_exist=upload_mode_cd,
                 )
         elif processing_mode == ProcessingMode.DRY_RUN:
             print('dry-run - will not publish component-descriptor')
