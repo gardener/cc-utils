@@ -5,8 +5,6 @@ from concourse.steps import step_lib
 
 extra_args = step._extra_args
 cfg_repo_relpath = extra_args['cfg_repo_relpath']
-kubeconfig = extra_args['kubeconfig']
-target_secret_namespace = extra_args['target_secret_namespace']
 raw_job_mapping = extra_args['raw_job_mapping']
 job_mapping_name = extra_args['job_mapping_name']
 secrets_repo_url = extra_args['secrets_repo_url']
