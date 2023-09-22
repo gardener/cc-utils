@@ -19,7 +19,7 @@ class UploadMode(enum.StrEnum):
 
 def upload_component_descriptor(
     component_descriptor: cm.ComponentDescriptor | cm.Component,
-    on_exist=UploadMode.SKIP|str,
+    on_exist:UploadMode|str=UploadMode.SKIP,
     ocm_repository: cm.OciRepositoryContext | str = None,
     oci_client: oci.client.Client=None,
 ):
