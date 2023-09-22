@@ -23,17 +23,8 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     src_name: str,
     src_version: str,
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
-    src_ctx_repo_base_url: str=None,
-    src_ctx_repo: cm.RepositoryContext=None,
+    src_ctx_repo: cm.RepositoryContext,
 ):
-    if not (bool(src_ctx_repo_base_url) ^ bool(src_ctx_repo)):
-        raise ValueError('exactly one of src_ctx_repo, src_ctx_repo_base_url must be passed')
-
-    if src_ctx_repo_base_url:
-        src_ctx_repo = cm.OciRepositoryContext(
-            baseUrl=src_ctx_repo_base_url,
-        )
-
     if not isinstance(src_ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(src_ctx_repo)
 
