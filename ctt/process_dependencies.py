@@ -237,7 +237,7 @@ def create_jobs(
     component_descriptor_v2: cm.ComponentDescriptor,
     processing_mode,
     inject_ocm_coordinates_into_oci_manifests,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById = None,
+    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
 ):
     processing_cfg = parse_processing_cfg(processing_cfg_path)
 
@@ -248,15 +248,10 @@ def create_jobs(
         name: _uploader(cfg) for name, cfg in processing_cfg.get('uploaders', {}).items()
     }
 
-    if component_descriptor_lookup:
-        components = cnudie.retrieve.components(
-            component=component_descriptor_v2,
-            component_descriptor_lookup=component_descriptor_lookup,
-        )
-    else:
-        components = cnudie.retrieve.components(
-            component=component_descriptor_v2,
-        )
+    components = cnudie.retrieve.components(
+        component=component_descriptor_v2,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
 
     def enumerate_component_and_oci_resources():
         for component in components:
