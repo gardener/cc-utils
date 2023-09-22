@@ -303,7 +303,6 @@ upload_image_lock = threading.Lock()
 # uploads a single OCI artifact and returns the content digest
 def process_upload_request(
     processing_job: processing_model.ProcessingJob,
-    upload_mode_images=product.v2.UploadMode.SKIP,
     replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
     platform_filter: typing.Callable[[om.OciPlatform], bool] = None,
     oci_client: oci.client.Client = None,
@@ -344,7 +343,7 @@ def process_upload_request(
         absent_ok=True,
         accept=accept,
     )
-    if bool(manifest_blob_ref) and upload_mode_images is product.v2.UploadMode.SKIP:
+    if bool(manifest_blob_ref):
         logger.info(f'{tgt_ref=} exists - skipping processing')
 
         uploaded_image_refs_to_digests[tgt_ref] = manifest_blob_ref.digest
@@ -451,7 +450,7 @@ def process_images(
     processing_mode=ProcessingMode.REGULAR,
     upload_mode=None,
     upload_mode_cd=product.v2.UploadMode.SKIP,
-    upload_mode_images=product.v2.UploadMode.SKIP,
+    upload_mode_images=None,
     replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests=False,
     replace_resource_tags_with_digests=False,
@@ -472,16 +471,11 @@ def process_images(
     if processing_mode is ProcessingMode.DRY_RUN:
         ci.util.warning('dry-run: not downloading or uploading any images')
 
-    if upload_mode_images is product.v2.UploadMode.FAIL:
-        raise NotImplementedError('upload-mode-image=fail is not a valid argument.')
+    if upload_mode_images:
+        logger.warn('passing upload_mode_images is deprecated - will ignore setting')
 
-    if upload_mode is not None:
-        logger.warning(
-            f'''upload_mode is deprecated for function process_images.
-                Please use upload_mode_cd and upload_mode_images.
-                Setting upload_mode_cd to {upload_mode} and defaulting upload_mode_images to
-                {upload_mode_images}'''
-            )
+    if upload_mode:
+        logger.warn('passing upload_mode is deprected - will ignore setting')
         upload_mode_cd = upload_mode
 
     src_ctx_base_url = component_descriptor_v2.component.current_repository_ctx().baseUrl
@@ -509,7 +503,6 @@ def process_images(
 
         docker_content_digest = process_upload_request(
             processing_job=processing_job,
-            upload_mode_images=upload_mode_images,
             replication_mode=replication_mode,
             platform_filter=platform_filter,
             oci_client=oci_client,
