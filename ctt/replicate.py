@@ -14,7 +14,6 @@ import ccc.oci
 import gci.componentmodel as cm
 import oci
 import oci.model as om
-import product.v2 as v2
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +27,11 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     if not isinstance(src_ctx_repo, cm.OciRepositoryContext):
         raise NotImplementedError(src_ctx_repo)
 
-    v2.ensure_is_v2(patched_component_descriptor)
     client = ccc.oci.oci_client()
 
-    target_ref = v2._target_oci_ref(patched_component_descriptor.component)
+    component = patched_component_descriptor.component
+    target_repository = component.current_repository_ctx()
+    target_ref = target_repository.component_version_oci_ref(component)
 
     if client.head_manifest(image_reference=target_ref, absent_ok=True):
         # do not overwrite existing component-descriptors

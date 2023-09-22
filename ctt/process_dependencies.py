@@ -655,9 +655,13 @@ def process_images(
     for component in components:
         append_ctx_repo(src_ctx_base_url, component)
         append_ctx_repo(tgt_ctx_base_url, component)
+
+        ocm_repository = component.current_repository_ctx()
+        oci_ref = ocm_repository.component_version_oci_ref(component)
+
         bom_resources.append(
             BOMEntry(
-                product.v2._target_oci_ref(component),
+                oci_ref,
                 BOMEntryType.Docker,
                 component.name,
             )
