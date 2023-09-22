@@ -25,7 +25,6 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
     src_ctx_repo_base_url: str=None,
     src_ctx_repo: cm.RepositoryContext=None,
-    on_exist=v2.UploadMode.SKIP,
 ):
     if not (bool(src_ctx_repo_base_url) ^ bool(src_ctx_repo)):
         raise ValueError('exactly one of src_ctx_repo, src_ctx_repo_base_url must be passed')
@@ -43,19 +42,9 @@ def replicate_oci_artifact_with_patched_component_descriptor(
 
     target_ref = v2._target_oci_ref(patched_component_descriptor.component)
 
-    if on_exist in (v2.UploadMode.SKIP, v2.UploadMode.FAIL):
-        # check whether manifest exists (head_manifest does not return None)
-        if client.head_manifest(image_reference=target_ref, absent_ok=True):
-            if on_exist is v2.UploadMode.SKIP:
-                return
-            if on_exist is v2.UploadMode.FAIL:
-                # XXX: we might still ignore it, if the to-be-uploaded CD is equal to the existing
-                # one
-                raise ValueError(f'{target_ref=} already existed')
-    elif on_exist is v2.UploadMode.OVERWRITE:
-        pass
-    else:
-        raise NotImplementedError(on_exist)
+    if client.head_manifest(image_reference=target_ref, absent_ok=True):
+        # do not overwrite existing component-descriptors
+        return
 
     src_ref = src_ctx_repo.component_version_oci_ref(
         name=src_name,
