@@ -738,10 +738,12 @@ def process_images(
                     )
             else:
                 ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
-                    src_ctx_repo_base_url=src_ctx_base_url,
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
                     patched_component_descriptor=component_descriptor,
+                    src_ctx_repo=cm.OciRepositoryContext(
+                        baseUrl=src_ctx_base_url,
+                    ),
                 )
         elif processing_mode == ProcessingMode.DRY_RUN:
             print('dry-run - will not publish component-descriptor')
