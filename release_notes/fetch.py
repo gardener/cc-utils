@@ -174,7 +174,7 @@ def get_release_note_commits_tuple(
         )
 
     # new patch release
-    logger.info(f'creating new patch release from {current_version_tag} to {previous_version_tag}')
+    logger.info(f'creating new patch release from {previous_version_tag} to {current_version_tag}')
     if previous_version_tag is None:
         raise RuntimeError(
             'cannot create patch-release notes because previous version cannot be found'
