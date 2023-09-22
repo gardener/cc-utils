@@ -448,6 +448,7 @@ def process_images(
     processing_cfg_path,
     component_descriptor_v2,
     tgt_ctx_base_url: str,
+    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     processing_mode=ProcessingMode.REGULAR,
     upload_mode=None,
     upload_mode_cd=None,
@@ -462,7 +463,6 @@ def process_images(
     root_ca_cert_path=None,
     platform_filter: typing.Callable[[om.OciPlatform], bool] = None,
     bom_resources: typing.Sequence[BOMEntry] = [],
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById = None,
     skip_component_upload: typing.Callable[[cm.Component], bool] = None,
     oci_client: oci.client.Client = None,
 ):
