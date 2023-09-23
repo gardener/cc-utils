@@ -74,7 +74,7 @@ setuptools.setup(
             '*.mako',
         ],
         'gci':[
-            'gci/component-descriptor-v2-schema.yaml',
+            'component-descriptor-v2-schema.yaml',
         ],
     },
     install_requires=list(requirements()),
