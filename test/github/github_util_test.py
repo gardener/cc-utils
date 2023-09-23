@@ -149,13 +149,13 @@ def test_target_matches():
         name='res1',
         version='1.2.3',
         type=cm.ArtefactType.BLOB,
-        access=cm.ResourceAccess(),
+        access=cm.Access(),
     )
     new_resource = cm.Resource(
         name='res1',
         version='2.0.0',
         type=cm.ArtefactType.BLOB,
-        access=cm.ResourceAccess(),
+        access=cm.Access(),
     )
 
     examinee = create_upgrade_pr(
@@ -183,7 +183,7 @@ def test_target_matches():
             name='different-name',
             version='2.0.0',
             type=cm.ArtefactType.BLOB,
-            access=cm.ResourceAccess(),
+            access=cm.Access(),
         )
     )
 
@@ -193,7 +193,7 @@ def test_target_matches():
             name='res1',
             version='8.7.9',
             type=cm.ArtefactType.BLOB,
-            access=cm.ResourceAccess(),
+            access=cm.Access(),
         )
     )
 
@@ -203,6 +203,6 @@ def test_target_matches():
             name='res1',
             version='2.0.0',
             type=cm.ArtefactType.BLOB,
-            access=cm.ResourceAccess(),
+            access=cm.Access(),
         )
     )

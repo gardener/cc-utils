@@ -150,7 +150,7 @@ def _try_scan_image(
 
 
 def resource_url_from_resource_access(
-    access: gci.componentmodel.ResourceAccess,
+    access: gci.componentmodel.Access,
 ) -> str:
     # TODO: replace once a more fitting method exists in component-model
     if isinstance(access, gci.componentmodel.OciAccess):
