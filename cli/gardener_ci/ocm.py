@@ -3,6 +3,7 @@ import enum
 import hashlib
 import io
 import json
+import jsonschema
 import logging
 import os
 import subprocess
@@ -10,6 +11,7 @@ import tarfile
 import tempfile
 
 import dacite
+import yaml
 
 import gci.componentmodel as cm
 import gci.oci as goci
@@ -20,6 +22,9 @@ import cnudie.retrieve
 import ctx
 import tarutil
 import oci
+
+own_dir = os.path.dirname(__file__)
+repo_root = os.path.join(own_dir, '../..')
 
 
 _cfg = ctx.cfg
@@ -241,3 +246,23 @@ def traverse(
                 print(f'{prefix}{" " * indent}{node.source.name}')
             else:
                 print(eval(print_expr, {'node': node, 'artefact': node.source}))
+
+
+def validate(component_descriptor: str):
+    schema_file = os.path.join(
+        repo_root,
+        'gci',
+        'component-descriptor-v2-schema.yaml',
+    )
+    with open(schema_file) as f:
+        schema_dict = yaml.safe_load(f)
+
+    with open(component_descriptor) as f:
+        comp_dict = yaml.safe_load(f)
+
+    jsonschema.validate(
+        instance=comp_dict,
+        schema=schema_dict,
+    )
+
+    print('schema validation succeeded')
