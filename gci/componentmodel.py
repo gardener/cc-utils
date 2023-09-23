@@ -355,6 +355,7 @@ class Artifact(LabelMethodsMixin):
         else:
             raise NotImplementedError(own_type)
 
+        # pylint: disable=E1101
         identity = IdCtor(
             name=self.name,
             **(self.extraIdentity or {})
@@ -372,6 +373,7 @@ class Artifact(LabelMethodsMixin):
                 continue
             if peer.identity(peers=()) == identity:
                 # there is at least one collision (id est: another artifact w/ same name)
+                # pylint: disable=E1101
                 return ArtifactIdentity(
                     name=self.name,
                     version=self.version,
