@@ -71,8 +71,10 @@ setuptools.setup(
         'concourse':[
             'resources/LAST_RELEASED_TAG',
             'resources/*.mako',
-            'gci/component-descriptor-v2-schema.yaml',
             '*.mako',
+        ],
+        'gci':[
+            'gci/component-descriptor-v2-schema.yaml',
         ],
     },
     install_requires=list(requirements()),
