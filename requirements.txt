@@ -27,6 +27,7 @@ google-auth<3
 google-cloud-storage<3
 google-crc32c>1.1.4
 html2text
+jsonschema
 kubernetes>=26.0.0
 msal<2
 openstacksdk
