@@ -56,7 +56,7 @@ cc-utils:
               - name: 'releases'
                 match: 'releases'
                 restrict: 'none'
-                keep: 1024
+                keep: 300
         notifications:
           default:
             on_error:
