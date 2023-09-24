@@ -709,13 +709,13 @@ def process_images(
                 # source context or (2) not (e.g. if a component descriptor from a local
                 # file is used).
                 # for case (2) the copying of resources isn't supported by the coding.
-                if (orig_component_descriptor := component_descriptor_lookup(component_descriptor)):
+                if component_descriptor_lookup(component_descriptor):
                     cd_exists_in_src_ctx = True
                 else:
                     cd_exists_in_src_ctx = False
 
                 if cd_exists_in_src_ctx:
-                    orig_ocm_repo = orig_component_descriptor.component.current_repository_ctx()
+                    orig_ocm_repo = component.repositoryContexts[-2]
                     ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
                         src_name=component_descriptor.component.name,
                         src_version=component_descriptor.component.version,
@@ -731,8 +731,7 @@ def process_images(
                         on_exist=cnudie.upload.UploadMode.SKIP,
                     )
             else:
-                orig_component_descriptor = component_descriptor_lookup(component)
-                orig_ocm_repo = orig_component_descriptor.component.current_repository_ctx()
+                orig_ocm_repo = component.repositoryContexts[-2]
                 ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
