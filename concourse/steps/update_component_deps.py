@@ -223,8 +223,8 @@ def determine_reference_versions(
 
 
 def greatest_references(
-    references: typing.Iterable[cm.ComponentReference],
-) -> typing.Iterable[cm.ComponentReference]:
+    references: typing.Iterable[gci.componentmodel.ComponentReference],
+) -> typing.Iterable[gci.componentmodel.ComponentReference]:
     '''
     yields the component references from the specified iterable of ComponentReference that
     have the greatest version (grouped by component name).
