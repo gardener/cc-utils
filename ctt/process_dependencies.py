@@ -643,7 +643,6 @@ def process_images(
             processed_component_versions.add(cname_version(component))
 
     for component in components:
-        append_ctx_repo(src_ctx_base_url, component)
         append_ctx_repo(tgt_ctx_base_url, component)
 
         ocm_repository = component.current_repository_ctx()
