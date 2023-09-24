@@ -737,7 +737,7 @@ def process_images(
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
                     patched_component_descriptor=component_descriptor,
-                    src_ctx_repo=ocm_ocm_repo,
+                    src_ctx_repo=orig_ocm_repo,
                 )
         elif processing_mode == ProcessingMode.DRY_RUN:
             print('dry-run - will not publish component-descriptor')
