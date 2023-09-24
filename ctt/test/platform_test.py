@@ -15,7 +15,7 @@
 
 import oci.model as om
 
-import ctt.platform as platform
+import ctt.oci_platform as platform
 
 
 def test_platform_filter():
