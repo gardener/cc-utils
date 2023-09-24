@@ -20,7 +20,6 @@ import dockerutil
 import github.util
 import gitutil
 import model.container_registry as cr
-import product.v2
 import release_notes.fetch as release_notes_fetch
 import version
 from concourse.model.traits.update_component_deps import (
@@ -223,6 +222,32 @@ def determine_reference_versions(
         raise NotImplementedError
 
 
+def greatest_references(
+    references: typing.Iterable[cm.ComponentReference],
+) -> typing.Iterable[cm.ComponentReference]:
+    '''
+    yields the component references from the specified iterable of ComponentReference that
+    have the greatest version (grouped by component name).
+    Id est: if the sequence contains exactly one version of each contained component name,
+    the sequence is returned unchanged.
+    '''
+    references = tuple(references)
+    names = {r.name for r in references}
+
+    for name in names:
+        matching_refs = [r for r in references if r.name == name]
+        if len(matching_refs) == 1:
+            # in case reference name was unique, do not bother sorting
+            # (this also works around issues from non-semver versions)
+            yield matching_refs[0]
+        else:
+            # there might be multiple component versions of the same name
+            # --> use the greatest version in that case
+            matching_refs.sort(key=lambda r: version.parse_to_semver(r.version))
+            # greates version comes last
+            yield matching_refs[-1]
+
+
 def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: UpstreamUpdatePolicy,
@@ -233,7 +258,7 @@ def determine_upgrade_prs(
 ) -> typing.Iterable[typing.Tuple[
     gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
 ]]:
-    for greatest_component_reference in product.v2.greatest_references(
+    for greatest_component_reference in greatest_references(
         references=current_component().componentReferences,
     ):
         versions_to_consider = determine_reference_versions(

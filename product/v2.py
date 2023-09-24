@@ -462,32 +462,6 @@ def enumerate_oci_resources(
             yield (component, resource)
 
 
-def greatest_references(
-    references: typing.Iterable[cm.ComponentReference],
-) -> typing.Iterable[cm.ComponentReference]:
-    '''
-    yields the component references from the specified iterable of ComponentReference that
-    have the greatest version (grouped by component name).
-    Id est: if the sequence contains exactly one version of each contained component name,
-    the sequence is returned unchanged.
-    '''
-    references = tuple(references)
-    names = {r.name for r in references}
-
-    for name in names:
-        matching_refs = [r for r in references if r.name == name]
-        if len(matching_refs) == 1:
-            # in case reference name was unique, do not bother sorting
-            # (this also works around issues from non-semver versions)
-            yield matching_refs[0]
-        else:
-            # there might be multiple component versions of the same name
-            # --> use the greatest version in that case
-            matching_refs.sort(key=lambda r: version.parse_to_semver(r.version))
-            # greates version comes last
-            yield matching_refs[-1]
-
-
 def greatest_component_version(
     component_name: str,
     ctx_repo_base_url: str=None,
