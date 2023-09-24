@@ -731,13 +731,13 @@ def process_images(
                         on_exist=cnudie.upload.UploadMode.SKIP,
                     )
             else:
+                orig_component_descriptor = component_descriptor_lookup(component)
+                orig_ocm_repo = orig_component_descriptor.component.current_repository_ctx()
                 ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
                     patched_component_descriptor=component_descriptor,
-                    src_ctx_repo=cm.OciRepositoryContext(
-                        baseUrl=src_ctx_base_url,
-                    ),
+                    src_ctx_repo=ocm_ocm_repo,
                 )
         elif processing_mode == ProcessingMode.DRY_RUN:
             print('dry-run - will not publish component-descriptor')
