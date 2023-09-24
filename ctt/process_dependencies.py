@@ -29,7 +29,7 @@ import oci
 import oci.client
 import oci.model as om
 
-import ctt.cosign as cosign
+import ctt.cosign_util as cosign
 import ctt.filters as filters
 import ctt.processing_model as processing_model
 import ctt.processors as processors
