@@ -594,12 +594,16 @@ def process_images(
         return cname_version(job.component)
 
     def append_ctx_repo(ctx_base_url, component):
+        if isinstance(ctx_base_url, str):
+            ocm_repo = cm.OciRepositoryContext(baseUrl=ctx_base_url)
+        elif isinstance(ctx_base_url, cm.OciRepositoryContext):
+            ocm_repo = ctx_base_url
+        else:
+            raise ArgumentError(ctx_base_url)
+
         if component.current_repository_ctx().baseUrl != ctx_base_url:
             component.repositoryContexts.append(
-                cm.OciRepositoryContext(
-                    baseUrl=ctx_base_url,
-                    type=cm.AccessType.OCI_REGISTRY,
-                ),
+                ocm_repo,
             )
 
     components = []
