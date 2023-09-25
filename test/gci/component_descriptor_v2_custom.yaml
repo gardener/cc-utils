@@ -1,0 +1,69 @@
+meta:
+  schemaVersion: 'v2'
+
+component:
+  name: 'github.com/gardener/gardener'
+  version: 'v1.7.2'
+
+  repositoryContexts:
+    - type: 'ociRegistry'
+      baseUrl: 'eu.gcr.io/gardener-project/components/dev'
+
+  provider: 'internal'
+
+  labels:
+    - name: 'a_label'
+      value: 'a_value'
+
+  sources:
+    - name: 'github_com_gardener_gardener'
+      type: 'git'
+      version: 'v1.7.2'
+      labels: []
+      access:
+        type: 'github'
+        repoUrl: 'github.com/gardener/gardener'
+        ref: 'refs/tags/v1.7.2'
+    - name: 'filesystem-typed-source'
+      version: '1.2.3'
+      type: 'filesystem'
+      access:
+        type: 'custom'
+
+  componentReferences:
+    - name: 'my-etcd-druid'
+      componentName: 'github.com/gardener/etcd-druid'
+      version: 'v0.3.0'
+      labels: []
+
+  resources:
+    - name: 'my-blueprint'
+      version: 'v1.7.2' # version is implied by component, i.e. v1.7.2 in this case
+      type: 'landscaper.gardener.cloud/blueprint'
+      relation: 'local'
+      labels: []
+      access:
+        type: 'localFilesystemBlob'
+        filename: 'my-file'
+    - name: 'my-unkown'
+      version: 'v1.7.2' # version is implied by component, i.e. v1.7.2 in this case
+      type: 'landscaper.gardener.cloud/blueprint'
+      relation: 'local'
+      labels: []
+      access: ~
+    - name: 'my-blueprint'
+      version: 'v1.7.2' # version is implied by component, i.e. v1.7.2 in this case
+      type: 'landscaper.gardener.cloud/blueprint'
+      relation: 'local'
+      labels: []
+      access:
+        type: 'myCustomType'
+        someAttr: abc
+    - name: 'my-relative-image'
+      version: 'v1.7.2' # version is implied by component, i.e. v1.7.2 in this case
+      type: 'ociImage'
+      relation: 'local'
+      labels: []
+      access:
+        type: 'relativeOciReference'
+        reference: 'abcd:latest'
