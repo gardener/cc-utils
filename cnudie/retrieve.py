@@ -589,7 +589,7 @@ def composite_component_descriptor_lookup(
             )
 
         if ctx_repo:
-            component_url = ctx_repo.component_version_oci_ref(component_id),
+            component_url = ctx_repo.component_version_oci_ref(component_id)
         else:
             component_url = f'<no ocm-repo given>: {str(component_id)}'
 
