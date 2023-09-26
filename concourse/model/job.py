@@ -86,7 +86,7 @@ class JobVariant(ModelBase):
 
         return '-'.join(parts)
 
-    def steps(self):
+    def steps(self) -> typing.Iterable[concourse.model.step.PipelineStep]:
         return self._steps_dict.values()
 
     def step_names(self):

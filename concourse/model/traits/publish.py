@@ -521,6 +521,9 @@ class PublishTraitTransformer(TraitTransformer):
                 continue
             if step.name.startswith('build_oci_image'):
                 continue
+            if 'publish' in step.trait_depends():
+                # don't depend on steps that have been explicitly configured to depend on publish.
+                continue
             prepare_step._add_dependency(step)
 
     @classmethod
