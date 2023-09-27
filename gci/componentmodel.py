@@ -85,7 +85,7 @@ class LocalBlobAccess(Access):
     localReference: str
     mediaType: str = 'application/data'
     referenceName: typing.Optional[str] = None
-    globalAccess: typing.Optional[LocalBlobGlobalAccess | dict] = None
+    globalAccess: typing.Optional[LocalBlobGlobalAccess | dict | None] = None
 
 
 @dc(frozen=True, kw_only=True)
