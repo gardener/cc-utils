@@ -66,6 +66,15 @@ class Access:
 
 
 @dc(frozen=True, kw_only=True)
+class LocalBlobGlobalAccess:
+    digest: str
+    mediaType: str
+    ref: str
+    size: int
+    type: str
+
+
+@dc(frozen=True, kw_only=True)
 class LocalBlobAccess(Access):
     '''
     a blob that is accessible locally to the component-descriptor
@@ -76,7 +85,7 @@ class LocalBlobAccess(Access):
     localReference: str
     mediaType: str = 'application/data'
     referenceName: typing.Optional[str] = None
-    globalAccess: typing.Optional[dict] = None
+    globalAccess: typing.Optional[LocalBlobGlobalAccess | dict] = None
 
 
 @dc(frozen=True, kw_only=True)
