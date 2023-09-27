@@ -673,7 +673,7 @@ class Client:
         parsed = json.loads(manifest)
         content_type = parsed.get('mediaType', om.OCI_MANIFEST_SCHEMA_V2_MIME)
 
-        logger.info(f'manifest-mimetype: {content_type=}')
+        logger.debug(f'manifest-mimetype: {content_type=}')
 
         res = self._request(
             url=self.routes.manifest_url(image_reference=image_reference),
