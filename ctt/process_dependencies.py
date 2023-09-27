@@ -646,8 +646,15 @@ def process_images(
             components.append(component)
             processed_component_versions.add(cname_version(component))
 
+    root = component_descriptor_v2.component
+
     for component in components:
-        src_component = component_descriptor_lookup(component).component
+        # root component descriptor is typically not uploaded prior to calling CTT
+        # -> use passed-in component-descriptor
+        if component.name == root.name and component.version == root.version:
+            src_component = root
+        else:
+            src_component = component_descriptor_lookup(component).component
         src_ocm_repo = src_component.current_repository_ctx()
         append_ctx_repo(src_ocm_repo, component)
         append_ctx_repo(tgt_ctx_base_url, component)
