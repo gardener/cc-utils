@@ -78,10 +78,13 @@ ocm_version_lookup = cnudie.retrieve.version_lookup(
 previous_version = cnudie.retrieve.greatest_component_version_with_matching_minor(
     component_name=component.name,
     ctx_repo=ocm_repo,
-    reference_version=version_str,
+    reference_version=processed_version,
     ignore_prerelease_versions=True,
 )
-ci.util.info(f'Previous version determined as "{previous_version}"')
+ci.util.info(
+    f'Previous version determined as "{previous_version}" '
+    f'(reference: "{processed_version}")'
+)
 
 if previous_version:
     previous_version=version.parse_to_semver(previous_version)
