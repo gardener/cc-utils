@@ -715,7 +715,7 @@ def process_images(
                 # source context or (2) not (e.g. if a component descriptor from a local
                 # file is used).
                 # for case (2) the copying of resources isn't supported by the coding.
-                if component_descriptor_lookup(component_descriptor):
+                if component_descriptor_lookup(component_descriptor, absent_ok=True):
                     cd_exists_in_src_ctx = True
                 else:
                     cd_exists_in_src_ctx = False
