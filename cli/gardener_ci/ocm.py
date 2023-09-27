@@ -19,6 +19,7 @@ import gci.oci as goci
 import ccc.oci
 import cnudie.iter
 import cnudie.retrieve
+import cnudie.upload
 import ctx
 import tarutil
 import oci
@@ -141,6 +142,25 @@ def edit(
     oci_client.put_manifest(
         oci_ref,
         manifest=json.dumps(manifest.as_dict())
+    )
+
+
+def upload(
+    file: str,
+):
+    with open(file) as f:
+        component_descriptor = cm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f)
+        )
+    component = component_descriptor.component
+
+    target_ocm_repo = component.current_repository_ctx()
+    target_ref = target_ocm_repo.component_version_oci_ref(component)
+
+    print(f'will upload to: {target_ref=}')
+
+    cnudie.upload.upload_component_descriptor(
+        component_descriptor=component_descriptor,
     )
 
 
