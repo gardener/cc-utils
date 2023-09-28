@@ -23,7 +23,7 @@ gardener-oci
 github3.py<5.0.0
 google-api-core<3
 google-api-python-client<3
-google-auth<3
+google-auth==2.23.0 # pinned until https://github.com/googleapis/google-auth-library-python/pull/1390 is released (dependency conflict with boto3)
 google-cloud-storage<3
 google-crc32c>1.1.4
 html2text
