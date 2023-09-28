@@ -951,7 +951,6 @@ def release_and_prepare_next_dev_cycle(
     component_descriptor_path: str=None,
     next_cycle_commit_message_prefix: str=None,
     next_version_callback: str=None,
-    increment_on_tag_collision: bool=False,
     prerelease_suffix: str="dev",
     rebase_before_release: bool=False,
     release_on_github: bool=True,
@@ -997,26 +996,12 @@ def release_and_prepare_next_dev_cycle(
     # in case of collisions
 
     tags_to_set = _calculate_tags(release_version, github_release_tag, git_tags)
-    logger.info(f'Making sure that required tags {tags_to_set} can be created ...')
+    logger.info(f'Making sure that required tags {tags_to_set} do not exist, yet')
     if (existing_tags := _conflicting_tags(tags_to_set, github_helper)):
-        if increment_on_tag_collision:
-            logger.warning(
-                f"Detected tag-conflicts with tags {existing_tags}. Will attempt to increment "
-                'release version _once_ as configured.'
-            )
-            release_version = version.process_version(
-                version_str=release_version,
-                operation=version_operation,
-            )
-            logger.info(f'New version: {release_version}')
-            tags_to_set = _calculate_tags(release_version, github_release_tag, git_tags)
-            if _conflicting_tags(tags_to_set, github_helper):
-                raise RuntimeError('Can not create requested tags.')
-        else:
-            raise RuntimeError(
-                f"Detected tag-conflicts with tags '{existing_tags}'. Please increment the version "
-                'or delete the conflicting tags.'
-            )
+        logger.error(
+            f'conflict: {existing_tags=}. Increment version or delete tags.'
+        )
+        exit(1)
 
     step_list = []
 
