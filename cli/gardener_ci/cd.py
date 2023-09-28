@@ -142,12 +142,11 @@ def purge_old(
     else:
         ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
 
-    version_lookup = cnudie.retrieve.version_lookup(ocm_repository_lookup=ocm_repo_lookup)
     ocm_repo = next(ocm_repo_lookup(name))
 
     versions = cnudie.retrieve.component_versions(
         component_name=name,
-        version_lookup=version_lookup,
+        ctx_repo=ocm_repo,
     )
 
     if not final:
