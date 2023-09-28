@@ -181,7 +181,7 @@ if os.path.isfile(descriptor_script):
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
 
   ocm_config_file = os.path.join(descriptor_out_dir, 'ocm-cfg.yaml')
-  with open(ocm_config_file.name, 'w') as f:
+  with open(ocm_config_file, 'w') as f:
     f.write(mapping_config.to_ocm_software_config())
 
   subproc_env = os.environ.copy()
