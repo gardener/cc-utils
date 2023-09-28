@@ -602,14 +602,14 @@ class OcmLookupMapping:
         return component.startswith(self.prefix)
 
 
+@dataclasses.dataclass
 class OcmLookupMappingConfig:
-    def __init__(
-        self,
-        mappings: list[OcmLookupMapping],
-    ):
-        self.mappings: list[OcmLookupMapping] = sorted(
+    mappings: list[OcmLookupMapping]
+
+    def __post_init__(self):
+        self.mappings = sorted(
             sorted(
-                mappings,
+                self.mappings,
                 key=lambda m: len(m.prefix),
                 reverse=True,
             ),
