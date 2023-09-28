@@ -50,14 +50,18 @@ def ls_products(
     ocm_repo: str=None,
 ):
     if not ocm_repo:
-        ocm_repo = ctx.cfg.ctx.ocm_repo_base_url
+        ocm_lookup = ctx.cfg.ctx.ocm_lookup
+    else:
+        ocm_lookup = cr.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+                ocm_repo,
+            )
+        )
 
     client = ccc.protecode.client(bdba_cfg_name)
 
     if not ':' in ocm_component:
         raise ValueError('ocm_component must have form <name>:<version>')
-
-    ocm_lookup = cr.create_default_component_descriptor_lookup(default_ctx_repo=ocm_repo)
 
     root_component_descriptor = ocm_lookup(ocm_component)
 
@@ -81,7 +85,7 @@ def rescore(
     protecode_cfg_name: str,
     product_id: int,
     rescoring_rules: str,
-    ctx_repo: str=None,
+    ocm_repo: str=None,
     categorisation: str=None,
     assess: bool=False,
 ):
@@ -103,11 +107,14 @@ def rescore(
             ci.util.parse_yaml_file(categorisation),
         )
     else:
-        if not ctx_repo:
-            ctx_repo = ctx.cfg.ctx.ocm_repo_base_url
-        if not ctx_repo:
-            logger.error('must specify ctx_repo')
-            exit(1)
+        if not ocm_repo:
+            ocm_lookup = ctx.cfg.ctx.ocm_lookup
+        else:
+            ocm_lookup = cr.create_default_component_descriptor_lookup(
+                ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+                    ocm_repo,
+                )
+            )
 
         custom_data = result.custom_data()
         component_name = custom_data['COMPONENT_NAME']
@@ -116,18 +123,15 @@ def rescore(
         image_version = custom_data['IMAGE_VERSION']
         logger.info(f'retrieving component descriptor for {component_name}:{component_version}')
 
-        lookup = cr.create_default_component_descriptor_lookup(
-            default_ctx_repo=cm.OciRepositoryContext(baseUrl=ctx_repo),
-        )
         try:
-            component_descriptor = lookup(
+            component_descriptor = ocm_lookup(
                 cm.ComponentIdentity(
                     name=component_name,
                     version=component_version,
                 ),
             )
         except om.OciImageNotFoundException:
-            logger.error(f'could not find {component_name}:{component_version} in {ctx_repo}')
+            logger.error(f'could not find {component_name}:{component_version} in {ocm_repo}')
             exit(1)
 
         logger.info(f'looking for {image_name}:{image_version} in component-descriptor')

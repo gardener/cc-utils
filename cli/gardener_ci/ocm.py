@@ -6,6 +6,7 @@ import json
 import jsonschema
 import logging
 import os
+import pprint
 import subprocess
 import tarfile
 import tempfile
@@ -39,7 +40,8 @@ def edit(
     editor: str='vim',
 ):
     if not ocm_repo:
-        ocm_repo = ctx.cfg.ctx.ocm_repo_base_url
+        ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
+        ocm_repo = next(ocm_repo_lookup(name)).baseUrl
 
     oci_client = ccc.oci.oci_client()
 
@@ -143,6 +145,22 @@ def edit(
         oci_ref,
         manifest=json.dumps(manifest.as_dict())
     )
+
+
+def retrieve(
+    name: str,
+    ocm_repo: str=None,
+):
+    if not ocm_repo:
+        ocm_lookup = ctx.cfg.ctx.ocm_lookup
+    else:
+        ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo),
+        )
+
+    component_descriptor = ocm_lookup(name)
+
+    pprint.pprint(component_descriptor)
 
 
 def upload(

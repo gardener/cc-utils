@@ -49,6 +49,34 @@ class CtxCfg:
     github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
     cache_dir: str | None = None # used (e.g.) for caching component-descriptors
     ocm_repo_base_url: str | None = None # fka ctx_repo_url
+    ocm_repository_mappings: list[dict] | None = None # list[cnudie.util.OcmLookupMapping]
+
+    @property
+    def ocm_repository_lookup(self) -> 'cnudie.retrieve.OcmRepositoryLookup | None':
+        if not self.ocm_repository_mappings:
+            return None
+
+        import cnudie.retrieve
+        import cnudie.util
+
+        mapping_cfg = cnudie.util.OcmLookupMappingConfig(
+            mappings=[
+                dacite.from_dict(cnudie.util.OcmLookupMapping, mapping) for mapping
+                in self.ocm_repository_mappings
+            ]
+        )
+
+        return cnudie.retrieve.ocm_repository_lookup(mapping_cfg)
+
+    @property
+    def ocm_lookup(self) -> 'cnudie.retrieve.ComponentDescriptorLookupById | None':
+        if not self.ocm_repository_lookup:
+            return None
+
+        import cnudie.retrieve
+        return cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=self.ocm_repository_lookup,
+        )
 
     @property
     def component_descriptor_cache_dir(self) -> str | None:

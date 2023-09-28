@@ -16,28 +16,31 @@ import version
 logger = logging.getLogger(__name__)
 
 
+def _ocm_lookup(ocm_repo: str=None):
+    if ocm_repo:
+        return cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo),
+        )
+    else:
+        return ctx.cfg.ctx.ocm_lookup
+
+
 def retrieve(
     name: str,
     version: str=None,
     ocm_repo: str=None,
     out: str=None
 ):
-    if not ocm_repo:
-        ocm_repo = ctx.cfg.ctx.ocm_repo_base_url
-
-    ctx_repo = cm.OciRepositoryContext(
-            baseUrl=ocm_repo,
-        )
-
     if not version:
         name, version = name.rsplit(':', 1)
 
-    component_descriptor = cnudie.retrieve.oci_component_descriptor_lookup()(
+    ocm_lookup = _ocm_lookup(ocm_repo=ocm_repo)
+
+    component_descriptor = ocm_lookup(
         component_id=cm.ComponentIdentity(
             name=name,
             version=version,
         ),
-        ctx_repo=ctx_repo,
     )
 
     if not component_descriptor:
@@ -57,23 +60,17 @@ def retrieve(
 def validate(
     name: str,
     version: str,
-    ctx_base_url: str=None,
+    ocm_repo: str=None,
     out: str=None
 ):
-    if not ctx_base_url:
-        ctx_base_url = ctx.cfg.ctx.ocm_repo_base_url
-
-    ctx_repo = cm.OciRepositoryContext(
-        baseUrl=ctx_base_url,
-    )
+    ocm_lookup = _ocm_lookup(ocm_repo=ocm_repo)
 
     logger.info('retrieving component-descriptor..')
-    component_descriptor = cnudie.retrieve.oci_component_descriptor_lookup()(
+    component_descriptor = ocm_lookup(
         component_id=cm.ComponentIdentity(
             name=name,
             version=version,
         ),
-        ctx_repo=ctx_repo,
     )
     component = component_descriptor.component
     logger.info('validating component-descriptor..')
@@ -102,23 +99,27 @@ def ls(
     name: str,
     greatest: bool=False,
     final: bool=False,
-    ocm_repo_base_url: str=None,
+    ocm_repo: str=None,
 ):
-    if not ocm_repo_base_url:
-        ocm_repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+    if ocm_repo:
+        ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(ocm_repo)
+    else:
+        ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
 
-    ctx_repo = cm.OciRepositoryContext(baseUrl=ocm_repo_base_url)
+    version_lookup = cnudie.retrieve.version_lookup(ocm_repository_lookup=ocm_repo_lookup)
+
+    ocm_repo = next(ocm_repo_lookup(name))
 
     if greatest:
         print(cnudie.retrieve.greatest_component_version(
             component_name=name,
-            ctx_repo=ctx_repo,
+            version_lookup=version_lookup,
         ))
         return
 
     versions = cnudie.retrieve.component_versions(
         component_name=name,
-        ctx_repo=ctx_repo,
+        ctx_repo=ocm_repo,
     )
 
     for v in versions:
@@ -132,18 +133,21 @@ def ls(
 def purge_old(
     name: str,
     final: bool=False,
-    repo_base_url: str=None,
+    ocm_repo: str=None,
     keep: int=256,
     threads: int=32,
 ):
-    if not repo_base_url:
-        repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+    if ocm_repo:
+        ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(ocm_repo)
+    else:
+        ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
 
-    ctx_repo = cm.OciRepositoryContext(baseUrl=repo_base_url)
+    version_lookup = cnudie.retrieve.version_lookup(ocm_repository_lookup=ocm_repo_lookup)
+    ocm_repo = next(ocm_repo_lookup(name))
 
     versions = cnudie.retrieve.component_versions(
         component_name=name,
-        ctx_repo=ctx_repo,
+        version_lookup=version_lookup,
     )
 
     if not final:
@@ -173,7 +177,7 @@ def purge_old(
 
     def iter_oci_refs_to_rm():
         for v in versions:
-            ref = f'{repo_base_url}/component-descriptors/{name}:{v}'
+            ref = f'{ocm_repo}/component-descriptors/{name}:{v}'
             yield pool.submit(
                 purge_component_descriptor,
                 ref=ref,
@@ -187,22 +191,20 @@ def purge(
     name: str,
     recursive: bool=False,
     version: str=None,
-    repo_base_url: str=None,
+    ocm_repo: str=None,
 ):
     if not version:
         name, version = name.rsplit(':', 1)
 
-    if not repo_base_url:
-        repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+    ocm_lookup = _ocm_lookup(ocm_repo=ocm_repo)
 
     lookup = cnudie.retrieve.oci_component_descriptor_lookup()
 
-    component_descriptor = lookup(
+    component_descriptor = ocm_lookup(
         component_id=cm.ComponentIdentity(
             name=name,
             version=version,
         ),
-        ctx_repo=cm.OciRepositoryContext(baseUrl=repo_base_url),
     )
 
     oci_client = ccc.oci.oci_client()

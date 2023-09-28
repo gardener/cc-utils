@@ -620,6 +620,9 @@ def create_default_component_descriptor_lookup(
                              client cannot be created, the delivery-service based lookup is not \
                              included in the returned lookup
     '''
+    if not ocm_repository_lookup:
+        ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
+
     lookups = [
         in_memory_cache_component_descriptor_lookup(
             default_ctx_repo=default_ctx_repo,
@@ -656,9 +659,6 @@ def create_default_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repository_lookup,
         ),
     )
-
-    if not default_ctx_repo:
-        default_ctx_repo = ctx.cfg.ctx.ocm_repo_base_url
 
     return composite_component_descriptor_lookup(
         lookups=tuple(lookups),

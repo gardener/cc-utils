@@ -17,13 +17,22 @@ def print_release_notes(
     previous_version: str = None,
 ):
     if not ocm_repo_base_url:
-        ocm_repo_base_url = ctx.cfg.ctx.ocm_repo_base_url
+        ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
+        ocm_lookup = ctx.cfg.ctx.ocm_lookup
+    else:
+        ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
+            ocm_repo_base_url,
+        )
+        ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup,
+        )
 
-    ctx_repo = cm.OciRepositoryContext(baseUrl=ocm_repo_base_url)
+    if not ocm_lookup:
+        print('must either pass ocm_repo_base_url, or configure in .cc-config')
+        exit(1)
 
-    lookup = cnudie.retrieve.oci_component_descriptor_lookup()
     version_lookup = cnudie.retrieve.version_lookup(
-        default_ctx_repo=ctx_repo,
+        ocm_repository_lookup=ocm_repository_lookup,
     )
 
     # We need a component. Fetch one with given information (assuming the relevant information
@@ -31,30 +40,27 @@ def print_release_notes(
     if not current_version and not previous_version:
         v = cnudie.retrieve.greatest_component_version(
             component_name=component_name,
-            ctx_repo=ctx_repo,
+            version_lookup=version_lookup,
         )
-        component_descriptor = lookup(
+        component_descriptor = ocm_lookup(
             component_id=cm.ComponentIdentity(
                 name=component_name,
                 version=v,
             ),
-            ctx_repo=ctx_repo,
         )
     elif current_version:
-        component_descriptor = lookup(
+        component_descriptor = ocm_lookup(
             component_id=cm.ComponentIdentity(
                 name=component_name,
                 version=current_version,
             ),
-            ctx_repo=ctx_repo,
         )
     elif previous_version:
-        component_descriptor = lookup(
+        component_descriptor = ocm_lookup(
             component_id=cm.ComponentIdentity(
                 name=component_name,
                 version=previous_version,
             ),
-            ctx_repo=ctx_repo,
         )
 
     if current_version:
