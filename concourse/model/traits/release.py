@@ -266,9 +266,6 @@ class ReleaseTrait(Trait):
     def merge_release_to_default_branch_commit_message_prefix(self) -> str:
         return self.raw.get('merge_release_to_default_branch_commit_message_prefix')
 
-    def increment_version_on_tag_collision(self) -> bool:
-        return self.raw['increment_version_on_tag_collision']
-
     def git_tags(self):
         '''
         all tags to be created in addition to the "github-release-tag" (without the gh-release-tag)
