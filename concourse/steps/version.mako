@@ -3,10 +3,16 @@
 import os
 from makoutil import indent_func
 from concourse.steps import step_lib
+from concourse.model.traits.release import TagConflictAction
 
 main_repo = job_variant.main_repository()
 head_sha_file = main_repo.head_sha_path()
 version_trait = job_variant.trait('version')
+if job_variant.has_trait('release'):
+  release_trait = job_variant.trait('release')
+  on_tag_conflict = release_trait.on_tag_conflict
+else:
+  on_tag_conflict = None
 
 path_to_repo_version_file = os.path.join(
   main_repo.resource_name(),
@@ -52,7 +58,7 @@ def quote_str(value):
   elif value is None:
     return None
   else:
-    raise ValueError
+    raise ValueError(value)
 
 %>
 
@@ -95,6 +101,30 @@ effective_version = version.process_version(
 )
 logger.info('version preprocessing operation: ${version_operation}')
 logger.info(f'effective version: {effective_version}')
+
+% if on_tag_conflict is not None:
+if has_version_conflict(
+  target_tag= (target_tag := f'refs/tags/{effective_version}'),
+  repository_name=${quote_str(main_repo.repo_name())},
+  repository_org=${quote_str(main_repo.repo_owner())},
+  repository_hostname=${quote_str(main_repo.repo_hostname())},
+):
+  logger.warning(f'{target_tag=} already exists in main-repository.')
+% if on_tag_conflict is TagConflictAction.IGNORE:
+  logger.warning('on_tag_conflict set to ignore -> release will fail!')
+% elif on_tag_conflict is TagConflictAction.FAIL:
+  logger.error('on_tag_conflict set to fail -> will exit with error now')
+  exit(1)
+% elif on_tag_conflict is TagConflictAction.INCREMENT_PATCH_VERSION:
+  logger.warning('on_tag_conflict set to increment-patch-version - will bump effective version')
+  effective_version = version.process_version(
+    version_str=effective_version,
+    prerelease=prerelease,
+    operation='bump_patch',
+  )
+  logger.warning(f'{effective_version=} was changed to avoid tag-conflict')
+% endif
+% endif
 
 write_callback = '${write_callback}' ## Either a path or an empty string
 if version_interface is version_trait.VersionInterface.CALLBACK and write_callback:

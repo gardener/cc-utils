@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import enum
+import textwrap
 import typing
 
 import version
@@ -89,6 +91,12 @@ class ReleaseCommitPublishingPolicy(EnumWithDocumentation):
         value='tag_and_merge_back',
         doc='publish release tag to dead-end and merge back release commit to default branch',
     )
+
+
+class TagConflictAction(enum.StrEnum):
+    IGNORE = 'ignore'
+    FAIL = 'fail'
+    INCREMENT_PATCH_VERSION = 'increment-patch-version'
 
 
 ATTRIBUTES = (
@@ -200,14 +208,19 @@ ATTRIBUTES = (
         type=bool
     ),
     AttributeSpec.optional(
-        name='increment_version_on_tag_collision',
-        default=False,
-        doc='''
-        If `True`, the pipeline will automatically increment the version _once_ if the tag
-        corresponding to the desired version already exists.
-        This incrementation follows the semantics set by the `nextversion` attribute.
-        ''',
-        type=bool,
+        name='on_tag_conflict',
+        default=TagConflictAction.IGNORE,
+        doc=textwrap.dedent('''\
+            specifies the action to take if the tag to be pushed (`refs/tags/<effective-version>`)
+            already exists (relevant, if `release_on_github` is not set to `False`).
+            Such cases can occur if pushing of "bump-commit" after previous release failed.
+            Default value is chosen for backwards-compatibility.
+            `fail` will lead to the `version` step to fail (which will shorten the time to
+            discover this error, and thus save time)
+            `increment-patch-version` will increment effective version's patchlevel (and thus
+            avoid a conflict)
+        '''),
+        type=TagConflictAction,
     ),
 )
 
@@ -269,6 +282,10 @@ class ReleaseTrait(Trait):
 
     def release_on_github(self) -> bool:
         return self.raw['release_on_github']
+
+    @property
+    def on_tag_conflict(self) -> TagConflictAction:
+        return TagConflictAction(self.raw['on_tag_conflict'])
 
     def validate(self):
         super().validate()
