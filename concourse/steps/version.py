@@ -1,6 +1,26 @@
 import subprocess
 
+import ccc.github
 import concourse.model.traits.version as version_trait
+
+
+def has_version_conflict(
+    target_tag: str,
+    repository_name: str,
+    repository_org: str,
+    repository_hostname: str,
+):
+    github_cfg = ccc.github.github_cfg_for_repo_url(repo_url=repository_hostname)
+    github_api = ccc.github.github_api(github_cfg)
+
+    target_tag = target_tag.removeprefix('refs/tags/')
+
+    repository = github_api.repository(repository_org, repository_name)
+    for tag in repository.tags():
+        if tag.name == target_tag:
+            return True
+
+    return False
 
 
 def read_version(
