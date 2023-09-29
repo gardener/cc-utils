@@ -113,6 +113,19 @@ class GreatestCVE:
 
 
 @dataclasses.dataclass(frozen=True)
+class CVE:
+    cve: str
+    cvss3Score: float
+    affected_package_name: str
+    affected_package_version: str
+    reportUrl: str
+    product_id: int
+    group_id: int
+    base_url: str
+    bdba_cfg_name: str
+
+
+@dataclasses.dataclass(frozen=True)
 class OsID:
     os_info: unixutil.model.OperatingSystemId
 
@@ -120,6 +133,13 @@ class OsID:
 @dataclasses.dataclass(frozen=True)
 class LicenseSummary:
     licenses: list[str]
+    reportUrl: str
+    productId: int
+
+
+@dataclasses.dataclass(frozen=True)
+class License:
+    name: str
     reportUrl: str
     productId: int
 
@@ -231,9 +251,13 @@ class ArtefactMetadata:
         | ComponentSummary
         | FilesystemPaths
         | GreatestCVE
+        | CVE
         | LicenseSummary
+        | License
         | MalwareSummary
         | OsID
         | RescoringData
         | dict # fallback, there should be a type
     )
+    discovery_date: datetime.date | None = None
+    latest_processing_date: datetime.date | None = None
