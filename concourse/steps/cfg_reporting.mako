@@ -1,12 +1,10 @@
-<%def name="cfg_reporting_step(step, job, job_mapping, indent)", filter="indent_func(indent),trim">
+<%def name="cfg_reporting_step(step, job, indent)", filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
 from concourse.steps import step_lib
 
 extra_args = step._extra_args
 cfg_repo_relpath = extra_args['cfg_repo_relpath']
-raw_job_mapping = extra_args['raw_job_mapping']
-job_mapping_name = extra_args['job_mapping_name']
 compliance_reporting_repo_url = extra_args['compliance_reporting_repo_url']
 delivery_endpoints_cfg_name = extra_args['delivery_endpoints_cfg_name']
 github_issue_template_cfgs_raw = extra_args['github_issue_template_cfgs_raw']
@@ -29,8 +27,6 @@ import model.concourse
 
 cfg_dir = '${cfg_repo_relpath}'
 cfg_factory: model.ConfigFactory = model.ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
-org_job_mapping = model.concourse.JobMapping(name='${job_mapping_name}', raw_dict=${raw_job_mapping})
-cfg_set = cfg_factory.cfg_set(org_job_mapping.replication_ctx_cfg_set())
 
 status_reports = cmr.generate_cfg_element_status_reports(
   cfg_dir='${cfg_repo_relpath}',

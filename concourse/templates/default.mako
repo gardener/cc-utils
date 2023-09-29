@@ -48,10 +48,13 @@ except ValueError:
 # expose secrets_server endpoint to all jobs
 secrets_server_cfg = config_set.secrets_server()
 
-secrets_server_cfg_url_path = model.secrets_server.secret_url_path(
-  job_mapping,
-  secret_cfg,
-)
+if job_mapping:
+  secrets_server_cfg_url_path = model.secrets_server.secret_url_path(
+    job_mapping,
+    secret_cfg,
+  )
+else:
+  secrets_server_cfg_url_path = 'No job mapping passed'
 
 def on_abort_anchor_name(variant_name, step_name):
   # instead of re-rendering all the config for the on_abort hook, we just re-use the existing one for the
@@ -539,9 +542,9 @@ else:
 % elif job_step.name == 'replicate_pipelines':
         ${replicate_pipelines_step(step=job_step, job=job_variant, job_mapping=job_mapping, indent=8)}
 % elif job_step.name == 'replicate_secrets':
-        ${replicate_secrets_step(step=job_step, job=job_variant, job_mapping=job_mapping, indent=8)}
+        ${replicate_secrets_step(step=job_step, job=job_variant, indent=8)}
 % elif job_step.name == 'cfg_reporting':
-        ${cfg_reporting_step(step=job_step, job=job_variant, job_mapping=job_mapping, indent=8)}
+        ${cfg_reporting_step(step=job_step, job=job_variant, indent=8)}
 % endif
 % endif
 % if job_step.publish_repository_names() and not job_variant.has_trait('pull-request'):
