@@ -121,7 +121,7 @@ def _artifact_url(artifact: cm.Artifact) -> str | None:
 def _compliance_status_summary(
     component: cm.Component,
     artifacts: typing.Sequence[cm.Artifact],
-    report_urls: str,
+    report_urls: tuple[str] | set[str],
     issue_description: str,
     issue_value: str,
 ):
@@ -194,11 +194,10 @@ def _vulnerability_template_vars(
     result_group: gcm.ScanResultGroup,
     cfg_set=None,
 ) -> dict:
-    results: tuple[pm.BDBA_ScanResult] = result_group.results_with_findings
+    results: tuple[pm.VulnerabilityScanResult] = result_group.results_with_findings
     analysis_results = [r.result for r in results]
-    greatest_cve = max((r.greatest_cve_score for r in results))
     component = result_group.component
-    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+    artefact = result_group.artifact
 
     def bdba_rescoring_cmd(cfg_set):
         nonlocal component
@@ -232,46 +231,34 @@ def _vulnerability_template_vars(
     return {
         'summary': _compliance_status_summary(
             component=component,
-            artifacts=artifacts,
-            issue_value=greatest_cve,
-            issue_description='Greatest CVE Score',
-            report_urls=[ar.report_url() for ar in analysis_results],
+            artifacts=[artefact],
+            report_urls={ar.report_url() for ar in analysis_results},
+            issue_description='CVEs',
+            issue_value='See comments for further information',
         ),
-        'greatest_cve': greatest_cve,
-        'criticality_classification': str(_criticality_classification(
-            cve_score=greatest_cve
-        )),
         'rescoring_cmd': rescoring_cmd,
     }
 
 
 def _license_template_vars(
     result_group: gcm.ScanResultGroup,
-    license_cfg: image_scan.LicenseCfg,
+    license_cfg: image_scan.LicenseCfg=None,
 ) -> dict:
-    results: tuple[pm.BDBA_ScanResult] = result_group.results_with_findings
+    results: tuple[pm.LicenseScanResult] = result_group.results_with_findings
     analysis_results = [r.result for r in results]
-    prohibited_licenses = set()
-    all_licenses = set()
     component = result_group.component
-    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
+    artifact = result_group.artifact
 
-    for r in results:
-        all_licenses |= r.license_names
-
-    for license_name in all_licenses:
-        if not license_cfg.is_allowed(license_name):
-            prohibited_licenses.add(license_name)
+    prohibited_licenses = {r.license.name for r in results if r._severity(license_cfg=license_cfg)}
 
     return {
         'summary': _compliance_status_summary(
             component=component,
-            artifacts=artifacts,
-            issue_value=' ,'.join(prohibited_licenses),
+            artifacts=[artifact],
+            report_urls={ar.report_url() for ar in analysis_results},
             issue_description='Prohibited Licenses',
-            report_urls=[ar.report_url() for ar in analysis_results],
+            issue_value=' ,'.join(prohibited_licenses),
         ),
-        'criticality_classification': str(gcm.Severity.BLOCKER),
     }
 
 
@@ -386,7 +373,7 @@ def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> di
 
 def _template_vars(
     result_group: gcm.ScanResultGroup,
-    license_cfg: image_scan.LicenseCfg,
+    license_cfg: image_scan.LicenseCfg=None,
     delivery_dashboard_url: str='',
     cfg_set=None,
 ) -> dict:
@@ -412,7 +399,7 @@ def _template_vars(
 
     if issue_type == _compliance_label_vulnerabilities:
         template_variables |= _vulnerability_template_vars(
-            result_group,
+            result_group=result_group,
             cfg_set=cfg_set,
         )
 
@@ -576,10 +563,15 @@ def _scanned_element_assignees(
 def _scanned_element_title(
     scanned_element: gcm.Target,
     issue_type: str,
+    target_milestone: github3.repos.repo.milestone.Milestone=None,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
-        artifact = gcm.artifact_from_node(scanned_element)
-        return f'[{issue_type}] - {scanned_element.component.name}:{artifact.name}'
+        c = scanned_element.component
+        a = gcm.artifact_from_node(scanned_element)
+        title = f'[{issue_type}] - {c.name}:{c.version}:{a.name}:{a.version}'
+        if target_milestone:
+            title += f' - {target_milestone.title}'
+        return title
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return f'[{issue_type}] - {scanned_element.name}'
@@ -619,10 +611,23 @@ def _target_milestone(
 @functools.cache
 def _target_sprint(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
-    latest_processing_date: datetime.date,
+    latest_processing_date: datetime.date=None,
+    sprint_end_date: datetime.date=None,
 ) -> delivery.model.Sprint:
+    if not latest_processing_date and not sprint_end_date:
+        raise ValueError(
+          "At least one of 'latest_processing_date' and 'sprint_end_date' must not be 'None'"
+        )
     try:
-        target_sprint = delivery_svc_client.sprint_current(before=latest_processing_date)
+        if latest_processing_date:
+            target_sprint = delivery_svc_client.sprint_current(
+                before=latest_processing_date,
+                offset=-1,
+            )
+        elif sprint_end_date:
+            target_sprint = delivery_svc_client.sprint_current(
+                before=sprint_end_date,
+            )
     except requests.HTTPError as http_error:
         logger.warning(f'error determining tgt-sprint {http_error=} - falling back to current')
         target_sprint = delivery_svc_client.sprint_current()
@@ -646,7 +651,7 @@ class PROCESSING_ACTION(enum.Enum):
 
 def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
-    max_processing_days: gcm.MaxProcessingTimesDays,
+    max_processing_days: gcm.MaxProcessingTimesDays=None,
     gh_api: github3.GitHub=None,
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
@@ -657,16 +662,10 @@ def create_or_update_github_issues(
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
     cfg_set=None,
 ):
-    # workaround / hack:
-    # we map findings to <component-name>:<resource-name>
-    # in case of ambiguities, this would lead to the same ticket firstly be created, then closed
-    # -> do not close tickets in this case.
-    # a cleaner approach would be to create seperate tickets, or combine findings into shared
-    # tickets. For the time being, this should be "good enough"
-
     result_groups = result_group_collection.result_groups
     result_groups_with_findings = result_group_collection.result_groups_with_findings
     result_groups_without_findings = result_group_collection.result_groups_without_findings
+    result_groups_with_scan_error = result_group_collection.result_groups_with_scan_errors
 
     err_count = 0
 
@@ -684,6 +683,7 @@ def create_or_update_github_issues(
         nonlocal cfg_set
         nonlocal gh_api
         nonlocal err_count
+        nonlocal max_processing_days
         issue_type = result_group.issue_type
 
         if action == PROCESSING_ACTION.DISCARD:
@@ -750,21 +750,34 @@ def create_or_update_github_issues(
 
             if delivery_svc_client:
                 try:
-                    max_days = max_processing_days.for_severity(
-                        criticality_classification
-                    )
-
-                    latest_processing_date = datetime.date.today() + \
-                        datetime.timedelta(days=max_days)
-
-                    target_sprint = _target_sprint(
-                        delivery_svc_client=delivery_svc_client,
-                        latest_processing_date=latest_processing_date,
-                    )
-                    target_milestone = _target_milestone(
-                        repo=repository,
-                        sprint=target_sprint,
-                    )
+                    if scan_result.has_latest_processing_date:
+                        latest_processing_date = scan_result.latest_processing_date
+                        target_sprint = _target_sprint(
+                            delivery_svc_client=delivery_svc_client,
+                            sprint_end_date=latest_processing_date,
+                        )
+                        target_milestone = _target_milestone(
+                            repo=repository,
+                            sprint=target_sprint,
+                        )
+                    else:
+                        if not max_processing_days:
+                            max_processing_days = gcm.MaxProcessingTimesDays()
+                        max_days = max_processing_days.for_severity(
+                            criticality_classification,
+                        )
+                        latest_processing_date = datetime.date.today() + datetime.timedelta(
+                            days=max_days,
+                        )
+                        target_sprint = _target_sprint(
+                            delivery_svc_client=delivery_svc_client,
+                            latest_processing_date=latest_processing_date,
+                        )
+                        target_milestone = _target_milestone(
+                            repo=repository,
+                            sprint=target_sprint,
+                        )
+                        latest_processing_date = target_milestone.due_on.date()
                 except Exception as e:
                     import traceback
                     traceback.print_exc()
@@ -805,15 +818,13 @@ def create_or_update_github_issues(
                     assignees_statuses=assignees_statuses,
                     milestone=target_milestone,
                     latest_processing_date=latest_processing_date,
-                    extra_labels=(
-                        _criticality_label(classification=criticality_classification),
-                    ),
                     ctx_labels=ctx_labels,
                     preserve_labels_regexes=preserve_labels_regexes,
                     known_issues=known_issues,
                     title=_scanned_element_title(
                         scanned_element=scan_result.scanned_element,
                         issue_type=issue_type,
+                        target_milestone=target_milestone,
                     ),
                 )
                 if result_group.comment_callback:
@@ -844,15 +855,19 @@ def create_or_update_github_issues(
 
                         return result_str
 
-                    sorted_results = sorted(
-                        results,
-                        key=sortable_result_str,
-                    )
+                    if type(results[0]) is pm.VulnerabilityScanResult:
+                        comment_body = result_group.comment_callback(result_group)
+                    else:
+                        sorted_results = sorted(
+                            results,
+                            key=sortable_result_str,
+                        )
 
-                    comment_body = '\n'.join((single_comment(result) for result in sorted_results))
+                        comment_body = '\n'.join((single_comment(r) for r in sorted_results))
 
-                    # only add comment if not already present
+                    # not checking for maximal length of comment because limit should not be reached
                     for comment in issue.comments():
+                        # only add comment if not already present
                         if comment.body.strip() == comment_body.strip():
                             break
                     else:
@@ -896,8 +911,8 @@ def create_or_update_github_issues(
         )
         time.sleep(1) # throttle github-api-requests
 
-    if groups_with_scan_error := result_group_collection.result_groups_with_scan_errors:
-        logger.warning(f'{len(groups_with_scan_error)=} had scanning errors (check log)')
+    if result_groups_with_scan_error:
+        logger.warning(f'{len(result_groups_with_scan_error)=} had scanning errors (check log)')
         # do not fail job (for now); might choose to, later
 
     if is_remaining_quota_too_low():
