@@ -3,6 +3,7 @@ import logging
 import typing
 
 import botocore.exceptions
+import github3.repos
 import requests
 
 import gci.componentmodel as cm
@@ -12,6 +13,8 @@ import cnudie.access
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
+import concourse.model.traits.image_scan as image_scan
+import delivery.client
 import dso.labels
 import github.compliance.model as gcm
 import oci.client
@@ -106,7 +109,7 @@ class ResourceGroupProcessor:
             result = self.protecode_client.wait_for_scan_result(product_id=product.product_id())
 
             yield from iter_vulnerabilities_with_assessments(
-                result=result
+                result=result,
             )
 
     def scan_request(
@@ -301,7 +304,11 @@ class ResourceGroupProcessor:
         ],
         oci_client: oci.client.Client,
         s3_client: 'botocore.client.S3',
-    ) -> typing.Iterator[pm.BDBA_ScanResult]:
+        license_cfg: image_scan.LicenseCfg=None,
+        max_processing_days: gcm.MaxProcessingTimesDays=None,
+        delivery_client: delivery.client.DeliveryServiceClient=None,
+        repository: github3.repos.Repository=None,
+    ) -> typing.Iterator[pm.BDBAScanResult]:
         r = resource.resource
         c = resource.component
         group_name = f'{c.name}:{c.version}/{r.name}:{r.version} - {r.type}'
@@ -340,7 +347,7 @@ class ResourceGroupProcessor:
 
         if scan_failed:
             # pylint: disable=E1123
-            yield pm.BDBA_ScanResult(
+            yield pm.BDBAScanResult(
                 scanned_element=resource,
                 status=pm.UploadStatus.DONE,
                 result=scan_result,
@@ -378,8 +385,45 @@ class ResourceGroupProcessor:
             protecode_client=self.protecode_client,
         )
 
-        # pylint: disable=E1123
-        yield pm.BDBA_ScanResult(
+        seen_license_names = set()
+        for affected_package in scan_result.components():
+            for vulnerability in affected_package.vulnerabilities():
+                if vulnerability.historical():
+                    continue
+                vulnerability_scan_result = pm.VulnerabilityScanResult(
+                    scanned_element=resource,
+                    status=pm.UploadStatus.DONE,
+                    result=scan_result,
+                    state=state,
+                    affected_package=affected_package,
+                    vulnerability=vulnerability,
+                )
+                vulnerability_scan_result.calculate_latest_processing_date(
+                    max_processing_days=max_processing_days,
+                    delivery_svc_client=delivery_client,
+                    repository=repository,
+                )
+                yield vulnerability_scan_result
+            for license in affected_package.licenses:
+                if license.name in seen_license_names:
+                    continue
+                seen_license_names.add(license.name)
+                license_scan_result = pm.LicenseScanResult(
+                    scanned_element=resource,
+                    status=pm.UploadStatus.DONE,
+                    result=scan_result,
+                    state=state,
+                    affected_package=affected_package,
+                    license=license,
+                    license_cfg=license_cfg,
+                )
+                license_scan_result.calculate_latest_processing_date(
+                    max_processing_days=max_processing_days,
+                    delivery_svc_client=delivery_client,
+                    repository=repository,
+                )
+                yield license_scan_result
+        yield pm.ComponentsScanResult(
             scanned_element=resource,
             status=pm.UploadStatus.DONE,
             result=scan_result,
@@ -493,10 +537,13 @@ def upload_grouped_images(
         lambda node: True
     ),
     reference_group_ids=(),
-    delivery_client=None,
+    delivery_client: delivery.client.DeliveryServiceClient=None,
     oci_client: oci.client.Client=None,
     s3_client: 'botocore.client.S3'=None,
-) -> typing.Generator[pm.BDBA_ScanResult, None, None]:
+    license_cfg: image_scan.LicenseCfg=None,
+    max_processing_days: gcm.MaxProcessingTimesDays=None,
+    repository: github3.repos.Repository=None,
+) -> typing.Generator[pm.BDBAScanResult, None, None]:
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
 
@@ -534,13 +581,17 @@ def upload_grouped_images(
     def task_function(
         resource: cnudie.iter.ResourceNode,
         processing_mode: pm.ProcessingMode,
-    ) -> tuple[pm.BDBA_ScanResult]:
+    ) -> tuple[pm.BDBAScanResult]:
         return tuple(processor.process(
             resource=resource,
             processing_mode=processing_mode,
             known_scan_results=known_scan_results,
             oci_client=oci_client,
             s3_client=s3_client,
+            license_cfg=license_cfg,
+            max_processing_days=max_processing_days,
+            delivery_client=delivery_client,
+            repository=repository,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
