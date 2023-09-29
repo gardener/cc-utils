@@ -708,15 +708,24 @@ def create_or_update_github_issues(
         known_issues = _all_issues(repository)
 
         if action == PROCESSING_ACTION.DISCARD:
+            if scan_result.has_latest_processing_date:
+                latest_processing_date = scan_result.latest_processing_date
+            else:
+                latest_processing_date = None
+
             github.compliance.issue.close_issue_if_present(
                 scanned_element=scan_result.scanned_element,
                 issue_type=issue_type,
                 repository=repository,
                 known_issues=known_issues,
                 ctx_labels=ctx_labels,
+                latest_processing_date=latest_processing_date,
             )
 
-            element_name = github.compliance.issue.name_for_element(scan_result.scanned_element)
+            element_name = github.compliance.issue.unique_name_for_element(
+                scanned_element=scan_result.scanned_element,
+                latest_processing_date=latest_processing_date,
+            )
             logger.info(f'closed (if existing) gh-issue for {element_name=}')
 
         elif action == PROCESSING_ACTION.REPORT:
@@ -873,7 +882,10 @@ def create_or_update_github_issues(
                     else:
                         issue.create_comment(comment_body)
 
-                element_name = github.compliance.issue.name_for_element(scan_result.scanned_element)
+                element_name = github.compliance.issue.unique_name_for_element(
+                    scanned_element=scan_result.scanned_element,
+                    latest_processing_date=latest_processing_date,
+                )
                 logger.info(
                     f'updated gh-issue for {element_name=} '
                     f'{issue_type=}: {issue.html_url=}'
@@ -1013,8 +1025,18 @@ def close_issues_for_absent_resources(
     }
 
     for result_group in result_groups:
-        scanned_element = result_group.results[0].scanned_element
-        name = github.compliance.issue.name_for_element(scanned_element)
+        scan_result = result_group.results[0]
+        scanned_element = scan_result.scanned_element
+
+        if scan_result.has_latest_processing_date:
+            latest_processing_date = scan_result.latest_processing_date
+        else:
+            latest_processing_date = None
+
+        name = github.compliance.issue.unique_name_for_element(
+            scanned_element=scanned_element,
+            latest_processing_date=latest_processing_date,
+        )
         prefix = github.compliance.issue.prefix_for_element(scanned_element)
 
         resource_label = github.compliance.issue.digest_label(
