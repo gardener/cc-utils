@@ -68,7 +68,9 @@ def _get_scan_artifacts_from_components(
     for component in components:
         for source in component.sources:
             if source.type is not cm.SourceType.GIT:
-                raise NotImplementedError
+                source_name = f'{component.name}:{component.version}/{source.name}:{source.version}'
+                logger.warning(f'skipping {source_name} with {source.type=}')
+                continue
 
             if source.access.type is not cm.AccessType.GITHUB:
                 raise NotImplementedError
