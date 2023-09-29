@@ -59,12 +59,19 @@ def prefix_for_element(
         raise TypeError(scanned_element)
 
 
-def name_for_element(
+def unique_name_for_element(
     scanned_element: gcm.Target,
+    latest_processing_date: datetime.date=None,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
         artifact = gcm.artifact_from_node(scanned_element)
-        return f'{scanned_element.component.name}:{artifact.name}'
+        name = (
+            f'{scanned_element.component.name}:{scanned_element.component.version}'
+            f':{artifact.name}:{artifact.version}'
+        )
+        if latest_processing_date:
+            name += f":{latest_processing_date.strftime('%Y-%m-%d')}"
+        return name
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return scanned_element.name
@@ -104,6 +111,7 @@ def _search_labels(
     scanned_element: gcm.Target | None,
     issue_type: str,
     extra_labels: typing.Iterable[str]=(),
+    latest_processing_date: datetime.date=None,
 ) -> typing.Generator[str, None, None]:
     if not issue_type:
         raise ValueError('issue_type must not be None or empty')
@@ -117,8 +125,13 @@ def _search_labels(
 
     if scanned_element:
         yield digest_label(
-            prefix=prefix_for_element(scanned_element),
-            digest_str=name_for_element(scanned_element),
+            prefix=prefix_for_element(
+                scanned_element=scanned_element,
+            ),
+            digest_str=unique_name_for_element(
+                scanned_element=scanned_element,
+                latest_processing_date=latest_processing_date,
+            ),
         )
 
 
@@ -129,6 +142,7 @@ def enumerate_issues(
     issue_type: str,
     extra_labels: typing.Iterable[str]=(),
     state: str | None = None, # 'open' | 'closed ; `None` ignores issue state
+    latest_processing_date: datetime.date=None,
 ) -> typing.Generator[github3.issues.ShortIssue, None, None]:
     '''Return an iterator iterating over those issues from `known_issues` that match the given
     parameters.
@@ -137,6 +151,7 @@ def enumerate_issues(
         scanned_element=scanned_element,
         issue_type=issue_type,
         extra_labels=extra_labels,
+        latest_processing_date=latest_processing_date,
     ))
 
     def filter_relevant_issues(issue: github3.issues.issue.ShortIssue):
@@ -172,6 +187,7 @@ def _create_issue(
         scanned_element=scanned_element,
         issue_type=issue_type,
         extra_labels=extra_labels,
+        latest_processing_date=latest_processing_date,
     ))
 
     try:
@@ -217,6 +233,7 @@ def _update_issue(
     extra_labels: typing.Iterable[str]=(),
     milestone: github3.issues.milestone.Milestone=None,
     assignees: typing.Iterable[str]=(),
+    latest_processing_date: datetime.date=None,
 ) -> github3.issues.issue.ShortIssue:
     kwargs = {}
     if not issue.assignees and assignees:
@@ -232,6 +249,7 @@ def _update_issue(
         scanned_element=scanned_element,
         issue_type=issue_type,
         extra_labels=extra_labels,
+        latest_processing_date=latest_processing_date,
     ))
 
     kwargs['labels'] = labels
@@ -291,7 +309,7 @@ def create_or_update_issue(
     assignees: typing.Iterable[str]=(),
     assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
-    latest_processing_date: datetime.date|datetime.datetime=None,
+    latest_processing_date: datetime.date=None,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     ctx_labels: typing.Iterable[str]=(),
@@ -314,11 +332,13 @@ def create_or_update_issue(
             known_issues=known_issues,
             state='open',
             extra_labels=ctx_labels,
+            latest_processing_date=latest_processing_date,
         )
     )
     if (issues_count := len(open_issues)) > 1:
         raise RuntimeError(
-            f'more than one open issue found for {name_for_element(scanned_element)=}'
+            'more than one open issue found for '
+                + f'{unique_name_for_element(scanned_element, latest_processing_date)=}'
         )
     elif issues_count == 0:
         if extra_labels:
@@ -370,6 +390,7 @@ def create_or_update_issue(
                 assignees=assignees,
                 milestone=milestone,
                 issue=open_issue,
+                latest_processing_date=latest_processing_date,
             )
         except Exception as e:
             message = f'```\n{traceback.format_exc()}\n```'
@@ -390,6 +411,7 @@ def close_issue_if_present(
     repository: github3.repos.Repository,
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
     ctx_labels: typing.Iterable[str]=(),
+    latest_processing_date: datetime.date=None,
 ):
     open_issues = tuple(
         enumerate_issues(
@@ -398,6 +420,7 @@ def close_issue_if_present(
             known_issues=known_issues,
             state='open',
             extra_labels=ctx_labels,
+            latest_processing_date=latest_processing_date,
         )
     )
     open_issues: tuple[github3.issues.ShortIssue]
@@ -406,10 +429,12 @@ def close_issue_if_present(
 
     if (issues_count := len(open_issues)) > 1:
         logger.warning(
-            f'more than one open issue found for {name_for_element(scanned_element)=}'
+            'more than one open issue found for '
+                + f'{unique_name_for_element(scanned_element, latest_processing_date)=}'
         )
     elif issues_count == 0:
-        logger.info(f'no open issue found for {name_for_element(scanned_element)=}')
+        logger.info('no open issue found for '
+            + f'{unique_name_for_element(scanned_element, latest_processing_date)=}')
         return # nothing to do
 
     open_issue = open_issues[0]
