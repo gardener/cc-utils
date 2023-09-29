@@ -57,7 +57,9 @@ import protecode.rescore
 
 from concourse.model.traits.image_scan import Notify
 from protecode.model import (
-  BDBA_ScanResult,
+  VulnerabilityScanResult,
+  LicenseScanResult,
+  ComponentsScanResult,
   CVSSVersion,
   ProcessingMode,
 )
@@ -109,6 +111,27 @@ if s3_session:
 else:
   s3_client = None
 
+% if license_cfg:
+license_cfg = dacite.from_dict(
+  data_class=image_scan.LicenseCfg,
+  data=${dataclasses.asdict(license_cfg)},
+)
+% else:
+license_cfg = None
+% endif
+
+max_processing_days = dacite.from_dict(
+  data_class=github.compliance.model.MaxProcessingTimesDays,
+  data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
+)
+
+% if issue_tgt_repo_url:
+gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
+overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
+% else:
+overwrite_repository = None
+% endif
+
 logger.info('running protecode scan for all components')
 results = tuple(
   protecode.scanning.upload_grouped_images(
@@ -124,18 +147,29 @@ results = tuple(
     delivery_client=delivery_svc_client,
     oci_client=oci_client,
     s3_client=s3_client,
+    license_cfg=license_cfg,
+    max_processing_days=max_processing_days,
+    repository=overwrite_repository,
   )
 )
-logger.info(f'bdba scan yielded {len(results)=}')
 
-% if license_cfg:
-license_cfg = dacite.from_dict(
-  data_class=image_scan.LicenseCfg,
-  data=${dataclasses.asdict(license_cfg)},
-)
-% else:
-license_cfg = None
-% endif
+vulnerability_results = []
+license_results = []
+components_results = []
+for result in results:
+  if type(result) is VulnerabilityScanResult:
+    vulnerability_results.append(result)
+  elif type(result) is LicenseScanResult:
+    license_results.append(result)
+  elif type(result) is ComponentsScanResult:
+    components_results.append(result)
+  else:
+    raise NotImplementedError(f'result with {type(result)=} not supported')
+
+logger.info(f'bdba scan yielded {len(results)=}')
+logger.info(f'- {len(vulnerability_results)} vulnerability results')
+logger.info(f'- {len(license_results)} license results')
+logger.info(f'- {len(components_results)} component results')
 
 % if rescoring_rules:
 import dso.cvss
@@ -166,51 +200,26 @@ github_issue_template_cfgs = [dacite.from_dict(
 ]
 % endif
 
-max_processing_days = dacite.from_dict(
-  data_class=github.compliance.model.MaxProcessingTimesDays,
-  data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
-)
-
-
-% if issue_tgt_repo_url:
-gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
-overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
-% endif
-
 % if rescoring_rules:
 ## rescorings
-def rescore_bdba_rescan_result(
-  scan_result: BDBA_ScanResult,
-):
-  resource_node = scan_result.scanned_element
-  analysis_result = scan_result.result
-
-  analysis_result = protecode.rescore.rescore(
+for idx, components_result in enumerate(components_results):
+  components_results[idx], vulnerability_results = protecode.rescore.rescore(
     bdba_client=protecode_client,
-    scan_result=analysis_result,
-    resource_node=resource_node,
+    components_scan_result=components_result,
+    vulnerability_scan_results=vulnerability_results,
     rescoring_rules=rescoring_rules,
     max_rescore_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
   )
-
-  ## patch-in updated bdba-scan-result (may be updated from rescoring)
-  scan_result.result = analysis_result
-  return scan_result
-
-results = [
-  rescore_bdba_rescan_result(result) for result in results
-]
 % endif
 
 
 scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
-  results=results,
+  results=vulnerability_results,
   cve_threshold=cve_threshold,
   rescoring_rules=rescoring_rules,
 )
 scan_results_licenses = scan_result_group_collection_for_licenses(
-  results=results,
-  license_cfg=license_cfg,
+  results=license_results,
 )
 
 if not notification_policy is Notify.GITHUB_ISSUES:

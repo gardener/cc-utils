@@ -1,3 +1,5 @@
+import collections
+import textwrap
 import typing
 
 import dso.labels
@@ -5,40 +7,22 @@ import dso.cvss
 import protecode.model as pm
 
 
-def _components_with_cves(
-    result: pm.AnalysisResult
-) -> typing.Generator[tuple[pm.Component, list[pm.Vulnerability]], None, None]:
-    '''
-    yields two-tuples of components and unassessed, relevant CVEs
-    '''
-    for component in result.components():
-        vulnerabilities = [
-            v for v in component.vulnerabilities()
-            if not v.historical() and not v.has_triage()
-        ]
-
-        if not vulnerabilities:
-            continue
-
-        yield component, sorted(vulnerabilities, key=lambda v: v.cve())
-
-
-def _component_and_results_to_report_str(
-    component: pm.Component,
-    vulnerabilities: list[pm.Vulnerability],
+def _grouped_component_to_report_table_row(
+    comp_name: str,
+    cve_and_versions: dict,
     rescoring_rules: typing.Iterable[dso.cvss.RescoringRule] | None=None,
     cve_categorisation: dso.cvss.CveCategorisation | None=None,
 ) -> str:
-    def vuln_str(vulnerability: pm.Vulnerability):
-        if not rescoring_rules or not cve_categorisation or not vulnerability.cvss:
+    def vuln_str(vuln: pm.Vulnerability):
+        if not rescoring_rules or not cve_categorisation or not vuln.cvss:
             rescore = False
         else:
-            orig_sev = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
+            orig_sev = dso.cvss.CVESeverity.from_cve_score(vuln.cve_severity())
 
             rules = tuple(dso.cvss.matching_rescore_rules(
                 rescoring_rules=rescoring_rules,
                 categorisation=cve_categorisation,
-                cvss=vulnerability.cvss,
+                cvss=vuln.cvss,
             ))
 
             rescored = dso.cvss.rescore(
@@ -51,84 +35,70 @@ def _component_and_results_to_report_str(
             else:
                 rescore = True
 
-        v = vulnerability
         if not rescore:
-            return f'{v.cve()} ({v.cve_severity()})'
+            return f'`{vuln.cve()}` | `{vuln.cve_severity()}` |'
 
-        return f'{v.cve()} ({v.cve_severity()}) [rescore to: {rescored.name}]'
+        return f'`{vuln.cve()}` | `{vuln.cve_severity()}` | `{rescored.name}`'
 
-    comp = f'{component.name()}:{component.version()}'
-    vulns = ', '.join((
-        vuln_str(v) for v in vulnerabilities
-    ))
-
-    report = f'`{comp}` - `{vulns}`'
-
-    return report
+    vulnerability: pm.Vulnerability = cve_and_versions['vulnerability']
+    versions = ', <br/>'.join((f'`{version}`' for version in sorted(
+        cve_and_versions['versions'],
+        key=lambda version: [x for x in version.split('.')] if version else [f'{version}'],
+    )))
+    return f'| `{comp_name}` | {vuln_str(vulnerability)} | {versions} |'
 
 
-def _worst_severity_and_worst_rescored_severity(
-    result: pm.AnalysisResult,
-    cve_categorisation: dso.cvss.CveCategorisation,
-    rescoring_rules: typing.Iterable[dso.cvss.RescoringRule],
-):
-    worst_severity = dso.cvss.CVESeverity.NONE
-    worst_rescored = dso.cvss.CVESeverity.NONE
+def _group_by_component_name_and_cve(
+    results: tuple[pm.VulnerabilityScanResult],
+) -> dict[str, list[dict]]:
+    grouped_components = collections.defaultdict(list)
 
-    for component in result.components():
-        for vulnerability in component.vulnerabilities():
-            orig_sev = dso.cvss.CVESeverity.from_cve_score(vulnerability.cve_severity())
-            worst_severity = max(worst_severity, orig_sev)
+    for result in results:
+        comp_name = result.affected_package.name()
+        comp_version = result.affected_package.version()
+        vulnerability = result.vulnerability
 
-            if not vulnerability.cvss: # happens if only cvss-v2 is available
-                continue
+        for grouped_vulnerability in grouped_components[comp_name]:
+            if grouped_vulnerability['vulnerability'].cve() == vulnerability.cve():
+                grouped_vulnerability['versions'].append(comp_version)
+                break
+        else:
+            grouped_components[comp_name].append({
+                'vulnerability': vulnerability,
+                'versions': [comp_version],
+            })
 
-            rules = tuple(dso.cvss.matching_rescore_rules(
-                rescoring_rules=rescoring_rules,
-                categorisation=cve_categorisation,
-                cvss=vulnerability.cvss,
-            ))
-
-            rescored = dso.cvss.rescore(
-                rescoring_rules=rules,
-                severity=orig_sev,
-            )
-            worst_rescored = max(worst_rescored, rescored)
-
-    return worst_severity, worst_rescored
+    return grouped_components
 
 
-def analysis_result_to_report_str(
-    result: pm.AnalysisResult,
+def scan_result_group_to_report_str(
+    results: tuple[pm.VulnerabilityScanResult],
     rescoring_rules: typing.Iterable[dso.cvss.RescoringRule] | None=None,
     cve_categorisation: dso.cvss.CveCategorisation | None=None,
 ) -> str:
-    components_and_cves = sorted(
-        _components_with_cves(result=result),
-        key=lambda comp_and_vulns: f'{comp_and_vulns[0].name()}:{comp_and_vulns[0].version()}',
-    )
-
-    report = '\n'.join((
-        _component_and_results_to_report_str(
-            comp,
-            results,
+    grouped_components = _group_by_component_name_and_cve(results=results)
+    report = textwrap.dedent('''\
+        | Affected Package | CVE | CVE Score | Possible Rescoring | Package Version(s) |
+        | ---------------- | :-: | :-------: | :----------------: | ------------------ |
+    ''')
+    report += '\n'.join(
+        _grouped_component_to_report_table_row(
+            comp_name=comp_name,
+            cve_and_versions=cve_and_versions,
             rescoring_rules=rescoring_rules,
             cve_categorisation=cve_categorisation,
         )
-        for comp, results in components_and_cves
-    ))
-
-    if not cve_categorisation or not rescoring_rules:
-        return report
-
-    worst_severity, worst_rescored = _worst_severity_and_worst_rescored_severity(
-        result=result,
-        rescoring_rules=rescoring_rules,
-        cve_categorisation=cve_categorisation,
+        for comp_name, cves_and_versions in sorted(
+            grouped_components.items(),
+            key=lambda component: component[0],
+        )
+        for cve_and_versions in sorted(
+            cves_and_versions,
+            key=lambda cav: (-cav['vulnerability'].cve_severity(), cav['vulnerability'].cve()),
+        )
     )
 
-    if worst_severity is not worst_rescored:
-        report += f'\n{worst_severity.name=} -> {worst_rescored.name=}'
-        report += '\nHint: Rescorings are informative - assessments still need to be done'
+    if cve_categorisation and rescoring_rules:
+        report = 'Hint: Rescorings are informative - assessments still need to be done\n' + report
 
     return report

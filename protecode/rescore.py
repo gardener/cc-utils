@@ -5,14 +5,13 @@ import cnudie.iter
 import dso.cvss
 import dso.labels
 import protecode.client
-import protecode.model
+import protecode.model as pm
 
 logger = logging.getLogger(__name__)
 
 
 def cve_categorisation(
     resource_node: cnudie.iter.ResourceNode,
-    absent_ok: bool=True,
 ) -> dso.cvss.CveCategorisation | None:
     label_name = dso.labels.CveCategorisationLabel.name
     label = resource_node.resource.find_label(name=label_name)
@@ -28,17 +27,21 @@ def cve_categorisation(
 
 def rescore(
     bdba_client: protecode.client.ProtecodeApi,
-    scan_result: protecode.model.AnalysisResult,
-    resource_node: cnudie.iter.ResourceNode,
+    components_scan_result: pm.ComponentsScanResult,
+    vulnerability_scan_results: list[pm.VulnerabilityScanResult],
     rescoring_rules: typing.Sequence[dso.cvss.RescoringRule],
     max_rescore_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
-) -> protecode.model.AnalysisResult:
+) -> tuple[pm.ComponentsScanResult, list[pm.VulnerabilityScanResult]]:
     '''
-    rescores bdba-findings for the given resource-node. Rescoring is only possible if
-    cve-categorisations are available from categoristion-label in either resource or component.
+    rescores bdba-findings for the scanned element of the given components scan result.
+    Rescoring is only possible if cve-categorisations are available from categoristion-label
+    in either resource or component.
     '''
+    scan_result = components_scan_result.result
+    resource_node = components_scan_result.scanned_element
+
     if not (categorisation := cve_categorisation(resource_node=resource_node)):
-        return scan_result
+        return (components_scan_result, vulnerability_scan_results)
 
     product_id = scan_result.product_id()
     component = resource_node.component
@@ -95,7 +98,7 @@ def rescore(
                 'component': c.name(),
                 'version': c.version(),
                 'vulns': [v.cve() for v in vulns_to_assess],
-                'scope': protecode.model.TriageScope.RESULT.value,
+                'scope': pm.TriageScope.RESULT.value,
                 'reason': 'OT',
                 'description': 'auto-assessed as irrelevant based on cve-categorisation',
                 'product_id': product_id,
@@ -106,5 +109,10 @@ def rescore(
         scan_result = bdba_client.wait_for_scan_result(
             product_id=product_id,
         )
+        # patch in updated scan result
+        components_scan_result.result = scan_result
+        for vsr in vulnerability_scan_results:
+            if vsr.scanned_element == resource_node:
+                vsr.result = scan_result
 
-    return scan_result
+    return (components_scan_result, vulnerability_scan_results)

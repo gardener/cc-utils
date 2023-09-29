@@ -29,7 +29,6 @@ import dso.cvss
 import dso.labels
 import github.compliance.issue as gciss
 import github.compliance.model as gcm
-import github.compliance.report as gcrep
 import protecode.model as pm
 import protecode.report as pr
 
@@ -40,23 +39,18 @@ tabulate.htmlescape = lambda x: x
 
 
 def scan_result_group_collection_for_vulnerabilities(
-    results: tuple[pm.BDBA_ScanResult],
+    results: tuple[pm.VulnerabilityScanResult],
     cve_threshold: float,
     rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ):
-    def classification_callback(result: pm.BDBA_ScanResult):
-        if not (cve_score := result.greatest_cve_score):
-            return None
+    def classification_callback(result: pm.VulnerabilityScanResult):
+        return result.severity
 
-        return gcrep._criticality_classification(cve_score=cve_score)
+    def findings_callback(result: pm.VulnerabilityScanResult):
+        return result.vulnerability.cve_severity() >= cve_threshold
 
-    def findings_callback(result: pm.BDBA_ScanResult):
-        if not (cve_score := result.greatest_cve_score):
-            return False
-        return cve_score >= cve_threshold
-
-    def comment_callback(result: pm.BDBA_ScanResult):
-        scanned_element: cnudie.iter.ResourceNode = result.scanned_element
+    def comment_callback(result_group: gcm.ScanResultGroup):
+        scanned_element: cnudie.iter.ResourceNode = result_group.results[0].scanned_element
         rescore_label = scanned_element.resource.find_label(
             name=dso.labels.CveCategorisationLabel.name,
         )
@@ -72,8 +66,8 @@ def scan_result_group_collection_for_vulnerabilities(
         else:
             cve_categoriation = None
 
-        return pr.analysis_result_to_report_str(
-            result.result,
+        return pr.scan_result_group_to_report_str(
+            results=result_group.results,
             rescoring_rules=rescoring_rules,
             cve_categorisation=cve_categoriation,
         )
@@ -88,25 +82,16 @@ def scan_result_group_collection_for_vulnerabilities(
 
 
 def scan_result_group_collection_for_licenses(
-    results: tuple[pm.BDBA_ScanResult],
-    license_cfg: image_scan.LicenseCfg,
+    results: tuple[pm.LicenseScanResult],
+    license_cfg: image_scan.LicenseCfg=None,
 ):
-    def has_prohibited_licenses(result: pm.BDBA_ScanResult):
-        nonlocal license_cfg
-        if not license_cfg:
-            logger.warning('no license-cfg - will not report license-issues')
-            return False
-        for license_name in result.license_names:
-            if not license_cfg.is_allowed(license_name):
-                return True
-        else:
-            return False
+    def has_prohibited_licenses(result: pm.LicenseScanResult):
+        if result._severity(license_cfg=license_cfg):
+            return True
+        return False
 
-    def classification_callback(result: pm.BDBA_ScanResult):
-        if has_prohibited_licenses(result=result):
-            return gcm.Severity.BLOCKER
-
-        return None
+    def classification_callback(result: pm.LicenseScanResult):
+        return result._severity(license_cfg=license_cfg)
 
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
