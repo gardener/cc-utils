@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging(print_thread_id=True)
 
 
-def upload_results_to_deliverydb(
+def sync_results_with_delivery_db(
     delivery_client: delivery.client.DeliveryServiceClient,
     results: typing.Iterable[pm.BDBAScanResult],
     bdba_cfg_name: str,
@@ -41,9 +41,56 @@ def upload_results_to_deliverydb(
                 bdba_cfg_name=bdba_cfg_name,
             ),
         )
+        # Delete vulnerabilites with new triages from delivery-db for now
+        # XXX in the future, implement own triage object in delivery-db
+        delivery_client.delete_metadata(
+            data=iter_artefact_metadata_with_triages(
+                results=results,
+            ),
+        )
     except:
         import traceback
         traceback.print_exc()
+
+
+def iter_artefact_metadata_with_triages(
+    results: typing.Collection[pm.BDBAScanResult],
+) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
+    for result in results:
+        if isinstance(result, pm.VulnerabilityScanResult):
+            result: pm.VulnerabilityScanResult
+
+            if not result.vulnerability.has_triage():
+                continue
+
+            artefact = github.compliance.model.artifact_from_node(result.scanned_element)
+            artefact_ref = dso.model.component_artefact_id_from_ocm(
+                component=result.scanned_element.component,
+                artefact=artefact,
+            )
+
+            meta = dso.model.Metadata(
+                datasource='',
+                type=dso.model.Datatype.VULNERABILITIES_AGGREGATED,
+            )
+
+            cve = dso.model.CVE(
+                cve=result.vulnerability.cve(),
+                cvss3Score=-1,
+                affected_package_name=result.affected_package.name(),
+                affected_package_version=result.affected_package.version(),
+                reportUrl='',
+                product_id=-1,
+                group_id=-1,
+                base_url='',
+                bdba_cfg_name='',
+            )
+
+            yield dso.model.ArtefactMetadata(
+                artefact=artefact_ref,
+                meta=meta,
+                data=cve,
+            )
 
 
 def iter_artefact_metadata(
@@ -57,8 +104,11 @@ def iter_artefact_metadata(
             artefact=artefact,
         )
 
-        if type(result) is pm.VulnerabilityScanResult:
+        if isinstance(result, pm.VulnerabilityScanResult):
             result: pm.VulnerabilityScanResult
+
+            if result.vulnerability.has_triage():
+                continue
 
             meta = dso.model.Metadata(
                 datasource=dso.model.Datasource.BDBA,
@@ -85,7 +135,7 @@ def iter_artefact_metadata(
                 meta=meta,
                 data=cve,
             )
-        elif type(result) is pm.LicenseScanResult:
+        elif isinstance(result, pm.LicenseScanResult):
             result: pm.LicenseScanResult
 
             meta = dso.model.Metadata(
@@ -107,7 +157,7 @@ def iter_artefact_metadata(
                 meta=meta,
                 data=license,
             )
-        elif type(result) is pm.ComponentsScanResult:
+        elif isinstance(result, pm.ComponentsScanResult):
             result: pm.ComponentsScanResult
 
             meta = dso.model.Metadata(

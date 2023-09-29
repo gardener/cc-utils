@@ -603,7 +603,7 @@ def upload_grouped_images(
         for completed_future in concurrent.futures.as_completed(futures):
             scan_results = completed_future.result()
             if delivery_client:
-                protecode.util.upload_results_to_deliverydb(
+                protecode.util.sync_results_with_delivery_db(
                     delivery_client=delivery_client,
                     results=scan_results,
                     bdba_cfg_name=bdba_cfg_name,
