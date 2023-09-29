@@ -118,7 +118,9 @@ class ArtefactMetadata:
     meta: dso.model.Metadata
     data: (
         dso.model.GreatestCVE
+        | dso.model.CVE
         | dso.model.LicenseSummary
+        | dso.model.License
         | dso.model.ComponentSummary
         | dso.model.OsID
         | dso.model.MalwareSummary

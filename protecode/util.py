@@ -31,7 +31,7 @@ ci.log.configure_default_logging(print_thread_id=True)
 
 def upload_results_to_deliverydb(
     delivery_client: delivery.client.DeliveryServiceClient,
-    results: typing.Iterable[pm.BDBA_ScanResult],
+    results: typing.Iterable[pm.BDBAScanResult],
     bdba_cfg_name: str,
 ):
     try:
@@ -47,7 +47,7 @@ def upload_results_to_deliverydb(
 
 
 def iter_artefact_metadata(
-    results: typing.Collection[pm.BDBA_ScanResult],
+    results: typing.Collection[pm.BDBAScanResult],
     bdba_cfg_name: str,
 ) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
     for result in results:
@@ -56,91 +56,115 @@ def iter_artefact_metadata(
             component=result.scanned_element.component,
             artefact=artefact,
         )
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.VULNERABILITIES_AGGREGATED,
-            creation_date=datetime.datetime.now()
-        )
-        cve = dso.model.GreatestCVE(
-            greatestCvss3Score=result.greatest_cve_score,
-            reportUrl=result.result.report_url(),
-            product_id=result.result.product_id(),
-            group_id=result.result.group_id(),
-            base_url=result.result.base_url(),
-            bdba_cfg_name=bdba_cfg_name,
-        )
-        yield dso.model.ArtefactMetadata(
-            artefact=artefact_ref,
-            meta=meta,
-            data=cve,
-        )
 
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.LICENSES_AGGREGATED,
-            creation_date=datetime.datetime.now()
-        )
-        license_names = list(result.license_names)
+        if type(result) is pm.VulnerabilityScanResult:
+            result: pm.VulnerabilityScanResult
 
-        license = dso.model.LicenseSummary(
-            licenses=license_names,
-            reportUrl=result.result.report_url(),
-            productId=result.result.product_id(),
-        )
-        yield dso.model.ArtefactMetadata(
-            artefact=artefact_ref,
-            meta=meta,
-            data=license,
-        )
+            meta = dso.model.Metadata(
+                datasource=dso.model.Datasource.BDBA,
+                type=dso.model.Datatype.VULNERABILITIES_AGGREGATED,
+                creation_date=datetime.datetime.now()
+            )
 
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.COMPONENTS,
-            creation_date=datetime.datetime.now()
-        )
-        components = list(dict.fromkeys(
-            [
-                dso.model.ComponentVersion(
-                    name=component.name(),
-                    version=component.version(),
+            cve = dso.model.CVE(
+                cve=result.vulnerability.cve(),
+                cvss3Score=result.vulnerability.cve_severity(),
+                affected_package_name=result.affected_package.name(),
+                affected_package_version=result.affected_package.version(),
+                reportUrl=result.result.report_url(),
+                product_id=result.result.product_id(),
+                group_id=result.result.group_id(),
+                base_url=result.result.base_url(),
+                bdba_cfg_name=bdba_cfg_name,
+            )
+
+            yield dso.model.ArtefactMetadata(
+                artefact=artefact_ref,
+                discovery_date=result.discovery_date,
+                latest_processing_date=result.latest_processing_date,
+                meta=meta,
+                data=cve,
+            )
+        elif type(result) is pm.LicenseScanResult:
+            result: pm.LicenseScanResult
+
+            meta = dso.model.Metadata(
+                datasource=dso.model.Datasource.BDBA,
+                type=dso.model.Datatype.LICENSES_AGGREGATED,
+                creation_date=datetime.datetime.now()
+            )
+
+            license = dso.model.License(
+                name=result.license.name,
+                reportUrl=result.result.report_url(),
+                productId=result.result.product_id(),
+            )
+
+            yield dso.model.ArtefactMetadata(
+                artefact=artefact_ref,
+                discovery_date=result.discovery_date,
+                latest_processing_date=result.latest_processing_date,
+                meta=meta,
+                data=license,
+            )
+        elif type(result) is pm.ComponentsScanResult:
+            result: pm.ComponentsScanResult
+
+            meta = dso.model.Metadata(
+                datasource=dso.model.Datasource.BDBA,
+                type=dso.model.Datatype.COMPONENTS,
+                creation_date=datetime.datetime.now()
+            )
+
+            components = list(dict.fromkeys(
+                [
+                    dso.model.ComponentVersion(
+                        name=component.name(),
+                        version=component.version(),
+                    )
+                    for component in result.result.components()
+                ]
+            ))
+            components = dso.model.ComponentSummary(
+                components=components
+            )
+
+            yield dso.model.ArtefactMetadata(
+                artefact=artefact_ref,
+                discovery_date=result.discovery_date,
+                latest_processing_date=result.latest_processing_date,
+                meta=meta,
+                data=components,
+            )
+
+            meta = dso.model.Metadata(
+                datasource=dso.model.Datasource.BDBA,
+                type=dso.model.Datatype.FILESYSTEM_PATHS,
+                creation_date=datetime.datetime.now()
+            )
+
+            # avoid duplicates
+            filesystem_paths = set(
+                dso.model.FilesystemPath(
+                    path=path,
+                    digest=digest,
                 )
                 for component in result.result.components()
-            ]
-        ))
-        component = dso.model.ComponentSummary(
-            components=components
-        )
-        yield dso.model.ArtefactMetadata(
-            artefact=artefact_ref,
-            meta=meta,
-            data=component,
-        )
-
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.FILESYSTEM_PATHS,
-            creation_date=datetime.datetime.now()
-        )
-
-        # avoid duplicates
-        filesystem_paths = set(
-            dso.model.FilesystemPath(
-                path=path,
-                digest=digest,
+                for path, digest in iter_filesystem_paths(component=component)
             )
-            for component in result.result.components()
-            for path, digest in iter_filesystem_paths(component=component)
-        )
+            filesystem_paths = dso.model.FilesystemPaths(
+                paths=list(filesystem_paths),
+            )
 
-        filesystem_paths = dso.model.FilesystemPaths(
-            paths=list(filesystem_paths),
-        )
-
-        yield dso.model.ArtefactMetadata(
-            artefact=artefact_ref,
-            meta=meta,
-            data=filesystem_paths,
-        )
+            yield dso.model.ArtefactMetadata(
+                artefact=artefact_ref,
+                discovery_date=result.discovery_date,
+                latest_processing_date=result.latest_processing_date,
+                meta=meta,
+                data=filesystem_paths,
+            )
+        else:
+            raise NotImplementedError(f'processing of result with type {type(result)} not supported')
 
 
 def iter_filesystem_paths(
