@@ -35,11 +35,12 @@ def upload_results_to_deliverydb(
     bdba_cfg_name: str,
 ):
     try:
-        for artefact_metadata in iter_artefact_metadata(
-            results=results,
-            bdba_cfg_name=bdba_cfg_name,
-        ):
-            delivery_client.upload_metadata(data=artefact_metadata)
+        delivery_client.upload_metadata(
+            data=iter_artefact_metadata(
+                results=results,
+                bdba_cfg_name=bdba_cfg_name,
+            ),
+        )
     except:
         import traceback
         traceback.print_exc()

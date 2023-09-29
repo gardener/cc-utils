@@ -228,4 +228,4 @@ def upload_to_delivery_db(
         data=os_id,
     )
 
-    db_client.upload_metadata(data=artefact_metadata)
+    db_client.upload_metadata(data=[artefact_metadata])
