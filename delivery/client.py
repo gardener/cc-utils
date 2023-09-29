@@ -56,6 +56,13 @@ class DeliveryServiceRoutes:
             'upload-metadata',
         )
 
+    def delete_metadata(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'artefacts',
+            'delete-metadata',
+        )
+
     def query_metadata(self):
         return ci.util.urljoin(
             self._base_url,
@@ -136,6 +143,38 @@ class DeliveryServiceClient:
 
         res = requests.post(
             url=self._routes.upload_metadata(),
+            json={'entries': data_raw},
+        )
+
+        res.raise_for_status()
+
+    def delete_metadata(
+        self,
+        data: typing.Iterable[dso.model.ArtefactMetadata],
+    ):
+        # following attributes are about to be removed from artefact-extra-id
+        IMAGE_VECTOR_REPO = 'imagevector-gardener-cloud+repository'
+        IMAGE_VECTOR_TAG = 'imagevector-gardener-cloud+tag'
+
+        data_raw = []
+        for artefact_metadata in data:
+            artefact_metadata_raw = dataclasses.asdict(
+                artefact_metadata,
+                dict_factory=ci.util.dict_to_json_factory,
+            )
+
+            artefact_extra_id = artefact_metadata_raw['artefact']['artefact']['artefact_extra_id']
+
+            if artefact_extra_id.get(IMAGE_VECTOR_REPO):
+                del artefact_extra_id[IMAGE_VECTOR_REPO]
+
+            if artefact_extra_id.get(IMAGE_VECTOR_TAG):
+                del artefact_extra_id[IMAGE_VECTOR_TAG]
+
+            data_raw.append(artefact_metadata_raw)
+
+        res = requests.delete(
+            url=self._routes.delete_metadata(),
             json={'entries': data_raw},
         )
 
