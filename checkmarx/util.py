@@ -536,8 +536,9 @@ def create_checkmarx_client(checkmarx_cfg: cmmmodel.CheckmarxConfig):
     return checkmarx.client.CheckmarxClient(checkmarx_cfg)
 
 
-def iter_artefact_metadata(results: typing.Iterable[model.ScanResult]) \
-    -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
+def iter_artefact_metadata(
+    results: typing.Iterable[model.ScanResult],
+) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
     for result in results:
         artefact = github.compliance.model.artifact_from_node(result.scanned_element)
         artefact_ref = dso.model.component_artefact_id_from_ocm(

@@ -111,28 +111,32 @@ class DeliveryServiceClient:
 
     def upload_metadata(
         self,
-        data: dso.model.ArtefactMetadata,
+        data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        data_raw = dataclasses.asdict(
-            data,
-            dict_factory=ci.util.dict_to_json_factory
-        )
-
         # following attributes are about to be removed from artefact-extra-id
         IMAGE_VECTOR_REPO = 'imagevector-gardener-cloud+repository'
         IMAGE_VECTOR_TAG = 'imagevector-gardener-cloud+tag'
 
-        artefact_extra_id = data_raw['artefact']['artefact']['artefact_extra_id']
+        data_raw = []
+        for artefact_metadata in data:
+            artefact_metadata_raw = dataclasses.asdict(
+                artefact_metadata,
+                dict_factory=ci.util.dict_to_json_factory,
+            )
 
-        if artefact_extra_id.get(IMAGE_VECTOR_REPO):
-            del artefact_extra_id[IMAGE_VECTOR_REPO]
+            artefact_extra_id = artefact_metadata_raw['artefact']['artefact']['artefact_extra_id']
 
-        if artefact_extra_id.get(IMAGE_VECTOR_TAG):
-            del artefact_extra_id[IMAGE_VECTOR_TAG]
+            if artefact_extra_id.get(IMAGE_VECTOR_REPO):
+                del artefact_extra_id[IMAGE_VECTOR_REPO]
+
+            if artefact_extra_id.get(IMAGE_VECTOR_TAG):
+                del artefact_extra_id[IMAGE_VECTOR_TAG]
+
+            data_raw.append(artefact_metadata_raw)
 
         res = requests.post(
             url=self._routes.upload_metadata(),
-            json={'entries': [data_raw]},
+            json={'entries': data_raw},
         )
 
         res.raise_for_status()
