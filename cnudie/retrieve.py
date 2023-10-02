@@ -796,7 +796,10 @@ def greatest_component_version(
             ),
         )
 
-    return version.find_latest_version(image_tags, ignore_prerelease_versions)
+    return version.find_latest_version(
+        versions=image_tags,
+        ignore_prerelease_versions=ignore_prerelease_versions,
+    )
 
 
 def greatest_component_versions(
