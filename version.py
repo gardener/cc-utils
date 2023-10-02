@@ -218,7 +218,11 @@ def _parse_to_semver_and_prefix(version: str) -> semver.VersionInfo:
     except ValueError:
         pass # last try: strip leading zeroes
 
-    major, minor, patch = numeric.split('.')
+    try:
+        major, minor, patch = numeric.split('.')
+    except ValueError:
+        raise_invalid()
+
     numeric = '.'.join((
         str(int(major)),
         str(int(minor)),
