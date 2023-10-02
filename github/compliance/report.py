@@ -29,6 +29,7 @@ import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import delivery.model
+import dso.cvss
 import github.codeowners
 import github.compliance.issue
 import github.compliance.milestone
@@ -38,6 +39,7 @@ import github.user
 import github.util
 import model.delivery
 import protecode.model as pm
+import protecode.report as pr
 
 logger = logging.getLogger(__name__)
 
@@ -193,11 +195,17 @@ def _ocm_result_group_template_vars(
 def _vulnerability_template_vars(
     result_group: gcm.ScanResultGroup,
     cfg_set=None,
+    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ) -> dict:
     results: tuple[pm.VulnerabilityScanResult] = result_group.results_with_findings
     analysis_results = [r.result for r in results]
     component = result_group.component
     artefact = result_group.artifact
+
+    cve_summary = pr.scan_result_group_to_report_str(
+        results=result_group.results,
+        rescoring_rules=rescoring_rules,
+    )
 
     def bdba_rescoring_cmd(cfg_set):
         nonlocal component
@@ -234,8 +242,8 @@ def _vulnerability_template_vars(
             artifacts=[artefact],
             report_urls={ar.report_url() for ar in analysis_results},
             issue_description='CVEs',
-            issue_value='See comments for further information',
-        ),
+            issue_value='See below for further information',
+        ) + '\n' + cve_summary,
         'rescoring_cmd': rescoring_cmd,
     }
 
@@ -376,6 +384,7 @@ def _template_vars(
     license_cfg: image_scan.LicenseCfg=None,
     delivery_dashboard_url: str='',
     cfg_set=None,
+    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ) -> dict:
     scanned_element = result_group.results[0].scanned_element
     issue_type = result_group.issue_type
@@ -401,6 +410,7 @@ def _template_vars(
         template_variables |= _vulnerability_template_vars(
             result_group=result_group,
             cfg_set=cfg_set,
+            rescoring_rules=rescoring_rules,
         )
 
     elif issue_type == _compliance_label_licenses:
@@ -661,6 +671,7 @@ def create_or_update_github_issues(
     license_cfg: image_scan.LicenseCfg=None, # XXX -> callback
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
     cfg_set=None,
+    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ):
     result_groups = result_group_collection.result_groups
     result_groups_with_findings = result_group_collection.result_groups_with_findings
@@ -807,6 +818,7 @@ def create_or_update_github_issues(
                 license_cfg=license_cfg,
                 delivery_dashboard_url=delivery_dashboard_url,
                 cfg_set=cfg_set,
+                rescoring_rules=rescoring_rules,
             )
 
             for issue_cfg in github_issue_template_cfgs:
@@ -836,51 +848,6 @@ def create_or_update_github_issues(
                         target_milestone=target_milestone,
                     ),
                 )
-                if result_group.comment_callback:
-                    def single_comment(result: gcm.ScanResult):
-                        if gcm.is_ocm_artefact_node(result.scanned_element):
-                            a = gcm.artifact_from_node(result.scanned_element)
-                            header = f'**{a.name}:{a.version}**\n'
-
-                        elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
-                            header = '**Policy Violations**\n'
-
-                        else:
-                            raise TypeError(result)
-
-                        return header + result_group.comment_callback(result)
-
-                    def sortable_result_str(result: gcm.ScanResult):
-                        if gcm.is_ocm_artefact_node(result.scanned_element):
-                            c = result.scanned_element.component
-                            a = gcm.artifact_from_node(result.scanned_element)
-                            result_str = f'{c.name}:{c.version}/{a.name}:{a.version}'
-
-                        elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
-                            result_str = result.scanned_element.name
-
-                        else:
-                            raise TypeError(result)
-
-                        return result_str
-
-                    if type(results[0]) is pm.VulnerabilityScanResult:
-                        comment_body = result_group.comment_callback(result_group)
-                    else:
-                        sorted_results = sorted(
-                            results,
-                            key=sortable_result_str,
-                        )
-
-                        comment_body = '\n'.join((single_comment(r) for r in sorted_results))
-
-                    # not checking for maximal length of comment because limit should not be reached
-                    for comment in issue.comments():
-                        # only add comment if not already present
-                        if comment.body.strip() == comment_body.strip():
-                            break
-                    else:
-                        issue.create_comment(comment_body)
 
                 element_name = github.compliance.issue.unique_name_for_element(
                     scanned_element=scan_result.scanned_element,

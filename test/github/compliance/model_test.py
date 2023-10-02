@@ -33,7 +33,6 @@ def test_ScanResultGroup():
         issue_type='t',
         findings_callback=None,
         classification_callback=None,
-        comment_callback=None,
     )
 
     assert empty_group.results_with_successful_scans == ()
@@ -67,7 +66,6 @@ def test_ScanResultGroup():
         issue_type='it',
         findings_callback=lambda f: True,
         classification_callback=lambda f: f.severity,
-        comment_callback=None,
     )
 
     assert group_with_findings.results_with_successful_scans == results
@@ -94,7 +92,6 @@ def test_ScanResultGroup():
         issue_type='it',
         findings_callback=lambda f: True,
         classification_callback=lambda f: f.severity,
-        comment_callback=None,
     )
 
     assert group_with_scan_errors.results_with_successful_scans == (result_critical,)
