@@ -23,14 +23,10 @@ import tabulate
 import clamav.client
 import clamav.cnudie
 import clamav.model
-import cnudie.iter
 import concourse.model.traits.image_scan as image_scan
-import dso.cvss
-import dso.labels
 import github.compliance.issue as gciss
 import github.compliance.model as gcm
 import protecode.model as pm
-import protecode.report as pr
 
 logger = logging.getLogger()
 
@@ -41,7 +37,6 @@ tabulate.htmlescape = lambda x: x
 def scan_result_group_collection_for_vulnerabilities(
     results: tuple[pm.VulnerabilityScanResult],
     cve_threshold: float,
-    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ):
     def classification_callback(result: pm.VulnerabilityScanResult):
         return result.severity
@@ -49,35 +44,11 @@ def scan_result_group_collection_for_vulnerabilities(
     def findings_callback(result: pm.VulnerabilityScanResult):
         return result.vulnerability.cve_severity() >= cve_threshold
 
-    def comment_callback(result_group: gcm.ScanResultGroup):
-        scanned_element: cnudie.iter.ResourceNode = result_group.results[0].scanned_element
-        rescore_label = scanned_element.resource.find_label(
-            name=dso.labels.CveCategorisationLabel.name,
-        )
-        if not rescore_label:
-            rescore_label = scanned_element.component.find_label(
-                name=dso.labels.CveCategorisationLabel.name,
-            )
-
-        if rescore_label:
-            rescore_label = dso.labels.deserialise_label(label=rescore_label)
-            rescore_label: dso.labels.CveCategorisationLabel
-            cve_categoriation = rescore_label.value
-        else:
-            cve_categoriation = None
-
-        return pr.scan_result_group_to_report_str(
-            results=result_group.results,
-            rescoring_rules=rescoring_rules,
-            cve_categorisation=cve_categoriation,
-        )
-
     return gcm.ScanResultGroupCollection(
         results=tuple(results),
         issue_type=gciss._label_bdba,
         classification_callback=classification_callback,
         findings_callback=findings_callback,
-        comment_callback=comment_callback,
     )
 
 

@@ -216,7 +216,6 @@ for idx, components_result in enumerate(components_results):
 scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
   results=vulnerability_results,
   cve_threshold=cve_threshold,
-  rescoring_rules=rescoring_rules,
 )
 scan_results_licenses = scan_result_group_collection_for_licenses(
   results=license_results,
@@ -245,5 +244,6 @@ for result_group in scan_results_vulnerabilities, scan_results_licenses:
     delivery_svc_endpoints=delivery_svc_endpoints,
     license_cfg=license_cfg,
     cfg_set=cfg_set,
+    rescoring_rules=rescoring_rules,
   )
 </%def>

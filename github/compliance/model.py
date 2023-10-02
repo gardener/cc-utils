@@ -172,11 +172,6 @@ Definition of "finding" is type-specific
 '''
 ClassificationCallback = typing.Callable[[ScanResult], Severity]
 
-CommentCallback = typing.Callable[[ScanResult], str]
-'''
-callback expected to return a comment to be posted upon creation/update
-'''
-
 
 def is_ocm_artefact_node(
     element: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | object,
@@ -208,7 +203,6 @@ class ScanResultGroup:
     issue_type: str
     findings_callback: FindingsCallback
     classification_callback: ClassificationCallback
-    comment_callback: CommentCallback
 
     @property
     def results_with_successful_scans(self):
@@ -298,7 +292,6 @@ class ScanResultGroupCollection:
     issue_type: str
     classification_callback: ClassificationCallback
     findings_callback: FindingsCallback
-    comment_callback: CommentCallback = None
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
@@ -328,7 +321,6 @@ class ScanResultGroupCollection:
                 issue_type=self.issue_type,
                 findings_callback=self.findings_callback,
                 classification_callback=self.classification_callback,
-                comment_callback=self.comment_callback,
             ) for group_name, results in grouped_results.items()
         ))
 
