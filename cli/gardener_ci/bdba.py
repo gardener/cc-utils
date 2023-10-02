@@ -2,7 +2,6 @@ import itertools
 import logging
 import os
 import pprint
-import typing
 
 import tabulate
 
@@ -265,7 +264,7 @@ def scan(
     component_descriptor_path: str,
     cve_threshold: float=7.0,
     protecode_api_url=None,
-    reference_protecode_group_ids: typing.List[int] = [],
+    reference_protecode_group_ids: list[int]=[],
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
@@ -274,15 +273,12 @@ def scan(
 
     if not protecode_api_url:
         protecode_api_url = protecode_cfg.api_url()
-        logger.info(f'Using Protecode at: {protecode_api_url}')
+    protecode_group_url = ci.util.urljoin(protecode_api_url, 'group', str(protecode_group_id))
+    logger.info(f'Using Protecode at: {protecode_api_url} with group {protecode_group_id}')
 
-    protecode_group_url = f'{protecode_api_url}/group/{protecode_group_id}/'
     cd = component_descriptor_util.component_descriptor_from_component_descriptor_path(
         cd_path=component_descriptor_path,
     )
-
-    protecode_api_url = protecode_cfg.api_url()
-    protecode_group_url = ci.util.urljoin(protecode_api_url, 'group', str(protecode_group_id))
 
     cvss_version = CVSSVersion.V3
 
@@ -295,38 +291,82 @@ def scan(
 
     logger.info('running protecode scan for all components')
 
-    client = ccc.protecode.client(protecode_cfg=protecode_cfg_name)
+    client = ccc.protecode.client(
+        protecode_cfg=protecode_cfg,
+        group_id=protecode_group_id,
+        base_url=protecode_api_url,
+        cfg_factory=cfg_factory,
+    )
 
-    results = _upload_grouped_images(
+    results = tuple(_upload_grouped_images(
         protecode_api=client,
         bdba_cfg_name=protecode_cfg_name,
         component=cd,
         protecode_group_id=protecode_group_id,
+        reference_group_ids=reference_protecode_group_ids,
         oci_client=oci_client,
-    )
+    ))
 
-    results_above_threshold: list[pm.BDBA_ScanResult] = [
-        r for r in results if r.greatest_cve_score >= cve_threshold
+    results_above_threshold: list[pm.VulnerabilityScanResult] = [
+        r for r in results
+        if isinstance(r, pm.VulnerabilityScanResult)
+            and r.vulnerability.cve_severity() >= cve_threshold
     ]
-    results_below_threshold: list[pm.BDBA_ScanResult] = [
-        r for r in results if r.greatest_cve_score < cve_threshold
+    results_below_threshold: list[pm.VulnerabilityScanResult] = [
+        r for r in results
+        if isinstance(r, pm.VulnerabilityScanResult)
+            and r.vulnerability.cve_severity() < cve_threshold
     ]
 
     logger.info('Summary of found vulnerabilities:')
-    logger.info(f'{len(results_above_threshold)=}; {results_above_threshold=}')
-    logger.info(f'{len(results_below_threshold)=}; {results_below_threshold=}')
+    logger.info(f'{len(results_above_threshold)=}')
+    logger.info(f'{len(results_below_threshold)=}')
 
-    def iter_summary_tuple():
-        for r in results_above_threshold + results_below_threshold:
+    def _grouped_results(results: list[pm.VulnerabilityScanResult]) -> dict:
+        grouped_results = dict()
+        for r in results:
             c_id = f'{r.scanned_element.component.name}:{r.scanned_element.component.version}'
             a_id = f'{r.scanned_element.resource.name}:{r.scanned_element.resource.version}'
-            cve = r.greatest_cve_score
-            yield c_id, a_id, cve
+            p_id = f'{r.affected_package.name()}:{r.affected_package.version()}'
 
-    print(tabulate.tabulate(
-        iter_summary_tuple(),
-        headers=['Component ID', 'Artefact ID', 'Greatest CVSSV3']),
+            key = f'{c_id}:{a_id}:{p_id}'
+            cve = r.vulnerability.cve()
+            cve_severity = r.vulnerability.cve_severity()
+
+            if key in grouped_results:
+                grouped_results[key]['vulnerabilities'] += f'\n{cve} ({cve_severity})'
+            else:
+                grouped_results[key] = {
+                    'c_id': c_id,
+                    'a_id': a_id,
+                    'p_id': p_id,
+                    'vulnerabilities': f'{cve} ({cve_severity})',
+                }
+        return grouped_results
+
+    grouped_results_above_threshold = _grouped_results(
+        results=results_above_threshold,
     )
+    grouped_results_below_threshold = _grouped_results(
+        results=results_below_threshold,
+    )
+
+    def print_summary(grouped_results: dict):
+        print(tabulate.tabulate(
+            grouped_results.values(),
+            headers={
+                'c_id': 'Component ID',
+                'a_id': 'Artefact ID',
+                'p_id': 'Affected Package ID',
+                'vulnerabilities': 'Vulnerabilities',
+            },
+            tablefmt='grid',
+        ))
+
+    print(f'Summary of found vulnerabilites above {cve_threshold=}')
+    print_summary(grouped_results=grouped_results_above_threshold)
+    print(f'Summary of found vulnerabilites below {cve_threshold=}')
+    print_summary(grouped_results=grouped_results_below_threshold)
 
 
 def transport_triages(
