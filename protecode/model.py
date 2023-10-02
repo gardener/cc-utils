@@ -99,14 +99,6 @@ class AnalysisResult(ModelBase):
     def custom_data(self) -> dict[str, str]:
         return self.raw.get('custom_data')
 
-    def greatest_cve_score(self) -> float:
-        greatest_cve_score = -1
-
-        for component in self.components():
-            greatest_cve_score = max(component.greatest_cve_score(), greatest_cve_score)
-
-        return greatest_cve_score
-
     def is_stale(self) -> bool:
         '''
         Returns a boolean value indicating whether or not the stored scan result
@@ -147,22 +139,11 @@ class Component(ModelBase):
     def version(self) -> str:
         return self.raw.get('version')
 
-    def vulnerabilities(self) -> 'typing.Generator[Vulnerability,None, None]':
+    def vulnerabilities(self) -> 'typing.Generator[Vulnerability, None, None]':
         for raw in self.raw.get('vulns'):
             if raw['vuln']['cve']:
                 yield Vulnerability(raw_dict=raw)
                 continue
-
-    def greatest_cve_score(self) -> float:
-        greatest_cve_score = -1
-
-        for vulnerability in self.vulnerabilities():
-            if vulnerability.historical() or vulnerability.has_triage():
-                continue
-
-            greatest_cve_score = max(vulnerability.cve_severity(), greatest_cve_score)
-
-        return greatest_cve_score
 
     @property
     def licenses(self) -> typing.Generator[License, None, None]:
@@ -222,9 +203,6 @@ class Vulnerability(ModelBase):
         else:
             raise NotImplementedError(f'{cvss_version} not supported')
 
-    def cve_severity_str(self, cvss_version=CVSSVersion.V3):
-        return str(self.cve_severity(cvss_version=cvss_version))
-
     @property
     def cvss(self) -> dso.cvss.CVSSV3 | None:
         cvss_vector = self.raw['vuln']['cvss3_vector']
@@ -246,12 +224,6 @@ class Vulnerability(ModelBase):
             trs = self.raw.get('triages')
 
         return (Triage(raw_dict=raw) for raw in trs)
-
-    def cve_major_severity(self, cvss_version) -> float:
-        if self.cve_severity_str(cvss_version):
-            return float(self.cve_severity_str(cvss_version))
-        else:
-            return -1
 
     @property
     def published(self) -> datetime.date:
