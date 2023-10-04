@@ -147,6 +147,7 @@ def versions_to_purge(
 
 def parse_to_semver(
     version,
+    invalid_semver_ok: bool=False,
 ) -> semver.VersionInfo:
     '''
     parses the given version into a semver.VersionInfo object.
@@ -178,7 +179,14 @@ def parse_to_semver(
             ci.util.warning(f'unexpected type for version: {type(version)}')
             version_str = str(version) # fallback
 
-    semver_version_info, _ = _parse_to_semver_and_prefix(version_str)
+    try:
+        semver_version_info, _ = _parse_to_semver_and_prefix(version_str)
+    except ValueError:
+        if invalid_semver_ok:
+            return None
+
+        raise
+
     return semver_version_info
 
 
