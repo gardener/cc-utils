@@ -355,13 +355,20 @@ def process_version(
 def find_latest_version(
     versions: Iterable[Union[semver.VersionInfo, str]],
     ignore_prerelease_versions: bool=False,
+    invalid_semver_ok: bool=False,
 ) -> str:
     latest_candidate = None
     latest_candidate_str = None
 
     for candidate in versions:
         if isinstance(candidate, str):
-            candidate_semver = parse_to_semver(candidate)
+            candidate_semver = parse_to_semver(
+                version=candidate,
+                invalid_semver_ok=invalid_semver_ok,
+            )
+
+            if not candidate_semver:
+                continue
         else:
             candidate_semver = candidate
 

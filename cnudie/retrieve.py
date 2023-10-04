@@ -772,6 +772,7 @@ def greatest_component_version(
     oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False,
     version_lookup: VersionLookupById=None,
+    invalid_semver_ok: bool=False,
 ) -> str:
     if not ctx_repo and not version_lookup:
         raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
@@ -799,6 +800,7 @@ def greatest_component_version(
     return version.find_latest_version(
         versions=image_tags,
         ignore_prerelease_versions=ignore_prerelease_versions,
+        invalid_semver_ok=invalid_semver_ok,
     )
 
 
@@ -810,6 +812,7 @@ def greatest_component_versions(
     oci_client: oc.Client = None,
     ignore_prerelease_versions: bool = False,
     version_lookup: VersionLookupById=None,
+    invalid_semver_ok: bool=False,
 ) -> list[str]:
     if not ctx_repo and not version_lookup:
         raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
@@ -837,14 +840,23 @@ def greatest_component_versions(
     if not versions:
         return []
 
+    versions = [
+        v
+        for v in versions
+        if version.parse_to_semver(
+            version=v,
+            invalid_semver_ok=invalid_semver_ok,
+        )
+    ]
+
     if ignore_prerelease_versions:
         versions = [
             v
             for v in versions
-            if not (pv := version.parse_to_semver(v)).prerelease and not pv.build
+            if not (pv := version.parse_to_semver(v, invalid_semver_ok)).prerelease and not pv.build
         ]
 
-    versions = sorted(versions, key=version.parse_to_semver)
+    versions = sorted(versions, key=lambda v: version.parse_to_semver(v, invalid_semver_ok))
 
     if greatest_version:
         versions = versions[:versions.index(greatest_version)+1]
