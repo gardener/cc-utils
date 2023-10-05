@@ -198,13 +198,18 @@ placeholders are available:</p>
 <td><p>bool</p></td>
 <td><p>if true, a github release is published.</p></td>
 </tr>
-<tr class="row-even"><td><p>increment_version_on_tag_collision</p></td>
+<tr class="row-even"><td><p>on_tag_conflict</p></td>
 <td><p>no</p></td>
-<td><p>False</p></td>
-<td><p>bool</p></td>
-<td><p>If <code class="code docutils literal notranslate"><span class="pre">True</span></code>, the pipeline will automatically increment the version _once_ if the tag
-corresponding to the desired version already exists.
-This incrementation follows the semantics set by the <code class="code docutils literal notranslate"><span class="pre">nextversion</span></code> attribute.</p></td>
+<td><p><code class="code docutils literal notranslate"><span class="pre">ignore</span></code></p></td>
+<td><p>TagConflictAction</p></td>
+<td><p>specifies the action to take if the tag to be pushed (<code class="code docutils literal notranslate"><span class="pre">refs/tags/&lt;effective-version&gt;</span></code>)
+already exists (relevant, if <code class="code docutils literal notranslate"><span class="pre">release_on_github</span></code> is not set to <code class="code docutils literal notranslate"><span class="pre">False</span></code>).
+Such cases can occur if pushing of “bump-commit” after previous release failed.
+Default value is chosen for backwards-compatibility.
+<code class="code docutils literal notranslate"><span class="pre">fail</span></code> will lead to the <code class="code docutils literal notranslate"><span class="pre">version</span></code> step to fail (which will shorten the time to
+discover this error, and thus save time)
+<code class="code docutils literal notranslate"><span class="pre">increment-patch-version</span></code> will increment effective version’s patchlevel (and thus
+avoid a conflict)</p></td>
 </tr>
 </tbody>
 </table>
@@ -284,6 +289,12 @@ This incrementation follows the semantics set by the <code class="code docutils 
 </tr>
 </tbody>
 </table>
+<h2>on_tag_conflict Enumeration Values<a class="headerlink" href="#trait-release" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ignore</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fail</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">increment-patch-version</span></code></p></li>
+</ul>
 <h2>Dependencies<a class="headerlink" href="#trait-release" title="Link to this heading"></a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
