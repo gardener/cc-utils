@@ -147,6 +147,9 @@ def get_release_note_commits_tuple(
         )
     # new major release
     if current_version.major != previous_version.major:
+        logger.info(
+            f"creating new major release '{current_version!s}'"
+        )
         previous_minor_version = semver.VersionInfo(
             major=previous_version.major,
             minor=previous_version.minor
@@ -160,7 +163,10 @@ def get_release_note_commits_tuple(
         )
 
     # new minor release
-    if current_version.minor != previous_version.minor:
+    if current_version.minor != previous_version.minor and current_version.patch == 0:
+        logger.info(
+            f"creating new minor release '{current_version!s}'"
+        )
         previous_minor_version = semver.VersionInfo(
             major=previous_version.major,
             minor=previous_version.minor
