@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import os
 import subprocess
+import sys
 import tempfile
 import traceback
 import typing
@@ -1116,6 +1117,12 @@ def release_and_prepare_next_dev_cycle(
             body=release_notes_markdown,
             component_name=component.name,
         )
+        try:
+            git_helper.push('refs/notes/commits', 'refs/notes/commits')
+        except:
+            exception = sys.exception()
+            logger.warning(f'There was an error when pushing created git-notes: {exception}')
+
 
     if slack_channel_configs:
         if not release_on_github:
