@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 r'''
 This pattern matches code-blocks in the following format:
-```{category} {note_message} [source component name] [reference-dependent str] [author]
+```{category} {target_group} [source component name] [reference-dependent str] [author]
 {note_message}
 ```
 with the three groups in "[]" being optional by virtue of not being present for commit-attached
