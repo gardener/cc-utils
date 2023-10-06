@@ -1,6 +1,7 @@
 import subprocess
 
 import ccc.github
+import ci.util
 import concourse.model.traits.version as version_trait
 
 
@@ -10,7 +11,9 @@ def has_version_conflict(
     repository_org: str,
     repository_hostname: str,
 ):
-    github_cfg = ccc.github.github_cfg_for_repo_url(repo_url=repository_hostname)
+    github_cfg = ccc.github.github_cfg_for_repo_url(
+        repo_url=ci.util.urljoin(repository_hostname, repository_org, repository_name),
+    )
     github_api = ccc.github.github_api(github_cfg)
 
     target_tag = target_tag.removeprefix('refs/tags/')
