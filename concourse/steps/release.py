@@ -1123,7 +1123,6 @@ def release_and_prepare_next_dev_cycle(
             exception = sys.exception()
             logger.warning(f'There was an error when pushing created git-notes: {exception}')
 
-
     if slack_channel_configs:
         if not release_on_github:
             raise RuntimeError('Cannot post to slack without a github release')
