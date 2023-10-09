@@ -19,22 +19,16 @@ FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
 
 ARG TARGETARCH
 
-COPY . /cc/utils/
 COPY --from=builder /pkgs/usr /usr
-
 COPY --from=ocm-cli /bin/ocm /bin/ocm
+COPY --from=builder /cc/utils/bin/launch-dockerd.sh /cc/utils/bin/launch-dockerd.sh
 
 # place version file into container's filesystem to make it easier to
 # determine the image version during runtime
 COPY VERSION /metadata/VERSION
 
-# XXX backards compatibility (remove eventually)
-ENV PATH /cc/utils/:/cc/utils/bin:$PATH
 ENV HELM_V3_VERSION=v3.12.2
 ENV HELM_ARCH="${TARGETARCH}"
-
+COPY --from=builder /cc/utils/bin/helm /usr/local/bin/helm
 # backwards-compatibility
-RUN ln -sf /cc/utils/bin/helm /bin/helm3
-
-RUN EFFECTIVE_VERSION="$(cat /metadata/VERSION)" REPO_DIR=/cc/utils \
-  /cc/utils/.ci/bump_job_image_version.py
+RUN ln -sf /usr/local/bin/helm /usr/local/bin/helm3
