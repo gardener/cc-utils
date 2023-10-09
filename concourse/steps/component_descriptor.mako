@@ -92,6 +92,8 @@ mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
 commit_hash = head_commit_hexsha(main_repo_path)
 
+main_repo_url = '${main_repo.repo_hostname()}/${main_repo.repo_path()}'
+
 # create base descriptor filled with default values
 base_descriptor_v2 = base_component_descriptor_v2(
     component_name_v2=component_name_v2,
@@ -100,6 +102,7 @@ base_descriptor_v2 = base_component_descriptor_v2(
     source_labels=${[dataclasses.asdict(label) for label in main_repo_labels]},
     ctx_repository_base_url=ctx_repository_base_url,
     commit=commit_hash,
+    repo_url=main_repo_url,
 )
 component_v2 = base_descriptor_v2.component
 

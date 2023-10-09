@@ -46,6 +46,7 @@ def base_component_descriptor_v2(
     source_labels: tuple,
     ctx_repository_base_url: str,
     commit: str,
+    repo_url: str,
 ):
     import datetime
     import cnudie.migrate
@@ -98,7 +99,7 @@ def base_component_descriptor_v2(
             type=cm.SourceType.GIT,
             access=cm.GithubAccess(
               type=cm.AccessType.GITHUB,
-              repoUrl=component_name_v2,
+              repoUrl=repo_url,
               ref=src_ref,
               commit=commit,
             ),
