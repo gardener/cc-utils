@@ -153,6 +153,7 @@ class ArtefactType(enum.Enum):
     OCI_ARTEFACT = 'ociArtifact/v1'
     HELM_CHART = 'helmChart/v1'
     BLOB = 'blob/v1'
+    DIRECTORY_TREE = 'directoryTree'
 
 
 # hack: patch enum to accept "aliases"
