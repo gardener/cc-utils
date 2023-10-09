@@ -185,7 +185,7 @@ def upload(
 def traverse(
     name: str,
     version: str=None,
-    ctx_base_url: str=None,
+    ocm_repo_url: str=None,
     components: bool=True,
     sources: bool=True,
     resources: bool=True,
@@ -200,22 +200,20 @@ def traverse(
     resources: whether to print resources
     print_expr: python-expression (passed to `eval()` w/ globals: {'node': node})
     '''
-    if not ctx_base_url:
-        ctx_base_url = _cfg.ctx.ocm_repo_base_url
+    if not ocm_repo_url:
+        ocm_repo_lookup = _cfg.ctx.ocm_repository_lookup
+    else:
+        ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(ocm_repo_url)
 
-    if not ctx_base_url:
-        print('must pass --ctx-base-url')
+    if not ocm_repo_lookup:
+        print('must pass --ocm-repo-url')
         exit(1)
 
     if not version:
         name, version = name.rsplit(':', 1)
 
-    ctx_repo = cm.OciRepositoryContext(
-        baseUrl=ctx_base_url,
-    )
-
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        default_ctx_repo=ctx_repo,
+        ocm_repository_lookup=ocm_repo_lookup,
     )
 
     component_descriptor = component_descriptor_lookup(cm.ComponentIdentity(
