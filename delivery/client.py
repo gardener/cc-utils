@@ -97,16 +97,19 @@ class DeliveryServiceClient:
         self,
         name: str,
         version: str,
-        ctx_repo_url: str,
+        ctx_repo_url: str=None,
         validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
     ):
+        params = {
+            'component_name': name,
+            'version': version,
+        }
+        if ctx_repo_url:
+            params['ctx_repo_url'] = ctx_repo_url
+
         res = requests.get(
             url=self._routes.component_descriptor(),
-            params={
-                'component_name': name,
-                'version': version,
-                'ctx_repo_url': ctx_repo_url,
-            },
+            params=params,
         )
 
         res.raise_for_status()
