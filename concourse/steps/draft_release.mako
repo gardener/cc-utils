@@ -118,6 +118,7 @@ except ValueError as e:
 draft_name = f'{processed_version}-draft'
 draft_release = github_helper.draft_release_with_name(draft_name)
 if not draft_release:
+    ci.util.info(f"Creating draft-release '{draft_name}'")
     github_helper.create_draft_release(
         name=draft_name,
         body=release_notes_md,
@@ -126,6 +127,7 @@ if not draft_release:
     )
 else:
     if not draft_release.body == release_notes_md:
+        ci.util.info(f"Updating draft-release '{draft_name}'")
         draft_release.edit(body=release_notes_md)
     else:
         ci.util.info('draft release notes are already up to date')
