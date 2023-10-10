@@ -115,8 +115,9 @@ class GreatestCVE:
 class CVE:
     cve: str
     cvss3Score: float
+    cvss: dso.cvss.CVSSV3 | dict
     affected_package_name: str
-    affected_package_version: str
+    affected_package_version: str | None
     reportUrl: str
     product_id: int
     group_id: int

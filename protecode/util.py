@@ -77,6 +77,7 @@ def iter_artefact_metadata_with_triages(
             cve = dso.model.CVE(
                 cve=result.vulnerability.cve(),
                 cvss3Score=-1,
+                cvss=result.vulnerability.cvss,
                 affected_package_name=result.affected_package.name(),
                 affected_package_version=result.affected_package.version(),
                 reportUrl='',
@@ -119,6 +120,7 @@ def iter_artefact_metadata(
             cve = dso.model.CVE(
                 cve=result.vulnerability.cve(),
                 cvss3Score=result.vulnerability.cve_severity(),
+                cvss=result.vulnerability.cvss,
                 affected_package_name=result.affected_package.name(),
                 affected_package_version=result.affected_package.version(),
                 reportUrl=result.result.report_url(),
