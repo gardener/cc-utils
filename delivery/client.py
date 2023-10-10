@@ -239,7 +239,18 @@ class DeliveryServiceClient:
 
         return dm.Sprint.from_dict(resp.json())
 
-    def query_metadata_raw(self, components: typing.Iterable[cm.Component]):
+    def query_metadata_raw(
+        self,
+        components: typing.Iterable[cm.Component],
+        type: dso.model.Datatype=None,
+    ):
+        if type:
+            params = {
+                'type': type,
+            }
+        else:
+            params = dict()
+
         query = {
             'components': [
                 {
@@ -252,6 +263,7 @@ class DeliveryServiceClient:
         res = requests.post(
             url=self._routes.query_metadata(),
             json=query,
+            params=params,
         )
 
         return res.json()
