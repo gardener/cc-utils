@@ -247,7 +247,7 @@ class RescoringRule:
 
         return attr_values
 
-    def matches_cvss(self, cvss: CVSSV3) -> bool:
+    def matches_cvss(self, cvss: CVSSV3 | dict) -> bool:
         '''
         returns a boolean indicating whether this rule matches the given CVSS.
 
@@ -256,11 +256,17 @@ class RescoringRule:
         the given CVSS's attr-value is contained in the rule's values.
         '''
         cve_values = self.parsed_cve_values
-        for attr, value in dataclasses.asdict(cvss).items():
+        if not type(cvss) is dict:
+            cvss = dataclasses.asdict(cvss)
+        for attr, value in cvss.items():
             if not attr in cve_values:
                 continue
 
-            if not value in cve_values[attr]:
+            # if cvss is of type dict, the values have to be compared to the values of the enums
+            if not value in [
+                v if isinstance(value, enum.Enum) else v.value
+                for v in cve_values[attr]
+            ]:
                 return False
 
         return True
@@ -308,7 +314,7 @@ def rescoring_rules_from_dicts(rules: list[dict]) -> typing.Generator[RescoringR
 def matching_rescore_rules(
     rescoring_rules: typing.Iterable[RescoringRule],
     categorisation: CveCategorisation,
-    cvss: CVSSV3,
+    cvss: CVSSV3 | dict,
 ) -> typing.Generator[RescoringRule, None, None]:
     for rescoring_rule in rescoring_rules:
         if not rescoring_rule.matches_categorisation(categorisation):

@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import enum
 
+import dso.cvss
 import dso.model
 
 import awesomeversion
@@ -128,6 +129,8 @@ class ArtefactMetadata:
         | dso.model.CodecheckSummary
         | dict
     )
+    discovery_date: datetime.date | None = None
+    latest_processing_date: datetime.date | None = None
 
     @staticmethod
     def from_dict(raw: dict):
@@ -135,8 +138,31 @@ class ArtefactMetadata:
             data_class=ArtefactMetadata,
             data=raw,
             config=dacite.Config(
-                type_hooks={datetime.datetime: datetime.datetime.fromisoformat},
+                type_hooks={
+                    datetime.datetime: datetime.datetime.fromisoformat,
+                    datetime.date: lambda date: datetime.datetime.strptime(date, '%Y-%m-%d').date()
+                        if date else None,
+                },
             ),
+        )
+
+    def to_dso_model_artefact_metadata(self) -> dso.model.ArtefactMetadata:
+        return dso.model.ArtefactMetadata(
+            artefact=dso.model.ComponentArtefactId(
+                component_name=self.artefactId.componentName,
+                component_version=self.artefactId.componentVersion,
+                artefact=dso.model.LocalArtefactId(
+                    artefact_name=self.artefactId.artefactName,
+                    artefact_version=self.artefactId.artefactVersion,
+                    artefact_type=self.artefactId.artefactType,
+                    artefact_extra_id=self.artefactId.artefactExtraId,
+                ),
+                artefact_kind=self.artefactId.artefactKind,
+            ),
+            meta=self.meta,
+            data=self.data,
+            discovery_date=self.discovery_date,
+            latest_processing_date=self.latest_processing_date,
         )
 
 
