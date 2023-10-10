@@ -96,6 +96,17 @@ class ComponentArtefactId:
     artefactType: str
     artefactExtraId: dict
 
+    @staticmethod
+    def normalise_artefact_extra_id(artefact_extra_id: dict[str, str]) -> str:
+        '''
+        generate stable representation of `artefact_extra_id`
+
+        sorted by key in alphabetical order and concatinated following pattern:
+        key1:value1_key2:value2_ ...
+        '''
+        s = sorted(artefact_extra_id.items(), key=lambda items: items[0])
+        return '_'.join([':'.join(values) for values in s])
+
 
 @dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
