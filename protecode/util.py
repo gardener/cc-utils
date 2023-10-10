@@ -71,7 +71,7 @@ def iter_artefact_metadata_with_triages(
 
             meta = dso.model.Metadata(
                 datasource='',
-                type=dso.model.Datatype.VULNERABILITIES_AGGREGATED,
+                type=dso.model.Datatype.VULNERABILITIES_CVE,
             )
 
             cve = dso.model.CVE(
@@ -112,7 +112,7 @@ def iter_artefact_metadata(
 
             meta = dso.model.Metadata(
                 datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.VULNERABILITIES_AGGREGATED,
+                type=dso.model.Datatype.VULNERABILITIES_CVE,
                 creation_date=datetime.datetime.now()
             )
 
@@ -140,7 +140,7 @@ def iter_artefact_metadata(
 
             meta = dso.model.Metadata(
                 datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.LICENSES_AGGREGATED,
+                type=dso.model.Datatype.LICENSE,
                 creation_date=datetime.datetime.now()
             )
 

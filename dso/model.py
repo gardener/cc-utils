@@ -68,10 +68,9 @@ def component_artefact_id_from_ocm(
 
 class Datatype:
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
-    VULNERABILITIES_AGGREGATED = 'vulnerabilities/aggregated'
-    VULNERABILITIES_RAW = 'vulnerabilities/raw'
+    VULNERABILITIES_CVE = 'vulnerabilities/cve'
     MALWARE = 'malware'
-    LICENSES_AGGREGATED = 'licenses/aggregated'
+    LICENSE = 'license'
     COMPONENTS = 'components'
     FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
@@ -87,7 +86,7 @@ class Relation:
     '''
     Describes relation between artefact_metadata.
     This is necessary as "rescorings" (type: "rescoring/vulnerabilities") are stored as
-    artefact_metadata, but relate to artefact_metadata (of type "vulnerabilities/aggregated") as they
+    artefact_metadata, but relate to artefact_metadata (of type "vulnerabilities/cve") as they
     rescore vulnerability findings.
     '''
     refers_to: str # see `Datatype` for supported values
