@@ -21,6 +21,9 @@ ARG TARGETARCH
 
 COPY --from=builder /pkgs/usr /usr
 COPY --from=ocm-cli /bin/ocm /bin/ocm
+COPY --from=builder /cc/utils/bin/component-cli /bin/component-cli
+
+# path is hardcoded in our trait
 COPY --from=builder /cc/utils/bin/launch-dockerd.sh /cc/utils/bin/launch-dockerd.sh
 
 # place version file into container's filesystem to make it easier to
@@ -29,6 +32,7 @@ COPY VERSION /metadata/VERSION
 
 ENV HELM_V3_VERSION=v3.12.2
 ENV HELM_ARCH="${TARGETARCH}"
+# copy to where helm is expected
 COPY --from=builder /cc/utils/bin/helm /usr/local/bin/helm
 # backwards-compatibility
 RUN ln -sf /usr/local/bin/helm /usr/local/bin/helm3
