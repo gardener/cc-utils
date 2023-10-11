@@ -201,7 +201,10 @@ class DeliveryServiceClient:
 
             params['artifact_name'] = artifact_name
 
-        logger.info(f'{component.identity()=} {params=}')
+        if component:
+            logger.info(f'{component.identity()=} {params=}')
+        else:
+            logger.info(f'{params=}')
 
         resp = requests.get(
             url=url,
