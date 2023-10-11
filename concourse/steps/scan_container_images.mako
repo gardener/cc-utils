@@ -23,9 +23,6 @@ if issue_tgt_repo_url:
   tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
 
 
-github_issue_templates = image_scan_trait.github_issue_templates()
-github_issue_labels_to_preserve = image_scan_trait.github_issue_labels_to_preserve()
-
 rescoring_rules = image_scan_trait.cve_rescoring_rules()
 rescoring_rules_raw = image_scan_trait.cve_rescoring_rules(raw=True)
 %>
@@ -50,9 +47,9 @@ import concourse.model.traits.image_scan as image_scan
 import concourse.model.traits.filter
 import delivery.client
 import github.compliance.model
-import github.compliance.report
 import protecode.scanning
 import protecode.rescore
+import protecode.util
 
 
 from concourse.model.traits.image_scan import Notify
@@ -70,7 +67,6 @@ ${step_lib('scan_container_images')}
 ${step_lib('component_descriptor_util')}
 
 cfg_factory = ci.util.ctx().cfg_factory()
-cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
 component_descriptor = parse_component_descriptor()
 
@@ -101,7 +97,6 @@ print_protecode_info_table(
 cve_threshold = ${protecode_scan.cve_threshold()}
 
 protecode_client = ccc.protecode.client(protecode_cfg=protecode_cfg)
-delivery_svc_endpoints = ccc.delivery.endpoints(cfg_set=cfg_set)
 delivery_svc_client = ccc.delivery.default_client_if_available()
 
 oci_client = ccc.oci.oci_client()
@@ -182,23 +177,9 @@ rescoring_rules = tuple(
 rescoring_rules = None
 % endif
 
-notification_policy = Notify('${image_scan_trait.notify().value}')
-
-if notification_policy is Notify.NOBODY:
-  print("Notification policy set to 'nobody', exiting")
-  sys.exit(0)
-
 if not results:
   print('nothing to report - early-exiting')
   sys.exit(0)
-
-% if github_issue_templates:
-github_issue_template_cfgs = [dacite.from_dict(
-    data_class=image_scan.GithubIssueTemplateCfg,
-    data=raw
-    ) for raw in ${[dataclasses.asdict(ghit) for ghit in github_issue_templates]}
-]
-% endif
 
 % if rescoring_rules:
 ## rescorings
@@ -210,40 +191,13 @@ for idx, components_result in enumerate(components_results):
     rescoring_rules=rescoring_rules,
     max_rescore_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
   )
-% endif
 
-
-scan_results_vulnerabilities = scan_result_group_collection_for_vulnerabilities(
+logger.info('sync possibly rescored vulnerability results with delivery-db')
+protecode.util.sync_results_with_delivery_db(
+  delivery_client=delivery_svc_client,
   results=vulnerability_results,
-  cve_threshold=cve_threshold,
+  bdba_cfg_name=protecode_cfg.name(),
 )
-scan_results_licenses = scan_result_group_collection_for_licenses(
-  results=license_results,
-)
-
-if not notification_policy is Notify.GITHUB_ISSUES:
-  logger.error(f'{notification_policy=} is no longer (or not yet) supported')
-  raise NotImplementedError(notification_policy)
-
-for result_group in scan_results_vulnerabilities, scan_results_licenses:
-  logger.info(f'processing {result_group.issue_type=}')
-  github.compliance.report.create_or_update_github_issues(
-    result_group_collection=result_group,
-    max_processing_days=max_processing_days,
-% if issue_tgt_repo_url:
-    gh_api=gh_api,
-    overwrite_repository=overwrite_repository,
+logger.info('synced possibly rescored vulnerability results with delivery-db')
 % endif
-% if github_issue_labels_to_preserve:
-    preserve_labels_regexes=${github_issue_labels_to_preserve},
-% endif
-% if github_issue_templates:
-    github_issue_template_cfgs=github_issue_template_cfgs,
-% endif
-    delivery_svc_client=delivery_svc_client,
-    delivery_svc_endpoints=delivery_svc_endpoints,
-    license_cfg=license_cfg,
-    cfg_set=cfg_set,
-    rescoring_rules=rescoring_rules,
-  )
 </%def>
