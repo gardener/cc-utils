@@ -250,7 +250,16 @@ class GitHelper:
                     raise RuntimeError('git-push failed (see stderr output)')
 
     def rebase(self, commit_ish: str):
-        self.repo.git.rebase('--quiet', commit_ish)
+
+        credentials = self.github_cfg.credentials()
+        cmd_env = os.environ.copy()
+        cmd_env["GIT_AUTHOR_NAME"] = credentials.username()
+        cmd_env["GIT_AUTHOR_EMAIL"] = credentials.email_address()
+        cmd_env['GIT_COMMITTER_NAME'] = credentials.username()
+        cmd_env['GIT_COMMITTER_EMAIL'] = credentials.email_address()
+
+        with self.repo.git.custom_environment(**cmd_env):
+            self.repo.git.rebase('--quiet', commit_ish)
 
     def add_note(self, body: str, commit: str):
         with self._authenticated_remote() as (cmd_env, remote):
