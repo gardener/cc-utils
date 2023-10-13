@@ -521,11 +521,13 @@ def _scanned_element_assignees(
 
         artifact = gcm.artifact_from_node(scanned_element)
         try:
+            responsibles, statuses = delivery_svc_client.component_responsibles(
+                component=scanned_element.component,
+                artifact=artifact,
+            )
+
             assignees = delivery.client.github_users_from_responsibles(
-                responsibles=delivery_svc_client.component_responsibles(
-                    component=scanned_element.component,
-                    artifact=artifact,
-                ),
+                responsibles=responsibles,
                 github_url=repository.url,
             )
 

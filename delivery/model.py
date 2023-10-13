@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 
 import dso.model
 
@@ -135,3 +136,14 @@ class ArtefactMetadata:
                 type_hooks={datetime.datetime: datetime.datetime.fromisoformat},
             ),
         )
+
+
+class StatusType(enum.StrEnum):
+    ERROR = enum.auto()
+    INFO = enum.auto()
+
+
+@dataclasses.dataclass(frozen=True) # TODO: deduplicate with model-class delivery-service
+class Status:
+    type: StatusType
+    msg: str

@@ -4,6 +4,8 @@ import logging
 import requests
 import typing
 
+import dacite
+
 import gci.componentmodel as cm
 
 import ci.util
@@ -158,12 +160,15 @@ class DeliveryServiceClient:
         ctx_repo_url: str=None,
         component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
         artifact: typing.Union[cm.Artifact, str]=None,
-    ) -> dict:
+    ) -> tuple[dict, list[dm.Status]]:
         '''
-        retrieves component-responsibles. Responsibles are returned as a list of typed user
-        identities. Optionally, an artifact (or artifact name) may be passed. In this case,
-        responsibles are filtered for the given resource definition. Note that an error will
-        be raised if the given artifact does not declare a artifact of the given name.
+        retrieves component-responsibles and optional status info.
+        Status info can be used to communicate additional information, e.g. that responsible-label
+        was malformed.
+        Responsibles are returned as a list of typed user identities. Optionally, an artifact
+        (or artifact name) may be passed. In this case, responsibles are filtered for the given
+        resource definition. Note that an error will be raised if the given artifact does not declare
+        a artifact of the given name.
 
         known types: githubUser, emailAddress, personalName
         example (single user entry): [
@@ -212,8 +217,24 @@ class DeliveryServiceClient:
         )
 
         resp.raise_for_status()
+        resp_json: dict = resp.json()
 
-        return resp.json()['responsibles']
+        responsibles = resp_json['responsibles']
+        statuses_raw = resp_json.get('statuses', [])
+        statuses = [
+            dacite.from_dict(
+                data_class=dm.Status,
+                data=status_raw,
+                config=dacite.Config(
+                    cast=[
+                        dm.StatusType,
+                    ],
+                ),
+            )
+            for status_raw in statuses_raw
+        ]
+
+        return responsibles, statuses
 
     def sprints(self) -> list[dm.Sprint]:
         raw = requests.get(
