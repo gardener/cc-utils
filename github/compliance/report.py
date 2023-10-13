@@ -479,7 +479,7 @@ def _scanned_element_assignees(
     delivery_svc_client: delivery.client.DeliveryServiceClient | None,
     repository: github3.repos.repo.Repository,
     gh_api: github3.GitHub | github3.GitHubEnterprise,
-) -> set[str]:
+) -> tuple[set[str], set[delivery.model.Status]]:
     '''
     Determines assignees for scanned-element based on its type.
         ocm-node:
@@ -515,9 +515,12 @@ def _scanned_element_assignees(
                 logger.warning(f'unable to process {responsible.type=}')
         yield from unique_usernames
 
+    assignees: set[str] = set()
+    statuses: set[delivery.model.Status] = set()
+
     if gcm.is_ocm_artefact_node(scanned_element):
         if not delivery_svc_client:
-            return ()
+            return assignees, statuses
 
         artifact = gcm.artifact_from_node(scanned_element)
         try:
@@ -525,32 +528,35 @@ def _scanned_element_assignees(
                 component=scanned_element.component,
                 artifact=artifact,
             )
+            statuses = set(statuses)
 
-            assignees = delivery.client.github_users_from_responsibles(
+            gh_users = delivery.client.github_users_from_responsibles(
                 responsibles=responsibles,
                 github_url=repository.url,
             )
 
-            return set(
-                u.username for u in assignees
+            assignees = set(
+                gh_user.username for gh_user in gh_users
                 if github.user.is_user_active(
-                    username=u.username,
+                    username=gh_user.username,
                     github=gh_api,
                 )
             )
+
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
                 logger.warning(f'Delivery Service returned 404 for '
                     f'{scanned_element.component.name=}, {artifact.name=}')
-                return set()
+                return assignees, statuses
+
             else:
                 raise
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         if not scanned_element.responsible:
-            return set()
+            return assignees, statuses
 
-        return set(
+        assignees = set(
             username for username in iter_gh_usernames_from_responsibles_mapping(
                 responsibles_mapping=scanned_element.responsible,
                 gh_api=gh_api,
@@ -560,8 +566,11 @@ def _scanned_element_assignees(
                 github=gh_api,
             )
         )
+
     else:
         raise TypeError(scanned_element)
+
+    return assignees, statuses
 
 
 def _scanned_element_title(
@@ -711,7 +720,7 @@ def create_or_update_github_issues(
             logger.info(f'closed (if existing) gh-issue for {element_name=}')
 
         elif action == PROCESSING_ACTION.REPORT:
-            assignees = _scanned_element_assignees(
+            assignees, statuses = _scanned_element_assignees(
                 scanned_element=scan_result.scanned_element,
                 delivery_svc_client=delivery_svc_client,
                 repository=repository,
