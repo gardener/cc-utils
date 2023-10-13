@@ -720,7 +720,7 @@ def create_or_update_github_issues(
             logger.info(f'closed (if existing) gh-issue for {element_name=}')
 
         elif action == PROCESSING_ACTION.REPORT:
-            assignees, statuses = _scanned_element_assignees(
+            assignees, assignees_statuses = _scanned_element_assignees(
                 scanned_element=scan_result.scanned_element,
                 delivery_svc_client=delivery_svc_client,
                 repository=repository,
@@ -802,6 +802,7 @@ def create_or_update_github_issues(
                     repository=repository,
                     body=body,
                     assignees=assignees,
+                    assignees_statuses=assignees_statuses,
                     milestone=target_milestone,
                     latest_processing_date=latest_processing_date,
                     extra_labels=(

@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import logging
 import re
+import textwrap
 import traceback
 import typing
 
@@ -15,6 +16,7 @@ import github3.repos
 
 import cfg_mgmt.model as cmm
 import ci.log
+import delivery.model
 import github.compliance.model as gcm
 import github.retry
 import github.util
@@ -160,6 +162,7 @@ def _create_issue(
     title: str,
     extra_labels: typing.Iterable[str]=(),
     assignees: typing.Iterable[str]=(),
+    assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
     latest_processing_date: datetime.date|datetime.datetime=None,
 ) -> github3.issues.issue.ShortIssue:
@@ -184,7 +187,19 @@ def _create_issue(
             latest_processing_date = latest_processing_date.isoformat()
             issue.create_comment(f'{latest_processing_date=}')
 
+        if assignees_statuses:
+            comment_body = textwrap.dedent(f'''
+                There have been anomalies during initial ticket assignment, please see details below:
+                | Message Type | Message |
+                | --- | --- |
+            ''')
+            for status in assignees_statuses:
+                comment_body += f'|`{status.type}`|`{status.msg}`\n'
+
+            issue.create_comment(comment_body)
+
         return issue
+
     except github3.exceptions.GitHubError as ghe:
         logger.warning(f'received error trying to create issue: {ghe=}')
         logger.warning(f'{ghe.message=} {ghe.code=} {ghe.errors=}')
@@ -274,6 +289,7 @@ def create_or_update_issue(
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
     title: str,
     assignees: typing.Iterable[str]=(),
+    assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
     latest_processing_date: datetime.date|datetime.datetime=None,
     extra_labels: typing.Iterable[str]=None,
@@ -318,6 +334,7 @@ def create_or_update_issue(
             body=body,
             title=title,
             assignees=assignees,
+            assignees_statuses=assignees_statuses,
             milestone=milestone,
             latest_processing_date=latest_processing_date,
         )
