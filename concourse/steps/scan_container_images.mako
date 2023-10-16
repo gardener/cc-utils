@@ -37,6 +37,7 @@ faulthandler.enable() # print stacktraces upon fatal signals
 # end of debugging block
 
 import ccc.aws
+import ccc.delivery
 import ccc.github
 import ccc.oci
 import ccc.protecode
