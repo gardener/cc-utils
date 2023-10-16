@@ -204,11 +204,11 @@ def _create_issue(
             issue.create_comment(f'{latest_processing_date=}')
 
         if assignees_statuses:
-            comment_body = textwrap.dedent(f'''
+            comment_body = textwrap.dedent('''\
                 There have been anomalies during initial ticket assignment, please see details below:
                 | Message Type | Message |
-                | --- | --- |
-            ''')
+                | --- | --- |'''
+            )
             for status in assignees_statuses:
                 comment_body += f'|`{status.type}`|`{status.msg}`\n'
 
