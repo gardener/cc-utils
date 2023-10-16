@@ -31,17 +31,19 @@ def rescore(
     vulnerability_scan_results: list[pm.VulnerabilityScanResult],
     rescoring_rules: typing.Sequence[dso.cvss.RescoringRule],
     max_rescore_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
-) -> tuple[pm.ComponentsScanResult, list[pm.VulnerabilityScanResult]]:
+) -> list[pm.VulnerabilityScanResult]:
     '''
     rescores bdba-findings for the scanned element of the given components scan result.
     Rescoring is only possible if cve-categorisations are available from categoristion-label
     in either resource or component.
     '''
+    assessed_vulnerability_results = []
+
     scan_result = components_scan_result.result
     resource_node = components_scan_result.scanned_element
 
     if not (categorisation := cve_categorisation(resource_node=resource_node)):
-        return (components_scan_result, vulnerability_scan_results)
+        return assessed_vulnerability_results
 
     product_id = scan_result.product_id()
     component = resource_node.component
@@ -90,6 +92,13 @@ def rescore(
 
             if rescored is dso.cvss.CVESeverity.NONE:
                 vulns_to_assess.append(v)
+                assessed_vulnerability_results.append(next(
+                    vsr for vsr in vulnerability_scan_results
+                    if vsr.scanned_element == resource_node
+                        and vsr.affected_package.name() == c.name()
+                        and vsr.affected_package.version() == c.version()
+                        and vsr.vulnerability.cve() == v.cve()
+                ))
 
         if vulns_to_assess:
             logger.info(f'{len(vulns_to_assess)=}: {[v.cve() for v in vulns_to_assess]}')
@@ -111,8 +120,7 @@ def rescore(
         )
         # patch in updated scan result
         components_scan_result.result = scan_result
-        for vsr in vulnerability_scan_results:
-            if vsr.scanned_element == resource_node:
-                vsr.result = scan_result
+        for avr in assessed_vulnerability_results:
+            avr.result = scan_result
 
-    return (components_scan_result, vulnerability_scan_results)
+    return assessed_vulnerability_results

@@ -184,21 +184,20 @@ if not results:
 
 % if rescoring_rules:
 ## rescorings
-for idx, components_result in enumerate(components_results):
-  components_results[idx], vulnerability_results = protecode.rescore.rescore(
+for components_result in components_results:
+  rescored_vulnerability_results = protecode.rescore.rescore(
     bdba_client=protecode_client,
     components_scan_result=components_result,
     vulnerability_scan_results=vulnerability_results,
     rescoring_rules=rescoring_rules,
     max_rescore_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
   )
-
-logger.info('sync possibly rescored vulnerability results with delivery-db')
-protecode.util.sync_results_with_delivery_db(
-  delivery_client=delivery_svc_client,
-  results=vulnerability_results,
-  bdba_cfg_name=protecode_cfg.name(),
-)
-logger.info('synced possibly rescored vulnerability results with delivery-db')
+  if rescored_vulnerability_results:
+    logger.info('sync rescored vulnerability results with delivery-db')
+    protecode.util.sync_results_with_delivery_db(
+      delivery_client=delivery_svc_client,
+      results=rescored_vulnerability_results,
+      bdba_cfg_name=protecode_cfg.name(),
+    )
 % endif
 </%def>
