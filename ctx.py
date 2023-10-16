@@ -49,7 +49,7 @@ class CtxCfg:
     github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
     cache_dir: str | None = None # used (e.g.) for caching component-descriptors
     ocm_repo_base_url: str | None = None # fka ctx_repo_url
-    ocm_repository_mappings: list[dict] | None = None # list[cnudie.util.OcmLookupMapping]
+    ocm_repository_mappings: list[dict] | None = None # list[cnudie.util.OcmResolverConfig]
 
     @property
     def ocm_repository_lookup(self) -> 'cnudie.retrieve.OcmRepositoryLookup | None':
@@ -61,7 +61,7 @@ class CtxCfg:
 
         mapping_cfg = cnudie.util.OcmLookupMappingConfig(
             mappings=[
-                dacite.from_dict(cnudie.util.OcmLookupMapping, mapping) for mapping
+                dacite.from_dict(cnudie.util.OcmResolverConfig, mapping) for mapping
                 in self.ocm_repository_mappings
             ]
         )
