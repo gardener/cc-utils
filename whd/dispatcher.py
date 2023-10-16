@@ -336,7 +336,7 @@ class GithubWebhookDispatcher:
                 if e.response.status_code != requests.status_codes.codes.NOT_FOUND:
                     raise e
                 logger.warning(f"could not retrieve pipeline config for '{pipeline.pipeline_name}'")
-                return
+                continue
 
             resources = [
                 r for r in pipeline_config.resources
