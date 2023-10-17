@@ -735,6 +735,7 @@ def create_or_update_github_issues(
 
             element_name = github.compliance.issue.unique_name_for_element(
                 scanned_element=scan_result.scanned_element,
+                issue_type=issue_type,
                 latest_processing_date=latest_processing_date,
             )
             logger.info(f'closed (if existing) gh-issue for {element_name=}')
@@ -851,6 +852,7 @@ def create_or_update_github_issues(
 
                 element_name = github.compliance.issue.unique_name_for_element(
                     scanned_element=scan_result.scanned_element,
+                    issue_type=issue_type,
                     latest_processing_date=latest_processing_date,
                 )
                 logger.info(
@@ -1002,6 +1004,7 @@ def close_issues_for_absent_resources(
 
         name = github.compliance.issue.unique_name_for_element(
             scanned_element=scanned_element,
+            issue_type=issue_type,
             latest_processing_date=latest_processing_date,
         )
         prefix = github.compliance.issue.prefix_for_element(scanned_element)

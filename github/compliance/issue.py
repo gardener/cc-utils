@@ -61,16 +61,20 @@ def prefix_for_element(
 
 def unique_name_for_element(
     scanned_element: gcm.Target,
+    issue_type: str,
     latest_processing_date: datetime.date=None,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
         artifact = gcm.artifact_from_node(scanned_element)
-        name = (
-            f'{scanned_element.component.name}:{scanned_element.component.version}'
-            f':{artifact.name}:{artifact.version}'
-        )
-        if latest_processing_date:
-            name += f":{latest_processing_date.strftime('%Y-%m-%d')}"
+        if issue_type == _label_bdba or issue_type == _label_licenses:
+            name = (
+                f'{scanned_element.component.name}:{scanned_element.component.version}'
+                f':{artifact.name}:{artifact.version}'
+            )
+            if latest_processing_date:
+                name += f":{latest_processing_date.strftime('%Y-%m-%d')}"
+        else:
+            name = f'{scanned_element.component.name}:{artifact.name}'
         return name
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
@@ -130,6 +134,7 @@ def _search_labels(
             ),
             digest_str=unique_name_for_element(
                 scanned_element=scanned_element,
+                issue_type=issue_type,
                 latest_processing_date=latest_processing_date,
             ),
         )
@@ -338,7 +343,7 @@ def create_or_update_issue(
     if (issues_count := len(open_issues)) > 1:
         raise RuntimeError(
             'more than one open issue found for '
-                + f'{unique_name_for_element(scanned_element, latest_processing_date)=}'
+                + f'{unique_name_for_element(scanned_element, issue_type, latest_processing_date)=}'
         )
     elif issues_count == 0:
         if extra_labels:
@@ -430,11 +435,11 @@ def close_issue_if_present(
     if (issues_count := len(open_issues)) > 1:
         logger.warning(
             'more than one open issue found for '
-                + f'{unique_name_for_element(scanned_element, latest_processing_date)=}'
+                + f'{unique_name_for_element(scanned_element, issue_type, latest_processing_date)=}'
         )
     elif issues_count == 0:
         logger.info('no open issue found for '
-            + f'{unique_name_for_element(scanned_element, latest_processing_date)=}')
+            + f'{unique_name_for_element(scanned_element, issue_type, latest_processing_date)=}')
         return # nothing to do
 
     open_issue = open_issues[0]
