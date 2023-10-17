@@ -4,6 +4,8 @@ import logging
 import typing
 from collections import defaultdict
 
+import cnudie.iter as cni
+import gci.componentmodel as cm
 import release_notes.model as rnm
 
 logger = logging.getLogger(__name__)
@@ -178,3 +180,44 @@ def render(notes: set[rnm.ReleaseNote]):
                     message = note.source_block.note_message
                     objs.append(list_item_from_note(message, note, group))
     return objs
+
+
+def release_notes_for_ocm_resource(resource: cm.Resource) -> str | None:
+
+    if resource.type == cm.ArtefactType.OCI_IMAGE:
+        if resource.access.type == cm.AccessType.OCI_REGISTRY:
+            return f'{resource.name}: `{resource.access.imageReference}`'
+
+    return None
+
+
+def release_note_for_ocm_component(component: cm.Component) -> str | None:
+    '''Create a markdown string containing information about the Resources included in the given
+    Component.
+    '''
+    local_resources = [
+        r
+        for r in component.resources
+        if r.relation is cm.ResourceRelation.LOCAL
+    ]
+
+    component_release_notes = ''
+    for resource_type in {resource.type for resource in local_resources}:
+        matching_resources = [r for r in local_resources if r.type == resource_type]
+        resource_lines = {
+            l for l in (
+                release_notes_for_ocm_resource(r)
+                for r in matching_resources
+            ) if l is not None
+        }
+
+        if resource_type == cm.ResourceType.OCI_IMAGE:
+            category_title = 'Docker Images'
+        else:
+            category_title = str(resource_type)
+
+        if resource_lines:
+            category_markdown = '## ' + category_title + '\n' + '\n'.join(resource_lines) + '\n'
+            component_release_notes += category_markdown
+
+    return component_release_notes

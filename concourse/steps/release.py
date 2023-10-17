@@ -1112,6 +1112,12 @@ def release_and_prepare_next_dev_cycle(
         release_notes_markdown = '\n'.join(
             str(i) for i in release_notes.markdown.render(release_note_blocks)
         ) or 'no release notes available'
+
+        if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
+            component=component,
+        )):
+            release_notes_markdown += '\n\n' + component_resources_markdown
+
         github_helper.update_release_notes(
             tag_name=release_version,
             body=release_notes_markdown,
