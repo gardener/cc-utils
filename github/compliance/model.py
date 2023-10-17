@@ -108,7 +108,7 @@ class ScanResult:
 
     @property
     def has_latest_processing_date(self) -> bool:
-        if self.latest_processing_date is self._no_latest_processing_date_sentinel:
+        if self.severity is self._no_latest_processing_date_sentinel:
             return False
         return True
 
