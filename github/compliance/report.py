@@ -790,10 +790,18 @@ def create_or_update_github_issues(
                         latest_processing_date = datetime.date.today() + datetime.timedelta(
                             days=max_days,
                         )
-                        target_sprint = _target_sprint(
-                            delivery_svc_client=delivery_svc_client,
-                            latest_processing_date=latest_processing_date,
-                        )
+                        # if processing time is 0 days, assign to current sprint, otherwise assign
+                        # to last sprint which is just "in-time"
+                        if max_days > 0:
+                            target_sprint = _target_sprint(
+                                delivery_svc_client=delivery_svc_client,
+                                latest_processing_date=latest_processing_date,
+                            )
+                        else:
+                            target_sprint = _target_sprint(
+                                delivery_svc_client=delivery_svc_client,
+                                sprint_end_date=latest_processing_date,
+                            )
                         target_milestone = _target_milestone(
                             repo=repository,
                             sprint=target_sprint,
