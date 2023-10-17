@@ -578,10 +578,14 @@ def _scanned_element_title(
     if gcm.is_ocm_artefact_node(scanned_element):
         c = scanned_element.component
         a = gcm.artifact_from_node(scanned_element)
-        title = f'[{issue_type}] - {c.name}:{c.version}:{a.name}:{a.version}'
-        if target_milestone:
-            title += f' - {target_milestone.title}'
-        return title
+        if (issue_type == _compliance_label_vulnerabilities or
+            issue_type == _compliance_label_licenses):
+            title = f'[{issue_type}] - {c.name}:{c.version}:{a.name}:{a.version}'
+            if target_milestone:
+                title += f' - {target_milestone.title}'
+            return title
+        else:
+            return f'[{issue_type}] - {c.name}:{a.name}'
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return f'[{issue_type}] - {scanned_element.name}'
