@@ -557,7 +557,7 @@ def process_images(
             # update the digest, because we might have changed the oci-artefact
             if digest.hashAlgorithm.upper() == 'SHA-256' and \
               digest.normalisationAlgorithm == 'ociArtifactDigest/v1':
-                digest.value = docker_content_digest
+                digest.value = docker_content_digest.removeprefix('sha256:')
 
                 processed_resource = dataclasses.replace(
                     processed_resource,
