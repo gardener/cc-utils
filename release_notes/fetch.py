@@ -1,5 +1,6 @@
 import logging
 import typing
+import datetime
 
 import gci.componentmodel
 import git
@@ -19,8 +20,7 @@ logger = logging.getLogger(__name__)
 def _list_commits_between_tags(
         repo: git.Repo,
         main_tag: git.TagReference,
-        other_tag: git.TagReference,
-        commit_limit: int = 200,
+        other_tag: git.TagReference
 ) -> tuple[git.Commit]:
     ''' If the tags are linear to each other (main_tag ancestor of other_tag or
     vice versa), all commits between the tags are returned. Otherwise, all
@@ -30,33 +30,24 @@ def _list_commits_between_tags(
     :return: a tuple of commits between the two tags '''
     if repo.is_ancestor(main_tag.commit, other_tag.commit) or \
             repo.is_ancestor(other_tag.commit, main_tag.commit):
-        return tuple(repo.iter_commits(
-            f'{main_tag.commit.hexsha}...{other_tag.commit.hexsha}',
-            max_count=commit_limit,
-        ))
+        return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{other_tag.commit.hexsha}'))
 
     if not (merge_commit_list := repo.merge_base(main_tag, other_tag)) or not \
             (merge_commit := merge_commit_list.pop()):
         raise RuntimeError('cannot find merge base')
-    return tuple(repo.iter_commits(
-        f'{main_tag.commit.hexsha}...{merge_commit.hexsha}',
-        max_count=commit_limit,
-    ))
+    return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{merge_commit.hexsha}'))
 
 
 def _list_commits_since_tag(
         repo: git.Repo,
         tag: git.TagReference,
-        commit_limit: int = 200,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''Return a list of between the given tag and HEAD
 
     :return: a tuple of commits'''
     if repo.is_ancestor(tag.commit, 'HEAD'):
         logger.info(f"Commit tagged '{tag.name}' is a direct ancestor of HEAD")
-        return tuple(
-            repo.iter_commits(f'HEAD...{tag.commit.hexsha}', max_count=commit_limit)
-        ), tuple()
+        return tuple(repo.iter_commits(f'HEAD...{tag.commit.hexsha}')), tuple()
 
     if (
         not (merge_commit_list := repo.merge_base('HEAD', tag))
@@ -64,10 +55,8 @@ def _list_commits_since_tag(
     ):
         raise RuntimeError('cannot find merge base')
     return (
-        tuple(repo.iter_commits(f'HEAD...{merge_commit.hexsha}', max_count=commit_limit)),
-        tuple(repo.iter_commits(
-            f'{merge_commit.hexsha}...{tag.commit.hexsha}', max_count=commit_limit,
-        ))
+        tuple(repo.iter_commits(f'HEAD...{merge_commit.hexsha}')),
+        tuple(repo.iter_commits(f'{merge_commit.hexsha}...{tag.commit.hexsha}'))
     )
 
 
@@ -77,7 +66,6 @@ def _get_release_note_commits_tuple_for_release(
         git_helper: gitutil.GitHelper,
         github_repo: github3.repos.Repository,
         current_version_tag: git.TagReference,
-        commit_limit: int = 200,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
@@ -101,9 +89,8 @@ def _get_release_note_commits_tuple_for_release(
     if git_helper.repo.is_ancestor(previous_version_tag_commit_sha, current_tag_commit_sha):
         logger.info('it\'s an ancestor. simple range should be enough.')
         return tuple(git_helper.repo.iter_commits(
-            f'{current_tag_commit_sha}...{previous_version_tag_commit_sha}',
-            max_count=commit_limit,
-            )), tuple()
+            f'{current_tag_commit_sha}...{previous_version_tag_commit_sha}')
+        ), tuple()
 
     # otherwise, use the new method
     # find start of previous minor-release tag
@@ -123,19 +110,13 @@ def _get_release_note_commits_tuple_for_release(
         f'{previous_version_tag_commit_sha}...{previous_branch_start}'
     )
     logger.debug(f'{filter_out_commits_range=}')
-    filter_out_commits = git_helper.repo.iter_commits(
-        filter_out_commits_range,
-        max_count=commit_limit,
-    )
+    filter_out_commits = git_helper.repo.iter_commits(filter_out_commits_range)
 
     # all commits (and release notes!) not included in {filter_out_commits} should be added to the
     # final generated release notes
     filter_in_commits_range = f'{current_tag_commit_sha}...{previous_branch_start}'
     logger.debug(f'{filter_in_commits_range=}')
-    filter_in_commits = git_helper.repo.iter_commits(
-        filter_in_commits_range,
-        max_count=commit_limit,
-    )
+    filter_in_commits = git_helper.repo.iter_commits(filter_in_commits_range)
 
     return tuple(filter_in_commits), tuple(filter_out_commits)
 
@@ -148,7 +129,6 @@ def get_release_note_commits_tuple(
         current_version_tag: git.TagReference,
         current_version: semver.VersionInfo,
         github_repo: github3.repos.Repository,
-        commit_limit: int = 200,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
@@ -158,16 +138,13 @@ def get_release_note_commits_tuple(
     if not previous_version or len(component_versions) == 1:
         logger.info('version appears to be an initial release.')
         # just return all commits starting from the current_version_tag
-        return tuple(
-            git_helper.repo.iter_commits(current_version_tag, max_count=commit_limit)
-        ), tuple()
+        return tuple(git_helper.repo.iter_commits(current_version_tag)), tuple()
 
     if not current_version:
         logger.info('No current version specified. Start fetching of release notes at HEAD')
         return _list_commits_since_tag(
             repo=git_helper.repo,
             tag=previous_version_tag,
-            commit_limit=commit_limit,
         )
     # new major release
     if current_version.major != previous_version.major:
@@ -183,8 +160,7 @@ def get_release_note_commits_tuple(
             component_versions=component_versions,
             git_helper=git_helper,
             github_repo=github_repo,
-            current_version_tag=current_version_tag,
-            commit_limit=commit_limit,
+            current_version_tag=current_version_tag
         )
 
     # new minor release
@@ -201,8 +177,7 @@ def get_release_note_commits_tuple(
             component_versions=component_versions,
             git_helper=git_helper,
             github_repo=github_repo,
-            current_version_tag=current_version_tag,
-            commit_limit=commit_limit,
+            current_version_tag=current_version_tag
         )
 
     # new patch release
@@ -216,7 +191,6 @@ def get_release_note_commits_tuple(
             current_version_tag,
             previous_version_tag
     ), tuple()
-
 
 def fetch_release_notes(
     component: gci.componentmodel.Component,
@@ -298,9 +272,26 @@ def fetch_release_notes(
     )
 
     logger.info(
-        f'Found {len(filter_in_commits)} relevant commits for release notes '
+        f'Found {(commit_count := len(filter_in_commits))} relevant commits for release notes '
         f'({len(filter_out_commits)} filtered out).'
     )
+
+    commit_processing_group_size = 200
+    processing_group_min_seconds = 200
+
+    if throttled := (commit_count > commit_processing_group_size):
+        logger.warning(
+            'A large amount of commits needs to be processed for this release. Processing will '
+            'be throttled to avoid hitting rate/quota limits.'
+        )
+        quotient, remainder = divmod(commit_count, commit_processing_group_size)
+        estimated_time = (
+            quotient * processing_group_min_seconds
+            + remainder * (processing_group_min_seconds/commit_processing_group_size)
+        )
+        logger.warning(
+            f'Estimated processing time: {datetime.timedelta(seconds=estimated_time)!s}.'
+        )
 
     # find associated pull requests for commits
     commit_pulls = rnu.request_pull_requests_from_api(
@@ -308,8 +299,12 @@ def fetch_release_notes(
         gh=github_helper.github,
         owner=github_repo.owner,
         repo_name=github_repo.name,
-        commits=[*filter_in_commits, *filter_out_commits]
+        commits=[*filter_in_commits, *filter_out_commits],
+        group_size=commit_processing_group_size,
+        min_seconds_per_group=processing_group_min_seconds,
     )
+    if throttled:
+        logger.info('Finished throttled processing.')
     if commit_pulls:
         logger.info(f'Found {len(commit_pulls)} commits with associated pull requests.')
         for sha, pr_list in commit_pulls.items():
