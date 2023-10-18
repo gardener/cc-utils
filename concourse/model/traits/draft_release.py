@@ -64,7 +64,7 @@ class DraftReleaseTraitTransformer(TraitTransformer):
 
     def inject_steps(self):
         # inject 'release' step
-        self.release_step = PipelineStep(
+        self.draft_release_step = PipelineStep(
             name='create_draft_release_notes',
             raw_dict={},
             is_synthetic=True,
@@ -73,13 +73,13 @@ class DraftReleaseTraitTransformer(TraitTransformer):
             injecting_trait_name=self.name,
             script_type=ScriptType.PYTHON3,
         )
-        self.release_step.set_timeout(duration_string='10m')
-        yield self.release_step
+        self.draft_release_step.set_timeout(duration_string='2h')
+        yield self.draft_release_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
         cd_trait = pipeline_args.trait('component_descriptor')
         cd_step = pipeline_args.step(cd_trait.step_name())
-        self.release_step._add_dependency(cd_step)
+        self.draft_release_step._add_dependency(cd_step)
 
     @classmethod
     def dependencies(cls):
