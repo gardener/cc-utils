@@ -1,5 +1,6 @@
 import collections
 import dataclasses
+import itertools
 import logging
 import time
 import typing
@@ -15,6 +16,7 @@ import yaml
 import yaml.scanner
 
 import ccc
+import ccc.github
 import gci.componentmodel
 import github.util
 import gitutil
@@ -165,12 +167,29 @@ def _upsert_document(
         documents.append(instance)
 
 
+# Taken from the itertools recipes
+# (https://docs.python.org/3/library/itertools.html#itertools-recipes)
+def _grouper(iterable, n, *, incomplete='fill', fillvalue=None):
+    "Collect data into non-overlapping fixed-length chunks or blocks"
+    args = [iter(iterable)] * n
+    if incomplete == 'fill':
+        return itertools.zip_longest(*args, fillvalue=fillvalue)
+    if incomplete == 'strict':
+        return zip(*args, strict=True)
+    if incomplete == 'ignore':
+        return zip(*args)
+    else:
+        raise ValueError('Expected fill, strict, or ignore')
+
+
 def request_pull_requests_from_api(
         git_helper: gitutil.GitHelper,
         gh: github3.GitHub,
         owner: str,
         repo_name: str,
-        commits: list[git.Commit]
+        commits: list[git.Commit],
+        group_size: int = 200,
+        min_seconds_per_group: int = 300,
 ) -> dict[str, list[gh3p.ShortPullRequest]]:
     ''' This function requests pull requests from the GitHub API and returns a
     dictionary mapping commit SHA to a list of pull requests.
@@ -189,35 +208,58 @@ def request_pull_requests_from_api(
     # commit_sha -> [ list of pull requests ]
     result = collections.defaultdict(list)
 
-    for commit in commits:
-        yaml_documents = []
-        is_yaml_content = True
-        if note_content := _find_git_notes_for_commit(git_helper.repo, commit):
-            try:
-                yaml_documents = list(yaml.safe_load_all(note_content))
-            except yaml.scanner.ScannerError as e:  # YAML parsing error
-                logger.debug(f'the notes of commit {commit.hexsha} do not contain valid YAML: {e}')
-                is_yaml_content = False
+    # used to avoid waiting for the last group
+    break_early = False
 
-        # if there is already a ReleaseNotesMetadata
-        if nums_meta := _find_first_document(yaml_documents, _meta_key, rnm.ReleaseNotesMetadata):
-            for num in nums_meta.prs:
-                pending[num].append(commit.hexsha)
-            continue
+    for commit_group in _grouper(commits, group_size):
+        start_time = time.time()
+        for commit in commit_group:
+            if commit is None:
+                # groups shorter than group_size are filled with None - we can safely
+                # break if we encounter one.
+                break_early = True
+                break
 
-        if prs := list_associated_pulls(gh, owner, repo_name, commit.hexsha):
-            # add all found pull requests to the result right away
-            result[commit.hexsha].extend(prs)
-            # only write notes to commit if there are no notes yet,
-            # or if the notes are in the YAML format already
-            if note_content or not is_yaml_content:
+            yaml_documents = []
+            is_yaml_content = True
+            if note_content := _find_git_notes_for_commit(git_helper.repo, commit):
+                try:
+                    yaml_documents = list(yaml.safe_load_all(note_content))
+                except yaml.scanner.ScannerError as e:  # YAML parsing error
+                    logger.debug(f'the notes of commit {commit.hexsha} do not contain valid YAML: {e}')
+                    is_yaml_content = False
+
+            # if there is already a ReleaseNotesMetadata
+            if nums_meta := _find_first_document(yaml_documents, _meta_key, rnm.ReleaseNotesMetadata):
+                for num in nums_meta.prs:
+                    pending[num].append(commit.hexsha)
                 continue
-            data = dataclasses.asdict(
-                rnm.ReleaseNotesMetadata(round(time.time() * 1000), [z.number for z in prs])
+
+            if prs := list_associated_pulls(gh, owner, repo_name, commit.hexsha):
+                # add all found pull requests to the result right away
+                result[commit.hexsha].extend(prs)
+                # only write notes to commit if there are no notes yet,
+                # or if the notes are in the YAML format already
+                if note_content or not is_yaml_content:
+                    continue
+                data = dataclasses.asdict(
+                    rnm.ReleaseNotesMetadata(round(time.time() * 1000), [z.number for z in prs])
+                )
+                meta = rnm.get_meta_obj(_meta_key, data)
+                _upsert_document(yaml_documents, _meta_key, meta)
+                git_helper.add_note(body=yaml.safe_dump_all(yaml_documents), commit=commit)
+
+        end_time = time.time()
+        time_elapsed = end_time - start_time # in seconds
+        if not break_early and time_elapsed < min_seconds_per_group:
+            wait_period = min_seconds_per_group - time_elapsed
+            logger.info(
+                f'Processed {group_size} commits in {int(time_elapsed)} seconds, will '
+                f'wait {int(wait_period)} seconds before continuing.'
             )
-            meta = rnm.get_meta_obj(_meta_key, data)
-            _upsert_document(yaml_documents, _meta_key, meta)
-            git_helper.add_note(body=yaml.safe_dump_all(yaml_documents), commit=commit)
+            time.sleep(wait_period)
+        # make sure to always use github-user with largest remaining quota
+        gh = ccc.github.github_api(github_cfg=git_helper.github_cfg)
 
     if pending:
         for pull in list_pulls(gh, owner, repo_name):
