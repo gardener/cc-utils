@@ -550,6 +550,19 @@ def process_images(
                     f'{digest_ref=} - signature for manifest already exists '
                     '- skipping signature upload'
                 )
+        processed_resource = processing_job.processed_resource
+
+        if processed_resource and (digest := processed_resource.digest):
+            # if resource has a digest we understand, and is an ociArtifact, then we need to
+            # update the digest, because we might have changed the oci-artefact
+            if digest.hashAlgorithm.upper() == 'SHA-256' and \
+              digest.normalisationAlgorithm == 'ociArtifactDigest/v1':
+                digest.value = docker_content_digest
+
+                processed_resource = dataclasses.replace(
+                    processed_resource,
+                    digest=digest,
+                )
 
         if replace_resource_tags_with_digests:
             processing_job.upload_request = dataclasses.replace(
