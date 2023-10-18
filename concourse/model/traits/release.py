@@ -337,6 +337,7 @@ class ReleaseTraitTransformer(TraitTransformer):
             injecting_trait_name=self.name,
             script_type=ScriptType.PYTHON3,
         )
+        self.release_step.set_timeout('2h')
         yield self.release_step
 
     def process_pipeline_args(self, pipeline_args: JobVariant):
