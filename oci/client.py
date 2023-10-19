@@ -313,7 +313,7 @@ class Client:
             return # no additional preliminary steps required for basic-auth
         elif 'bearer' in auth_challenge:
             bearer = auth_challenge['bearer']
-            service = bearer['service']
+            service = bearer.get('service')
             self.token_cache.set_auth_method(
                 image_reference=image_reference,
                 auth_method=AuthMethod.BEARER,
@@ -321,10 +321,11 @@ class Client:
         else:
             logger.warning(f'did not understand {auth_challenge=} - pbly a bug')
 
-        realm = bearer['realm'] + '?' + urllib.parse.urlencode({
-            'scope': scope,
-            'service': service,
-        })
+        bearer_dict = {'scope': scope}
+        if service:
+            bearer_dict['service'] = service
+
+        realm = bearer['realm'] + '?' + urllib.parse.urlencode(bearer_dict)
 
         if oci_creds:
             auth = requests.auth.HTTPBasicAuth(
