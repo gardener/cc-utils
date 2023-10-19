@@ -19,18 +19,18 @@ dc = dataclasses.dataclass
 logger = logging.getLogger(__name__)
 
 
-class ValidationMode(enum.Enum):
+class ValidationMode(enum.StrEnum):
     FAIL = 'fail'
     WARN = 'warn'
     NONE = 'none'
 
 
-class SchemaVersion(enum.Enum):
+class SchemaVersion(enum.StrEnum):
     V1 = 'v1'
     V2 = 'v2'
 
 
-class AccessType(enum.Enum):
+class AccessType(enum.StrEnum):
     GITHUB = 'github' # XXX: new: gitHub/v1
     LOCAL_BLOB = 'localBlob/v1'
     NONE = 'None'  # the resource is only declared informally (e.g. generic)
@@ -146,7 +146,7 @@ class S3Access(Access):
     region: typing.Optional[str] = None
 
 
-class ArtefactType(enum.Enum):
+class ArtefactType(enum.StrEnum):
     COSIGN_SIGNATURE = 'cosignSignature'
     GIT = 'git'
     OCI_IMAGE = 'ociImage'
