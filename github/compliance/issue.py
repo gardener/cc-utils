@@ -215,7 +215,7 @@ def _create_issue(
                 | --- | --- |'''
             )
             for status in assignees_statuses:
-                comment_body += f'|`{status.type}`|`{status.msg}`\n'
+                comment_body += f'\n|`{status.type}`|`{status.msg}`'
 
             issue.create_comment(comment_body)
 
