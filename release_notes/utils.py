@@ -226,11 +226,17 @@ def request_pull_requests_from_api(
                 try:
                     yaml_documents = list(yaml.safe_load_all(note_content))
                 except yaml.scanner.ScannerError as e:  # YAML parsing error
-                    logger.debug(f'the notes of commit {commit.hexsha} do not contain valid YAML: {e}')
+                    logger.debug(
+                        f'the notes of commit {commit.hexsha} do not contain valid YAML: {e}'
+                    )
                     is_yaml_content = False
 
             # if there is already a ReleaseNotesMetadata
-            if nums_meta := _find_first_document(yaml_documents, _meta_key, rnm.ReleaseNotesMetadata):
+            if nums_meta := _find_first_document(
+                documents=yaml_documents,
+                key=_meta_key,
+                ctor=rnm.ReleaseNotesMetadata,
+            ):
                 for num in nums_meta.prs:
                     pending[num].append(commit.hexsha)
                 continue

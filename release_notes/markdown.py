@@ -4,7 +4,6 @@ import logging
 import typing
 from collections import defaultdict
 
-import cnudie.iter as cni
 import gci.componentmodel as cm
 import release_notes.model as rnm
 

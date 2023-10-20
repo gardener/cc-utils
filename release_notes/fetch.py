@@ -192,6 +192,7 @@ def get_release_note_commits_tuple(
             previous_version_tag
     ), tuple()
 
+
 def fetch_release_notes(
     component: gci.componentmodel.Component,
     version_lookup,
