@@ -68,7 +68,7 @@ cc-utils:
           oci-builder: 'docker-buildx'
           dockerimages:
             job-image:
-              image: 'eu.gcr.io/gardener-project/cc/job-image'
+              image: 'europe-docker.pkg.dev/gardener-project/snapshots/cicd/job-image'
               dockerfile: 'Dockerfile'
               tag_as_latest: False
               inputs:
@@ -76,7 +76,7 @@ cc-utils:
                   build_python_packages: ~
             kaniko-image:
               registry: 'gcr-readwrite'
-              image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
+              image: 'europe-docker.pkg.dev/gardener-project/snapshots/cicd/kaniko-image'
               dockerfile: 'Dockerfile.kaniko'
               tag_as_latest: False
               inputs:
