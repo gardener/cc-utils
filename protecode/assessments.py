@@ -46,25 +46,31 @@ def add_assessments_if_none_exist(
     '''
     add assessments to given protecode "app"; skip given assessments that are not relevant for
     target "app" (either because there are already assessments, or vulnerabilities do not exit).
+    Assessments are added "optimistically", ignoring version differences between source and target
+    component versions (assumption: assessments are valid for all component-versions).
     '''
     product_id = tgt.product_id()
 
-    assessments_by_c_and_v = collections.defaultdict(list)
-    for c, v, triages in assessments:
-        assessments_by_c_and_v[f'{c.name()}:{c.version()}:{v.cve()}'] = (c, v, triages)
+    tgt_components_by_name = collections.defaultdict(list)
+    for c in tgt.components():
+        tgt_components_by_name[c.name()].append(c)
 
-    for tgt_c in tgt.components():
-        for tgt_v in tgt_c.vulnerabilities():
-            if tgt_v.historical():
-                continue
-            if tgt_v.has_triage():
-                continue
-            if not f'{tgt_c.name()}:{tgt_c.version()}:{tgt_v.cve()}' in assessments_by_c_and_v:
-                continue
+    for component, vulnerability, triages in assessments:
+        if not component.name() in tgt_components_by_name:
+            continue
 
-            c, v, triages = assessments_by_c_and_v[f'{tgt_c.name()}:{tgt_c.version()}:{tgt_v.cve()}']
-
-            if tgt_v.cve() != v.cve():
+        for tgt_component in tgt_components_by_name[component.name()]:
+            for tgt_vulnerability in tgt_component.vulnerabilities():
+                if tgt_vulnerability.cve() != vulnerability.cve():
+                    continue
+                if tgt_vulnerability.historical():
+                    continue
+                if tgt_vulnerability.has_triage():
+                    continue
+                # vulnerability is still "relevant" (not obsolete and unassessed)
+                break
+            else:
+                # vulnerability is not longer "relevant" -> skip
                 continue
 
             for triage in triages:
@@ -73,12 +79,13 @@ def add_assessments_if_none_exist(
                         triage=triage,
                         product_id=product_id,
                         group_id=tgt_group_id,
+                        component_version=tgt_component.version(),
                     )
                 except requests.exceptions.HTTPError as e:
                     # we will re-try importing every scan, so just print a warning
                     logger.warning(
-                        f'An error occurred importing {triage=} to {triage.component_name()=} '
-                        f'in version {triage.component_version()} for scan {product_id} '
+                        f'An error occurred importing {triage=} to {component.name()=} '
+                        f'in version {component.version()} for scan {product_id} '
                         f'{e}'
                     )
 
