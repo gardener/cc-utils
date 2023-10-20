@@ -43,8 +43,8 @@ VersionLookupById = typing.Callable[
 OcmRepositoryCfg = \
     str | typing.Iterable[str] | \
     cnudie.util.OcmLookupMappingConfig | \
-    cnudie.util.OcmResolverConfig | \
-    typing.Iterable[cnudie.util.OcmResolverConfig]
+    cnudie.util.OcmLookupMapping | \
+    typing.Iterable[cnudie.util.OcmLookupMapping]
 
 
 OcmRepositoryLookup = typing.Callable[
@@ -71,10 +71,10 @@ def _iter_ocm_repositories(
         yield repository_cfg
         return
 
-    if isinstance(repository_cfg, cnudie.util.OcmResolverConfig):
-        repository_cfg: cnudie.util.OcmResolverConfig
+    if isinstance(repository_cfg, cnudie.util.OcmLookupMapping):
+        repository_cfg: cnudie.util.OcmLookupMapping
         if repository_cfg.matches(component):
-            yield repository_cfg.repository
+            yield repository_cfg.ocm_repo_url
         return
 
     if isinstance(repository_cfg, cnudie.util.OcmLookupMappingConfig):
