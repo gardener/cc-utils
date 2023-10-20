@@ -133,7 +133,7 @@ class ScanResult:
         # if the max processing time is 0 days, keep `latest_processing_date` to
         # make sure, the finding is assigned to the current sprint during issue
         # creation instead of a sprint lying in the past
-        if delivery_svc_client and max_days > 0:
+        if delivery_svc_client and repository and max_days > 0:
             try:
                 import github.compliance.report as gcr
                 target_sprint = gcr._target_sprint(
