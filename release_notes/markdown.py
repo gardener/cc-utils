@@ -201,7 +201,7 @@ def release_note_for_ocm_component(component: cm.Component) -> str | None:
     ]
 
     component_release_notes = ''
-    for resource_type in {resource.type for resource in local_resources}:
+    for resource_type in sorted({resource.type for resource in local_resources}):
         matching_resources = [r for r in local_resources if r.type == resource_type]
         resource_lines = {
             l for l in (
@@ -216,7 +216,9 @@ def release_note_for_ocm_component(component: cm.Component) -> str | None:
             category_title = str(resource_type)
 
         if resource_lines:
-            category_markdown = '## ' + category_title + '\n' + '\n'.join(resource_lines) + '\n'
+            category_markdown = (
+                '## ' + category_title + '\n' + '\n'.join(sorted(resource_lines)) + '\n'
+            )
             component_release_notes += category_markdown
 
     return component_release_notes
