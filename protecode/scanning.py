@@ -385,6 +385,10 @@ class ResourceGroupProcessor:
             protecode_client=self.protecode_client,
         )
 
+        scan_result = self.protecode_client.wait_for_scan_result(
+            product_id=scan_result.product_id(),
+        )
+
         seen_license_names = set()
         for affected_package in scan_result.components():
             for vulnerability in affected_package.vulnerabilities():
