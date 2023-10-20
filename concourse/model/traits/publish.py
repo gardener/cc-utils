@@ -443,7 +443,8 @@ class PublishTraitTransformer(TraitTransformer):
             if oci_builder is OciBuilder.KANIKO:
                 with open(concourse.paths.last_released_tag_file) as f:
                     last_tag = f.read().strip()
-                kaniko_image_ref = f'eu.gcr.io/gardener-project/cc/job-image-kaniko:{last_tag}'
+                prefix = 'europe-docker.pkg.dev/gardener-project/releases'
+                kaniko_image_ref = f'{prefix}/cicd/job-image-kaniko:{last_tag}'
             elif oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
                 kaniko_image_ref = None
             else:

@@ -37,7 +37,7 @@ Run `.ci/install_git_hooks` to register recommended git hooks.
 ### Consume from Container Image
 
 A copy of cc-utils is contained in the default container image in which gardener
-CI/CD jobs are run (`eu.gcr.io/gardener-project/cc/job-image`):
+CI/CD jobs are run (`europe-docker.pkg.dev/gardener-project/releases/cicd/job-image`):
 
 - `gardener-ci` is available from PATH
 

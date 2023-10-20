@@ -119,8 +119,7 @@ cc-utils:
           oci-builder: 'docker-buildx'
           dockerimages:
             job-image:
-              registry: 'docker_io_write'
-              image: 'eu.gcr.io/gardener-project/cc/job-image'
+              image: 'europe-docker.pkg.dev/gardener-project/releases/cicd/job-image'
               dockerfile: 'Dockerfile'
               tag_as_latest: True
               inputs:
@@ -140,8 +139,7 @@ cc-utils:
                     integrity_requirement: 'high'
                     availability_requirement: 'low'
             kaniko-image:
-              registry: 'gcr-readwrite'
-              image: 'eu.gcr.io/gardener-project/cc/job-image-kaniko'
+              image: 'europe-docker.pkg.dev/gardener-project/releases/cicd/kaniko-image'
               dockerfile: 'Dockerfile.kaniko'
               tag_as_latest: True
               resource_labels:

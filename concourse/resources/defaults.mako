@@ -16,7 +16,7 @@ if platform:
     job_image_tag = f'{job_image_tag}-{platform.normalised_oci_platform_tag_suffix}'
 
 # registry_cfg must be of type ContainerRegistryConfig (cc-utils)
-repository = 'eu.gcr.io/gardener-project/cc/job-image'
+repository = 'europe-docker.pkg.dev/gardener-project/releases/cicd/job-image'
 registry_cfg = mcr.find_config(image_reference=repository)
 %>
 ${task_image_resource(
