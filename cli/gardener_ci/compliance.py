@@ -105,7 +105,7 @@ def diff(
     print('retrieving component-descriptors (might take a few seconds)')
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        default_ctx_repo=cm.OciRepositoryContext(
+        default_ctx_repo=cm.OciOcmRepository(
             baseUrl=parsed.ctx_repo_url,
         ),
         cache_dir=cache_dir,

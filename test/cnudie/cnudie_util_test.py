@@ -269,7 +269,7 @@ def test_label_usage():
         componentReferences=[],
         labels=[],
         repositoryContexts=[
-            cm.OciRepositoryContext(
+            cm.OciOcmRepository(
                 baseUrl='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/landscapes',
                 type='ociRegistry',
             ),
@@ -306,7 +306,7 @@ def test_label_usage():
         componentReferences=[],
         labels=[],
         repositoryContexts=[
-            cm.OciRepositoryContext(
+            cm.OciOcmRepository(
                 baseUrl='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/landscapes',
                 type='ociRegistry',
             ),

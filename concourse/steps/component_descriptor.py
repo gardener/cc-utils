@@ -87,7 +87,7 @@ def base_component_descriptor_v2(
         name=component_name_v2,
         version=effective_version,
         repositoryContexts=[
-          cm.OciRepositoryContext(
+          cm.OciOcmRepository(
             baseUrl=ctx_repository_base_url,
             type=cm.AccessType.OCI_REGISTRY,
           )

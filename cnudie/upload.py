@@ -20,7 +20,7 @@ class UploadMode(enum.StrEnum):
 def upload_component_descriptor(
     component_descriptor: cm.ComponentDescriptor | cm.Component,
     on_exist:UploadMode|str=UploadMode.SKIP,
-    ocm_repository: cm.OciRepositoryContext | str = None,
+    ocm_repository: cm.OciOcmRepository | str = None,
     oci_client: oci.client.Client=None,
 ):
     if not oci_client:
@@ -41,8 +41,8 @@ def upload_component_descriptor(
 
     if ocm_repository:
         if isinstance(ocm_repository, str):
-            ocm_repository = cm.OciRepositoryContext(baseUrl=ocm_repository)
-        elif isinstance(ocm_repository, cm.OciRepositoryContext):
+            ocm_repository = cm.OciOcmRepository(baseUrl=ocm_repository)
+        elif isinstance(ocm_repository, cm.OciOcmRepository):
             pass
         else:
             raise TypeError(type(ocm_repository))

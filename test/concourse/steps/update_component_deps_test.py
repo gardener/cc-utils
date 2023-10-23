@@ -41,7 +41,7 @@ class UpdateComponentDependenciesStepTest(unittest.TestCase):
                 'component_name': 'github.com/org/repo_name',
             },
         )
-        self.component_descriptor_trait.ctx_repository = lambda: cm.OciRepositoryContext(
+        self.component_descriptor_trait.ctx_repository = lambda: cm.OciOcmRepository(
             baseUrl='dummy-base-url',
         )
 

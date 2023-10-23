@@ -433,12 +433,12 @@ class Resource(Artifact, LabelMethodsMixin):
 
 
 @dc(frozen=True, kw_only=True)
-class RepositoryContext:
+class OcmRepository:
     type: AccessTypeOrStr
 
 
 @dc(frozen=True, kw_only=True)
-class OciRepositoryContext(RepositoryContext):
+class OciOcmRepository(OcmRepository):
     baseUrl: str
     subPath: typing.Optional[str] = None
     type: AccessTypeOrStr = AccessType.OCI_REGISTRY
@@ -481,6 +481,11 @@ class OciRepositoryContext(RepositoryContext):
         return f'{self.component_oci_ref(name)}:{version}'
 
 
+# XXX remove type-aliases after renaming all usages of old names
+RepositoryContext = OcmRepository
+OciRepositoryContext = OciOcmRepository
+
+
 @dc
 class Source(Artifact, LabelMethodsMixin):
     name: str
@@ -500,7 +505,7 @@ class Component(LabelMethodsMixin):
     name: str     # must be valid URL w/o schema
     version: str  # relaxed semver
 
-    repositoryContexts: typing.List[OciRepositoryContext]
+    repositoryContexts: typing.List[OciOcmRepository]
     provider: typing.Union[str, dict]
 
     sources: typing.List[Source]

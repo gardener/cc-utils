@@ -606,8 +606,8 @@ def process_images(
 
     def append_ctx_repo(ctx_base_url, component):
         if isinstance(ctx_base_url, str):
-            ocm_repo = cm.OciRepositoryContext(baseUrl=ctx_base_url)
-        elif isinstance(ctx_base_url, cm.OciRepositoryContext):
+            ocm_repo = cm.OciOcmRepository(baseUrl=ctx_base_url)
+        elif isinstance(ctx_base_url, cm.OciOcmRepository):
             ocm_repo = ctx_base_url
         else:
             raise TypeError(ctx_base_url)

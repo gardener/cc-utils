@@ -254,7 +254,7 @@ if snapshot_ctx_repository_base_url:
       ci.util.parse_yaml_file(v2_outfile)
     )
     if ctx_repository_base_url != snapshot_ctx_repository_base_url:
-      repo_ctx = cm.OciRepositoryContext(
+      repo_ctx = cm.OciOcmRepository(
         baseUrl=snapshot_ctx_repository_base_url,
         type=cm.AccessType.OCI_REGISTRY,
       )

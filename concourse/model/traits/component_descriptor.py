@@ -328,8 +328,8 @@ class ComponentDescriptorTrait(Trait):
             return snapshot_repo_cfg.base_url()
 
     @property
-    def ocm_repository(self) -> cm.OciRepositoryContext:
-        ocm_repo_name = self.raw.get(
+    def ocm_repository(self) -> cm.OciOcmRepository:
+        ocm_repo = self.raw.get(
             'ocm_repository',
             self.raw.get('ctx_repository'),
         )
@@ -343,7 +343,7 @@ class ComponentDescriptorTrait(Trait):
 
         ctx_repo_cfg: model.ctx_repository.CtxRepositoryCfg
 
-        return cm.OciRepositoryContext(
+        return cm.OciOcmRepository(
             baseUrl=ctx_repo_cfg.base_url(),
         )
 

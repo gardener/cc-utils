@@ -60,8 +60,8 @@ def test_component():
         name='component-name',
         version='1.2.3',
         repositoryContexts=[
-            cm.OciRepositoryContext(baseUrl='old-ctx-url'),
-            cm.OciRepositoryContext(baseUrl='current-ctx-url'),
+            cm.OciOcmRepository(baseUrl='old-ctx-url'),
+            cm.OciOcmRepository(baseUrl='current-ctx-url'),
         ],
         provider=None,
         sources=(),

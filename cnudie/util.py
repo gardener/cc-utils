@@ -46,7 +46,7 @@ def to_component_id(
 
 def to_component_id_and_repository_url(
     component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
-    repository: cm.OciRepositoryContext|str=None,
+    repository: cm.OciOcmRepository|str=None,
 ):
     if isinstance(component, str):
         name, version = component.rsplit(':', 1)
@@ -64,19 +64,19 @@ def to_component_id_and_repository_url(
         component: cm.Component
         repository = component.current_repository_ctx()
 
-    if isinstance(repository, cm.OciRepositoryContext):
+    if isinstance(repository, cm.OciOcmRepository):
         repo_base_url = repository.baseUrl
     elif isinstance(repository, str):
         repo_base_url = repository
     else:
-        raise ValueError(f'only OciRepositoryContext is supported - got: {repository=}')
+        raise ValueError(f'only OciOcmRepository is supported - got: {repository=}')
 
     return component, repo_base_url
 
 
 def oci_ref(
     component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
-    repository: cm.OciRepositoryContext|str=None,
+    repository: cm.OciOcmRepository|str=None,
 ) -> om.OciImageReference:
     component, repo_base_url = to_component_id_and_repository_url(
         component=component,
@@ -159,7 +159,7 @@ def oci_artefact_reference(
             | str # 'name:version'
             | tuple[str, str] # (name, version)
         ),
-        ocm_repository: str | cm.OciRepositoryContext = None
+        ocm_repository: str | cm.OciOcmRepository = None
 ) -> str:
     if isinstance(component, cm.Component):
         if not ocm_repository:
@@ -190,8 +190,8 @@ def oci_artefact_reference(
     if not ocm_repository:
         raise ValueError('ocm_repository must be given unless a Component is passed.')
     elif isinstance(ocm_repository, str):
-        repo_ctx = cm.OciRepositoryContext(baseUrl=ocm_repository)
-    elif isinstance(ocm_repository, cm.OciRepositoryContext):
+        repo_ctx = cm.OciOcmRepository(baseUrl=ocm_repository)
+    elif isinstance(ocm_repository, cm.OciOcmRepository):
         repo_ctx = ocm_repository
     else:
         raise TypeError(type(ocm_repository))
@@ -620,10 +620,10 @@ class OcmLookupMappingConfig:
     def iter_ocm_repositories(
         self,
         component_name: str,
-    ) -> typing.Generator[cm.OciRepositoryContext, None, None]:
+    ) -> typing.Generator[cm.OciOcmRepository, None, None]:
         for mapping in self.mappings:
             if mapping.matches(component_name):
-                yield cm.OciRepositoryContext(baseUrl=mapping.ocm_repo_url)
+                yield cm.OciOcmRepository(baseUrl=mapping.ocm_repo_url)
 
     def to_ocm_software_config(
         self,

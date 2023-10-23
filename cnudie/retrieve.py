@@ -31,12 +31,12 @@ _cache_dir = _cfg.ctx.component_descriptor_cache_dir
 ComponentName = str | tuple[str, str] | cm.Component | cm.ComponentIdentity
 
 ComponentDescriptorLookupById = typing.Callable[
-    [cm.ComponentIdentity, cm.RepositoryContext],
+    [cm.ComponentIdentity, cm.OcmRepository],
     cm.ComponentDescriptor
 ]
 
 VersionLookupById = typing.Callable[
-    [cm.ComponentIdentity, cm.RepositoryContext],
+    [cm.ComponentIdentity, cm.OcmRepository],
     typing.Sequence[str]
 ]
 
@@ -49,7 +49,7 @@ OcmRepositoryCfg = \
 
 OcmRepositoryLookup = typing.Callable[
     [ComponentName],
-    typing.Generator[cm.OciRepositoryContext | str, None, None],
+    typing.Generator[cm.OciOcmRepository | str, None, None],
 ]
 
 
@@ -63,7 +63,7 @@ def _iter_ocm_repositories(
     elif isinstance(component, cm.Component):
         component = component.name
 
-    if isinstance(repository_cfg, cm.OciRepositoryContext):
+    if isinstance(repository_cfg, cm.OciOcmRepository):
         yield repository_cfg
         return
 
@@ -140,7 +140,7 @@ class WriteBack:
 
 
 def in_memory_cache_component_descriptor_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.OcmRepository=None,
     cache_ctor: cachetools.Cache=cachetools.LRUCache,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     **cache_kwargs,
@@ -170,7 +170,7 @@ def in_memory_cache_component_descriptor_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=default_ctx_repo,
         ocm_repository_lookup=ocm_repository_lookup,
     ):
         if ctx_repo:
@@ -185,7 +185,7 @@ def in_memory_cache_component_descriptor_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciRepositoryContext(
+                ocm_repo = cm.OciOcmRepository(
                     type=cm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                 )
@@ -202,7 +202,7 @@ def in_memory_cache_component_descriptor_lookup(
 
 
 def file_system_cache_component_descriptor_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     cache_dir: str=_cache_dir,
 ) -> ComponentDescriptorLookupById:
@@ -253,7 +253,7 @@ def file_system_cache_component_descriptor_lookup(
 
     def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: cm.RepositoryContext|str=default_ctx_repo,
+        ctx_repo: cm.OcmRepository|str=default_ctx_repo,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
     ):
         if ctx_repo:
@@ -270,12 +270,12 @@ def file_system_cache_component_descriptor_lookup(
                 raise ValueError(ocm_repo)
 
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciRepositoryContext(
+                ocm_repo = cm.OciOcmRepository(
                     type=cm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                 )
 
-            if not isinstance(ocm_repo, cm.OciRepositoryContext):
+            if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             component_id = cnudie.util.to_component_id(component_id)
@@ -297,7 +297,7 @@ def file_system_cache_component_descriptor_lookup(
 
 
 def delivery_service_component_descriptor_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     delivery_client=None,
     default_absent_ok=True,
@@ -320,7 +320,7 @@ def delivery_service_component_descriptor_lookup(
     def lookup(
         component_id: cm.ComponentIdentity,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=default_ctx_repo,
         absent_ok=default_absent_ok,
     ):
         component_id = cnudie.util.to_component_id(component_id)
@@ -335,12 +335,12 @@ def delivery_service_component_descriptor_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciRepositoryContext(
+                ocm_repo = cm.OciOcmRepository(
                     type=cm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                 )
 
-            if not isinstance(ocm_repo, cm.OciRepositoryContext):
+            if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             try:
@@ -362,7 +362,7 @@ def delivery_service_component_descriptor_lookup(
 
 
 def oci_component_descriptor_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client | typing.Callable[[], oc.Client]=None,
     default_absent_ok=True,
@@ -383,7 +383,7 @@ def oci_component_descriptor_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=default_ctx_repo,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
@@ -409,12 +409,12 @@ def oci_component_descriptor_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciRepositoryContext(
+                ocm_repo = cm.OciOcmRepository(
                     type=cm.OciAccess,
                     baseUrl=ocm_repo,
                 )
 
-            if not isinstance(ocm_repo, cm.OciRepositoryContext):
+            if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             target_ref = ci.util.urljoin(
@@ -485,7 +485,7 @@ def oci_component_descriptor_lookup(
 
 
 def version_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client=None,
     default_absent_ok=True,
@@ -497,7 +497,7 @@ def version_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.RepositoryContext=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=default_ctx_repo,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
     ):
@@ -514,11 +514,11 @@ def version_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciRepositoryContext(
+                ocm_repo = cm.OciOcmRepository(
                     type=cm.OciAccess,
                     baseUrl=ocm_repo,
                 )
-            if not isinstance(ocm_repo, cm.OciRepositoryContext):
+            if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             image_tags = component_versions(
@@ -544,7 +544,7 @@ def version_lookup(
 
 def composite_component_descriptor_lookup(
     lookups: typing.Tuple[ComponentDescriptorLookupById, ...],
-    default_ctx_repo: cm.RepositoryContext | str=None,
+    default_ctx_repo: cm.OcmRepository | str=None,
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -557,7 +557,7 @@ def composite_component_descriptor_lookup(
     '''
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OciRepositoryContext|str=default_ctx_repo,
+        ctx_repo: cm.OciOcmRepository|str=default_ctx_repo,
         absent_ok=default_absent_ok,
     ):
         component_id = cnudie.util.to_component_id(component_id)
@@ -583,7 +583,7 @@ def composite_component_descriptor_lookup(
             return
 
         if isinstance(ctx_repo, str):
-            ctx_repo = cm.OciRepositoryContext(
+            ctx_repo = cm.OciOcmRepository(
                 type=cm.OciAccess,
                 baseUrl=ctx_repo,
             )
@@ -601,7 +601,7 @@ def composite_component_descriptor_lookup(
 
 
 def create_default_component_descriptor_lookup(
-    default_ctx_repo: cm.RepositoryContext=None,
+    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     cache_dir: str=_cache_dir,
     oci_client: oc.Client=None,
@@ -751,16 +751,16 @@ def component_diff(
 
 def component_versions(
     component_name: str,
-    ctx_repo: cm.RepositoryContext,
+    ctx_repo: cm.OcmRepository,
     oci_client: oc.Client=None,
 ) -> typing.Sequence[str]:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+    if not isinstance(ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
-    ctx_repo: cm.OciRepositoryContext
+    ctx_repo: cm.OciOcmRepository
     oci_ref = ctx_repo.component_oci_ref(component_name)
 
     return oci_client.tags(image_reference=oci_ref)
@@ -768,7 +768,7 @@ def component_versions(
 
 def greatest_component_version(
     component_name: str,
-    ctx_repo: cm.RepositoryContext=None,
+    ctx_repo: cm.OcmRepository=None,
     oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False,
     version_lookup: VersionLookupById=None,
@@ -778,7 +778,7 @@ def greatest_component_version(
         raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
 
     if ctx_repo:
-        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        if not isinstance(ctx_repo, cm.OciOcmRepository):
             raise NotImplementedError(ctx_repo)
 
         if not oci_client:
@@ -806,7 +806,7 @@ def greatest_component_version(
 
 def greatest_component_versions(
     component_name: str,
-    ctx_repo: cm.RepositoryContext=None,
+    ctx_repo: cm.OcmRepository=None,
     max_versions: int = 5,
     greatest_version: str = None,
     oci_client: oc.Client = None,
@@ -818,7 +818,7 @@ def greatest_component_versions(
         raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
 
     if ctx_repo:
-        if not isinstance(ctx_repo, cm.OciRepositoryContext):
+        if not isinstance(ctx_repo, cm.OciOcmRepository):
             raise NotImplementedError(ctx_repo)
 
         if not oci_client:
@@ -867,10 +867,10 @@ def greatest_component_versions(
 def greatest_version_before(
     component_name: str,
     component_version: str,
-    ctx_repo: cm.RepositoryContext,
+    ctx_repo: cm.OcmRepository,
     oci_client: oc.Client=None,
 ) -> str | None:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+    if not isinstance(ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
@@ -893,12 +893,12 @@ def greatest_version_before(
 
 def greatest_component_version_with_matching_minor(
     component_name: str,
-    ctx_repo: cm.RepositoryContext,
+    ctx_repo: cm.OcmRepository,
     reference_version: str,
     ignore_prerelease_versions: bool=False,
     oci_client: oc.Client=None,
 ) -> str:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+    if not isinstance(ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
@@ -919,12 +919,12 @@ def greatest_component_version_with_matching_minor(
 
 def greatest_component_version_by_name(
     component_name: str,
-    ctx_repo: cm.RepositoryContext,
+    ctx_repo: cm.OcmRepository,
     ignore_prerelease_versions: bool=False,
     oci_client: oc.Client=None,
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ) -> cm.Component:
-    if not isinstance(ctx_repo, cm.OciRepositoryContext):
+    if not isinstance(ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:

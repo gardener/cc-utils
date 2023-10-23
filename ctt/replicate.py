@@ -22,9 +22,9 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     src_name: str,
     src_version: str,
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
-    src_ctx_repo: cm.RepositoryContext,
+    src_ctx_repo: cm.OciOcmRepository,
 ):
-    if not isinstance(src_ctx_repo, cm.OciRepositoryContext):
+    if not isinstance(src_ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(src_ctx_repo)
 
     client = ccc.oci.oci_client()

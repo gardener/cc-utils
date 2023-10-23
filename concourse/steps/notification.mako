@@ -199,7 +199,7 @@ if not email_cfg.get('mail_body'):
         task_name='${job_step.name}',
     )
 
-ctx_repo = cm.OciRepositoryContext(
+ctx_repo = cm.OciOcmRepository(
   baseUrl='${ocm_repo_url}',
 )
 

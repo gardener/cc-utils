@@ -261,7 +261,7 @@ def _codeowners_parser_from_component_name(
     ctx_repo_url: str,
     branch_name='master',
 ):
-    ctx_repo = cm.OciRepositoryContext(baseUrl=ctx_repo_url)
+    ctx_repo = cm.OciOcmRepository(baseUrl=ctx_repo_url)
 
     component = cnudie.retrieve.greatest_component_version_by_name(
         component_name=component_name,

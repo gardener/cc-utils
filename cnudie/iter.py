@@ -74,7 +74,7 @@ def iter(
     recursion_depth: int=-1,
     prune_unique: bool=True,
     node_filter: typing.Callable[[Node], bool]=None,
-    ctx_repo: cm.RepositoryContext | str=None,
+    ctx_repo: cm.OcmRepository | str=None,
 ) -> typing.Generator[Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
@@ -90,7 +90,7 @@ def iter(
                             component dependencies
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
-    @param ctx_repo:     optional ctx_repo to be used to override in the lookup
+    @param ctx_repo:     optional OCM Repository to be used to override in the lookup
     '''
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component

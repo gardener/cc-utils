@@ -300,7 +300,7 @@ def base_component_descriptor(
             name=component_name,
             version=version,
             repositoryContexts=[
-                cm.OciRepositoryContext(
+                cm.OciOcmRepository(
                     type=cm.AccessType.OCI_REGISTRY,
                     baseUrl=ctx_repo,
                     subPath='',
