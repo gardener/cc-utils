@@ -19,6 +19,7 @@ cc-utils:
     traits:
       version: ~
       component_descriptor:
+        ocm_repository: cloud-docker.pkg.dev/gardener-project/snapshots
   jobs:
     head-update:
       steps:
@@ -109,6 +110,8 @@ cc-utils:
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
+        component_descriptor:
+          ocm_repository: cloud-docker.pkg.dev/gardener-project/releases
         version:
           preprocess: 'finalize'
           inject_effective_version: True
