@@ -376,3 +376,82 @@ def test_diff_label():
     with pytest.raises(RuntimeError) as re:
         label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert re != None
+
+def test_to_component_id():
+    base_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
+
+    test_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
+    assert cnudie.util.to_component_id(test_identity) == base_identity
+
+    test_component = cm.Component(
+        name='Foo',
+        version='1.2.3',
+        repositoryContexts=[],
+        provider='',
+        sources=[],
+        componentReferences=[],
+        resources=[],
+    )
+    assert cnudie.util.to_component_id(test_component) == base_identity
+
+    test_component_descriptor = cm.ComponentDescriptor(
+        meta=cm.Metadata(),
+        component=test_component,
+        signatures=[],
+    )
+    assert cnudie.util.to_component_id(test_component_descriptor) == base_identity
+
+    test_component_reference = cm.ComponentReference(
+        componentName='Foo', name='Bar', version='1.2.3',
+    )
+    assert cnudie.util.to_component_id(test_component_reference) == base_identity
+
+    test_str = 'Foo:1.2.3'
+    assert cnudie.util.to_component_id(test_str) == base_identity
+
+    test_str = 'Foo'
+    with pytest.raises(ValueError):
+        cnudie.util.to_component_id(test_str)
+
+    test_tuple = 'Foo', '1.2.3'
+    assert cnudie.util.to_component_id(test_tuple) == base_identity
+
+
+def test_to_component_name():
+    base_name = 'Foo'
+
+    test_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
+    assert cnudie.util.to_component_name(test_identity) == base_name
+
+    test_component = cm.Component(
+        name='Foo',
+        version='1.2.3',
+        repositoryContexts=[],
+        provider='',
+        sources=[],
+        componentReferences=[],
+        resources=[],
+    )
+    assert cnudie.util.to_component_name(test_component) == base_name
+
+    test_component_descriptor = cm.ComponentDescriptor(
+        meta=cm.Metadata(),
+        component=test_component,
+        signatures=[],
+    )
+    assert cnudie.util.to_component_name(test_component_descriptor) == base_name
+
+    test_component_reference = cm.ComponentReference(
+        componentName='Foo', name='Bar', version='1.2.3',
+    )
+    assert cnudie.util.to_component_name(test_component_reference) == base_name
+
+    test_str = 'Foo:1.2.3'
+    assert cnudie.util.to_component_name(test_str) == base_name
+
+    test_str = 'Foo:Bar:Baz'
+    with pytest.raises(ValueError):
+        cnudie.util.to_component_name(test_str)
+
+    test_tuple = 'Foo', '1.2.3'
+    assert cnudie.util.to_component_name(test_tuple) == base_name
