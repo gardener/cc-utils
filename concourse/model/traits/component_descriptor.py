@@ -166,13 +166,21 @@ ATTRIBUTES = (
             If not configured, the CICD-landscape's default ctx will be used.
         '''
     ),
-    AttributeSpec.optional(
+    AttributeSpec.deprecated(
         name='ctx_repository',
         type=str,
         default=None, # if not explicitly configured, will be injected from cicd-default
         doc='''
             the component descriptor context repository cfg name (for component descriptor v2).
             If not configured, the CICD-landscape's default ctx will be used.
+        '''
+    ),
+    AttributeSpec.optional(
+        name='ocm_repository',
+        type=str,
+        default=None, # if not explicitly configured, will be injected from cicd-default
+        doc='''\
+            the Component Descriptor OCM Repository url used for publishing.
         '''
     ),
     AttributeSpec.optional(
@@ -319,13 +327,17 @@ class ComponentDescriptorTrait(Trait):
         if snapshot_repo_cfg := self.snapshot_ctx_repository():
             return snapshot_repo_cfg.base_url()
 
-    def ctx_repository(self) -> cm.OciRepositoryContext:
-        ctx_repo_name = self.raw.get('ctx_repository')
+    @property
+    def ocm_repository(self) -> cm.OciRepositoryContext:
+        ocm_repo_name = self.raw.get(
+            'ocm_repository',
+            self.raw.get('ctx_repository'),
+        )
         # XXX hack for unittests
         if not self.cfg_set:
             return None
-        if ctx_repo_name:
-            ctx_repo_cfg = self.cfg_set.ctx_repository(ctx_repo_name)
+        if ocm_repo_name:
+            ctx_repo_cfg = self.cfg_set.ctx_repository(ocm_repo_name)
         else:
             ctx_repo_cfg = self.cfg_set.ctx_repository()
 
@@ -336,7 +348,7 @@ class ComponentDescriptorTrait(Trait):
         )
 
     def ctx_repository_base_url(self):
-        ctx_repo = self.ctx_repository()
+        ctx_repo = self.ocm_repository
         # XXX hack for unittsts
         if ctx_repo is None:
             return None

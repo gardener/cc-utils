@@ -47,17 +47,10 @@ if job_variant.has_main_repository():
   )
   path_to_main_repository = job_variant.main_repository().resource_name()
 
-if job_variant.has_trait('component_descriptor'):
-  component_name = job_variant.trait('component_descriptor').component_name()
-else:
-  component_name = None
 if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
-  ctx_repo = component_descriptor_trait.ctx_repository()
+  ocm_repo_url = component_descriptor_trait.ocm_repository.baseUrl
 else:
-  # fallback to default ctx-repo
-  ctx_repo = cm.OciRepositoryContext(
-    baseUrl=cfg_set.ctx_repository().base_url(),
-  )
+  ocm_repo_url = baseUrl=cfg_set.ctx_repository().base_url()
 %>
 import logging
 import sys
@@ -207,7 +200,7 @@ if not email_cfg.get('mail_body'):
     )
 
 ctx_repo = cm.OciRepositoryContext(
-  baseUrl='${ctx_repo.baseUrl}',
+  baseUrl='${ocm_repo_url}',
 )
 
 ## Finally, determine recipients for all component names gathered
