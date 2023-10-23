@@ -212,26 +212,27 @@ ATTRIBUTES = (
         default=[], # cannot define a proper default here because this depends on another (optional)
                     # config-value. At least not in a way that would be represented in our
                     # rendered documentation.
-        type=typing.List[cnudie.util.OcmLookupMapping],
+        type=typing.List[cnudie.util.OcmResolverConfig],
         doc='''
             used to explicitly configure where to lookup component descriptors. Example:
 
             .. code-block:: yaml
 
-                - ocm_repo_url: ocm_repo_url
+                - repository: ocm_repo_url
                   prefix: github.com/some-org/
-                - ocm_repo_url: ocm_repo_url
+                - repository: ocm_repo_url
                   prefix: github.com/another-org/
                   priority: 10 # default
-                - ocm_repo_url: another_ocm_repo_url
-                  component_names: github.com/yet-another-org/
+                - repository: another_ocm_repo_url
+                  prefix: github.com/yet-another-org/
 
             If not given, a default mapping will be applied that is equivalent to the following:
 
             .. code-block:: yaml
 
-                - ocm_repo_url: <ctx_repository_base_url>
+                - repository: <ctx_repository_base_url>
                   prefix: ''
+                  priority: 10
 
             .. note::
                 If multiple mappings match a component name, they will be tried in order of priority
@@ -380,9 +381,10 @@ class ComponentDescriptorTrait(Trait):
             return []
         if not (ocm_repository_mappings := self.raw['ocm_repository_mappings']):
             ocm_repository_mappings = [{
-                'ocm_repo_url': ctx_repository_url,
+                'repository': ctx_repository_url,
                 'prefix': '',
-                'use_for': 'readonly',
+                'priority': 10,
+
             }]
 
         return ocm_repository_mappings
