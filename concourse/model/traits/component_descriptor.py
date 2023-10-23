@@ -25,6 +25,7 @@ from gci.componentmodel import Label
 import ci.util
 import cnudie.util
 import gci.componentmodel as cm
+import model.base
 import version
 
 from concourse.model.job import (
@@ -181,6 +182,7 @@ ATTRIBUTES = (
         default=None, # if not explicitly configured, will be injected from cicd-default
         doc='''\
             the Component Descriptor OCM Repository url used for publishing.
+            instead of repository-url, may also be the name of a cfg-element.
         '''
     ),
     AttributeSpec.optional(
@@ -336,8 +338,20 @@ class ComponentDescriptorTrait(Trait):
         # XXX hack for unittests
         if not self.cfg_set:
             return None
-        if ocm_repo_name:
-            ctx_repo_cfg = self.cfg_set.ctx_repository(ocm_repo_name)
+
+        # ocm_repo might be:
+        # - a cfg-element-name (type: CtxRepositoryCfg)
+        # - a ocm-repository-url (type: str)
+        # - a OCM Repository (type: dict / gcm.OcmRepository
+
+        if ocm_repo:
+            try:
+                ctx_repo_cfg = self.cfg_set.ctx_repository(ocm_repo)
+            except model.base.ConfigElementNotFoundError:
+                # assume it is a ocm-repository-url
+                return cm.OciOcmRepository(
+                    baseUrl=ocm_repo,
+                )
         else:
             ctx_repo_cfg = self.cfg_set.ctx_repository()
 
