@@ -222,7 +222,14 @@ If not configured, the CICD-landscape’s default ctx will be used.</p></td>
 <td><p>the component descriptor context repository cfg name (for component descriptor v2).
 If not configured, the CICD-landscape’s default ctx will be used.</p></td>
 </tr>
-<tr class="row-even"><td><p>snapshot_ctx_repository</p></td>
+<tr class="row-even"><td><p>ocm_repository</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>the Component Descriptor OCM Repository url used for publishing.
+instead of repository-url, may also be the name of a cfg-element.</p></td>
+</tr>
+<tr class="row-odd"><td><p>snapshot_ctx_repository</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
@@ -230,7 +237,7 @@ If not configured, the CICD-landscape’s default ctx will be used.</p></td>
 i.e. component descriptors that are not for release-versions.
 If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 </tr>
-<tr class="row-odd"><td><p>component_labels</p></td>
+<tr class="row-even"><td><p>component_labels</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -239,7 +246,7 @@ If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 <td><p>List[Label]</p></td>
 <td><p>a list of labels to add to the component in the base Component Descriptor</p></td>
 </tr>
-<tr class="row-even"><td><p>inputs</p></td>
+<tr class="row-odd"><td><p>inputs</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -248,7 +255,7 @@ If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 <td><p>List[StepInput]</p></td>
 <td><p>inputs to expose to component-descriptor step</p></td>
 </tr>
-<tr class="row-odd"><td><p>ocm_repository_mappings</p></td>
+<tr class="row-even"><td><p>ocm_repository_mappings</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
