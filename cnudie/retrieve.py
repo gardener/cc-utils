@@ -706,6 +706,10 @@ def components(
                 ),
             )
 
+            if not resolved_component_descriptor:
+                logger.error(f'failed to find {component_id=}')
+                raise RuntimeError(component_id, component_descriptor_lookup)
+
             yield from resolve_component_dependencies(
                 component=resolved_component_descriptor.component,
             )
