@@ -590,10 +590,13 @@ class OcmGenericConfig:
 @dataclasses.dataclass
 class OcmLookupMapping:
     ocm_repo_url: str
-    prefix: str
+    prefix: str | None = ''
     priority: int | None = 10
 
     def matches(self, component):
+        if not self.prefix:
+            return True
+
         if isinstance(component, cm.Component):
             component = component.name
         elif isinstance(component, cm.ComponentIdentity):
