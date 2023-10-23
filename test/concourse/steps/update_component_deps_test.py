@@ -80,7 +80,7 @@ def test_determine_reference_versions():
     greatest_version = '2.1.1'
     component_name = 'example.org/foo/bar'
     mapping_config = cnudie.util.OcmLookupMappingConfig(
-        [cnudie.util.OcmLookupMapping(ocm_repo_url='foo', prefix='', priority=10)]
+        [cnudie.util.OcmResolverConfig(repository='foo', prefix='', priority=10)]
     )
 
     ocm_lookup = cnudie.retrieve.in_memory_cache_component_descriptor_lookup(
