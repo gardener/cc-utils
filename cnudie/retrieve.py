@@ -675,7 +675,9 @@ def components(
 
     if not component_descriptor_lookup:
         component_descriptor_lookup = create_default_component_descriptor_lookup(
-            default_ctx_repo=component.current_repository_ctx(),
+            ocm_repository_lookup=ocm_repository_lookup(
+                component.current_repository_ctx(),
+            ),
         )
 
     _visited_component_versions = [
