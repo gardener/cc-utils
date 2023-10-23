@@ -527,6 +527,10 @@ def create_upgrade_pr(
     if merge_policy is MergePolicy.MANUAL:
         return pull_request_util._pr_to_upgrade_pull_request(pull_request)
 
+    logger.info(
+        f"Merging upgrade-pr #{pull_request.number} ({merge_method=!s}) on branch "
+        f"'{upgrade_branch_name}' into branch '{githubrepobranch.branch()}'."
+    )
     if merge_method is MergeMethod.MERGE:
         pull_request.merge(merge_method='merge')
     elif merge_method is MergeMethod.REBASE:
