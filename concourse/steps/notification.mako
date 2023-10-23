@@ -50,7 +50,7 @@ if job_variant.has_main_repository():
 if job_variant.has_trait('component_descriptor'):
   component_name = job_variant.trait('component_descriptor').component_name()
 else:
-  component_name = None # todo: fallback to main repository
+  component_name = None
 if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
   ctx_repo = component_descriptor_trait.ctx_repository()
 else:
