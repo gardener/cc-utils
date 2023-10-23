@@ -11,31 +11,40 @@ import gci.componentmodel as cm
 import model.container_registry
 import oci.model as om
 
-ComponentId = cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str | tuple[str, str]
-ComponentName = cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str
+ComponentId = (
+    cm.Component
+    | cm.ComponentDescriptor
+    | cm.ComponentIdentity
+    | cm.ComponentReference
+    | str
+    | tuple[str, str]
+)
+ComponentName = (
+    cm.Component
+    | cm.ComponentReference
+    | cm.ComponentDescriptor
+    | cm.ComponentIdentity
+    | str
+)
 
 
 def to_component_id(
     component: ComponentId, /
 ) -> cm.ComponentIdentity:
-    if isinstance(component, cm.ComponentDescriptor):
-        component = component.component
-    if isinstance(component, cm.Component):
-        return cm.ComponentIdentity(
-            name=component.name,
-            version=component.version,
-        )
     if isinstance(component, cm.ComponentIdentity):
         return component
 
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+        # fall through to next case
+    if isinstance(component, cm.Component):
+        name = component.name
+        version = component.version
     if isinstance(component, cm.ComponentReference):
-        component: cm.ComponentReference
         name = component.componentName
         version = component.version
-
     if isinstance(component, str):
         name, version = component.split(':', 1)
-
     if isinstance(component, tuple):
         name, version = component
 
