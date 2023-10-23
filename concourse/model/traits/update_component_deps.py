@@ -44,7 +44,7 @@ class MergePolicy(enum.Enum):
     AUTO_MERGE = 'auto_merge'
 
 
-class MergeMethod(enum.Enum):
+class MergeMethod(enum.StrEnum):
     MERGE = 'merge'
     REBASE = 'rebase'
     SQUASH = 'squash'
