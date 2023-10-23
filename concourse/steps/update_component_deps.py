@@ -378,7 +378,6 @@ def create_upgrade_pr(
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
-    version_lookup,
     ocm_lookup,
     merge_policy: MergePolicy,
     merge_method: MergeMethod,

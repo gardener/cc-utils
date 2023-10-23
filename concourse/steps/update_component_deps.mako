@@ -180,7 +180,6 @@ for from_ref, to_version in determine_upgrade_prs(
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
         ocm_lookup=ocm_lookup,
-        version_lookup=version_lookup,
         merge_policy=merge_policy,
         merge_method=merge_method,
 % if after_merge_callback:
