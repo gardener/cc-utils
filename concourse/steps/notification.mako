@@ -50,7 +50,7 @@ if job_variant.has_main_repository():
 if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
   ocm_repo_url = component_descriptor_trait.ocm_repository.baseUrl
 else:
-  ocm_repo_url = baseUrl=cfg_set.ctx_repository().base_url()
+  ocm_repo_url = cfg_set.ctx_repository().base_url()
 %>
 import logging
 import sys
