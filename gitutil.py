@@ -145,7 +145,7 @@ class GitHelper:
             name=random_str(),
             url=url,
         )
-        logger.info(f'autenticated {remote.name=} using {protocol=}')
+        logger.debug(f'authenticated {remote.name=} using {protocol=}')
 
         try:
             yield (cmd_env, remote)
