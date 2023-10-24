@@ -497,7 +497,7 @@ def version_lookup(
         raise ValueError(oci_client)
 
     def lookup(
-        component_id: cm.ComponentName,
+        component_id: ComponentName,
         ctx_repo: cm.OcmRepository=default_ctx_repo,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
