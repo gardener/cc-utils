@@ -36,8 +36,8 @@ ComponentDescriptorLookupById = typing.Callable[
     cm.ComponentDescriptor
 ]
 
-VersionLookupById = typing.Callable[
-    [cm.ComponentIdentity, cm.OcmRepository],
+VersionLookupByComponent = typing.Callable[
+    [ComponentName, cm.OcmRepository],
     typing.Sequence[str]
 ]
 
@@ -490,25 +490,24 @@ def version_lookup(
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client=None,
     default_absent_ok=True,
-) -> VersionLookupById:
+) -> VersionLookupByComponent:
     if not oci_client:
         oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
 
     def lookup(
-        component_id: cm.ComponentIdentity,
+        component_id: cm.ComponentName,
         ctx_repo: cm.OcmRepository=default_ctx_repo,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
     ):
-        component_id = cnudie.util.to_component_id(component_id)
-        component_name = component_id.name.lower()
+        component_name = cnudie.util.to_component_name(component_id)
         if ctx_repo:
             ocm_repos = (ctx_repo, )
         else:
             ocm_repos = iter_ocm_repositories(
-                component_id,
+                component_name,
                 ocm_repository_lookup,
                 default_ctx_repo,
             )
@@ -778,7 +777,7 @@ def greatest_component_version(
     ctx_repo: cm.OcmRepository=None,
     oci_client: oc.Client=None,
     ignore_prerelease_versions: bool=False,
-    version_lookup: VersionLookupById=None,
+    version_lookup: VersionLookupByComponent=None,
     invalid_semver_ok: bool=False,
 ) -> str:
     if not ctx_repo and not version_lookup:
@@ -819,7 +818,7 @@ def greatest_component_versions(
     greatest_version: str = None,
     oci_client: oc.Client = None,
     ignore_prerelease_versions: bool = False,
-    version_lookup: VersionLookupById=None,
+    version_lookup: VersionLookupByComponent=None,
     invalid_semver_ok: bool=False,
 ) -> list[str]:
     if not ctx_repo and not version_lookup:
