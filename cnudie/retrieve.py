@@ -891,7 +891,7 @@ def greatest_component_version_with_matching_minor(
         oci_client=oci_client,
     )
 
-    return version.find_latest_version_with_matching_minor(
+    return version.greatest_version_with_matching_minor(
         reference_version=reference_version,
         versions=versions,
         ignore_prerelease_versions=ignore_prerelease_versions,

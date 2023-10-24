@@ -390,7 +390,7 @@ def find_latest_version(
 greatest_version = find_latest_version
 
 
-def find_latest_version_with_matching_major(
+def greatest_version_with_matching_major(
     reference_version: Union[semver.VersionInfo, str],
     versions: Iterable[Union[semver.VersionInfo, str]],
     ignore_prerelease_versions: bool=False,
@@ -422,7 +422,7 @@ def find_latest_version_with_matching_major(
     return latest_candidate_str
 
 
-def find_latest_version_with_matching_minor(
+def greatest_version_with_matching_minor(
     reference_version: Union[semver.VersionInfo, str],
     versions: Iterable[Union[semver.VersionInfo, str]],
     ignore_prerelease_versions: bool=False,
@@ -455,6 +455,10 @@ def find_latest_version_with_matching_minor(
                 latest_candidate_str = candidate
 
     return latest_candidate_str
+
+
+# alias for backwards-compatibility
+find_latest_version_with_matching_minor = greatest_version_with_matching_minor
 
 
 def find_smallest_version_with_matching_minor(
