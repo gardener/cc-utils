@@ -331,10 +331,7 @@ class ComponentDescriptorTrait(Trait):
 
     @property
     def ocm_repository(self) -> cm.OciOcmRepository:
-        ocm_repo = self.raw.get(
-            'ocm_repository',
-            self.raw.get('ctx_repository'),
-        )
+        ocm_repo = self.raw.get('ocm_repository') or self.raw.get('ctx_repository')
         # XXX hack for unittests
         if not self.cfg_set:
             return None
