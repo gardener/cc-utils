@@ -111,16 +111,12 @@ def ls(
     ocm_repo = next(ocm_repo_lookup(name))
 
     if greatest:
-        print(cnudie.retrieve.greatest_component_version(
-            component_name=name,
-            version_lookup=version_lookup,
+        print(version.greatest_version(
+            versions=version_lookup(name),
         ))
         return
 
-    versions = cnudie.retrieve.component_versions(
-        component_name=name,
-        ctx_repo=ocm_repo,
-    )
+    versions = version_lookup(name)
 
     for v in versions:
         if final:
@@ -144,10 +140,9 @@ def purge_old(
 
     ocm_repo = next(ocm_repo_lookup(name))
 
-    versions = cnudie.retrieve.component_versions(
-        component_name=name,
-        ctx_repo=ocm_repo,
-    )
+    version_lookup = cnudie.retrieve.version_lookup(ocm_repository_lookup=ocm_repo_lookup)
+
+    versions = version_lookup(name)
 
     if not final:
         versions = [

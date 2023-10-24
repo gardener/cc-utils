@@ -255,6 +255,7 @@ def main_source(
     component: cm.Component,
     absent_ok: bool=True,
 ) -> cm.ComponentSource:
+    component = to_component(component)
     for source in component.sources:
         if label := source.find_label('cloud.gardener/cicd/source'):
             if label.value.get('repository-classification') == 'main':

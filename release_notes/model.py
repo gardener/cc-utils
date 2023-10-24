@@ -11,6 +11,7 @@ import github3.pulls
 
 import cnudie.util
 import cnudie.retrieve
+import version
 
 logger = logging.getLogger(__name__)
 
@@ -265,16 +266,20 @@ def _source_component(
         # try to fetch cd for the parsed source repo. The actual version does not matter,
         # we're only interested in the components GithubAccess (we assume it does not
         # change).
-        ctx_repo = current_component.current_repository_ctx()
+        ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
+            current_component.current_repository_ctx(),
+        )
         component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-            default_ctx_repo=ctx_repo,
+            ocm_repository_lookup=ocm_repository_lookup,
+        )
+        version_lookup = cnudie.retrieve.version_lookup(
+            ocm_repository_lookup=ocm_repository_lookup,
         )
         source_component_descriptor = component_descriptor_lookup(
             gci.componentmodel.ComponentIdentity(
                 name=source_component_name,
-                version=cnudie.retrieve.greatest_component_version(
-                    component_name=source_component_name,
-                    ctx_repo=ctx_repo,
+                version=version.greatest_version(
+                    versions=version_lookup(source_component_name),
                     ignore_prerelease_versions=True,
                 ),
             ),

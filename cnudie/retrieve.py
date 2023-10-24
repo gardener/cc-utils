@@ -772,44 +772,6 @@ def component_versions(
     return oci_client.tags(image_reference=oci_ref)
 
 
-def greatest_component_version(
-    component_name: str,
-    ctx_repo: cm.OcmRepository=None,
-    oci_client: oc.Client=None,
-    ignore_prerelease_versions: bool=False,
-    version_lookup: VersionLookupByComponent=None,
-    invalid_semver_ok: bool=False,
-) -> str:
-    if not ctx_repo and not version_lookup:
-        raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
-
-    if ctx_repo:
-        if not isinstance(ctx_repo, cm.OciOcmRepository):
-            raise NotImplementedError(ctx_repo)
-
-        if not oci_client:
-            oci_client = ccc.oci.oci_client()
-
-        image_tags = component_versions(
-            component_name=component_name,
-            ctx_repo=ctx_repo,
-            oci_client=oci_client,
-        )
-    else:
-        image_tags = version_lookup(
-            component_id=cm.ComponentIdentity(
-                name=component_name,
-                version=None
-            ),
-        )
-
-    return version.find_latest_version(
-        versions=image_tags,
-        ignore_prerelease_versions=ignore_prerelease_versions,
-        invalid_semver_ok=invalid_semver_ok,
-    )
-
-
 @deprecated.deprecated # mv to delivery-service
 def greatest_component_versions(
     component_name: str,
@@ -869,36 +831,3 @@ def greatest_component_versions(
         versions = versions[:versions.index(greatest_version)+1]
 
     return versions[-max_versions:]
-
-
-def greatest_component_version_by_name(
-    component_name: str,
-    ctx_repo: cm.OcmRepository,
-    ignore_prerelease_versions: bool=False,
-    oci_client: oc.Client=None,
-    component_descriptor_lookup: ComponentDescriptorLookupById=None,
-) -> cm.Component:
-    if not isinstance(ctx_repo, cm.OciOcmRepository):
-        raise NotImplementedError(ctx_repo)
-
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
-
-    if not component_descriptor_lookup:
-        component_descriptor_lookup = create_default_component_descriptor_lookup(
-            default_ctx_repo=ctx_repo,
-        )
-
-    greatest_version = greatest_component_version(
-        component_name=component_name,
-        ctx_repo=ctx_repo,
-        oci_client=oci_client,
-        ignore_prerelease_versions=ignore_prerelease_versions,
-    )
-    component_descriptor = component_descriptor_lookup(
-        component_id=cm.ComponentIdentity(
-            name=component_name,
-            version=greatest_version,
-        ),
-    )
-    return component_descriptor.component

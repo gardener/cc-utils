@@ -48,9 +48,14 @@ if job_variant.has_main_repository():
   path_to_main_repository = job_variant.main_repository().resource_name()
 
 if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
-  ocm_repo_url = component_descriptor_trait.ocm_repository.baseUrl
+  ocm_repo_mappings = component_descriptor_trait.ocm_repository_mappings()
 else:
   ocm_repo_url = cfg_set.ctx_repository().base_url()
+  ocm_repo_mappings = [{
+    'ocm_repo_url': ocm_repo_url,
+    'prefix': '',
+    'use_for': 'readonly'
+   }]
 %>
 import logging
 import sys
@@ -61,10 +66,12 @@ import gci.componentmodel as cm
 import ccc.concourse
 import ccc.github
 import cnudie.retrieve
+import cnudie.util
 import ci.util
 import ci.log
 import github
 import mailutil
+import version
 
 from ci.util import ctx
 
@@ -199,23 +206,22 @@ if not email_cfg.get('mail_body'):
         task_name='${job_step.name}',
     )
 
-ctx_repo = cm.OciOcmRepository(
-  baseUrl='${ocm_repo_url}',
+ocm_repository_lookup = cnudie.util.OcmLookupMappingConfig.from_dict(
+  raw_mappings=${ocm_repo_mappings},
+)
+version_lookup = cnudie.retrieve.version_lookup(
+  ocm_repository_lookup=ocm_repository_lookup,
+)
+component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+  ocm_repository_lookup=ocm_repository_lookup,
 )
 
 ## Finally, determine recipients for all component names gathered
 def retr_component(component_name: str):
-  greatest_version = cnudie.retrieve.greatest_component_version(
-    component_name=component_name,
-    ctx_repo=ctx_repo,
+  greatest_version = version.greatest_version(
+    versions=version_lookup(component_name),
   )
-  component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    default_ctx_repo=ctx_repo,
-  )
-  comp_descr = component_descriptor_lookup(cm.ComponentIdentity(
-    name=component_name,
-    version=greatest_version,
-  ))
+  comp_descr = component_descriptor_lookup((component_name, greatest_version))
   return comp_descr.component
 
 

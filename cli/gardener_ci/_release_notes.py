@@ -38,14 +38,13 @@ def print_release_notes(
     # We need a component. Fetch one with given information (assuming the relevant information
     # is still correct if no version was given).
     if not current_version and not previous_version:
-        v = cnudie.retrieve.greatest_component_version(
-            component_name=component_name,
-            version_lookup=version_lookup,
+        greatest_version = version.greatest_version(
+            versions=version_lookup(component_name),
         )
         component_descriptor = ocm_lookup(
             component_id=cm.ComponentIdentity(
                 name=component_name,
-                version=v,
+                version=greatest_version,
             ),
         )
     elif current_version:

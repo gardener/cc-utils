@@ -33,6 +33,7 @@ from ci.util import (
 from mail import template_mailer as mailer
 import ccc.github
 import github.codeowners
+import version
 
 
 def send_mail(
@@ -193,7 +194,8 @@ def determine_mail_recipients(
     component_names=(),
     codeowners_files=(),
     branch_name='master',
-    ctx_repo_url=None,
+    component_descriptor_lookup=None,
+    version_lookup=None,
 ):
     '''
     returns a generator yielding all email addresses for the given (git) repository work tree
@@ -211,8 +213,10 @@ def determine_mail_recipients(
     if components and component_names:
         raise ValueError('only one of components, component_names must be set')
 
-    if component_names and not ctx_repo_url:
-        raise ValueError('If component_names is given, ctx_repo_url must also be given')
+    if component_names and not component_descriptor_lookup:
+        raise ValueError(
+            'If component_names is given, component_descriptor_lookup must also be given'
+        )
 
     cfg_factory = ctx().cfg_factory()
 
@@ -235,7 +239,8 @@ def determine_mail_recipients(
         entries_and_apis = [
             _codeowners_parser_from_component_name(
                 component_name=component_name,
-                ctx_repo_url=ctx_repo_url,
+                component_descriptor_lookup=component_descriptor_lookup,
+                version_lookup=version_lookup,
                 branch_name=branch_name
             ) for component_name in component_names
         ]
@@ -258,15 +263,18 @@ def determine_mail_recipients(
 
 def _codeowners_parser_from_component_name(
     component_name: str,
-    ctx_repo_url: str,
+    component_descriptor_lookup,
+    version_lookup,
     branch_name='master',
 ):
-    ctx_repo = cm.OciOcmRepository(baseUrl=ctx_repo_url)
-
-    component = cnudie.retrieve.greatest_component_version_by_name(
-        component_name=component_name,
-        ctx_repo=ctx_repo,
+    greatest_version = version.greatest_version(
+        versions=version_lookup(component_name)
     )
+
+    component = component_descriptor_lookup((
+        component_name,
+        greatest_version,
+    ))
     return _codeowners_parser_from_component(
         component=component,
         branch_name=branch_name,
@@ -277,7 +285,7 @@ def _codeowners_parser_from_component(
     component: cm.Component,
     branch_name: str='master',
 ):
-    main_source = cnudie.util.determine_main_source_for_component(
+    main_source = cnudie.util.main_source(
         component=component,
         absent_ok=False,
     )
