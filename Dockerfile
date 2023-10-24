@@ -14,13 +14,13 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
   gardener-cicd-dso==$(cat /metadata/VERSION) \
   pycryptodome
 
-FROM eu.gcr.io/gardener-project/cc/ocm-cli:0.3.0-preview as ocm-cli
+FROM ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.4.1 as ocm-cli
 FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
 
 ARG TARGETARCH
 
 COPY --from=builder /pkgs/usr /usr
-COPY --from=ocm-cli /bin/ocm /bin/ocm
+COPY --from=ocm-cli /usr/bin/ocm /bin/ocm
 COPY --from=builder /cc/utils/bin/component-cli /bin/component-cli
 
 # path is hardcoded in our trait
