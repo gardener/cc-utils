@@ -87,7 +87,7 @@ ocm_version_lookup = cnudie.retrieve.version_lookup(
 previous_version = version.greatest_version_with_matching_major(
   reference_version=version_str,
   ignore_prerelease_versions=True,
-  versions=ocm_version_lookup(),
+  versions=ocm_version_lookup(component),
 )
 
 logger.info(f'{previous_version=} (reference: {version_str})')
