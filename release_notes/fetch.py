@@ -293,6 +293,12 @@ def fetch_release_notes(
         logger.warning(
             f'Estimated processing time: {datetime.timedelta(seconds=estimated_time)!s}.'
         )
+        if estimated_time > 7200: # 2h, the current timeout for draft-/release steps
+            raise RuntimeError(
+                'Aborting release-note creation as it will not complete before reaching the '
+                'timeout of two hours. Please check whether the number of commits to be scanned '
+                'for this release is intentional.'
+            )
 
     # find associated pull requests for commits
     commit_pulls = rnu.request_pull_requests_from_api(
