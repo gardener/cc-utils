@@ -63,6 +63,11 @@ def to_component_name(
     if not isinstance(component, str):
         raise ValueError(component)
 
+    if ':' in component:
+        # assumption: has form <name>:<version>
+        # let exception raise in other cases
+        component, _ = component.split(':')
+
     return component
 
 
