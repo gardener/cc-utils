@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import typing
 
+import deprecated
 import requests
 import yaml
 
@@ -810,6 +811,7 @@ def greatest_component_version(
     )
 
 
+@deprecated.deprecated # mv to delivery-service
 def greatest_component_versions(
     component_name: str,
     ctx_repo: cm.OcmRepository=None,
