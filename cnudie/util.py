@@ -11,7 +11,8 @@ import gci.componentmodel as cm
 import model.container_registry
 import oci.model as om
 
-ComponentId = cm.Component, cm.ComponentDescriptor | cm.ComponentIdentity | str | tuple[str, str]
+ComponentId = cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str | tuple[str, str]
+ComponentName = cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str
 
 
 def to_component_id(
@@ -42,6 +43,27 @@ def to_component_id(
         name=name,
         version=version,
     )
+
+
+def to_component_name(
+    component: ComponentName,
+) -> str:
+    if isinstance(component, cm.ComponentDescriptor):
+        component = component.component
+    if isinstance(component, cm.Component):
+        component = component.name
+    elif isinstance(component, cm.ComponentIdentity):
+        component = component.name
+    elif isinstance(component, cm.ComponentReference):
+        component = component.componentName
+    elif isinstance(component, tuple):
+        if not len(component) == 2:
+            raise ValueError('expected two-tuple with two elements')
+        component = component[0]
+    if not isinstance(component, str):
+        raise ValueError(component)
+
+    return component
 
 
 def to_component_id_and_repository_url(
