@@ -173,7 +173,7 @@ def purge_old(
 def manifest(
     image_reference: str,
     pretty:bool=True,
-    accept:OciManifestChoice=OciManifestChoice.SINGLE,
+    accept:OciManifestChoice=OciManifestChoice.PREFER_MULTIARCH,
 ):
     oci_client = ccc.oci.oci_client()
 
