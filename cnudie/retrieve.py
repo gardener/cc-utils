@@ -512,6 +512,7 @@ def version_lookup(
                 default_ctx_repo,
             )
 
+        versions = set()
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
                 ocm_repo = cm.OciOcmRepository(
@@ -521,23 +522,17 @@ def version_lookup(
             if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
-            image_tags = component_versions(
+            for version_tag in component_versions(
                 component_name=component_name,
                 ctx_repo=ocm_repo,
                 oci_client=oci_client,
-            )
+            ):
+                versions.add(version_tag)
 
-            # component_versions will return an empty list for non-existant images
-            # -> use first non-empty response
-            if image_tags:
-                break
-        else:
-            image_tags = ()
-
-        if not image_tags and not absent_ok:
+        if not versions and not absent_ok:
             raise om.OciImageNotFoundException()
 
-        return image_tags
+        return versions
 
     return lookup
 
