@@ -714,7 +714,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
 
                 tgt_ref = cnudie.util.target_oci_ref(component=component)
 
-                logger.info(f'publishing CNUDIE-Component-Descriptor to {tgt_ref=}')
+                logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
                 cnudie.upload.upload_component_descriptor(
                     component_descriptor=component,
                 )
