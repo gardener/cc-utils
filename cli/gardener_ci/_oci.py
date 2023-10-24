@@ -236,7 +236,7 @@ def cfg(image_reference: str):
     )
 
 
-def blob(image_reference: str, digest: str, outfile: str):
+def blob(image_reference: str, digest: str, outfile: str='-'):
     oci_client = ccc.oci.oci_client()
 
     if outfile == '-':
