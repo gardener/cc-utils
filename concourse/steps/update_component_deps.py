@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 import traceback
 import typing
 
@@ -531,14 +532,42 @@ def create_upgrade_pr(
         f"Merging upgrade-pr #{pull_request.number} ({merge_method=!s}) on branch "
         f"'{upgrade_branch_name}' into branch '{githubrepobranch.branch()}'."
     )
-    if merge_method is MergeMethod.MERGE:
-        pull_request.merge(merge_method='merge')
-    elif merge_method is MergeMethod.REBASE:
-        pull_request.merge(merge_method='rebase')
-    elif merge_method is MergeMethod.SQUASH:
-        pull_request.merge(merge_method='squash')
-    else:
-        raise NotImplementedError(f'{merge_method=}')
+
+    def  _merge_pr(
+        merge_method: MergeMethod,
+        pull_request: github3.github.pulls.ShortPullRequest,
+        attempts: int,
+        delay: int = 2,
+    ):
+        if attempts > 0:
+            try:
+                if merge_method is MergeMethod.MERGE:
+                    pull_request.merge(merge_method='merge')
+                elif merge_method is MergeMethod.REBASE:
+                    pull_request.merge(merge_method='rebase')
+                elif merge_method is MergeMethod.SQUASH:
+                    pull_request.merge(merge_method='squash')
+                else:
+                    raise NotImplementedError(f'{merge_method=}')
+            except github3.exceptions.MethodNotAllowed as e:
+                remaining_attempts = attempts-1
+                logger.warning(
+                    f'Encountered an exception when merging PR: {e}. Will wait {delay} seconds '
+                    f'and try again {remaining_attempts} time(s).'
+                )
+                time.sleep(delay)
+                _merge_pr(
+                    merge_method=merge_method,
+                    pull_request=pull_request,
+                    attempts=remaining_attempts,
+                )
+        else:
+            logger.warning(
+                f'Unable to merge upgrade pull request #{pull_request.number} '
+                f'({pull_request.html_url}).'
+            )
+
+    _merge_pr(merge_method=merge_method, pull_request=pull_request, attempts=3)
 
     try:
         ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
