@@ -18,10 +18,12 @@ component_descriptor_path = os.path.join(
     cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
 )
 %>
-import version
+import logging
 import os
+import version
 
 import ccc.github
+import ci.log
 import ci.util
 import cnudie.retrieve
 import cnudie.util
@@ -34,6 +36,9 @@ from github.util import (
     GitHubRepositoryHelper,
     GitHubRepoBranch,
 )
+
+logger = logging.getLogger('draft-release')
+ci.log.configure_default_logging()
 
 if '${version_operation}' != 'finalize':
     raise NotImplementedError(
@@ -70,21 +75,22 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
   ),
 )
 
-ocm_repo = component.current_repository_ctx()
-ocm_version_lookup = cnudie.retrieve.version_lookup(
-    default_ctx_repo=ocm_repo,
+ocm_mapping_cfg = cnudie.util.OcmLookupMappingConfig.from_dict(
+  raw_mappings=${component_descriptor_trait.ocm_repository_mappings()},
 )
 
-previous_version = cnudie.retrieve.greatest_component_version_with_matching_minor(
-    component_name=component.name,
-    ctx_repo=ocm_repo,
-    reference_version=version_str,
-    ignore_prerelease_versions=True,
+ocm_repo = component.current_repository_ctx()
+ocm_version_lookup = cnudie.retrieve.version_lookup(
+    ocm_repository_lookup=ocm_mappings_cfg,
 )
-ci.util.info(
-    f'Previous version determined as "{previous_version}" '
-    f'(reference: "{version_str}")'
+
+previous_version = version.greatest_version_with_matching_major(
+  reference_version=version_str,
+  ignore_prerelease_versions=True,
+  versions=ocm_version_lookup(),
 )
+
+logger.info(f'{previous_version=} (reference: {version_str})')
 
 if previous_version:
     previous_version=version.parse_to_semver(previous_version)
