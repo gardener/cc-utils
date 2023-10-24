@@ -81,7 +81,7 @@ ocm_mapping_cfg = cnudie.util.OcmLookupMappingConfig.from_dict(
 
 ocm_repo = component.current_repository_ctx()
 ocm_version_lookup = cnudie.retrieve.version_lookup(
-    ocm_repository_lookup=ocm_mappings_cfg,
+    ocm_repository_lookup=ocm_mapping_cfg,
 )
 
 previous_version = version.greatest_version_with_matching_major(
