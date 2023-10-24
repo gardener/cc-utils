@@ -872,33 +872,6 @@ def greatest_component_versions(
     return versions[-max_versions:]
 
 
-def greatest_version_before(
-    component_name: str,
-    component_version: str,
-    ctx_repo: cm.OcmRepository,
-    oci_client: oc.Client=None,
-) -> str | None:
-    if not isinstance(ctx_repo, cm.OciOcmRepository):
-        raise NotImplementedError(ctx_repo)
-
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
-
-    versions = component_versions(
-        component_name=component_name,
-        ctx_repo=ctx_repo,
-        oci_client=oci_client,
-    )
-    versions = sorted(versions, key=version.parse_to_semver)
-    versions = [
-        v for v in versions
-        if version.parse_to_semver(v) < version.parse_to_semver(component_version)
-    ]
-    if not versions:
-        return None # no release before current was found
-    return versions[-1]
-
-
 def greatest_component_version_with_matching_minor(
     component_name: str,
     ctx_repo: cm.OcmRepository,
