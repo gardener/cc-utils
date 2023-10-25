@@ -260,4 +260,3 @@ class ArtefactMetadata:
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None
-    latest_processing_date: datetime.date | None = None

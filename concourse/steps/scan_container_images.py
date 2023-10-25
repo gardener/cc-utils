@@ -18,12 +18,14 @@ import json
 import logging
 import typing
 
+import github3.repos
 import tabulate
 
 import clamav.client
 import clamav.cnudie
 import clamav.model
 import concourse.model.traits.image_scan as image_scan
+import delivery.client
 import github.compliance.issue as gciss
 import github.compliance.model as gcm
 import protecode.model as pm
@@ -37,6 +39,9 @@ tabulate.htmlescape = lambda x: x
 def scan_result_group_collection_for_vulnerabilities(
     results: tuple[pm.VulnerabilityScanResult],
     cve_threshold: float,
+    max_processing_days: gcm.MaxProcessingTimesDays=None,
+    delivery_svc_client: delivery.client.DeliveryServiceClient=None,
+    repository: github3.repos.Repository=None,
 ):
     def classification_callback(result: pm.VulnerabilityScanResult):
         return result.severity
@@ -49,12 +54,18 @@ def scan_result_group_collection_for_vulnerabilities(
         issue_type=gciss._label_bdba,
         classification_callback=classification_callback,
         findings_callback=findings_callback,
+        max_processing_days=max_processing_days,
+        delivery_svc_client=delivery_svc_client,
+        repository=repository,
     )
 
 
 def scan_result_group_collection_for_licenses(
     results: tuple[pm.LicenseScanResult],
     license_cfg: image_scan.LicenseCfg=None,
+    max_processing_days: gcm.MaxProcessingTimesDays=None,
+    delivery_svc_client: delivery.client.DeliveryServiceClient=None,
+    repository: github3.repos.Repository=None,
 ):
     def has_prohibited_licenses(result: pm.LicenseScanResult):
         if result._severity(license_cfg=license_cfg):
@@ -69,6 +80,9 @@ def scan_result_group_collection_for_licenses(
         issue_type=gciss._label_licenses,
         classification_callback=classification_callback,
         findings_callback=has_prohibited_licenses,
+        max_processing_days=max_processing_days,
+        delivery_svc_client=delivery_svc_client,
+        repository=repository,
     )
 
 

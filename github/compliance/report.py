@@ -722,12 +722,13 @@ def create_or_update_github_issues(
 
         known_issues = _all_issues(repository)
 
-        if action == PROCESSING_ACTION.DISCARD:
-            if scan_result.has_latest_processing_date:
-                latest_processing_date = scan_result.latest_processing_date
-            else:
-                latest_processing_date = None
+        latest_processing_date = scan_result.calculate_latest_processing_date(
+            max_processing_days=max_processing_days,
+            delivery_svc_client=delivery_svc_client,
+            repository=repository,
+        )
 
+        if action == PROCESSING_ACTION.DISCARD:
             github.compliance.issue.close_issue_if_present(
                 scanned_element=scan_result.scanned_element,
                 issue_type=issue_type,
@@ -771,21 +772,11 @@ def create_or_update_github_issues(
                 )
 
             target_milestone = None
-            latest_processing_date = None
 
             if delivery_svc_client:
                 try:
-                    if scan_result.has_latest_processing_date:
-                        latest_processing_date = scan_result.latest_processing_date
-                        target_sprint = _target_sprint(
-                            delivery_svc_client=delivery_svc_client,
-                            sprint_end_date=latest_processing_date,
-                        )
-                        target_milestone = _target_milestone(
-                            repo=repository,
-                            sprint=target_sprint,
-                        )
-                    else:
+                    max_days = 0
+                    if not latest_processing_date:
                         if not max_processing_days:
                             max_processing_days = gcm.MaxProcessingTimesDays()
                         max_days = max_processing_days.for_severity(
@@ -797,19 +788,24 @@ def create_or_update_github_issues(
                         # if processing time is 0 days, assign to current sprint, otherwise assign
                         # to last sprint which is just "in-time"
                         if max_days > 0:
+                            # get the last possible sprint which ends before the processing date
                             target_sprint = _target_sprint(
                                 delivery_svc_client=delivery_svc_client,
                                 latest_processing_date=latest_processing_date,
                             )
-                        else:
-                            target_sprint = _target_sprint(
-                                delivery_svc_client=delivery_svc_client,
-                                sprint_end_date=latest_processing_date,
-                            )
-                        target_milestone = _target_milestone(
-                            repo=repository,
-                            sprint=target_sprint,
+
+                    if max_days == 0: # either explicit bc of severity or bc of initial value
+                        # get the sprint where the processing date is in
+                        target_sprint = _target_sprint(
+                            delivery_svc_client=delivery_svc_client,
+                            sprint_end_date=latest_processing_date,
                         )
+                    target_milestone = _target_milestone(
+                        repo=repository,
+                        sprint=target_sprint,
+                    )
+
+                    if max_days > 0:
                         latest_processing_date = target_milestone.due_on.date()
                 except Exception as e:
                     import traceback
@@ -932,6 +928,9 @@ def create_or_update_github_issues(
             known_issues=known_issues,
             issue_type=issue_type,
             ctx_labels=all_ctx_labels,
+            max_processing_days=max_processing_days,
+            delivery_svc_client=delivery_svc_client,
+            repository=overwrite_repository,
         )
 
     if err_count > 0:
@@ -946,6 +945,9 @@ def close_issues_for_absent_resources(
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
     issue_type: str | None,
     ctx_labels: typing.Iterable[str]=(),
+    max_processing_days: gcm.MaxProcessingTimesDays=None,
+    delivery_svc_client: delivery.client.DeliveryServiceClient=None,
+    repository: github3.repos.Repository=None,
 ):
     '''
     closes all open issues for scanned elements that are not present in given result-groups.
@@ -1009,10 +1011,11 @@ def close_issues_for_absent_resources(
         scan_result = result_group.results[0]
         scanned_element = scan_result.scanned_element
 
-        if scan_result.has_latest_processing_date:
-            latest_processing_date = scan_result.latest_processing_date
-        else:
-            latest_processing_date = None
+        latest_processing_date = scan_result.calculate_latest_processing_date(
+            max_processing_days=max_processing_days,
+            delivery_svc_client=delivery_svc_client,
+            repository=repository,
+        )
 
         name = github.compliance.issue.unique_name_for_element(
             scanned_element=scanned_element,

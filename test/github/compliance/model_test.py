@@ -1,6 +1,7 @@
 import dataclasses
 
 import cnudie.iter
+import github.compliance.issue as gci
 import github.compliance.model as gcm
 
 
@@ -115,21 +116,20 @@ def test_ScanResultGroupCollection_result_groups():
     assert srgc.result_groups == ()
 
     # one group (same component-name/-version/artefact-name/-version/latest-processing-date)
-    result1 = gcm.ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
-            path=(Component(name='c1', version='cv1'),),
-            resource=Artefact(name='a1', version='av1'),
+    results = (
+        gcm.ScanResult(
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c1', version='cv1'),),
+                resource=Artefact(name='a1', version='av1'),
+            ),
+        ),
+        gcm.ScanResult(
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c1', version='cv1'),),
+                resource=Artefact(name='a1', version='av1'),
+            ),
         ),
     )
-    result1.calculate_latest_processing_date()
-    result2 = gcm.ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
-            path=(Component(name='c1', version='cv1'),),
-            resource=Artefact(name='a1', version='av1'),
-        ),
-    )
-    result2.calculate_latest_processing_date()
-    results = (result1, result2)
 
     srgc = gcm.ScanResultGroupCollection(
         results=results,
@@ -167,27 +167,26 @@ def test_ScanResultGroupCollection_result_groups():
     assert len(srgc.result_groups) == 2
 
     # two groups (different processing-date)
-    result1 = ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
-            path=(Component(name='c1', version='cv1'),),
-            resource=Artefact(name='a1', version='av1'),
+    results = (
+        ScanResult(
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c1', version='cv1'),),
+                resource=Artefact(name='a1', version='av1'),
+            ),
+            severity=gcm.Severity.MEDIUM,
         ),
-        severity=gcm.Severity.MEDIUM,
-    )
-    result1.calculate_latest_processing_date()
-    result2 = ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
-            path=(Component(name='c1', version='cv1'),),
-            resource=Artefact(name='a1', version='av1'),
+        ScanResult(
+            scanned_element=cnudie.iter.ResourceNode(
+                path=(Component(name='c2', version='cv2'),),
+                resource=Artefact(name='a2', version='av2'),
+            ),
+            severity=gcm.Severity.HIGH,
         ),
-        severity=gcm.Severity.HIGH,
     )
-    result2.calculate_latest_processing_date()
-    results = (result1, result2)
 
     srgc = gcm.ScanResultGroupCollection(
         results=results,
-        issue_type='dont/care',
+        issue_type=gci._label_bdba,
         classification_callback=None,
         findings_callback=None,
     )
