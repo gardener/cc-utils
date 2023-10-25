@@ -126,6 +126,7 @@ def _compliance_status_summary(
     report_urls: tuple[str] | set[str],
     issue_description: str,
     issue_value: str,
+    latest_processing_date: datetime.date=None,
 ):
     if isinstance(artifacts[0].type, enum.Enum):
         artifact_type = artifacts[0].type.value
@@ -150,7 +151,12 @@ def _compliance_status_summary(
         | Artifact-Type | {artifact_type} |
         | URLs | {artifact_urls} |
         | {issue_description} | {issue_value} |
+    ''')
 
+    if latest_processing_date:
+        summary += f'| Latest Processing Date | {latest_processing_date.isoformat()} |\n'
+
+    summary += textwrap.dedent(f'''
         The aforementioned {_pluralise(artifact_type, len(artifacts))} yielded findings
         relevant for future release decisions.
 
@@ -196,6 +202,7 @@ def _vulnerability_template_vars(
     result_group: gcm.ScanResultGroup,
     cfg_set=None,
     rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
+    latest_processing_date: datetime.date=None,
 ) -> dict:
     results: tuple[pm.VulnerabilityScanResult] = result_group.results_with_findings
     analysis_results = [r.result for r in results]
@@ -243,6 +250,7 @@ def _vulnerability_template_vars(
             report_urls={ar.report_url() for ar in analysis_results},
             issue_description='CVEs',
             issue_value='See below for further information',
+            latest_processing_date=latest_processing_date,
         ) + '\n' + cve_summary,
         'rescoring_cmd': rescoring_cmd,
     }
@@ -251,6 +259,7 @@ def _vulnerability_template_vars(
 def _license_template_vars(
     result_group: gcm.ScanResultGroup,
     license_cfg: image_scan.LicenseCfg=None,
+    latest_processing_date: datetime.date=None,
 ) -> dict:
     results: tuple[pm.LicenseScanResult] = result_group.results_with_findings
     analysis_results = [r.result for r in results]
@@ -266,6 +275,7 @@ def _license_template_vars(
             report_urls={ar.report_url() for ar in analysis_results},
             issue_description='Prohibited Licenses',
             issue_value=' ,'.join(prohibited_licenses),
+            latest_processing_date=latest_processing_date,
         ),
     }
 
@@ -385,6 +395,7 @@ def _template_vars(
     delivery_dashboard_url: str='',
     cfg_set=None,
     rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
+    latest_processing_date: datetime.date=None,
 ) -> dict:
     scanned_element = result_group.results[0].scanned_element
     issue_type = result_group.issue_type
@@ -411,12 +422,14 @@ def _template_vars(
             result_group=result_group,
             cfg_set=cfg_set,
             rescoring_rules=rescoring_rules,
+            latest_processing_date=latest_processing_date,
         )
 
     elif issue_type == _compliance_label_licenses:
         template_variables |= _license_template_vars(
             result_group=result_group,
             license_cfg=license_cfg,
+            latest_processing_date=latest_processing_date,
         )
 
     elif issue_type == _compliance_label_os_outdated:
@@ -828,6 +841,7 @@ def create_or_update_github_issues(
                 delivery_dashboard_url=delivery_dashboard_url,
                 cfg_set=cfg_set,
                 rescoring_rules=rescoring_rules,
+                latest_processing_date=latest_processing_date,
             )
 
             for issue_cfg in github_issue_template_cfgs:
