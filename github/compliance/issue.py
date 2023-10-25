@@ -204,7 +204,7 @@ def _create_issue(
             labels=sorted(labels),
         )
 
-        if latest_processing_date:
+        if latest_processing_date and issue_type != _label_bdba and issue_type != _label_licenses:
             latest_processing_date = latest_processing_date.isoformat()
             issue.create_comment(f'{latest_processing_date=}')
 
