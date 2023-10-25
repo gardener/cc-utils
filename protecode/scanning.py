@@ -3,7 +3,6 @@ import logging
 import typing
 
 import botocore.exceptions
-import github3.repos
 import requests
 
 import gci.componentmodel as cm
@@ -305,9 +304,6 @@ class ResourceGroupProcessor:
         oci_client: oci.client.Client,
         s3_client: 'botocore.client.S3',
         license_cfg: image_scan.LicenseCfg=None,
-        max_processing_days: gcm.MaxProcessingTimesDays=None,
-        delivery_client: delivery.client.DeliveryServiceClient=None,
-        repository: github3.repos.Repository=None,
     ) -> typing.Iterator[pm.BDBAScanResult]:
         r = resource.resource
         c = resource.component
@@ -394,7 +390,7 @@ class ResourceGroupProcessor:
             for vulnerability in affected_package.vulnerabilities():
                 if vulnerability.historical():
                     continue
-                vulnerability_scan_result = pm.VulnerabilityScanResult(
+                yield pm.VulnerabilityScanResult(
                     scanned_element=resource,
                     status=pm.UploadStatus.DONE,
                     result=scan_result,
@@ -402,17 +398,11 @@ class ResourceGroupProcessor:
                     affected_package=affected_package,
                     vulnerability=vulnerability,
                 )
-                vulnerability_scan_result.calculate_latest_processing_date(
-                    max_processing_days=max_processing_days,
-                    delivery_svc_client=delivery_client,
-                    repository=repository,
-                )
-                yield vulnerability_scan_result
             for license in affected_package.licenses:
                 if license.name in seen_license_names:
                     continue
                 seen_license_names.add(license.name)
-                license_scan_result = pm.LicenseScanResult(
+                yield  pm.LicenseScanResult(
                     scanned_element=resource,
                     status=pm.UploadStatus.DONE,
                     result=scan_result,
@@ -421,12 +411,6 @@ class ResourceGroupProcessor:
                     license=license,
                     license_cfg=license_cfg,
                 )
-                license_scan_result.calculate_latest_processing_date(
-                    max_processing_days=max_processing_days,
-                    delivery_svc_client=delivery_client,
-                    repository=repository,
-                )
-                yield license_scan_result
         yield pm.ComponentsScanResult(
             scanned_element=resource,
             status=pm.UploadStatus.DONE,
@@ -545,8 +529,6 @@ def upload_grouped_images(
     oci_client: oci.client.Client=None,
     s3_client: 'botocore.client.S3'=None,
     license_cfg: image_scan.LicenseCfg=None,
-    max_processing_days: gcm.MaxProcessingTimesDays=None,
-    repository: github3.repos.Repository=None,
 ) -> typing.Generator[pm.BDBAScanResult, None, None]:
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
@@ -595,9 +577,6 @@ def upload_grouped_images(
             oci_client=oci_client,
             s3_client=s3_client,
             license_cfg=license_cfg,
-            max_processing_days=max_processing_days,
-            delivery_client=delivery_client,
-            repository=repository,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:

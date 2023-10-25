@@ -6,22 +6,14 @@
 from makoutil import indent_func
 from concourse.steps import step_lib
 import dataclasses
-import ci.util
 
 image_scan_trait = job_variant.trait('image_scan')
-issue_policies = image_scan_trait.issue_policies()
 protecode_scan = image_scan_trait.protecode()
 auto_assess_max_severity = protecode_scan.auto_assess_max_severity.name
 
 filter_cfg = image_scan_trait.matching_config()
 
 license_cfg = image_scan_trait.licenses()
-
-issue_tgt_repo_url = image_scan_trait.overwrite_github_issues_tgt_repository_url()
-if issue_tgt_repo_url:
-  parsed_repo_url = ci.util.urlparse(issue_tgt_repo_url)
-  tgt_repo_org, tgt_repo_name = parsed_repo_url.path.strip('/').split('/')
-
 
 rescoring_rules = image_scan_trait.cve_rescoring_rules()
 rescoring_rules_raw = image_scan_trait.cve_rescoring_rules(raw=True)
@@ -38,7 +30,6 @@ faulthandler.enable() # print stacktraces upon fatal signals
 
 import ccc.aws
 import ccc.delivery
-import ccc.github
 import ccc.oci
 import ccc.protecode
 import ci.log
@@ -47,7 +38,6 @@ import ci.util
 import concourse.model.traits.image_scan as image_scan
 import concourse.model.traits.filter
 import delivery.client
-import github.compliance.model
 import protecode.scanning
 import protecode.rescore
 import protecode.util
@@ -116,18 +106,6 @@ license_cfg = dacite.from_dict(
 license_cfg = None
 % endif
 
-max_processing_days = dacite.from_dict(
-  data_class=github.compliance.model.MaxProcessingTimesDays,
-  data=${dataclasses.asdict(issue_policies.max_processing_time_days)},
-)
-
-% if issue_tgt_repo_url:
-gh_api = ccc.github.github_api(repo_url='${issue_tgt_repo_url}')
-overwrite_repository = gh_api.repository('${tgt_repo_org}', '${tgt_repo_name}')
-% else:
-overwrite_repository = None
-% endif
-
 logger.info('running protecode scan for all components')
 results = tuple(
   protecode.scanning.upload_grouped_images(
@@ -144,8 +122,6 @@ results = tuple(
     oci_client=oci_client,
     s3_client=s3_client,
     license_cfg=license_cfg,
-    max_processing_days=max_processing_days,
-    repository=overwrite_repository,
   )
 )
 

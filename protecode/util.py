@@ -133,7 +133,6 @@ def iter_artefact_metadata(
             yield dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
                 discovery_date=result.discovery_date,
-                latest_processing_date=result.latest_processing_date,
                 meta=meta,
                 data=cve,
             )
@@ -155,7 +154,6 @@ def iter_artefact_metadata(
             yield dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
                 discovery_date=result.discovery_date,
-                latest_processing_date=result.latest_processing_date,
                 meta=meta,
                 data=license,
             )
@@ -184,7 +182,6 @@ def iter_artefact_metadata(
             yield dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
                 discovery_date=result.discovery_date,
-                latest_processing_date=result.latest_processing_date,
                 meta=meta,
                 data=components,
             )
@@ -211,7 +208,6 @@ def iter_artefact_metadata(
             yield dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
                 discovery_date=result.discovery_date,
-                latest_processing_date=result.latest_processing_date,
                 meta=meta,
                 data=filesystem_paths,
             )

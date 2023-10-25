@@ -84,18 +84,10 @@ Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode | cmm.CfgElementStatu
 
 @dataclasses.dataclass(kw_only=True)
 class ScanResult:
-    # sentinel class to detect if latest processing date is missing
-    @dataclasses.dataclass(frozen=True)
-    class NoLatestProcessingDate:
-        pass
-
     scanned_element: Target
     discovery_date: datetime.date = datetime.date.today()
-    latest_processing_date: datetime.date | NoLatestProcessingDate | None = None
 
     state: ScanState = ScanState.SUCCEEDED
-
-    _no_latest_processing_date_sentinel: NoLatestProcessingDate = NoLatestProcessingDate()
 
     @property
     def scan_succeeded(self) -> bool:
@@ -104,13 +96,7 @@ class ScanResult:
     @property
     def severity(self) -> Severity:
         # has to be defined by enclosing class
-        return self._no_latest_processing_date_sentinel
-
-    @property
-    def has_latest_processing_date(self) -> bool:
-        if self.severity is self._no_latest_processing_date_sentinel:
-            return False
-        return True
+        pass
 
     def calculate_latest_processing_date(
         self,
@@ -118,12 +104,9 @@ class ScanResult:
         delivery_svc_client: delivery.client.DeliveryServiceClient=None,
         repository: github3.repos.Repository=None,
     ):
-        if self.severity is None: # explicitly check for `None` in case severity is `0`
-            self.latest_processing_date = None
-            return
-        if self.severity is self._no_latest_processing_date_sentinel:
-            self.latest_processing_date = self._no_latest_processing_date_sentinel
-            return
+        # explicitly check for `None` in case severity is `0`
+        if self.severity is None:
+            return None
 
         if not max_processing_days:
             max_processing_days = MaxProcessingTimesDays()
@@ -149,7 +132,7 @@ class ScanResult:
                 import traceback
                 traceback.print_exc()
 
-        self.latest_processing_date = date
+        return date
 
 
 @dataclasses.dataclass
@@ -292,6 +275,9 @@ class ScanResultGroupCollection:
     issue_type: str
     classification_callback: ClassificationCallback
     findings_callback: FindingsCallback
+    max_processing_days: MaxProcessingTimesDays = None
+    delivery_svc_client: delivery.client.DeliveryServiceClient = None
+    repository: github3.repos.Repository = None
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
@@ -300,13 +286,22 @@ class ScanResultGroupCollection:
 
         grouped_results = collections.defaultdict(list)
 
+        import github.compliance.issue as gci
         for result in self.results:
             if is_ocm_artefact_node(result.scanned_element):
                 c = result.scanned_element.component
                 a = artifact_from_node(result.scanned_element)
-                group_name = f'{c.name}:{c.version}:{a.name}:{a.version}'
-                if result.has_latest_processing_date:
-                    group_name += f':{result.latest_processing_date}'
+                if (self.issue_type == gci._label_bdba or
+                    self.issue_type == gci._label_licenses):
+                    group_name = f'{c.name}:{c.version}:{a.name}:{a.version}'
+                    if (latest_processing_date := result.calculate_latest_processing_date(
+                        max_processing_days=self.max_processing_days,
+                        delivery_svc_client=self.delivery_svc_client,
+                        repository=self.repository,
+                    )):
+                        group_name += f':{latest_processing_date}'
+                else:
+                    group_name = f'{c.name}:{a.name}'
             elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
                 group_name = result.scanned_element.name
             else:

@@ -130,7 +130,6 @@ class ArtefactMetadata:
         | dict
     )
     discovery_date: datetime.date | None = None
-    latest_processing_date: datetime.date | None = None
 
     @staticmethod
     def from_dict(raw: dict):
@@ -162,7 +161,6 @@ class ArtefactMetadata:
             meta=self.meta,
             data=self.data,
             discovery_date=self.discovery_date,
-            latest_processing_date=self.latest_processing_date,
         )
 
 
