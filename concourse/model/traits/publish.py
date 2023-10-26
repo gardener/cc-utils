@@ -444,7 +444,7 @@ class PublishTraitTransformer(TraitTransformer):
                 with open(concourse.paths.last_released_tag_file) as f:
                     last_tag = f.read().strip()
                 prefix = 'europe-docker.pkg.dev/gardener-project/releases'
-                kaniko_image_ref = f'{prefix}/cicd/job-image-kaniko:{last_tag}'
+                kaniko_image_ref = f'{prefix}/cicd/kaniko-image:{last_tag}'
             elif oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
                 kaniko_image_ref = None
             else:
