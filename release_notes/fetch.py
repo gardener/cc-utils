@@ -236,8 +236,11 @@ def fetch_release_notes(
             continue
         component_versions[parsed_version] = ver
 
-    if not current_version or current_version not in component_versions:
+    if not current_version:
         current_version_tag = None
+    elif current_version not in component_versions:
+        raise RuntimeError(
+            f'Did not find a published component-descriptor with version {current_version}')
     else:
         current_version_tag = git_helper.repo.tag(component_versions[current_version])
         if not current_version_tag:
