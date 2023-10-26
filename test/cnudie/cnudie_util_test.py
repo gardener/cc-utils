@@ -377,6 +377,7 @@ def test_diff_label():
         label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert re != None
 
+
 def test_to_component_id():
     base_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
 
