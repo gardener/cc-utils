@@ -389,14 +389,24 @@ def find_latest_version(
 # alias with a more expressive (and correct..) name
 greatest_version = find_latest_version
 
+T = typing.TypeVar('T', semver.VersionInfo, str)
+
 
 def greatest_version_with_matching_major(
     reference_version: Union[semver.VersionInfo, str],
-    versions: Iterable[Union[semver.VersionInfo, str]],
+    versions: Iterable[T],
     ignore_prerelease_versions: bool=False,
-) -> str:
+) -> T | None:
+    '''
+    returns the greatest version with matching major version compared to `reference_version`
+    if no matching version is found, returns `None`
+
+    the returned object (if matching version is found) is guaranteed to be identical to passed-in
+    from `versions`.
+    `versions` (if passed as str) must be parsable into semver using version.parse_to_semver
+    '''
     latest_candidate_semver = None
-    latest_candidate_str = None
+    latest_candidate = None
 
     if isinstance(reference_version, str):
         reference_version = parse_to_semver(reference_version)
@@ -417,9 +427,9 @@ def greatest_version_with_matching_major(
         if candidate_semver > reference_version:
             if not latest_candidate_semver or latest_candidate_semver < candidate_semver:
                 latest_candidate_semver = candidate_semver
-                latest_candidate_str = candidate
+                latest_candidate = candidate
 
-    return latest_candidate_str
+    return latest_candidate
 
 
 def greatest_version_with_matching_minor(

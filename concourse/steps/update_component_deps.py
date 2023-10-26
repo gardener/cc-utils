@@ -639,8 +639,8 @@ def create_release_notes(
                 component=from_component,
                 version_lookup=ocm_version_lookup,
                 repo_path=temp_dir,
-                current_version=version.parse_to_semver(to_version),
-                previous_version=version.parse_to_semver(from_version),
+                current_version=to_version,
+                previous_version=from_version,
             )
             if release_note_blocks:
                 n = '\n'

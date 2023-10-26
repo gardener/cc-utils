@@ -1107,7 +1107,7 @@ def release_and_prepare_next_dev_cycle(
             repo_path=repo_dir,
             component=component,
             version_lookup=version_lookup,
-            current_version=version.parse_to_semver(release_version),
+            current_version=release_version,
         )
         release_notes_markdown = '\n'.join(
             str(i) for i in release_notes.markdown.render(release_note_blocks)

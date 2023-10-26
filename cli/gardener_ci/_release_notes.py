@@ -62,11 +62,6 @@ def print_release_notes(
             ),
         )
 
-    if current_version:
-        current_version = version.parse_to_semver(current_version)
-    if previous_version:
-        previous_version = version.parse_to_semver(previous_version)
-
     component = component_descriptor.component
     blocks = release_notes.fetch.fetch_release_notes(
         component=component,

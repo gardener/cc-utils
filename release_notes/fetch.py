@@ -197,8 +197,8 @@ def fetch_release_notes(
     component: gci.componentmodel.Component,
     version_lookup,
     repo_path: str,
-    current_version: typing.Optional[semver.VersionInfo] = None,
-    previous_version: typing.Optional[semver.VersionInfo] = None,
+    current_version: typing.Optional[str] = None,
+    previous_version: typing.Optional[str] = None,
 ) -> set[rnm.ReleaseNote]:
     ''' Fetches and returns a set of release notes for the specified component.
 
@@ -213,7 +213,7 @@ def fetch_release_notes(
     '''
 
     if current_version and previous_version:
-        if current_version < previous_version:
+        if version.parse_to_semver(current_version) < version.parse_to_semver(previous_version):
             logger.info(
                 f'{current_version=} is a predecessor to {previous_version=}. '
                 'Will not generate release-notes.'
@@ -236,23 +236,24 @@ def fetch_release_notes(
             continue
         component_versions[parsed_version] = ver
 
-    if not current_version:
-        current_version_tag = None
-    elif current_version not in component_versions:
-        raise RuntimeError(
-            f'Did not find a published component-descriptor with version {current_version}')
-    else:
-        current_version_tag = git_helper.repo.tag(component_versions[current_version])
+    if current_version:
+        current_version_tag = git_helper.repo.tag(current_version)
         if not current_version_tag:
             raise RuntimeError(f'cannot find ref {source.access.ref} in repo')
+    else:
+        current_version_tag = None
 
     if not previous_version:
+        # no previous version will exist on first release
+        previous_version_tag: typing.Optional[git.TagReference] = None
         previous_version = rnu.find_next_smallest_version(
-            list(component_versions.keys()), current_version
+            list(component_versions.keys()), version.parse_to_semver(current_version)
         )
-    previous_version_tag: typing.Optional[git.TagReference] = None
+        if previous_version:
+            previous_version = str(previous_version)
+
     if previous_version:
-        previous_version_tag = git_helper.repo.tag(component_versions[previous_version])
+        previous_version_tag = git_helper.repo.tag(previous_version)
 
     logger.info(
         f'current: {current_version=}, {current_version_tag=}, '
@@ -266,12 +267,12 @@ def fetch_release_notes(
 
     # fetch commits for release
     filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
-        previous_version=previous_version,
+        previous_version=version.parse_to_semver(previous_version),
         previous_version_tag=previous_version_tag,
         component_versions=component_versions,
         git_helper=git_helper,
         current_version_tag=current_version_tag,
-        current_version=current_version,
+        current_version=version.parse_to_semver(current_version),
         github_repo=github_repo
     )
 

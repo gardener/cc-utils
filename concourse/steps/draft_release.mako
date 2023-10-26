@@ -92,9 +92,6 @@ previous_version = version.greatest_version_with_matching_major(
 
 logger.info(f'{previous_version=} (reference: {version_str})')
 
-if previous_version:
-    previous_version=version.parse_to_semver(previous_version)
-
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
     repo_owner='${repo.repo_owner()}',
