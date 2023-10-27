@@ -587,7 +587,10 @@ class OcmResolverConfig:
 
     def __post_init__(self):
         if isinstance(base_url := self.repository, str):
-            self.repository = cm.OciOcmRepository(baseUrl=base_url)
+            self.repository = cm.OciOcmRepository(
+                baseUrl=base_url,
+                type='OCIRegistry'  # Use this (legal) variant of cm.AccessType.OCI_REGISTRY
+            )                       # since the OCM-CLI does not recognize Enum's `ociRegistry`
 
 
 @dataclasses.dataclass
