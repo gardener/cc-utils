@@ -15,8 +15,11 @@
 
 import pytest
 
+import yaml
+
 import cnudie.util
 import gci.componentmodel as cm
+import oci.auth as oa
 
 # functions under test
 diff_components = cnudie.util.diff_components
@@ -456,3 +459,35 @@ def test_to_component_name():
 
     test_tuple = 'Foo', '1.2.3'
     assert cnudie.util.to_component_name(test_tuple) == base_name
+
+
+def test_ocm_serialisation():
+    test_mappings = [
+        {
+            'repository': 'foo.baz',
+            'prefix': 'foo/bar/baz',
+            'priority': 15,
+            'privileges': oa.Privileges.READWRITE,
+        },{
+            'repository': 'fizz.buzz',
+            'prefix': 'fizz/buzz',
+            'privileges': oa.Privileges.READONLY,
+        },{
+            'repository': {
+                'baseUrl': 'spam/ham/eggs',
+                'subPath': None,
+                'type': 'OCIRegistry',
+            },
+            'prefix': 'fizz/buzz',
+        }
+    ]
+
+    ocm_lu_config = cnudie.util.OcmLookupMappingConfig.from_dict(test_mappings)
+    ocm_software_config_str = ocm_lu_config.to_ocm_software_config()
+    ocm_software_config = yaml.safe_load(ocm_software_config_str)
+    cnudie.util.OcmLookupMappingConfig.from_ocm_config_dict(ocm_software_config)
+
+    # Ideally we'd check the config hasn't changed, but equality is currently a bit
+    # cumbersome to determine due to slight differences in the way OCM handles AccessTypes
+    # and how we handle that.
+    # assert parsed_ocm_lu_config == ocm_lu_config
