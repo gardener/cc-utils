@@ -262,7 +262,9 @@ If not configured, the CICD_landscape’s default ctx will be used.</p></td>
 </div>
 </p></td>
 <td><p>List[OcmResolverConfig]</p></td>
-<td><p><p>used to explicitly configure where to lookup component descriptors. Example:</p>
+<td><p><p>used to explicitly configure where to lookup component descriptors. If given,
+ocm_repository <em>must</em> be defined.</p>
+<p><strong>Example:</strong></p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocm_repo_url</span>
 <span class="w">  </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/some-org/</span>
 <span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocm_repo_url</span>
