@@ -376,12 +376,12 @@ class ComponentDescriptorTrait(Trait):
         return self.raw['component_labels']
 
     def ocm_repository_mappings(self) -> list:
-        ctx_repository_url = self.ctx_repository_base_url()
-        if ctx_repository_url is None:
+        ocm_repository_url = self.ctx_repository_base_url()
+        if ocm_repository_url is None:
             return []
         if not (ocm_repository_mappings := self.raw['ocm_repository_mappings']):
             ocm_repository_mappings = [{
-                'repository': ctx_repository_url,
+                'repository': ocm_repository_url,
                 'prefix': '',
                 'priority': 10,
 
