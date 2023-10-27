@@ -728,7 +728,7 @@ class OcmLookupMappingConfig:
             dacite.from_dict(
                 data_class=OcmResolverConfig,
                 data=e,
-                config=dacite.Config(cast=(enum.Enum)),
+                config=dacite.Config(cast=(enum.Enum,)),
             ) for e in raw_mappings
         ]
 
