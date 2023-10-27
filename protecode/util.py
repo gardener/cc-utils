@@ -19,6 +19,7 @@ import typing
 
 import ci.log
 import delivery.client
+import delivery.model as dm
 import dso.model
 import gci.componentmodel as cm
 import github.compliance.model
@@ -48,9 +49,75 @@ def sync_results_with_delivery_db(
                 results=results,
             ),
         )
+        # Delete findings with no package version if the package without
+        # version is not part of the scan results anymore -> i.e. version
+        # was set manually and therefore the finding is not relevant anymore
+        delivery_client.delete_metadata(
+            data=iter_artefact_metadata_without_package_version(
+                delivery_client=delivery_client,
+                results=results,
+            ),
+        )
     except:
         import traceback
         traceback.print_exc()
+
+
+def iter_artefact_metadata_without_package_version(
+    delivery_client: delivery.client.DeliveryServiceClient,
+    results: typing.Collection[pm.BDBAScanResult],
+) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
+    component_metadata = dict()
+    for result in results:
+        if isinstance(result, pm.ComponentsScanResult):
+            result: pm.ComponentsScanResult
+
+            a = github.compliance.model.artifact_from_node(result.scanned_element)
+            a_ref = dso.model.component_artefact_id_from_ocm(
+                component=result.scanned_element.component,
+                artefact=a,
+            )
+
+            packages_without_version = {
+                package.name() for package in result.result.components()
+                if not package.version()
+            }
+            seen_package_names = set()
+
+            for package in result.result.components():
+                if package.name() in packages_without_version.union(seen_package_names):
+                    continue
+
+                # there is no instance of the package without a version
+                # delete all findings for that package without version from db (if any)
+                key = result.scanned_element.component_id
+                if not key in component_metadata:
+                    metadata_raw = delivery_client.query_metadata_raw(
+                        components=[key],
+                        type=dso.model.Datatype.VULNERABILITIES_CVE,
+                    )
+                    component_metadata[key] = [
+                        dm.ArtefactMetadata.from_dict(raw).to_dso_model_artefact_metadata()
+                        for raw in metadata_raw
+                    ]
+
+                filtered_metadata = [
+                    cm for cm in component_metadata[key]
+                    if (
+                        cm.artefact.artefact.artefact_name == a_ref.artefact.artefact_name and
+                        cm.artefact.artefact.artefact_version == a_ref.artefact.artefact_version and
+                        cm.artefact.artefact.artefact_type == a_ref.artefact.artefact_type and
+                        dm.ComponentArtefactId.normalise_artefact_extra_id(
+                            artefact_extra_id=cm.artefact.artefact.artefact_extra_id,
+                        ) == dm.ComponentArtefactId.normalise_artefact_extra_id(
+                            artefact_extra_id=a_ref.artefact.artefact_extra_id,
+                        ) and
+                        cm.artefact.artefact_kind == a_ref.artefact_kind and
+                        cm.data.affected_package_name == package.name() and
+                        cm.data.affected_package_version is None
+                    )
+                ]
+                yield from filtered_metadata
 
 
 def iter_artefact_metadata_with_triages(
