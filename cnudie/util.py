@@ -706,6 +706,7 @@ class OcmLookupMappingConfig:
         ocm_config = dacite.from_dict(
             data_class=OcmGenericConfig,
             data=ocm_config_dict,
+            config=dacite.Config(cast=(enum.Enum,)),
         )
         for c in ocm_config.configurations:
             if isinstance(c, OcmSoftwareConfig):
