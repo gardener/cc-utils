@@ -1,4 +1,5 @@
 import dataclasses
+import enum
 import graphlib
 import typing
 
@@ -10,6 +11,7 @@ import ctx
 import gci.componentmodel as cm
 import model.container_registry
 import oci.model as om
+import oci.auth as oa
 
 ComponentId = (
     cm.Component
@@ -578,6 +580,7 @@ class OcmResolverConfig:
     repository: cm.OciOcmRepository | str
     prefix: str
     priority: int = 10
+    privileges: oa.Privileges | None = None
 
     def matches(self, component: ComponentId):
         return to_component_name(component).startswith(self.prefix)
@@ -656,8 +659,10 @@ class OcmLookupMappingConfig:
 
         consumers = []
         for m in self.mappings:
+            m: OcmResolverConfig
             container_registry_config = model.container_registry.find_config(
                 image_reference=m.repository.oci_ref,
+                privileges=m.privileges,
                 cfg_factory=cfg_factory,
             )
             if container_registry_config:
@@ -720,6 +725,7 @@ class OcmLookupMappingConfig:
             dacite.from_dict(
                 data_class=OcmResolverConfig,
                 data=e,
+                config=dacite.Config(cast=(enum.Enum)),
             ) for e in raw_mappings
         ]
 

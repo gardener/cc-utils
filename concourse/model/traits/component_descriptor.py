@@ -26,6 +26,7 @@ import ci.util
 import cnudie.util
 import gci.componentmodel as cm
 import model.base
+import oci.auth
 import version
 
 from concourse.model.job import (
@@ -214,7 +215,10 @@ ATTRIBUTES = (
                     # rendered documentation.
         type=typing.List[cnudie.util.OcmResolverConfig],
         doc='''
-            used to explicitly configure where to lookup component descriptors. Example:
+            used to explicitly configure where to lookup component descriptors. If given,
+            ocm_repository *must* be defined.
+
+            **Example:**
 
             .. code-block:: yaml
 
@@ -377,15 +381,40 @@ class ComponentDescriptorTrait(Trait):
 
     def ocm_repository_mappings(self) -> list:
         ocm_repository_url = self.ctx_repository_base_url()
-        if ocm_repository_url is None:
-            return []
-        if not (ocm_repository_mappings := self.raw['ocm_repository_mappings']):
-            ocm_repository_mappings = [{
+        ocm_repository_mappings: list[dict] = self.raw['ocm_repository_mappings']
+
+        if ocm_repository_url:
+            mapping_for_repository_url = {
                 'repository': ocm_repository_url,
                 'prefix': '',
                 'priority': 10,
+                'privileges': oci.auth.Privileges.READWRITE.value,
+            }
 
-            }]
+        if not ocm_repository_url and not ocm_repository_mappings:
+            return []
+        elif not ocm_repository_url and ocm_repository_mappings:
+            raise ValueError('ocm_repository_url must be defined if ocm_repository_mappings are')
+        elif ocm_repository_url and not ocm_repository_mappings:
+            return [mapping_for_repository_url]
+
+        # check if mapping contains entry for ocm_repository; if no, add it, if yes, set privileges
+        for mapping in ocm_repository_mappings:
+            repo_url = mapping['repository']
+            if isinstance(repository, dict):
+                repo_url = dacite.from_dict(
+                    data_class=cm.OciRepositoryContext,
+                    data=repository,
+                ).oci_ref
+
+            if repo_url != ocm_repository_url:
+                continue
+
+            # for target-ocm-repository, we will need write-privileges
+            mapping['privileges'] = oci.auth.Privileges.READWRITE.value
+            break
+        else:
+            ocm_repository_mappings.append(mapping)
 
         return ocm_repository_mappings
 
