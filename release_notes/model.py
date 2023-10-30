@@ -260,6 +260,7 @@ class ReleaseNote:
 def _source_component(
     component_descriptor_lookup,
     version_lookup,
+    current_component: gci.componentmodel.Component,
     source_component_name: str,
 ) -> gci.componentmodel.Component | None:
     try:
