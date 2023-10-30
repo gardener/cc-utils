@@ -65,6 +65,7 @@ def print_release_notes(
     component = component_descriptor.component
     blocks = release_notes.fetch.fetch_release_notes(
         component=component,
+        component_descriptor_lookup=ocm_lookup,
         version_lookup=version_lookup,
         repo_path=repo_path,
         current_version=current_version,

@@ -195,6 +195,7 @@ def get_release_note_commits_tuple(
 
 def fetch_release_notes(
     component: gci.componentmodel.Component,
+    component_descriptor_lookup,
     version_lookup,
     repo_path: str,
     current_version: typing.Optional[str] = None,
@@ -363,7 +364,9 @@ def fetch_release_notes(
         )
 
     release_notes: set[rnm.ReleaseNote] = {
-        rnm.create_release_note_obj(
+        rnm.create_release_notes_obj(
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
             source_block=source_block,
             source_component=component,
             current_component=component,

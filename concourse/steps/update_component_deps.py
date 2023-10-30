@@ -627,6 +627,11 @@ def create_release_notes(
     ocm_version_lookup = cnudie.retrieve.version_lookup(
         default_ctx_repo=ocm_repo,
     )
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+            ocm_repo,
+        ),
+    )
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -638,6 +643,7 @@ def create_release_notes(
             release_note_blocks = release_notes_fetch.fetch_release_notes(
                 component=from_component,
                 version_lookup=ocm_version_lookup,
+                component_descriptor_lookup=component_descriptor_lookup,
                 repo_path=temp_dir,
                 current_version=to_version,
                 previous_version=from_version,

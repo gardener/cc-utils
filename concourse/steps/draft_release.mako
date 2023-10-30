@@ -83,6 +83,9 @@ ocm_repo = component.current_repository_ctx()
 ocm_version_lookup = cnudie.retrieve.version_lookup(
     ocm_repository_lookup=ocm_mapping_cfg,
 )
+component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    ocm_repository_lookup=ocm_mapping_cfg,
+)
 
 previous_version = version.greatest_version_with_matching_major(
   reference_version=version_str,
@@ -106,6 +109,7 @@ try:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         repo_path=repo_dir,
         component=component,
+        component_descriptor_lookup=component_descriptor_lookup,
         version_lookup=ocm_version_lookup,
         previous_version=previous_version,
     )

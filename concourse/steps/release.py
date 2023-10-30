@@ -1102,11 +1102,15 @@ def release_and_prepare_next_dev_cycle(
         version_lookup = cnudie.retrieve.version_lookup(
             ocm_repository_lookup=mapping_config,
         )
+        component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=mapping_config,
+        )
 
         release_note_blocks = release_notes.fetch.fetch_release_notes(
             repo_path=repo_dir,
             component=component,
             version_lookup=version_lookup,
+            component_descriptor_lookup=component_descriptor_lookup,
             current_version=release_version,
         )
         release_notes_markdown = '\n'.join(

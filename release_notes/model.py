@@ -258,22 +258,14 @@ class ReleaseNote:
 
 
 def _source_component(
-    current_component: gci.componentmodel.Component,
+    component_descriptor_lookup,
+    version_lookup,
     source_component_name: str,
 ) -> gci.componentmodel.Component | None:
     try:
-        # try to fetch cd for the parsed source repo. The actual version does not matter,
-        # we're only interested in the components GithubAccess (we assume it does not
-        # change).
-        ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
-            current_component.current_repository_ctx(),
-        )
-        component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-            ocm_repository_lookup=ocm_repository_lookup,
-        )
-        version_lookup = cnudie.retrieve.version_lookup(
-            ocm_repository_lookup=ocm_repository_lookup,
-        )
+        # try to fetch greatest component-descriptor for source component. The
+        # actual version (hopefully) does not matter, as we assume the GithubAccess
+        # (which we need to lookup release-notes) will rarely change.
         source_component_descriptor = component_descriptor_lookup(
             gci.componentmodel.ComponentIdentity(
                 name=source_component_name,
@@ -292,10 +284,12 @@ def _source_component(
         return None
 
 
-def create_release_note_obj(
-        source_block: SourceBlock,
-        source_component: gci.componentmodel.Component,
-        current_component: gci.componentmodel.Component
+def create_release_notes_obj(
+    component_descriptor_lookup,
+    version_lookup,
+    source_block: SourceBlock,
+    source_component: gci.componentmodel.Component,
+    current_component: gci.componentmodel.Component,
 ) -> ReleaseNote:
     target = source_block.source
     if isinstance(target, git.Commit):
@@ -311,6 +305,8 @@ def create_release_note_obj(
 
     if source_block.component_name:
         source_component = _source_component(
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
             current_component=current_component,
             source_component_name=source_block.component_name,
         )
