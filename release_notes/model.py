@@ -1,9 +1,8 @@
 import dataclasses
 import logging
 import re
+import traceback
 import typing
-
-import requests
 
 import gci.componentmodel
 import git
@@ -285,10 +284,11 @@ def _source_component(
             ),
         )
         return source_component_descriptor.component
-    except requests.exceptions.HTTPError:
+    except Exception:
         logger.warning(
             f'Unable to retrieve component descriptor for source component {source_component_name}'
         )
+        traceback.print_exc()
         return None
 
 
