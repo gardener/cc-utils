@@ -192,7 +192,7 @@ def scan_artifacts(
 def upload_and_scan_gh_artifact(
     artifact: dso.model.ScanArtifact,
     gh_repo: github3.repos.repo.Repository,
-    cx_project: checkmarx.project.CheckmarxProject,
+    cx_project: 'checkmarx.project.CheckmarxProject',
     path_filter_func: typing.Callable,
     source_commit_hash: str,
     force: bool,
@@ -307,7 +307,7 @@ def _guess_commit_from_source(
 
 
 def scan_gh_artifact(
-    cx_project: checkmarx.project.CheckmarxProject,
+    cx_project: 'checkmarx.project.CheckmarxProject',
     scan_artifact: dso.model.ScanArtifact,
     timeout_seconds: int,
     exclude_paths: typing.Sequence[str] = (),
@@ -478,7 +478,7 @@ def download_repo_and_create_scan(
     artifact_name: str,
     artifact_version: str,
     hash:str,
-    cx_project: checkmarx.project.CheckmarxProject,
+    cx_project: 'checkmarx.project.CheckmarxProject',
     path_filter_func: typing.Callable,
     repo: github3.repos.repo.Repository,
 ):
