@@ -248,7 +248,8 @@ def fetch_release_notes(
         # no previous version will exist on first release
         previous_version_tag: typing.Optional[git.TagReference] = None
         previous_version = rnu.find_next_smallest_version(
-            list(component_versions.keys()), version.parse_to_semver(current_version)
+            available_versions=list(component_versions.keys()),
+            current_version=version.parse_to_semver(current_version) if current_version else None,
         )
         if previous_version:
             previous_version = str(previous_version)
