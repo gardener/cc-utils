@@ -87,7 +87,7 @@ component_descriptor_lookup = cnudie.retrieve.create_default_component_descripto
     ocm_repository_lookup=ocm_mapping_cfg,
 )
 
-previous_version = version.greatest_version_with_matching_major(
+previous_version = version.greatest_version_with_matching_minor(
   reference_version=version_str,
   ignore_prerelease_versions=True,
   versions=ocm_version_lookup(component),
