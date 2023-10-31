@@ -81,7 +81,7 @@ def create_release_notes_blocks(
 def find_next_smallest_version(
         available_versions: list[semver.VersionInfo],
         current_version: semver.VersionInfo
-) -> typing.Optional[semver.VersionInfo]:
+) -> semver.VersionInfo | None:
     # find version before the requested version and sort by semver
     # If no version requested, return greatest version
     sorted_versions =  sorted(available_versions, reverse=True)

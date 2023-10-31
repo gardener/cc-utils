@@ -122,12 +122,12 @@ def _get_release_note_commits_tuple_for_release(
 
 
 def get_release_note_commits_tuple(
-        previous_version: semver.VersionInfo,
+        previous_version: semver.VersionInfo | None,
         previous_version_tag: git.TagReference,
         component_versions: dict[semver.VersionInfo, str],
         git_helper,
         current_version_tag: git.TagReference,
-        current_version: semver.VersionInfo,
+        current_version: semver.VersionInfo | None,
         github_repo: github3.repos.Repository,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
@@ -196,7 +196,7 @@ def get_release_note_commits_tuple(
 def fetch_release_notes(
     component: gci.componentmodel.Component,
     component_descriptor_lookup,
-    version_lookup,
+    version_lookup: cnudie.retrieve.VersionLookupByComponent,
     repo_path: str,
     current_version: typing.Optional[str] = None,
     previous_version: typing.Optional[str] = None,
