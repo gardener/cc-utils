@@ -255,7 +255,13 @@ def fetch_release_notes(
             previous_version = str(previous_version)
 
     if previous_version:
-        previous_version_tag = git_helper.repo.tag(previous_version)
+        # we need to use the original previous version as found in the ocm-repo to refer to
+        # the tag or we risk losing the leading 'v' if it is present.
+        # TODO: This may happen after retrieving the previous version the component_versions' keys.
+        # This function should be split up and refactored to avoid these headaches. Ideally use
+        # str where possible, as they are the closest representation of our release-versions.
+        original_version = component_versions[version.parse_to_semver(previous_version)]
+        previous_version_tag = git_helper.repo.tag(original_version)
 
     logger.info(
         f'current: {current_version=}, {current_version_tag=}, '
