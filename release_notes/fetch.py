@@ -269,12 +269,12 @@ def fetch_release_notes(
 
     # fetch commits for release
     filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
-        previous_version=version.parse_to_semver(previous_version),
+        previous_version=version.parse_to_semver(previous_version) if previous_version else None,
         previous_version_tag=previous_version_tag,
         component_versions=component_versions,
         git_helper=git_helper,
         current_version_tag=current_version_tag,
-        current_version=version.parse_to_semver(current_version),
+        current_version=version.parse_to_semver(current_version) if current_version else None,
         github_repo=github_repo
     )
 
