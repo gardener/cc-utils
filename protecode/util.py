@@ -33,6 +33,8 @@ def sync_results_with_delivery_db(
     delivery_client: delivery.client.DeliveryServiceClient,
     results: typing.Iterable[pm.BDBAScanResult],
     bdba_cfg_name: str,
+    max_retries: int=3,
+    retry_count: int=0,
 ):
     try:
         # Delete vulnerabilites with new triages from delivery-db for now
@@ -46,6 +48,14 @@ def sync_results_with_delivery_db(
     except:
         import traceback
         traceback.print_exc()
+        if retry_count < max_retries:
+            sync_results_with_delivery_db(
+                delivery_client=delivery_client,
+                results=results,
+                bdba_cfg_name=bdba_cfg_name,
+                max_retries=max_retries,
+                retry_count=retry_count + 1,
+            )
 
 
 def iter_artefact_metadata(
