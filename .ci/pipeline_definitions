@@ -163,15 +163,3 @@ cc-utils:
           release_commit_publishing_policy: tag_and_merge_back
           release_notes_policy: disabled
           release_on_github: False
-
-    create_upgrade_prs:
-      traits:
-        cronjob:
-          interval: '2.5m'
-        update_component_deps:
-          ignore_prerelease_versions: yes
-          merge_policies:
-          - component_names:
-            - 'github.com/gardener/component-spec'
-            merge_mode: 'auto_merge'
-            merge_method: 'rebase'
