@@ -58,7 +58,10 @@ def tags(image: str):
     print('\n'.join(oci_client.tags(image_reference=image)))
 
 
-def ls(image: str):
+def ls(
+    image: str,
+    long: bool=False, # inspired by ls --long ; aka: ls -l
+):
     oci_client = ccc.oci.oci_client()
     image_reference: om.OciImageReference = om.OciImageReference.to_image_ref(image)
 
@@ -81,7 +84,24 @@ def ls(image: str):
             mode='r|*',
         ) as tf:
             for info in tf:
-                print(info.name)
+                if long:
+                    suffix = ''
+                    if info.isdir():
+                        prefix = 'd'
+                    elif info.isfile():
+                        prefix = 'f'
+                        suffix = f'({info.size})'
+                    elif info.issym():
+                        suffix = f'-> {info.linkname}'
+                        prefix = 's'
+                    elif info.islnk():
+                        prefix = 'l'
+                    else:
+                        prefix = ' '
+
+                    print(f'{prefix} {info.name} {suffix}')
+                else:
+                    print(info.name)
 
 
 def purge(image: str):
