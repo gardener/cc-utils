@@ -390,7 +390,8 @@ class CreateTagsStep(TransactionalStep):
                 )
                 self.git_helper.rebase(commit_ish=upstream_commit.hexsha)
 
-                # do not revert potential submodule changes applied with rebase
+                # if repository contains submodules, update worktree to prevent subsequent "git add" from worktree will not
+                # overwrite received upstream changes from rebase. for repositories w/o submodules, this is (almost) a no-op
                 self.git_helper.repo.submodule_update()
 
                 merge_commit = create_merge_commit(upstream_commit)
