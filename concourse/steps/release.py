@@ -390,6 +390,9 @@ class CreateTagsStep(TransactionalStep):
                 )
                 self.git_helper.rebase(commit_ish=upstream_commit.hexsha)
 
+                # do not revert potential submodule changes applied with rebase
+                self.git_helper.repo.submodule_update()
+
                 merge_commit = create_merge_commit(upstream_commit)
                 self.context().merge_release_back_to_default_branch_commit = merge_commit
 
