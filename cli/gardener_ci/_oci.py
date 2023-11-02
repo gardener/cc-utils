@@ -58,6 +58,32 @@ def tags(image: str):
     print('\n'.join(oci_client.tags(image_reference=image)))
 
 
+def ls(image: str):
+    oci_client = ccc.oci.oci_client()
+    image_reference: om.OciImageReference = om.OciImageReference.to_image_ref(image)
+
+    manifest = oci_client.manifest(
+        image_reference=image,
+        accept=om.MimeTypes.prefer_multiarch,
+    )
+
+    if isinstance(manifest, om.OciImageManifestList):
+        manifest: om.OciImageManifestList
+        manifest: om.OciImageManifestListEntry = manifest.manifests[0]
+        sub_img_ref = f'{image_reference.ref_without_tag}@{manifest.digest}'
+        manifest = oci_client.manifest(sub_img_ref)
+
+    for layer in manifest.layers:
+        blob = oci_client.blob(image_reference=image_reference, digest=layer.digest)
+
+        with tarfile.open(
+            fileobj=tarutil.FilelikeProxy(generator=blob.iter_content(chunk_size=4096)),
+            mode='r|*',
+        ) as tf:
+            for info in tf:
+                print(info.name)
+
+
 def purge(image: str):
     oci_client = ccc.oci.oci_client()
 
