@@ -52,7 +52,7 @@ def cp(
     )
 
 
-def ls(image: str):
+def tags(image: str):
     oci_client = ccc.oci.oci_client()
 
     print('\n'.join(oci_client.tags(image_reference=image)))
