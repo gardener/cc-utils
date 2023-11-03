@@ -184,6 +184,7 @@ def _create_issue(
     assignees: typing.Iterable[str]=(),
     assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
+    failed_milestones: list[github3.issues.milestone.Milestone]=[],
     latest_processing_date: datetime.date|datetime.datetime=None,
 ) -> github3.issues.issue.ShortIssue:
     assignees = tuple(assignees)
@@ -218,6 +219,13 @@ def _create_issue(
                 comment_body += f'\n|`{status.type}`|`{status.msg}`'
 
             issue.create_comment(comment_body)
+
+        if failed_milestones:
+            issue.create_comment(
+                'Failed to automatically assign ticket to one of these milestones: ' +
+                f'{", ".join([milestone.title for milestone in failed_milestones])}. ' +
+                'Milestones were probably closed before their due date.'
+            )
 
         return issue
 
@@ -314,6 +322,7 @@ def create_or_update_issue(
     assignees: typing.Iterable[str]=(),
     assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
+    failed_milestones: list[github3.issues.milestone.Milestone]=[],
     latest_processing_date: datetime.date=None,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
@@ -361,6 +370,7 @@ def create_or_update_issue(
             assignees=assignees,
             assignees_statuses=assignees_statuses,
             milestone=milestone,
+            failed_milestones=failed_milestones,
             latest_processing_date=latest_processing_date,
         )
     elif issues_count == 1:
