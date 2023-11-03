@@ -119,15 +119,17 @@ class ScanResult:
         if delivery_svc_client and repository and max_days > 0:
             try:
                 import github.compliance.report as gcr
-                target_sprint = gcr._target_sprint(
+                target_sprints = gcr._target_sprints(
                     delivery_svc_client=delivery_svc_client,
                     latest_processing_date=date,
+                    sprints_count=2,
                 )
-                target_milestone = gcr._target_milestone(
+                target_milestone, _ = gcr._target_milestone(
                     repo=repository,
-                    sprint=target_sprint,
+                    sprints=target_sprints,
                 )
-                date = target_milestone.due_on.date()
+                if target_milestone:
+                    date = target_milestone.due_on.date()
             except Exception:
                 import traceback
                 traceback.print_exc()
