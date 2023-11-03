@@ -37,7 +37,7 @@ def rescore(
     Rescoring is only possible if cve-categorisations are available from categoristion-label
     in either resource or component.
     '''
-    assessed_vulnerability_results = []
+    assessed_vulnerability_results: list[pm.VulnerabilityScanResult] = []
 
     scan_result = components_scan_result.result
     resource_node = components_scan_result.scanned_element
@@ -92,13 +92,15 @@ def rescore(
 
             if rescored is dso.cvss.CVESeverity.NONE:
                 vulns_to_assess.append(v)
-                assessed_vulnerability_results.append(next(
+                vsr = next(
                     vsr for vsr in vulnerability_scan_results
                     if vsr.scanned_element == resource_node
                         and vsr.affected_package.name() == c.name()
                         and vsr.affected_package.version() == c.version()
                         and vsr.vulnerability.cve() == v.cve()
-                ))
+                )
+                assessed_vulnerability_results.append(vsr)
+                vulnerability_scan_results.remove(vsr)
 
         if vulns_to_assess:
             logger.info(f'{len(vulns_to_assess)=}: {[v.cve() for v in vulns_to_assess]}')
@@ -118,9 +120,20 @@ def rescore(
         scan_result = bdba_client.wait_for_scan_result(
             product_id=product_id,
         )
-        # patch in updated scan result
-        components_scan_result.result = scan_result
+        # patch in updated scan result and vulnerability
         for avr in assessed_vulnerability_results:
             avr.result = scan_result
+            for affected_package in scan_result.components():
+                for vuln in affected_package.vulnerabilities():
+                    if (affected_package.name() == avr.affected_package.name() and
+                        affected_package.version() == avr.affected_package.version() and
+                        vuln.cve() == avr.vulnerability.cve()
+                    ):
+                        avr.vulnerability = vuln
+
+        assessed_vulnerability_results.extend([
+            vsr for vsr in vulnerability_scan_results
+            if vsr.scanned_element == resource_node
+        ])
 
     return assessed_vulnerability_results
