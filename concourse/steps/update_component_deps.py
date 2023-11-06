@@ -340,6 +340,8 @@ def _import_release_notes(
     component: gci.componentmodel.Component,
     to_version: str,
     pull_request_util,
+    version_lookup,
+    component_descriptor_lookup,
 ):
     if not component.sources:
         logger.warning(
@@ -360,6 +362,8 @@ def _import_release_notes(
         from_repo_owner=org_name,
         from_repo_name=repository_name,
         to_version=to_version,
+        version_lookup=version_lookup,
+        component_descriptor_lookup=component_descriptor_lookup,
     )
 
     if not release_notes:
@@ -379,9 +383,10 @@ def create_upgrade_pr(
     githubrepobranch: GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
-    ocm_lookup,
     merge_policy: MergePolicy,
     merge_method: MergeMethod,
+    version_lookup,
+    component_descriptor_lookup,
     after_merge_callback=None,
     container_image:str=None,
 ) -> github.util.UpgradePullRequest:
@@ -390,7 +395,7 @@ def create_upgrade_pr(
 
     ls_repo = pull_request_util.repository
 
-    from_component_descriptor = ocm_lookup(
+    from_component_descriptor = component_descriptor_lookup(
         component_id=gci.componentmodel.ComponentIdentity(
             name=from_ref.componentName,
             version=from_ref.version,
@@ -476,6 +481,8 @@ def create_upgrade_pr(
             component=from_component,
             to_version=to_version,
             pull_request_util=pull_request_util,
+            version_lookup=version_lookup,
+            component_descriptor_lookup=component_descriptor_lookup,
         )
     except Exception:
         logger.warning('failed to retrieve release-notes')
@@ -620,18 +627,10 @@ def create_release_notes(
     from_repo_owner: str,
     from_repo_name: str,
     to_version: str,
+    version_lookup,
+    component_descriptor_lookup,
 ):
     from_version = from_component.version
-
-    ocm_repo = from_component.current_repository_ctx()
-    ocm_version_lookup = cnudie.retrieve.version_lookup(
-        default_ctx_repo=ocm_repo,
-    )
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
-            ocm_repo,
-        ),
-    )
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -642,7 +641,7 @@ def create_release_notes(
             )
             release_note_blocks = release_notes_fetch.fetch_release_notes(
                 component=from_component,
-                version_lookup=ocm_version_lookup,
+                version_lookup=version_lookup,
                 component_descriptor_lookup=component_descriptor_lookup,
                 repo_path=temp_dir,
                 current_version=to_version,

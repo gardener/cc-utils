@@ -195,7 +195,7 @@ def get_release_note_commits_tuple(
 
 def fetch_release_notes(
     component: gci.componentmodel.Component,
-    component_descriptor_lookup,
+    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     repo_path: str,
     current_version: typing.Optional[str] = None,
