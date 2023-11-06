@@ -58,15 +58,13 @@ def tags(image: str):
     print('\n'.join(oci_client.tags(image_reference=image)))
 
 
-def ls(
-    image: str,
-    long: bool=False, # inspired by ls --long ; aka: ls -l
+def _manifest(
+    image_reference: str,
+    oci_client,
 ):
-    oci_client = ccc.oci.oci_client()
-    image_reference: om.OciImageReference = om.OciImageReference.to_image_ref(image)
-
+    image_reference: om.OciImageReference = om.OciImageReference.to_image_ref(image_reference)
     manifest = oci_client.manifest(
-        image_reference=image,
+        image_reference=image_reference,
         accept=om.MimeTypes.prefer_multiarch,
     )
 
@@ -75,6 +73,21 @@ def ls(
         manifest: om.OciImageManifestListEntry = manifest.manifests[0]
         sub_img_ref = f'{image_reference.ref_without_tag}@{manifest.digest}'
         manifest = oci_client.manifest(sub_img_ref)
+
+    return manifest
+
+
+def ls(
+    image: str,
+    long: bool=False, # inspired by ls --long ; aka: ls -l
+):
+    oci_client = ccc.oci.oci_client()
+    image_reference: om.OciImageReference = om.OciImageReference.to_image_ref(image)
+
+    manifest = _manifest(
+        image_reference=image_reference,
+        oci_client=oci_client,
+    )
 
     for layer in manifest.layers:
         blob = oci_client.blob(image_reference=image_reference, digest=layer.digest)
