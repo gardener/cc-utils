@@ -400,7 +400,12 @@ class ComponentDescriptorTrait(Trait):
 
         # check if mapping contains entry for ocm_repository; if no, add it, if yes, set privileges
         for mapping in ocm_repository_mappings:
-            repo_url = mapping['ocm_repo_url']
+
+            if 'repository' in mapping:
+                repo_url = mapping['repository']
+            else:
+                repo_url = mapping['ocm_repo_url']
+
             if isinstance(repo_url, dict):
                 repo_url = dacite.from_dict(
                     data_class=cm.OciRepositoryContext,
