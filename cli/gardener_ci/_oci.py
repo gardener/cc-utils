@@ -117,6 +117,55 @@ def ls(
                     print(info.name)
 
 
+def cat(
+    image: str,
+    path: str,
+    outfile: str='-',
+):
+    if outfile == '-' and sys.stdout.isatty():
+        print('error: either redirect output, or specify --outfile')
+        exit(1)
+
+    image_reference = oci.model.OciImageReference.to_image_ref(image)
+
+    oci_client = ccc.oci.oci_client()
+    manifest = _manifest(
+        image_reference=image_reference,
+        oci_client=oci_client,
+    )
+
+    for layer in manifest.layers:
+        blob = oci_client.blob(image_reference=image_reference, digest=layer.digest)
+
+        with tarfile.open(
+            fileobj=tarutil.FilelikeProxy(generator=blob.iter_content(chunk_size=4096)),
+            mode='r|*',
+        ) as tf:
+            for info in tf:
+                if path.removeprefix('/') != info.name.removeprefix('/'):
+                    continue
+                break
+            else:
+                continue
+
+            if not info.isfile():
+                print(f'error: {path=} is not a regular file')
+                exit(1)
+            if outfile == '-':
+                outfile = sys.stdout.buffer
+            else:
+                outfile = open(outfile, 'wb')
+
+            octects_left = info.size
+            while octects_left:
+                read = min(octects_left, 4096)
+                outfile.write(tf.fileobj.read(read))
+                octects_left -= read
+
+            # stop after first match
+            exit(0)
+
+
 def purge(image: str):
     oci_client = ccc.oci.oci_client()
 
