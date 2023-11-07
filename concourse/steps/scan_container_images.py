@@ -21,8 +21,6 @@ import typing
 import github3.repos
 import tabulate
 
-import clamav.client
-import clamav.cnudie
 import clamav.model
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
