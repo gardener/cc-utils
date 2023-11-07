@@ -903,7 +903,7 @@ def create_or_update_github_issues(
         else:
             logger.info('no scan results, will skip issues with ctx label')
 
-        close_issues_for_absent_resources(
+        close_issues_for_absent_or_assessed_resources(
             result_groups=result_groups,
             known_issues=known_issues,
             issue_type=issue_type,
@@ -920,7 +920,7 @@ def create_or_update_github_issues(
     logger.info(f'{gh_api.ratelimit_remaining=}')
 
 
-def close_issues_for_absent_resources(
+def close_issues_for_absent_or_assessed_resources(
     result_groups: list[gcm.ScanResultGroup],
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
     issue_type: str | None,
@@ -937,13 +937,23 @@ def close_issues_for_absent_resources(
 
     def close_issues(
         issues: typing.Iterable[github3.issues.Issue],
+        resources_in_bom: set[str]=set(),
     ):
         for issue in issues:
             logger.info(
                 f"Closing issue '{issue.title}'({issue.html_url}) since no scan contained a "
                 "scanned element matching its digest."
             )
-            issue.create_comment('closing, because scanned element no longer present in BoM')
+            comment = (
+                'closing ticket, because scanned element is no longer present in BoM ' +
+                'or there are no longer unassessed findings'
+            )
+            for resource_in_bom in resources_in_bom:
+                if resource_in_bom in issue.title:
+                    # if there is still an issue open for this resource, it is still present in BoM
+                    comment = 'closing ticket, because there are no longer unassessed findings'
+                    break
+            issue.create_comment(comment)
             github.util.close_issue(issue)
 
     def has_ctx_label(
@@ -987,6 +997,7 @@ def close_issues_for_absent_resources(
         component_resource_label(issue): issue for issue in all_issues
     }
 
+    resources_in_bom = set()
     for result_group in result_groups:
         scan_result = result_group.results[0]
         scanned_element = scan_result.scanned_element
@@ -1012,5 +1023,13 @@ def close_issues_for_absent_resources(
         logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
+        resources_in_bom.add(github.compliance.issue.unique_name_for_element(
+            scanned_element=scanned_element,
+            issue_type=issue_type,
+        ))
+
     # any issues that have not been removed thus far were not referenced by given result_groups
-    close_issues(component_resources_to_issues.values())
+    close_issues(
+        issues=component_resources_to_issues.values(),
+        resources_in_bom=resources_in_bom,
+    )
