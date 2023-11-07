@@ -32,7 +32,7 @@ import delivery.model
 import dso.cvss
 import github.codeowners
 import github.compliance.issue
-import github.compliance.milestone
+import github.compliance.milestone as gcmi
 import github.compliance.model as gcm
 import github.retry
 import github.user
@@ -625,90 +625,6 @@ def _scanned_element_ctx_label(
 
 
 @functools.cache
-def _target_milestone(
-    repo: github3.repos.Repository,
-    sprints: tuple[delivery.model.Sprint],
-) -> tuple[
-    github3.repos.repo.milestone.Milestone | None,
-    list[github3.repos.repo.milestone.Milestone],
-]:
-    return github.compliance.milestone.find_or_create_sprint_milestone(
-        repo=repo,
-        sprints=sprints,
-    )
-
-
-@functools.cache
-def _upcoming_sprints(
-    delivery_svc_client: delivery.client.DeliveryServiceClient,
-    today: datetime.date=datetime.date.today(), # used to refresh the cache daily
-) -> list[delivery.model.Sprint]:
-    sprints = delivery_svc_client.sprints()
-    upcoming_sprints = [
-        sprint for sprint in sprints
-        if sprint.find_sprint_date(name='end_date').value.date() >= today
-    ]
-
-    if len(upcoming_sprints) == 0:
-        raise ValueError(f'no upcoming sprints found, all sprints ended before {today}')
-
-    return upcoming_sprints
-
-
-def _target_sprints(
-    delivery_svc_client: delivery.client.DeliveryServiceClient,
-    latest_processing_date: datetime.date=None,
-    sprint_end_date: datetime.date=None,
-    sprints_count: int=1,
-) -> tuple[delivery.model.Sprint]:
-    if not latest_processing_date and not sprint_end_date:
-        raise ValueError(
-          "At least one of 'latest_processing_date' and 'sprint_end_date' must not be 'None'"
-        )
-    today = datetime.date.today()
-    sprints = _upcoming_sprints(
-        delivery_svc_client=delivery_svc_client,
-        today=today,
-    )
-
-    if latest_processing_date:
-        date = latest_processing_date
-        offset = -1 # find the sprint that ends before the specified date
-    else:
-        date = sprint_end_date
-        offset = 0 # find the sprint that includes the specified date
-
-    sprints.sort(key=lambda sprint: sprint.find_sprint_date(name='end_date').value.date())
-
-    targets_sprints = []
-    for idx, sprint in enumerate(sprints):
-        if len(targets_sprints) == sprints_count:
-            # found enough sprints -> early exiting
-            break
-
-        end_date = sprint.find_sprint_date(name='end_date').value.date()
-        if end_date >= date:
-            if idx + offset == -1: # compare to "-1" instead of "<0" to print warning _once_
-                logger.warning(
-                    f'did not found not ended sprints starting from {date} with an offset '
-                    f'of {offset}, will return the first {sprints_count} not ended sprints'
-                )
-            elif idx + offset >= len(sprints):
-                # index + offset keep being out of bounds -> early exiting
-                break
-            else:
-                targets_sprints.append(sprints[idx + offset])
-
-    if len(targets_sprints) < sprints_count:
-        logger.warning(
-            f'did not found {sprints_count} sprints starting from {date} with ' +
-            f'an offset of {offset}, only found {len(targets_sprints)} sprints'
-        )
-
-    return tuple(targets_sprints)
-
-
-@functools.cache
 def _valid_issue_assignees(
     repository: github3.repos.Repository,
 ) -> set[str]:
@@ -849,7 +765,7 @@ def create_or_update_github_issues(
                         # to last sprint which is just "in-time"
                         if max_days > 0:
                             # get the last possible sprint which ends before the processing date
-                            target_sprints = _target_sprints(
+                            target_sprints = gcmi.target_sprints(
                                 delivery_svc_client=delivery_svc_client,
                                 latest_processing_date=latest_processing_date,
                                 sprints_count=2,
@@ -857,12 +773,12 @@ def create_or_update_github_issues(
 
                     if max_days == 0: # either explicit bc of severity or bc of initial value
                         # get the sprint where the processing date is in
-                        target_sprints = _target_sprints(
+                        target_sprints = gcmi.target_sprints(
                             delivery_svc_client=delivery_svc_client,
                             sprint_end_date=latest_processing_date,
                             sprints_count=2,
                         )
-                    target_milestone, failed_milestones = _target_milestone(
+                    target_milestone, failed_milestones = gcmi.find_or_create_sprint_milestone(
                         repo=repository,
                         sprints=target_sprints,
                     )
