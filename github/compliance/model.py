@@ -11,6 +11,7 @@ import cfg_mgmt.model as cmm
 import cnudie.iter
 import delivery.client
 import gci.componentmodel as cm
+import github.compliance.milestone as gcmi
 import unixutil.model
 
 
@@ -118,13 +119,12 @@ class ScanResult:
         # creation instead of a sprint lying in the past
         if delivery_svc_client and repository and max_days > 0:
             try:
-                import github.compliance.report as gcr
-                target_sprints = gcr._target_sprints(
+                target_sprints = gcmi.target_sprints(
                     delivery_svc_client=delivery_svc_client,
                     latest_processing_date=date,
                     sprints_count=2,
                 )
-                target_milestone, _ = gcr._target_milestone(
+                target_milestone, _ = gcmi.find_or_create_sprint_milestone(
                     repo=repository,
                     sprints=target_sprints,
                 )
