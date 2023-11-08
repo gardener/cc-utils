@@ -352,13 +352,16 @@ def process_version(
     return processed_version
 
 
+T = typing.TypeVar('T', semver.VersionInfo, str)
+
+
 def find_latest_version(
-    versions: Iterable[Union[semver.VersionInfo, str]],
+    versions: Iterable[T],
     ignore_prerelease_versions: bool=False,
     invalid_semver_ok: bool=False,
-) -> str:
+) -> T | None:
     latest_candidate = None
-    latest_candidate_str = None
+    latest_candidate_semver = None
 
     for candidate in versions:
         if isinstance(candidate, str):
@@ -375,21 +378,20 @@ def find_latest_version(
         if ignore_prerelease_versions and candidate_semver.prerelease:
             continue
 
-        if not latest_candidate:
-            latest_candidate = candidate_semver
-            latest_candidate_str = candidate
+        if not latest_candidate_semver:
+            latest_candidate_semver = candidate_semver
+            latest_candidate = candidate
             continue
-        if candidate_semver > latest_candidate:
-            latest_candidate = candidate_semver
-            latest_candidate_str = candidate
 
-    return latest_candidate_str
+        if candidate_semver > latest_candidate_semver:
+            latest_candidate_semver = candidate_semver
+            latest_candidate = candidate
+
+    return latest_candidate
 
 
 # alias with a more expressive (and correct..) name
 greatest_version = find_latest_version
-
-T = typing.TypeVar('T', semver.VersionInfo, str)
 
 
 def greatest_version_with_matching_major(
@@ -433,12 +435,12 @@ def greatest_version_with_matching_major(
 
 
 def greatest_version_with_matching_minor(
-    reference_version: Union[semver.VersionInfo, str],
-    versions: Iterable[Union[semver.VersionInfo, str]],
+    reference_version: T,
+    versions: Iterable[T],
     ignore_prerelease_versions: bool=False,
-) -> str:
+) -> T | None:
     latest_candidate_semver = None
-    latest_candidate_str = None
+    latest_candidate = None
 
     if isinstance(reference_version, str):
         reference_version = parse_to_semver(reference_version)
@@ -462,9 +464,9 @@ def greatest_version_with_matching_minor(
         if candidate_semver >= reference_version:
             if not latest_candidate_semver or latest_candidate_semver < candidate_semver:
                 latest_candidate_semver = candidate_semver
-                latest_candidate_str = candidate
+                latest_candidate = candidate
 
-    return latest_candidate_str
+    return latest_candidate
 
 
 # alias for backwards-compatibility
@@ -509,11 +511,11 @@ def find_smallest_version_with_matching_minor(
 
 def greatest_version_before(
     reference_version: Union[semver.VersionInfo, str],
-    versions: Iterable[Union[semver.VersionInfo, str]],
+    versions: Iterable[T],
     ignore_prerelease_versions: bool=False,
-) -> str | None:
+) -> T | None:
     latest_candidate_semver = None
-    latest_candidate_str = None
+    latest_candidate = None
 
     if isinstance(reference_version, str):
         reference_version = parse_to_semver(reference_version)
@@ -530,9 +532,9 @@ def greatest_version_before(
         if candidate_semver < reference_version:
             if not latest_candidate_semver or candidate_semver > latest_candidate_semver:
                 latest_candidate_semver = candidate_semver
-                latest_candidate_str = candidate
+                latest_candidate = candidate
 
-    return latest_candidate_str
+    return latest_candidate
 
 
 def partition_by_major_and_minor(
