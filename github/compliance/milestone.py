@@ -135,7 +135,7 @@ def target_sprints(
             break
 
         end_date = sprint.find_sprint_date(name='end_date').value.date()
-        if end_date >= date:
+        if end_date > date:
             if idx + offset == -1: # compare to "-1" instead of "<0" to print warning _once_
                 logger.warning(
                     f'did not find not ended sprints starting from {date} with an offset '
