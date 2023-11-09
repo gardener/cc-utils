@@ -87,14 +87,6 @@ component_descriptor_lookup = cnudie.retrieve.create_default_component_descripto
     ocm_repository_lookup=ocm_mapping_cfg,
 )
 
-previous_version = version.greatest_version_with_matching_minor(
-  reference_version=version_str,
-  ignore_prerelease_versions=True,
-  versions=ocm_version_lookup(component),
-)
-
-logger.info(f'{previous_version=} (reference: {version_str})')
-
 githubrepobranch = GitHubRepoBranch(
     github_config=github_cfg,
     repo_owner='${repo.repo_owner()}',
@@ -106,12 +98,12 @@ github_helper = GitHubRepositoryHelper.from_githubrepobranch(
     githubrepobranch=githubrepobranch,
 )
 try:
-    release_note_blocks = release_notes.fetch.fetch_release_notes(
+    release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
         repo_path=repo_dir,
         component=component,
         component_descriptor_lookup=component_descriptor_lookup,
         version_lookup=ocm_version_lookup,
-        previous_version=previous_version,
+        current_version=version_str,
     )
     release_notes_md = '\n'.join(
         str(i) for i in release_notes.markdown.render(release_note_blocks)

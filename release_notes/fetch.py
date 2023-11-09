@@ -1,6 +1,7 @@
 import logging
 import typing
 import datetime
+import enum
 
 import gci.componentmodel
 import git
@@ -10,11 +11,17 @@ import semver
 import cnudie.retrieve
 import cnudie.util
 import gitutil
+import github.util
 import release_notes.model as rnm
 import release_notes.utils as rnu
 import version
 
 logger = logging.getLogger(__name__)
+
+
+class SpecialVersion(enum.Enum):
+    HEAD = enum.auto()
+    INITIAL = enum.auto()
 
 
 def _list_commits_between_tags(
@@ -61,39 +68,36 @@ def _list_commits_since_tag(
 
 
 def _get_release_note_commits_tuple_for_release(
-        previous_version: semver.VersionInfo,
-        component_versions: dict[semver.VersionInfo, str],
+        current_version: str,
+        previous_version: str,
         git_helper: gitutil.GitHelper,
         github_repo: github3.repos.Repository,
-        current_version_tag: git.TagReference,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
     and a tuple of commits which should not be included in the release notes
     '''
-    logger.info('creating new release')
+    logger.info('Fetching commits for release notes')
 
-    previous_version_tag = git_helper.repo.tag(component_versions[previous_version])
-    if not previous_version_tag:
-        raise RuntimeError(
-            f"cannot find previous version '{previous_version!s}' in component versions / tags."
-        )
-    logger.info(f'found previous minor tag: {previous_version_tag}')
+    current_version_tag = git_helper.repo.tag(current_version)
+    logger.info(f"Found tag for current version: '{current_version_tag}'")
+    previous_version_tag = git_helper.repo.tag(previous_version)
+    logger.info(f"Found tag for previous version: '{previous_version_tag}'")
 
-    # if the current version tag and the previous minor tag are ancestors, just
+    # if the current version tag and the previous tag are ancestors, just
     # add the range (old method)
     previous_version_tag_commit_sha = git_helper.fetch_head(
         f'refs/tags/{previous_version_tag}'
     )
     current_tag_commit_sha = git_helper.fetch_head(f'refs/tags/{current_version_tag}')
     if git_helper.repo.is_ancestor(previous_version_tag_commit_sha, current_tag_commit_sha):
-        logger.info('it\'s an ancestor. simple range should be enough.')
+        logger.info('Previous tag is an ancestor, simple range should be enough.')
         return tuple(git_helper.repo.iter_commits(
             f'{current_tag_commit_sha}...{previous_version_tag_commit_sha}')
         ), tuple()
 
     # otherwise, use the new method
-    # find start of previous minor-release tag
+    # find start of previous release tag
     default_head = git_helper.fetch_head(f'refs/heads/{github_repo.default_branch}')
     if not (previous_branch_starts := git_helper.repo.merge_base(
         default_head,
@@ -102,9 +106,9 @@ def _get_release_note_commits_tuple_for_release(
         raise RuntimeError('cannot find the branch start for the previous version')
 
     previous_branch_start: git.Commit = previous_branch_starts.pop()
-    logger.info(f'it\'s not an ancestor. the branch start appears to be {previous_branch_start}')
+    logger.info(f'Previous tag not an ancestor. The branch start appears to be {previous_branch_start}')
 
-    # all commits from the branch start to the previous minor-release tag
+    # all commits from the branch start to the previous release tag
     # should be removed from the release notes
     filter_out_commits_range = (
         f'{previous_version_tag_commit_sha}...{previous_branch_start}'
@@ -122,168 +126,47 @@ def _get_release_note_commits_tuple_for_release(
 
 
 def get_release_note_commits_tuple(
-        previous_version: semver.VersionInfo | None,
-        previous_version_tag: git.TagReference,
-        component_versions: dict[semver.VersionInfo, str],
-        git_helper,
-        current_version_tag: git.TagReference,
-        current_version: semver.VersionInfo | None,
+        release_note_version_range: tuple[str | SpecialVersion, str | SpecialVersion],
+        git_helper:gitutil.GitHelper,
         github_repo: github3.repos.Repository,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
     and a tuple of commits which should not be included in the release notes
     '''
-    # initial release
-    if not previous_version or len(component_versions) == 1:
-        logger.info('version appears to be an initial release.')
-        # just return all commits starting from the current_version_tag
-        return tuple(git_helper.repo.iter_commits(current_version_tag)), tuple()
 
-    if not current_version:
-        logger.info('No current version specified. Start fetching of release notes at HEAD')
+    from_version, to_version = release_note_version_range
+
+    if from_version is SpecialVersion.INITIAL:
+        logger.info('Version appears to be an initial release.')
+        if to_version is SpecialVersion.HEAD:
+            return tuple(git_helper.repo.iter_commits()), tuple()
+        else:
+            return tuple(git_helper.repo.iter_commits(git_helper.repo.tag(to_version))), tuple()
+
+    if to_version is SpecialVersion.HEAD:
+        logger.info(f"Considering all commits since {from_version}")
         return _list_commits_since_tag(
             repo=git_helper.repo,
-            tag=previous_version_tag,
-        )
-    # new major release
-    if current_version.major != previous_version.major:
-        logger.info(
-            f"creating new major release '{current_version!s}'"
-        )
-        previous_minor_version = semver.VersionInfo(
-            major=previous_version.major,
-            minor=previous_version.minor
-        )
-        return _get_release_note_commits_tuple_for_release(
-            previous_version=previous_minor_version,
-            component_versions=component_versions,
-            git_helper=git_helper,
-            github_repo=github_repo,
-            current_version_tag=current_version_tag
+            tag=git_helper.repo.tag(from_version),
         )
 
-    # new minor release
-    if current_version.minor != previous_version.minor and current_version.patch == 0:
-        logger.info(
-            f"creating new minor release '{current_version!s}'"
-        )
-        previous_minor_version = semver.VersionInfo(
-            major=previous_version.major,
-            minor=previous_version.minor
-        )
-        return _get_release_note_commits_tuple_for_release(
-            previous_version=previous_minor_version,
-            component_versions=component_versions,
-            git_helper=git_helper,
-            github_repo=github_repo,
-            current_version_tag=current_version_tag
-        )
+    logger.info(f'Considering commits in range {from_version}...{to_version}')
 
-    # new patch release
-    logger.info(f'creating new patch release from {previous_version_tag} to {current_version_tag}')
-    if previous_version_tag is None:
-        raise RuntimeError(
-            'cannot create patch-release notes because previous version cannot be found'
-        )
-    return _list_commits_between_tags(
-            git_helper.repo,
-            current_version_tag,
-            previous_version_tag
-    ), tuple()
-
-
-def fetch_release_notes(
-    component: gci.componentmodel.Component,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    version_lookup: cnudie.retrieve.VersionLookupByComponent,
-    repo_path: str,
-    current_version: typing.Optional[str] = None,
-    previous_version: typing.Optional[str] = None,
-) -> set[rnm.ReleaseNote]:
-    ''' Fetches and returns a set of release notes for the specified component.
-
-    :param component: An instance of the Component class from the GCI component model.
-    :param repo_path: The (local) path to the git-repository.
-    :param current_version: Optional argument to retrieve release notes up to a specific version.
-        If not given, the current `HEAD` is used.
-    :param previous_version: Optional argument to retrieve release notes starting at a specific \
-        version. If not given, the closest version to `current_version` is used.
-
-    :return: A set of ReleaseNote objects for the specified component.
-    '''
-
-    if current_version and previous_version:
-        if version.parse_to_semver(current_version) < version.parse_to_semver(previous_version):
-            logger.info(
-                f'{current_version=} is a predecessor to {previous_version=}. '
-                'Will not generate release-notes.'
-            )
-            return set()
-
-    source = cnudie.util.determine_main_source_for_component(component)
-    github_helper = rnu.github_helper_from_github_access(source.access)
-    git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
-
-    # make sure _all_ tags are available locally
-    git_helper.fetch_tags()
-
-    # find all available versions
-    component_versions: dict[semver.VersionInfo, str] = {}
-
-    for ver in version_lookup(component.identity()):
-        parsed_version = version.parse_to_semver(ver)
-        if parsed_version.prerelease:  # ignore pre-releases
-            continue
-        component_versions[parsed_version] = ver
-
-    if current_version:
-        current_version_tag = git_helper.repo.tag(current_version)
-        if not current_version_tag:
-            raise RuntimeError(f'cannot find ref {source.access.ref} in repo')
-    else:
-        current_version_tag = None
-
-    if not previous_version:
-        # no previous version will exist on first release
-        previous_version_tag: typing.Optional[git.TagReference] = None
-        previous_version = rnu.find_next_smallest_version(
-            available_versions=list(component_versions.keys()),
-            current_version=version.parse_to_semver(current_version) if current_version else None,
-        )
-        if previous_version:
-            previous_version = str(previous_version)
-
-    if previous_version:
-        # we need to use the original previous version as found in the ocm-repo to refer to
-        # the tag or we risk losing the leading 'v' if it is present.
-        # TODO: This may happen after retrieving the previous version the component_versions' keys.
-        # This function should be split up and refactored to avoid these headaches. Ideally use
-        # str where possible, as they are the closest representation of our release-versions.
-        original_version = component_versions[version.parse_to_semver(previous_version)]
-        previous_version_tag = git_helper.repo.tag(original_version)
-
-    logger.info(
-        f'current: {current_version=}, {current_version_tag=}, '
-        f'previous: {previous_version=}, {previous_version_tag=}'
-    )
-
-    github_repo: github3.repos.Repository = github_helper.github.repository(
-        github_helper.owner,
-        github_helper.repository_name
-    )
-
-    # fetch commits for release
-    filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
-        previous_version=version.parse_to_semver(previous_version) if previous_version else None,
-        previous_version_tag=previous_version_tag,
-        component_versions=component_versions,
+    return _get_release_note_commits_tuple_for_release(
+        previous_version=from_version,
+        current_version=to_version,
         git_helper=git_helper,
-        current_version_tag=current_version_tag,
-        current_version=version.parse_to_semver(current_version) if current_version else None,
-        github_repo=github_repo
+        github_repo=github_repo,
     )
 
+
+def _determine_blocks_to_include(
+    filter_in_commits: tuple[git.Commit, ...],
+    filter_out_commits: tuple[git.Commit, ...],
+    git_helper: gitutil.GitHelper,
+    github_helper: github.util.GitHubRepositoryHelper,
+) -> set[rnm.SourceBlock]:
     logger.info(
         f'Found {(commit_count := len(filter_in_commits))} relevant commits for release notes '
         f'({len(filter_out_commits)} filtered out).'
@@ -316,8 +199,8 @@ def fetch_release_notes(
     commit_pulls = rnu.request_pull_requests_from_api(
         git_helper=git_helper,
         gh=github_helper.github,
-        owner=github_repo.owner,
-        repo_name=github_repo.name,
+        owner=github_helper.owner,
+        repo_name=github_helper.repository_name,
         commits=[*filter_in_commits, *filter_out_commits],
         group_size=commit_processing_group_size,
         min_seconds_per_group=processing_group_min_seconds,
@@ -370,6 +253,56 @@ def fetch_release_notes(
             'removing duplicates.'
         )
 
+    return source_blocks_to_be_included
+
+
+def fetch_draft_release_notes(
+    current_version: str,
+    component: gci.componentmodel.Component,
+    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    version_lookup: cnudie.retrieve.VersionLookupByComponent,
+    repo_path: str,
+):
+    known_versions: list[str] = list(version_lookup(component.identity()))
+
+    previous_version = version.greatest_version_before(
+        reference_version=current_version,
+        versions=known_versions,
+        ignore_prerelease_versions=True,
+    ) or SpecialVersion.INITIAL
+
+    release_note_version_range = (previous_version, SpecialVersion.HEAD)
+
+    logger.info(
+        f'Creating draft-release notes from {previous_version} to current HEAD'
+    )
+
+    source = cnudie.util.determine_main_source_for_component(component)
+    github_helper = rnu.github_helper_from_github_access(source.access)
+    git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
+
+    # make sure _all_ tags are available locally
+    git_helper.fetch_tags()
+
+    github_repo: github3.repos.Repository = github_helper.github.repository(
+        owner=github_helper.owner,
+        repository=github_helper.repository_name,
+    )
+
+    # fetch commits for release
+    filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
+        release_note_version_range=release_note_version_range,
+        git_helper=git_helper,
+        github_repo=github_repo
+    )
+
+    release_note_blocks = _determine_blocks_to_include(
+        filter_in_commits=filter_in_commits,
+        filter_out_commits=filter_out_commits,
+        git_helper=git_helper,
+        github_helper=github_helper,
+    )
+
     release_notes: set[rnm.ReleaseNote] = {
         rnm.create_release_notes_obj(
             component_descriptor_lookup=component_descriptor_lookup,
@@ -377,7 +310,115 @@ def fetch_release_notes(
             source_block=source_block,
             source_component=component,
             current_component=component,
-        ) for source_block in source_blocks_to_be_included
+        ) for source_block in release_note_blocks
+    }
+
+    return release_notes
+
+
+
+def fetch_release_notes(
+    component: gci.componentmodel.Component,
+    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    version_lookup: cnudie.retrieve.VersionLookupByComponent,
+    repo_path: str,
+    current_version: typing.Optional[str] = None,
+    previous_version: typing.Optional[str] = None,
+) -> set[rnm.ReleaseNote]:
+    ''' Fetches and returns a set of release notes for the specified component.
+
+    :param component: An instance of the Component class from the GCI component model.
+    :param repo_path: The (local) path to the git-repository.
+    :param current_version: Optional argument to retrieve release notes up to a specific version.
+        If not given, the current `HEAD` is used.
+    :param previous_version: Optional argument to retrieve release notes starting at a specific \
+        version. If not given, the closest version to `current_version` is used.
+
+    :return: A set of ReleaseNote objects for the specified component.
+    '''
+
+    # sanity-checks / validation
+    if current_version and previous_version:
+        current_semver = version.parse_to_semver(current_version)
+        previous_semver = version.parse_to_semver(previous_version)
+
+        if current_semver < previous_semver:
+            logger.info(
+                f'{current_version=} is a predecessor to {previous_version=}. '
+                'will not generate release-notes.'
+            )
+            return set()
+
+        if current_semver == previous_semver:
+            logger.info(
+                f'Current and previous versions given are equal ({current_version!s}), '
+                'will not generate release-notes.'
+            )
+            return set()
+
+    known_versions: list[str] = list(version_lookup(component.identity()))
+
+    if not previous_version:
+        if current_version:
+            # if we have a current version, try to find closest match and use it
+            previous_version = version.greatest_version_before(
+                reference_version=current_version,
+                versions=known_versions,
+                ignore_prerelease_versions=True,
+            )
+        else:
+            # if no current version was given, use latest version
+            previous_version = version.greatest_version(
+                versions=known_versions,
+                ignore_prerelease_versions=True,
+            )
+        if not previous_version:
+            # if still no previous version could be determined this is probably the first release.
+            previous_version = SpecialVersion.INITIAL
+
+    logger.info(
+        f'current: {current_version=}, previous: {previous_version=},'
+    )
+
+    release_note_version_range = (
+        previous_version or SpecialVersion.INITIAL,
+        current_version or SpecialVersion.HEAD
+    )
+
+    source = cnudie.util.determine_main_source_for_component(component)
+    github_helper = rnu.github_helper_from_github_access(source.access)
+    git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
+
+    # make sure _all_ tags are available locally
+    git_helper.fetch_tags()
+
+    github_repo: github3.repos.Repository = github_helper.github.repository(
+        owner=github_helper.owner,
+        repository=github_helper.repository_name,
+    )
+
+    # fetch commits for release
+    filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
+        release_note_version_range=release_note_version_range,
+        git_helper=git_helper,
+        github_repo=github_repo
+    )
+
+    release_note_blocks = _determine_blocks_to_include(
+        filter_in_commits=filter_in_commits,
+        filter_out_commits=filter_out_commits,
+        git_helper=git_helper,
+        github_helper=github_helper,
+    )
+
+    release_notes: set[rnm.ReleaseNote] = {
+        rnm.create_release_notes_obj(
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            source_block=source_block,
+            source_component=component,
+            current_component=component,
+        ) for source_block in release_note_blocks
     }
 
     return release_notes
