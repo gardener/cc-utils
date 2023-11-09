@@ -11,7 +11,6 @@ import github3
 import github3.exceptions as gh3e
 import github3.pulls as gh3p
 import github3.structs as gh3s
-import semver
 import yaml
 import yaml.scanner
 
@@ -76,28 +75,6 @@ def create_release_notes_blocks(
         release_notes: set[rnm.ReleaseNote]
 ) -> str:
     return '\n\n'.join(z.block_str for z in release_notes)
-
-
-def find_next_smallest_version(
-        available_versions: list[semver.VersionInfo],
-        current_version: semver.VersionInfo
-) -> semver.VersionInfo | None:
-    # find version before the requested version and sort by semver
-    # If no version requested, return greatest version
-    sorted_versions =  sorted(available_versions, reverse=True)
-    if not sorted_versions:
-        return None
-
-    if current_version:
-        # TODO: the desired version is always the first hit, so this can be optimised further.
-        # Do so in a way that keeps readability.
-        candidate_versions = [v for v in sorted_versions if v < current_version]
-        if not candidate_versions:
-            return None
-        return max(candidate_versions)
-
-    else:
-        return sorted_versions[0]
 
 
 def _find_git_notes_for_commit(
