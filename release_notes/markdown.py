@@ -185,7 +185,7 @@ def release_notes_for_ocm_resource(resource: cm.Resource) -> str | None:
 
     if resource.type == cm.ArtefactType.OCI_IMAGE:
         if resource.access.type == cm.AccessType.OCI_REGISTRY:
-            return f'{resource.name}: `{resource.access.imageReference}`'
+            return f'- {resource.name}: `{resource.access.imageReference}`'
 
     return None
 
