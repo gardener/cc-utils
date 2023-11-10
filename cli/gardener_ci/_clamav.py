@@ -26,7 +26,9 @@ def scan_component(
     ).component
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        default_ctx_repo=component.current_repository_ctx(),
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+            component.current_repository_ctx(),
+        ),
     )
 
     resource_nodes = cnudie.iter.iter(
