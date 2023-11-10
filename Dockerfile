@@ -1,5 +1,5 @@
-ARG BASE_IMAGE_TAG=0.91.0
-FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG as builder
+ARG BASE_IMAGE=europe-docker.pkg.dev/gardener-project/releases/cicd/job-image-base:0.92.0
+FROM $BASE_IMAGE as builder
 COPY VERSION /metadata/VERSION
 COPY . /cc/utils/
 
@@ -15,7 +15,7 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
   pycryptodome
 
 FROM ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.4.1 as ocm-cli
-FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
+FROM $BASE_IMAGE
 
 ARG TARGETARCH
 
