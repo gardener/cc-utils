@@ -419,7 +419,7 @@ class ComponentDescriptorTrait(Trait):
             mapping['privileges'] = oci.auth.Privileges.READWRITE.value
             break
         else:
-            ocm_repository_mappings.append(mapping)
+            ocm_repository_mappings.append(mapping_for_repository_url)
 
         return ocm_repository_mappings
 
