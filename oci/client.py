@@ -397,7 +397,7 @@ class Client:
             ):
                 auth = oci_creds.username, oci_creds.password
             else:
-                logger.warning(f'did not find any matching credentials for {image_reference=}')
+                logger.debug(f'did not find any matching credentials for {image_reference=}')
         else:
             headers = {
               'Authorization': f'Bearer {self.token_cache.token(scope=scope).token}',
