@@ -608,7 +608,8 @@ def create_default_component_descriptor_lookup(
     configuration if available. It combines (in this order) an in-memory cache, file-system cache,
     delivery-service based, and oci-registry based lookup.
 
-    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param default_ctx_repo: deprecated. use ocm_repository_lookup instead
+    @param ocm_repository_lookup: lookup for OCM Repositories
     @param cache_dir:        directory used for caching. If cache_dir does not exist, the file-\
                              system cache lookup is not included in the returned lookup
     @param delivery_client:  client to establish the connection to the delivery-service. If the \
@@ -618,9 +619,17 @@ def create_default_component_descriptor_lookup(
     if not ocm_repository_lookup:
         ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
 
+    if ocm_repository_lookup and default_ctx_repo:
+        raise ValueError('default_ctx_repo and ocm_repository_lookup must not both be passed')
+
+    if default_ctx_repo:
+        logger.warn('passing default_ctx_repo is deprecated')
+        ocm_repository_lookup = globals()['ocm_repository_lookup'](
+            default_ctx_repo,
+        )
+
     lookups = [
         in_memory_cache_component_descriptor_lookup(
-            default_ctx_repo=default_ctx_repo,
             ocm_repository_lookup=ocm_repository_lookup,
         )
     ]
@@ -632,7 +641,6 @@ def create_default_component_descriptor_lookup(
         lookups.append(
             file_system_cache_component_descriptor_lookup(
                 cache_dir=cache_dir,
-                default_ctx_repo=default_ctx_repo,
                 ocm_repository_lookup=ocm_repository_lookup,
             )
         )
@@ -643,21 +651,19 @@ def create_default_component_descriptor_lookup(
     if delivery_client:
         lookups.append(delivery_service_component_descriptor_lookup(
             delivery_client=delivery_client,
-            default_ctx_repo=default_ctx_repo,
             ocm_repository_lookup=ocm_repository_lookup,
         ))
 
     lookups.append(
         oci_component_descriptor_lookup(
             oci_client=oci_client,
-            default_ctx_repo=default_ctx_repo,
             ocm_repository_lookup=ocm_repository_lookup,
         ),
     )
 
     return composite_component_descriptor_lookup(
         lookups=tuple(lookups),
-        default_ctx_repo=default_ctx_repo,
+        ocm_repository_lookup=ocm_repository_lookup,
         default_absent_ok=default_absent_ok,
     )
 
