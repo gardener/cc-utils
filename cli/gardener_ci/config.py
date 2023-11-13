@@ -58,7 +58,12 @@ def attribute(
     key: str,
     output_file: str = None,
     json: bool=False,
+    yaml: bool=False,
 ):
+    if json and yaml:
+        print('Error: must not pass both --json and --yaml')
+        exit(1)
+
     raw = _retrieve_model_element(cfg_type=cfg_type, cfg_name=cfg_name).raw
 
     attrib_path = key.split('.')
@@ -68,7 +73,12 @@ def attribute(
         attrib = raw.get(attrib_path.pop())
         raw = attrib
 
-    output = json_m.dumps(attrib) if json else str(attrib)
+    if json:
+        output = json_m.dumps(attrib)
+    elif yaml:
+        output = globals()['yaml'].dump(attrib)
+    else:
+        output = str(attrib)
 
     if output_file:
         with open(output_file, 'w') as f:
