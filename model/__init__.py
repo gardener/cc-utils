@@ -31,8 +31,8 @@ from ci.util import (
 )
 
 dc = dataclasses.dataclass
-empty_list = dataclasses.field(default_factory=list)
-empty_tuple = dataclasses.field(default_factory=tuple)
+empty_list = dataclasses.field(default_factory=list) # noqa:E3701
+empty_tuple = dataclasses.field(default_factory=tuple) # noqa:E3701
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)

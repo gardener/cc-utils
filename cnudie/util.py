@@ -298,7 +298,7 @@ class LabelDiff:
     label_pairs_changed: typing.List[typing.Tuple[cm.Label, cm.Label]] = dataclasses.field(default_factory=list) # noqa:E501
 
 
-empty_list = lambda: dataclasses.field(default_factory=list)
+empty_list = lambda: dataclasses.field(default_factory=list) # noqa:E3701
 
 
 @dataclasses.dataclass

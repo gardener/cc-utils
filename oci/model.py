@@ -14,7 +14,7 @@ OCI_IMAGE_INDEX_MIME = 'application/vnd.oci.image.index.v1+json'
 DOCKER_MANIFEST_LIST_MIME = 'application/vnd.docker.distribution.manifest.list.v2+json'
 DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v2+json'
 
-empty_dict = dataclasses.field(default_factory=dict)
+empty_dict = dataclasses.field(default_factory=dict) # noqa:E3701
 
 
 class MimeTypes:
