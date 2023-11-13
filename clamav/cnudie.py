@@ -26,10 +26,10 @@ ci.log.configure_default_logging()
 
 
 def _may_reuse_existing_scan_result(
-        resource_node: cnudie.iter.ResourceNode,
-        virus_db_max_age_days: int,
-        delivery_client: delivery.client.DeliveryServiceClient,
-        current_version_info: clamav.model.ClamAVVersionInfo = None,
+    resource_node: cnudie.iter.ResourceNode,
+    virus_db_max_age_days: int,
+    delivery_client: delivery.client.DeliveryServiceClient,
+    current_version_info: clamav.model.ClamAVVersionInfo = None,
 ) -> bool:
 
     previous_findings = delivery_client.artefact_metadata_for_resource_node(
