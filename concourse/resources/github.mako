@@ -87,14 +87,26 @@ ${git_ignore_paths(repo_cfg)}
 </%def>
 <%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
 <%
+import ccc.github
+import ci.util
 from concourse.client.model import ResourceType
 from makoutil import indent_func
 from model.github import Protocol
-repo_name = repo_cfg.name()
-if repo_name is not None:
-  github_cfg = cfg_set.github(cfg_name=repo_cfg.cfg_name())
+
+gh_cfg_name = repo_cfg.cfg_name()
+
+if gh_cfg_name:
+  github_cfg = cfg_set.github(cfg_name=gh_cfg_name)
+
 else:
-  github_cfg = cfg_set.github()
+  github_cfg = ccc.github.github_cfg_for_repo_url(
+    ci.util.urljoin(
+      repo_cfg.repo_hostname(),
+      repo_cfg.repo_path(),
+    ),
+    cfg_factory=cfg_set,
+    require_labels=('ci',),
+  )
 
 disable_tls_validation = github_cfg.tls_validation()
 credentials = github_cfg.credentials()
