@@ -62,12 +62,42 @@ def iter_artefact_metadata(
     results: typing.Collection[pm.BDBAScanResult],
     bdba_cfg_name: str,
 ) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
+    seen_product_ids = set()
     for result in results:
         artefact = github.compliance.model.artifact_from_node(result.scanned_element)
         artefact_ref = dso.model.component_artefact_id_from_ocm(
             component=result.scanned_element.component,
             artefact=artefact,
         )
+
+        if result.result.product_id() not in seen_product_ids:
+            seen_product_ids.add(result.result.product_id())
+            # yield dummy vulnerability finding to delete all remaining findings
+            # in case all findings have been triaged
+            meta = dso.model.Metadata(
+                datasource=dso.model.Datasource.BDBA,
+                type=dso.model.Datatype.VULNERABILITIES_CVE,
+                creation_date=datetime.datetime.now()
+            )
+
+            cve = dso.model.CVE(
+                cve=None,
+                cvss3Score=-1, # hardcoded assumption, -1 means finding was triaged
+                cvss=None,
+                affected_package_name=None,
+                affected_package_version=None,
+                reportUrl=None,
+                product_id=-1,
+                group_id=-1,
+                base_url=None,
+                bdba_cfg_name=None,
+            )
+
+            yield dso.model.ArtefactMetadata(
+                artefact=artefact_ref,
+                meta=meta,
+                data=cve,
+            )
 
         if isinstance(result, pm.VulnerabilityScanResult):
             result: pm.VulnerabilityScanResult
