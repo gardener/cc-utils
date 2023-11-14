@@ -10,6 +10,7 @@ import ruamel.yaml.scalarstring
 
 import cfg_mgmt.model as cmm
 import cfg_mgmt.rotate as cmro
+import concourse.util
 import gitutil
 import model
 
@@ -262,6 +263,16 @@ def rotate_config_element_and_persist_in_cfg_repo(
         statuses=cfg_metadata.statuses,
     )
 
+    build_url = None
+    if concourse.util._running_on_ci():
+        try:
+            build_url = concourse.util.own_running_build_url()
+        except Exception as e:
+            logger.warning(
+                'Unable to determine own job-url. Will not put it in commit-message if a '
+                f'commit is created. Error: {e}'
+            )
+
     try:
         write_changes_to_local_dir(
             cfg_element=updated_elem,
@@ -271,8 +282,13 @@ def rotate_config_element_and_persist_in_cfg_repo(
             cfg_dir=cfg_dir,
             delete_after_period=status.policy.delete_after_period,
         )
+
+        commit_message = f'rotate secret for {cfg_element._type_name}/{cfg_element.name()}'
+        if build_url:
+            commit_message += f'\n\nJob url: {build_url}'
+
         git_helper.add_and_commit(
-            message=f'rotate secret for {cfg_element._type_name}/{cfg_element.name()}',
+            message=commit_message,
         )
         git_helper.push('@', target_ref)
     except Exception as e:
@@ -337,9 +353,22 @@ def process_cfg_queue_and_persist_in_repo(
             cfg_metadata=cfg_metadata,
         )
 
+    build_url = None
+    if concourse.util._running_on_ci():
+        try:
+            build_url = concourse.util.own_running_build_url()
+        except Exception as e:
+            logger.warning(
+                'Unable to determine own job-url. Will not put it in commit-message if a '
+                f'commit is created. Error: {e}'
+            )
+
     try:
+        commit_message = f'process config queue for {cfg_element._type_name}/{cfg_element.name()}'
+        if build_url:
+            commit_message += f'\n\nJob url: {build_url}'
         git_helper.add_and_commit(
-            message=f'process config queue for {cfg_element._type_name}/{cfg_element.name()}',
+            message=commit_message,
         )
         git_helper.push('@', target_ref)
     except:

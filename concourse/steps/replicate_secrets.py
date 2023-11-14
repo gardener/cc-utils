@@ -84,6 +84,9 @@ def rotate_secrets(
         cfg_metadata=cfg_metadata,
         rotation_method=cmm.RotationMethod.AUTOMATED,
     ):
+        logger.info(
+            f"Rotating config-element '{cfg_element.name()}' of type '{cfg_element._type_name}'"
+        )
         if cmu.rotate_config_element_and_persist_in_cfg_repo(
             cfg_element=cfg_element,
             cfg_factory=cfg_factory,
