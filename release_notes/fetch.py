@@ -24,27 +24,6 @@ class SpecialVersion(enum.Enum):
     INITIAL = enum.auto()
 
 
-def _list_commits_between_tags(
-        repo: git.Repo,
-        main_tag: git.TagReference,
-        other_tag: git.TagReference
-) -> tuple[git.Commit]:
-    ''' If the tags are linear to each other (main_tag ancestor of other_tag or
-    vice versa), all commits between the tags are returned. Otherwise, all
-    commits between the merge base (first common ancestor) and the main_branch
-    are returned.
-
-    :return: a tuple of commits between the two tags '''
-    if repo.is_ancestor(main_tag.commit, other_tag.commit) or \
-            repo.is_ancestor(other_tag.commit, main_tag.commit):
-        return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{other_tag.commit.hexsha}'))
-
-    if not (merge_commit_list := repo.merge_base(main_tag, other_tag)) or not \
-            (merge_commit := merge_commit_list.pop()):
-        raise RuntimeError('cannot find merge base')
-    return tuple(repo.iter_commits(f'{main_tag.commit.hexsha}...{merge_commit.hexsha}'))
-
-
 def _list_commits_since_tag(
         repo: git.Repo,
         tag: git.TagReference,
