@@ -86,11 +86,11 @@ def iter_artefact_metadata(
                 cvss=None,
                 affected_package_name=None,
                 affected_package_version=None,
-                reportUrl=None,
-                product_id=-1,
-                group_id=-1,
-                base_url=None,
-                bdba_cfg_name=None,
+                reportUrl=result.result.report_url(),
+                product_id=result.result.product_id(),
+                group_id=result.result.group_id(),
+                base_url=result.result.base_url(),
+                bdba_cfg_name=bdba_cfg_name,
             )
 
             yield dso.model.ArtefactMetadata(
