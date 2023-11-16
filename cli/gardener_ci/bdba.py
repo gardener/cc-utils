@@ -14,7 +14,6 @@ import ccc.protecode
 import ci.util
 import cnudie.iter
 import cnudie.retrieve as cr
-import concourse.steps.component_descriptor_util as component_descriptor_util
 import concourse.steps.images
 import concourse.steps.scan_container_images
 import ctx
@@ -261,7 +260,7 @@ def assess(
 def scan(
     protecode_cfg_name: str,
     protecode_group_id: str,
-    component_descriptor_path: str,
+    component: str,
     cve_threshold: float=7.0,
     protecode_api_url=None,
     reference_protecode_group_ids: list[int]=[],
@@ -276,9 +275,8 @@ def scan(
     protecode_group_url = ci.util.urljoin(protecode_api_url, 'group', str(protecode_group_id))
     logger.info(f'Using Protecode at: {protecode_api_url} with group {protecode_group_id}')
 
-    cd = component_descriptor_util.component_descriptor_from_component_descriptor_path(
-        cd_path=component_descriptor_path,
-    )
+    lookup = cnudie.retrieve.create_default_component_descriptor_lookup()
+    component_descriptor = lookup(component)
 
     cvss_version = CVSSVersion.V3
 
@@ -301,7 +299,7 @@ def scan(
     results = tuple(_upload_grouped_images(
         protecode_api=client,
         bdba_cfg_name=protecode_cfg_name,
-        component=cd,
+        component=component_descriptor,
         protecode_group_id=protecode_group_id,
         reference_group_ids=reference_protecode_group_ids,
         oci_client=oci_client,
