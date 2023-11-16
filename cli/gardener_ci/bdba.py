@@ -9,6 +9,7 @@ import gci.componentmodel as cm
 
 from protecode.model import CVSSVersion, TriageScope
 from protecode.scanning import upload_grouped_images as _upload_grouped_images
+import ccc.aws
 import ccc.oci
 import ccc.protecode
 import ci.util
@@ -264,11 +265,18 @@ def scan(
     cve_threshold: float=7.0,
     protecode_api_url=None,
     reference_protecode_group_ids: list[int]=[],
+    aws_cfg: str=None,
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)
 
     oci_client = ccc.oci.oci_client()
+    if aws_cfg:
+        aws_session = ccc.aws.session(aws_cfg=aws_cfg)
+        s3_client = aws_session.client('s3')
+    else:
+        s3_client = None
+        logger.warn('failed to initialise s3-client')
 
     if not protecode_api_url:
         protecode_api_url = protecode_cfg.api_url()
@@ -303,6 +311,7 @@ def scan(
         protecode_group_id=protecode_group_id,
         reference_group_ids=reference_protecode_group_ids,
         oci_client=oci_client,
+        s3_client=s3_client,
     ))
 
     results_above_threshold: list[pm.VulnerabilityScanResult] = [
