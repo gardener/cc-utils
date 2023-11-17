@@ -30,6 +30,14 @@ class DeliveryServiceRoutes:
             'component',
         )
 
+    def greatest_component_versions(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'cnudie',
+            'component',
+            'versions',
+        )
+
     def component_responsibles(self):
         return ci.util.urljoin(
             self._base_url,
@@ -120,6 +128,36 @@ class DeliveryServiceClient:
             res.json(),
             validation_mode=validation_mode,
         )
+
+    def greatest_component_versions(
+        self,
+        component_name: str,
+        max_versions: int=5,
+        greatest_version: str=None,
+        ocm_repo: cm.OcmRepository=None,
+        ignore_prerelease_versions: bool=False,
+    ):
+        params = {
+            'component_name': component_name,
+            'max': max_versions,
+            'ignore_prerelease_versions': ignore_prerelease_versions,
+        }
+        if greatest_version:
+            params['version'] = greatest_version
+        if ocm_repo:
+            if not isinstance(ocm_repo, cm.OciOcmRepository):
+                raise NotImplementedError(ocm_repo)
+            params['ocm_repo_url'] = ocm_repo.baseUrl
+            params['ctx_repo_url'] = ocm_repo.baseUrl # TODO remove once updated in delivery-service
+
+        res = requests.get(
+            url=self._routes.greatest_component_versions(),
+            params=params,
+        )
+
+        res.raise_for_status()
+
+        return res.json()
 
     def upload_metadata(
         self,

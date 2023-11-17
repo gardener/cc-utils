@@ -767,7 +767,9 @@ def component_versions(
     return oci_client.tags(image_reference=oci_ref)
 
 
-@deprecated.deprecated # mv to delivery-service
+# moved to delivery-service
+# TODO remove once all usages of this functions are updated
+@deprecated.deprecated
 def greatest_component_versions(
     component_name: str,
     ctx_repo: cm.OcmRepository=None,
