@@ -6,7 +6,6 @@ import enum
 import gci.componentmodel
 import git
 import github3.repos
-import semver
 
 import cnudie.retrieve
 import cnudie.util
@@ -85,7 +84,9 @@ def _get_release_note_commits_tuple_for_release(
         raise RuntimeError('cannot find the branch start for the previous version')
 
     previous_branch_start: git.Commit = previous_branch_starts.pop()
-    logger.info(f'Previous tag not an ancestor. The branch start appears to be {previous_branch_start}')
+    logger.info(
+        f'Previous tag not an ancestor. The branch start appears to be {previous_branch_start}'
+    )
 
     # all commits from the branch start to the previous release tag
     # should be removed from the release notes
@@ -293,7 +294,6 @@ def fetch_draft_release_notes(
     }
 
     return release_notes
-
 
 
 def fetch_release_notes(
