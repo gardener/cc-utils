@@ -9,6 +9,9 @@ def s3_access_as_blob_descriptor(
     chunk_size: int=4096,
     name: str=None,
 ) -> ioutil.BlobDescriptor:
+    if not s3_client:
+        raise ValueError('must pass-in s3-client')
+
     blob = s3_client.get_object(Bucket=s3_access.bucketName, Key=s3_access.objectKey)
 
     size = blob['ContentLength']
