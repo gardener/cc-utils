@@ -710,7 +710,7 @@ def components(
                 _visited_component_versions.append(cref)
 
             resolved_component_descriptor = component_descriptor_lookup(
-                component_id=cm.ComponentIdentity(
+                cm.ComponentIdentity(
                     name=component_ref.componentName,
                     version=component_ref.version,
                 ),
@@ -812,7 +812,7 @@ def greatest_component_versions(
         )
     else:
         versions = version_lookup(
-            component_id=cm.ComponentIdentity(
+            cm.ComponentIdentity(
                 name=component_name,
                 version=None
             ),

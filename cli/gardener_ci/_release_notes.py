@@ -42,21 +42,21 @@ def print_release_notes(
             versions=version_lookup(component_name),
         )
         component_descriptor = ocm_lookup(
-            component_id=cm.ComponentIdentity(
+            cm.ComponentIdentity(
                 name=component_name,
                 version=greatest_version,
             ),
         )
     elif current_version:
         component_descriptor = ocm_lookup(
-            component_id=cm.ComponentIdentity(
+            cm.ComponentIdentity(
                 name=component_name,
                 version=current_version,
             ),
         )
     elif previous_version:
         component_descriptor = ocm_lookup(
-            component_id=cm.ComponentIdentity(
+            cm.ComponentIdentity(
                 name=component_name,
                 version=previous_version,
             ),
