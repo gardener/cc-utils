@@ -396,7 +396,7 @@ def create_upgrade_pr(
     ls_repo = pull_request_util.repository
 
     from_component_descriptor = component_descriptor_lookup(
-        component_id=gci.componentmodel.ComponentIdentity(
+        gci.componentmodel.ComponentIdentity(
             name=from_ref.componentName,
             version=from_ref.version,
         ),
