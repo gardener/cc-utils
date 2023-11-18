@@ -539,7 +539,7 @@ def version_lookup(
 
 def composite_component_descriptor_lookup(
     lookups: typing.Tuple[ComponentDescriptorLookupById, ...],
-    default_ctx_repo: cm.OcmRepository | str=None,
+    ocm_repository_lookup: OcmRepositoryLookup | None=None,
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -548,11 +548,14 @@ def composite_component_descriptor_lookup(
     written back to the prior lookups (if they have a WriteBack defined).
 
     @param lookups:          a tuple of ComponentDescriptorLookupByIds which should be combined
-    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
+    @param ocm_repository_lookup: ocm_repository_lookup to be used if none is specified
+                                  in the lookup function
     '''
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OciOcmRepository|str=default_ctx_repo,
+        /,
+        ctx_repo: cm.OciOcmRepository|str=None,
+        ocm_repository_lookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
         component_id = cnudie.util.to_component_id(component_id)
@@ -585,6 +588,12 @@ def composite_component_descriptor_lookup(
 
         if ctx_repo:
             component_url = ctx_repo.component_version_oci_ref(component_id)
+        elif ocm_repository_lookup:
+            ocm_repository_urls = '\n'.join(
+                ocm_repository.oci_ref for ocm_repository
+                in ocm_repository_lookup(component_id)
+            )
+            component_url = f'ocm-repositories:\n{ocm_repository_urls}:\n{str(component_id)}'
         else:
             component_url = f'<no ocm-repo given>: {str(component_id)}'
 
