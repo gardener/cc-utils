@@ -292,7 +292,7 @@ class Client:
         )
 
         if not oci_creds:
-            logger.warning(f'no credentials for {image_reference=} - attempting anonymous-auth')
+            logger.debug(f'no credentials for {image_reference=} - attempting anonymous-auth')
 
         url = base_api_url(
             image_reference=str(image_reference),
