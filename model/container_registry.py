@@ -16,6 +16,7 @@
 import base64
 import json
 import logging
+import urllib.parse
 import typing
 
 import ci.log
@@ -96,8 +97,14 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         auth_str = f'{self.credentials().username()}:{self.credentials().passwd()}'
         auth_str = base64.b64encode(auth_str.encode('utf-8')).decode('utf-8')
 
+        hostnames = set()
+        for image_prefix in self.image_reference_prefixes():
+            if '://' not in image_prefix:
+                image_prefix = f'x://{image_prefix}'
+            hostnames.add(urllib.parse.urlparse(image_prefix).hostname)
+
         auths = {
-            host: {'auth': auth_str} for host in self.image_reference_prefixes()
+            host: {'auth': auth_str} for host in hostnames
         }
 
         # ugly workaround for docker-hub, see:
