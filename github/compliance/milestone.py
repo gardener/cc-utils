@@ -87,70 +87,37 @@ def find_or_create_sprint_milestone(
 
 
 @functools.cache
-def _upcoming_sprints(
+def _sprints(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
     today: datetime.date=datetime.date.today(), # used to refresh the cache daily
 ) -> list[delivery.model.Sprint]:
-    sprints = delivery_svc_client.sprints()
-    upcoming_sprints = [
-        sprint for sprint in sprints
-        if sprint.find_sprint_date(name='end_date').value.date() >= today
-    ]
-
-    if len(upcoming_sprints) == 0:
-        raise ValueError(f'no upcoming sprints found, all sprints ended before {today}')
-
-    return upcoming_sprints
+    return delivery_svc_client.sprints()
 
 
 def target_sprints(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
-    latest_processing_date: datetime.date=None,
-    sprint_end_date: datetime.date=None,
+    latest_processing_date: datetime.date,
     sprints_count: int=1,
 ) -> tuple[delivery.model.Sprint]:
-    if not latest_processing_date and not sprint_end_date:
-        raise ValueError(
-          "At least one of 'latest_processing_date' and 'sprint_end_date' must not be 'None'"
-        )
-    today = datetime.date.today()
-    sprints = _upcoming_sprints(
+    sprints = _sprints(
         delivery_svc_client=delivery_svc_client,
-        today=today,
     )
-
-    if latest_processing_date:
-        date = latest_processing_date
-        offset = -1 # find the sprint that ends before the specified date
-    else:
-        date = sprint_end_date
-        offset = 0 # find the sprint that includes the specified date
-
     sprints.sort(key=lambda sprint: sprint.find_sprint_date(name='end_date').value.date())
 
     targets_sprints = []
-    for idx, sprint in enumerate(sprints):
+    for sprint in sprints:
         if len(targets_sprints) == sprints_count:
             # found enough sprints -> early exiting
             break
 
         end_date = sprint.find_sprint_date(name='end_date').value.date()
-        if end_date > date:
-            if idx + offset == -1: # compare to "-1" instead of "<0" to print warning _once_
-                logger.warning(
-                    f'did not find not ended sprints starting from {date} with an offset '
-                    f'of {offset}, will return the first {sprints_count} not ended sprints'
-                )
-            elif idx + offset >= len(sprints):
-                # index + offset keep being out of bounds -> early exiting
-                break
-            else:
-                targets_sprints.append(sprints[idx + offset])
+        if end_date >= latest_processing_date:
+            targets_sprints.append(sprint)
 
     if len(targets_sprints) < sprints_count:
         logger.warning(
-            f'did not find {sprints_count} sprints starting from {date} with ' +
-            f'an offset of {offset}, only found {len(targets_sprints)} sprints'
+            f'did not find {sprints_count} sprints starting from ' +
+            f'{latest_processing_date}, only found {len(targets_sprints)} sprints'
         )
 
     return tuple(targets_sprints)

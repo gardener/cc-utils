@@ -224,7 +224,7 @@ def _create_issue(
             issue.create_comment(
                 'Failed to automatically assign ticket to one of these milestones: ' +
                 f'{", ".join([milestone.title for milestone in failed_milestones])}. ' +
-                'Milestones were probably closed before their due date.'
+                'Milestones were probably closed before all associated findings were assessed.'
             )
 
         return issue

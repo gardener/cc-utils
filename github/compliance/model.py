@@ -104,7 +104,7 @@ class ScanResult:
         max_processing_days: MaxProcessingTimesDays=None,
         delivery_svc_client: delivery.client.DeliveryServiceClient=None,
         repository: github3.repos.Repository=None,
-    ):
+    ) -> datetime.date | None:
         # explicitly check for `None` in case severity is `0`
         if self.severity is None:
             return None
@@ -114,10 +114,7 @@ class ScanResult:
         max_days = max_processing_days.for_severity(severity=self.severity)
         date = self.discovery_date + datetime.timedelta(days=max_days)
 
-        # if the max processing time is 0 days, keep `latest_processing_date` to
-        # make sure, the finding is assigned to the current sprint during issue
-        # creation instead of a sprint lying in the past
-        if delivery_svc_client and repository and max_days > 0:
+        if delivery_svc_client and repository:
             try:
                 target_sprints = gcmi.target_sprints(
                     delivery_svc_client=delivery_svc_client,

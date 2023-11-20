@@ -697,13 +697,13 @@ def create_or_update_github_issues(
 
         known_issues = _all_issues(repository)
 
-        latest_processing_date = scan_result.calculate_latest_processing_date(
-            max_processing_days=max_processing_days,
-            delivery_svc_client=delivery_svc_client,
-            repository=repository,
-        )
-
         if action == PROCESSING_ACTION.DISCARD:
+            latest_processing_date = scan_result.calculate_latest_processing_date(
+                max_processing_days=max_processing_days,
+                delivery_svc_client=delivery_svc_client,
+                repository=repository,
+            )
+
             github.compliance.issue.close_issue_if_present(
                 scanned_element=scan_result.scanned_element,
                 issue_type=issue_type,
@@ -746,13 +746,13 @@ def create_or_update_github_issues(
                     f'issue. Remaining assignees: {assignees}'
                 )
 
+            latest_processing_date = None
             target_milestone = None
             failed_milestones = []
 
             if delivery_svc_client:
                 try:
-                    max_days = 0
-                    if not latest_processing_date:
+                    if not scan_result.severity:
                         if not max_processing_days:
                             max_processing_days = gcm.MaxProcessingTimesDays()
                         max_days = max_processing_days.for_severity(
@@ -761,29 +761,25 @@ def create_or_update_github_issues(
                         latest_processing_date = datetime.date.today() + datetime.timedelta(
                             days=max_days,
                         )
-                        # if processing time is 0 days, assign to current sprint, otherwise assign
-                        # to last sprint which is just "in-time"
-                        if max_days > 0:
-                            # get the last possible sprint which ends before the processing date
-                            target_sprints = gcmi.target_sprints(
-                                delivery_svc_client=delivery_svc_client,
-                                latest_processing_date=latest_processing_date,
-                                sprints_count=2,
-                            )
-
-                    if max_days == 0: # either explicit bc of severity or bc of initial value
-                        # get the sprint where the processing date is in
-                        target_sprints = gcmi.target_sprints(
-                            delivery_svc_client=delivery_svc_client,
-                            sprint_end_date=latest_processing_date,
-                            sprints_count=2,
+                    else:
+                        # do not pass delivery service client or repository here to avoid
+                        # determining milestone here because then we would lose track of
+                        # failed milestone assignments
+                        latest_processing_date = scan_result.calculate_latest_processing_date(
+                            max_processing_days=max_processing_days,
                         )
+
+                    target_sprints = gcmi.target_sprints(
+                        delivery_svc_client=delivery_svc_client,
+                        latest_processing_date=latest_processing_date,
+                        sprints_count=2,
+                    )
                     target_milestone, failed_milestones = gcmi.find_or_create_sprint_milestone(
                         repo=repository,
                         sprints=target_sprints,
                     )
 
-                    if max_days > 0 and target_milestone:
+                    if target_milestone:
                         latest_processing_date = target_milestone.due_on.date()
                 except Exception as e:
                     import traceback
