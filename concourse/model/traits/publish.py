@@ -50,7 +50,7 @@ IMG_DESCRIPTOR_ATTRIBS = (
         name='registry',
         default=None,
         type=str,
-        doc='name of the registry config to use when pushing the image (see cc-utils).',
+        doc='name of the registry config to use when pushing the image.',
     ),
     AttributeSpec.required(
         name='image',
