@@ -15,12 +15,14 @@ import cnudie.retrieve
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
+import dso.cvss
 import dso.labels
 import github.compliance.model as gcm
 import oci.client
 import protecode.assessments
 import protecode.client
 import protecode.model as pm
+import protecode.rescore
 import protecode.util
 import tarutil
 
@@ -321,6 +323,8 @@ class ResourceGroupProcessor:
         oci_client: oci.client.Client,
         s3_client: 'botocore.client.S3',
         license_cfg: image_scan.LicenseCfg=None,
+        cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
+        auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
     ) -> typing.Iterator[pm.BDBAScanResult]:
         r = resource_group[0].resource
         c = resource_group[0].component
@@ -386,31 +390,46 @@ class ResourceGroupProcessor:
                     client=self.protecode_client,
                 )
 
+            assessed_vulns_by_component = collections.defaultdict(list)
+
             if scan_request.auto_triage_scan():
-                protecode.assessments.auto_triage(
+                assessed_vulns_by_component = protecode.assessments.auto_triage(
                     analysis_result=scan_result,
                     protecode_client=self.protecode_client,
+                    assessed_vulns_by_component=assessed_vulns_by_component,
                 )
 
-                scan_result = self.protecode_client.wait_for_scan_result(
-                    product_id=scan_result.product_id(),
-                )
-
-            protecode.assessments.add_assessments_if_none_exist(
+            assessed_vulns_by_component = protecode.assessments.add_assessments_if_none_exist(
                 tgt=scan_result,
                 tgt_group_id=self.group_id,
                 assessments=component_vulnerabilities_with_assessments,
                 protecode_client=self.protecode_client,
+                assessed_vulns_by_component=assessed_vulns_by_component,
             )
 
-            scan_result = self.protecode_client.wait_for_scan_result(
-                product_id=scan_result.product_id(),
-            )
+            if cve_rescoring_rules:
+                assessed_vulns_by_component = protecode.rescore.rescore(
+                    bdba_client=self.protecode_client,
+                    scan_result=scan_result,
+                    scanned_element=scanned_element,
+                    rescoring_rules=cve_rescoring_rules,
+                    max_rescore_severity=auto_assess_max_severity,
+                    assessed_vulns_by_component=assessed_vulns_by_component,
+                )
+
+            if assessed_vulns_by_component:
+                logger.info(
+                    f'retrieving result again from bdba for {scan_result.display_name()} ' +
+                    '(this may take a while)'
+                )
+                scan_result = self.protecode_client.wait_for_scan_result(
+                    product_id=scan_result.product_id(),
+                )
 
             seen_license_names = set()
             for affected_package in scan_result.components():
                 for vulnerability in affected_package.vulnerabilities():
-                    if vulnerability.historical():
+                    if vulnerability.historical() or vulnerability.has_triage():
                         continue
                     yield pm.VulnerabilityScanResult(
                         scanned_element=scanned_element,
@@ -584,6 +603,8 @@ def upload_grouped_images(
     oci_client: oci.client.Client=None,
     s3_client: 'botocore.client.S3'=None,
     license_cfg: image_scan.LicenseCfg=None,
+    cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
+    auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
 ) -> typing.Generator[pm.BDBAScanResult, None, None]:
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
@@ -633,6 +654,8 @@ def upload_grouped_images(
             oci_client=oci_client,
             s3_client=s3_client,
             license_cfg=license_cfg,
+            cve_rescoring_rules=cve_rescoring_rules,
+            auto_assess_max_severity=auto_assess_max_severity,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:

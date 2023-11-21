@@ -106,8 +106,19 @@ license_cfg = dacite.from_dict(
 license_cfg = None
 % endif
 
+% if rescoring_rules:
+import dso.cvss
+rescoring_rules = tuple(
+  dso.cvss.rescoring_rules_from_dicts(
+    ${rescoring_rules_raw}
+  )
+)
+% else:
+rescoring_rules = None
+% endif
+
 logger.info('running protecode scan for all components')
-results = tuple(
+tuple(
   protecode.scanning.upload_grouped_images(
     protecode_api=protecode_client,
     bdba_cfg_name=protecode_cfg.name(),
@@ -122,58 +133,10 @@ results = tuple(
     oci_client=oci_client,
     s3_client=s3_client,
     license_cfg=license_cfg,
+% if rescoring_rules:
+    cve_rescoring_rules=rescoring_rules,
+    auto_assess_max_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
+% endif
   )
 )
-
-vulnerability_results = []
-license_results = []
-components_results = []
-for result in results:
-  if type(result) is VulnerabilityScanResult:
-    vulnerability_results.append(result)
-  elif type(result) is LicenseScanResult:
-    license_results.append(result)
-  elif type(result) is ComponentsScanResult:
-    components_results.append(result)
-  else:
-    raise NotImplementedError(f'result with {type(result)=} not supported')
-
-logger.info(f'bdba scan yielded {len(results)=}')
-logger.info(f'- {len(vulnerability_results)} vulnerability results')
-logger.info(f'- {len(license_results)} license results')
-logger.info(f'- {len(components_results)} component results')
-
-% if rescoring_rules:
-import dso.cvss
-rescoring_rules = tuple(
-  dso.cvss.rescoring_rules_from_dicts(
-    ${rescoring_rules_raw}
-  )
-)
-% else:
-rescoring_rules = None
-% endif
-
-if not results:
-  print('nothing to report - early-exiting')
-  sys.exit(0)
-
-% if rescoring_rules:
-## rescorings
-for components_result in components_results:
-  rescored_vulnerability_results = protecode.rescore.rescore(
-    bdba_client=protecode_client,
-    components_scan_result=components_result,
-    vulnerability_scan_results=vulnerability_results,
-    rescoring_rules=rescoring_rules,
-    max_rescore_severity=dso.cvss.CVESeverity['${auto_assess_max_severity}'],
-  )
-  if rescored_vulnerability_results:
-    logger.info('sync rescored vulnerability results with delivery-db')
-    protecode.util.sync_results_with_delivery_db(
-      delivery_client=delivery_svc_client,
-      results=rescored_vulnerability_results,
-      bdba_cfg_name=protecode_cfg.name(),
-    )
-% endif
-</%def>
+logger.info('finished scan for all components')

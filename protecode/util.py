@@ -15,6 +15,7 @@
 
 import datetime
 import logging
+import time
 import typing
 
 import ci.log
@@ -49,6 +50,11 @@ def sync_results_with_delivery_db(
         import traceback
         traceback.print_exc()
         if retry_count < max_retries:
+            retry_interval = (retry_count + 1) * 10
+            logger.warning(
+                f'caught error while updating delivery-db, will retry in {retry_interval} s'
+            )
+            time.sleep(retry_interval)
             sync_results_with_delivery_db(
                 delivery_client=delivery_client,
                 results=results,
@@ -101,9 +107,6 @@ def iter_artefact_metadata(
 
         if isinstance(result, pm.VulnerabilityScanResult):
             result: pm.VulnerabilityScanResult
-
-            if result.vulnerability.has_triage():
-                continue
 
             meta = dso.model.Metadata(
                 datasource=dso.model.Datasource.BDBA,

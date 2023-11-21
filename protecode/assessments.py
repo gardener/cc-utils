@@ -42,7 +42,8 @@ def add_assessments_if_none_exist(
     tgt_group_id: int,
     assessments: typing.Iterable[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]]],
     protecode_client: protecode.client.ProtecodeApi,
-):
+    assessed_vulns_by_component: dict[str, list[str]]=collections.defaultdict(list),
+) -> dict[str, list[str]]:
     '''
     add assessments to given protecode "app"; skip given assessments that are not relevant for
     target "app" (either because there are already assessments, or vulnerabilities do not exit).
@@ -73,6 +74,10 @@ def add_assessments_if_none_exist(
                 # vulnerability is not longer "relevant" -> skip
                 continue
 
+            tgt_component_id = f'{tgt_component.name()}:{tgt_component.version()}'
+            if vulnerability.cve() in assessed_vulns_by_component[tgt_component_id]:
+                continue
+
             for triage in triages:
                 try:
                     protecode_client.add_triage(
@@ -81,6 +86,7 @@ def add_assessments_if_none_exist(
                         group_id=tgt_group_id,
                         component_version=tgt_component.version(),
                     )
+                    assessed_vulns_by_component[tgt_component_id].append(vulnerability.cve())
                 except requests.exceptions.HTTPError as e:
                     # we will re-try importing every scan, so just print a warning
                     logger.warning(
@@ -88,6 +94,7 @@ def add_assessments_if_none_exist(
                         f'in version {component.version()} for scan {product_id} '
                         f'{e}'
                     )
+    return assessed_vulns_by_component
 
 
 def auto_triage(
@@ -95,7 +102,8 @@ def auto_triage(
     analysis_result: pm.AnalysisResult=None,
     product_id: int=None,
     assessment_txt: str=None,
-):
+    assessed_vulns_by_component: dict[str, list[str]]=collections.defaultdict(list),
+) -> dict[str, list[str]]:
     '''Automatically triage all current vulnerabilities below the given CVSS-threshold on the given
     Protecode scan.
 
@@ -126,6 +134,11 @@ def auto_triage(
             # we want to auto-triage we need to set the version first.
             component_name = component.name()
             vulnerability_cve = vulnerability.cve()
+
+            component_id = f'{component_name}:{component_version}'
+            if vulnerability_cve in assessed_vulns_by_component[component_id]:
+                continue
+
             if not component_version:
                 component_version = '[ci]-auto-triage'
                 protecode_client.set_component_version(
@@ -151,3 +164,5 @@ def auto_triage(
             protecode_client.add_triage_raw(
                 triage_dict=triage_dict,
             )
+            assessed_vulns_by_component[component_id].append(vulnerability_cve)
+    return assessed_vulns_by_component
