@@ -140,3 +140,4 @@ tuple(
   )
 )
 logger.info('finished scan for all components')
+</%def>
