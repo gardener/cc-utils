@@ -34,139 +34,14 @@ from concourse.model.base import (
     ModelBase,
     ScriptType,
 )
-import dso.cvss
 import github.compliance.model as gcm
 from model.base import ModelValidationError
-from protecode.model import ProcessingMode
-
-from protecode.model import CVSSVersion
 
 import concourse.model.traits.component_descriptor
 from .filter import (
     FILTER_ATTRS,
     ImageFilterMixin,
 )
-
-
-PROTECODE_ATTRS = (
-    AttributeSpec.optional(
-        name='parallel_jobs',
-        default=12,
-        doc='amount of parallel scanning threads',
-        type=int,
-    ),
-    AttributeSpec.optional(
-        name='cve_threshold',
-        default=7,
-        doc='CVE threshold for reporting/notications (if smaller, findings are ignored)',
-        type=int,
-    ),
-    AttributeSpec.optional(
-        name='auto_assess_max_severity',
-        default=dso.cvss.CVESeverity.MEDIUM.name,
-        doc='''\
-        maximum severity to allow automated assessments. Automated assessments are done if
-        there is a "CVE Categorisation" label present for the scanned resource, and a
-        rescoring-ruleset is configured.
-        ''',
-        type=dso.cvss.CVESeverity,
-    ),
-    AttributeSpec.optional(
-        name='processing_mode',
-        default=ProcessingMode.RESCAN,
-        doc='Protecode processing mode',
-        type=ProcessingMode,
-    ),
-    AttributeSpec.optional(
-        name='reference_protecode_group_ids',
-        default=(),
-        doc='''
-        an optional list of protecode group IDs to import triages from.
-        ''',
-    ),
-    AttributeSpec.required(
-        name='protecode_group_id',
-        doc='technical protecode group id to upload to',
-        type=int,
-    ),
-    AttributeSpec.optional(
-        name='protecode_cfg_name',
-        default=None,
-        doc='protecode cfg name to use (see cc-config)',
-    ),
-    AttributeSpec.optional(
-        name='cvss_version',
-        default=CVSSVersion.V3,
-        doc='CVSS version used to evaluate the severity of vulnerabilities',
-        type=CVSSVersion,
-    ),
-    AttributeSpec.optional(
-        name='timeout',
-        default='12h',
-        doc='''
-        go-style time interval (e.g.: '1h30m') after which the image-scan-step will be interrupted
-        and fail.
-        ''',
-        type=str,
-    ),
-    AttributeSpec.deprecated(
-        name='allowed_licenses',
-        default=[],
-        doc='use toplevel `licences` attr',
-        type=list,
-    ),
-    AttributeSpec.deprecated(
-        name='prohibited_licenses',
-        default=[],
-        doc='use toplevel `licences` attr',
-        type=list,
-    ),
-)
-
-
-class ProtecodeScanCfg(ModelBase):
-    @classmethod
-    def _attribute_specs(cls):
-        return PROTECODE_ATTRS
-
-    def reference_protecode_group_ids(self):
-        return self.raw['reference_protecode_group_ids']
-
-    def protecode_group_id(self):
-        return self.raw.get('protecode_group_id')
-
-    def protecode_cfg_name(self):
-        return self.raw.get('protecode_cfg_name')
-
-    def parallel_jobs(self):
-        return self.raw.get('parallel_jobs')
-
-    def cve_threshold(self):
-        return self.raw.get('cve_threshold')
-
-    @property
-    def auto_assess_max_severity(self) -> gcm.Severity:
-        return gcm.Severity.parse(self.raw.get('auto_assess_max_severity'))
-
-    def processing_mode(self):
-        return ProcessingMode(self.raw.get('processing_mode'))
-
-    def cvss_version(self):
-        return CVSSVersion(self.raw.get('cvss_version'))
-
-    def allowed_licenses(self):
-        return self.raw.get('allowed_licenses')
-
-    def prohibited_licenses(self):
-        return self.raw.get('prohibited_licenses')
-
-    def timeout(self):
-        return self.raw.get('timeout')
-
-    def validate(self):
-        super().validate()
-        # Use enum.Enum's validation to validate configured processing mode.
-        ProcessingMode(self.processing_mode())
 
 
 @dataclasses.dataclass
@@ -383,18 +258,6 @@ ATTRIBUTES = (
         type=typing.List[str],
     ),
     AttributeSpec.optional(
-        name='cve_rescoring_rules',
-        default=None,
-        type=list[dso.cvss.RescoringRule],
-        doc='rescoring rules to honour for artefacts that declare a cve-categorisation',
-    ),
-    AttributeSpec.optional(
-        name='protecode',
-        default=None,
-        type=ProtecodeScanCfg,
-        doc='if present, perform protecode scanning',
-    ),
-    AttributeSpec.optional(
         name='clam_av',
         default=None,
         type=ClamAVScanCfg,
@@ -412,15 +275,6 @@ ATTRIBUTES = (
         type=typing.Set[str],
         doc='if present, generated build steps depend on those generated from specified traits',
     ),
-    AttributeSpec.optional(
-        name='licenses',
-        default=None,
-        doc='''\
-            if present, license checks will be done using available scanners (currently, this is
-            only implemented for "protecode" / BDBA)
-        ''',
-        type=LicenseCfg,
-    ),
 )
 
 
@@ -430,8 +284,6 @@ class ImageScanTrait(Trait, ImageFilterMixin):
         return ATTRIBUTES
 
     def _children(self):
-        if self.protecode():
-            yield self.protecode()
         if self.clam_av():
             yield self.clam_av()
 
@@ -479,21 +331,6 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def email_recipients(self):
         return self.raw['email_recipients']
 
-    def cve_rescoring_rules(self, raw=False) -> tuple[dso.cvss.RescoringRule]:
-        if not (rules := self.raw.get('cve_rescoring_rules', False)):
-            return None
-
-        if raw:
-            return rules
-
-        return tuple(
-            dso.cvss.rescoring_rules_from_dicts(rules=rules)
-        )
-
-    def protecode(self):
-        if self.raw['protecode']:
-            return ProtecodeScanCfg(raw_dict=self.raw['protecode'])
-
     def clam_av(self):
         if self.raw['clam_av']:
             return ClamAVScanCfg(raw_dict=self.raw['clam_av'])
@@ -501,15 +338,6 @@ class ImageScanTrait(Trait, ImageFilterMixin):
     def os_id(self):
         if (raw := self.raw.get('os_id')) is not None:
             return OsIdScan(raw_dict=raw)
-
-    def licenses(self) -> typing.Optional[LicenseCfg]:
-        if (raw := self.raw.get('licenses')):
-            return dacite.from_dict(
-                data_class=LicenseCfg,
-                data=raw,
-            )
-
-        return None
 
     def transformer(self):
         return ImageScanTraitTransformer(trait=self)
@@ -529,22 +357,6 @@ class ImageScanTraitTransformer(TraitTransformer):
         super().__init__(*args, **kwargs)
 
     def inject_steps(self):
-        if self.trait.protecode():
-            self.image_scan_step = PipelineStep(
-                    name='scan_container_images',
-                    raw_dict={},
-                    is_synthetic=True,
-                    pull_request_notification_policy=PullRequestNotificationPolicy.NO_NOTIFICATION,
-                    injecting_trait_name=self.name,
-                    script_type=ScriptType.PYTHON3
-            )
-            self.image_scan_step.add_input(
-                name=concourse.model.traits.component_descriptor.DIR_NAME,
-                variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
-            )
-            self.image_scan_step.set_timeout(duration_string=self.trait.protecode().timeout())
-            yield self.image_scan_step
-
         if self.trait.clam_av():
             self.malware_scan_step = PipelineStep(
                     name='malware-scan',
@@ -582,8 +394,6 @@ class ImageScanTraitTransformer(TraitTransformer):
         component_descriptor_step = pipeline_args.step(
             concourse.model.traits.component_descriptor.DEFAULT_COMPONENT_DESCRIPTOR_STEP_NAME
         )
-        if self.trait.protecode():
-            self.image_scan_step._add_dependency(component_descriptor_step)
         if self.trait.clam_av():
             self.malware_scan_step._add_dependency(component_descriptor_step)
         if self.trait.os_id():
@@ -602,11 +412,6 @@ class ImageScanTraitTransformer(TraitTransformer):
             for step in pipeline_args.steps():
                 if not step.name in depended_on_step_names:
                     continue
-                if self.trait.protecode():
-                    self.image_scan_step._add_dependency(step)
-                    # prevent cyclic dependencies (from auto-injected depends)
-                    if self.image_scan_step.name in step.depends():
-                        step._remove_dependency(self.image_scan_step)
 
                 if self.trait.clam_av():
                     self.malware_scan_step._add_dependency(step)

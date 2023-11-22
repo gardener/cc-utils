@@ -15,8 +15,6 @@ import ccc.protecode
 import ci.util
 import cnudie.iter
 import cnudie.retrieve as cr
-import concourse.steps.images
-import concourse.steps.scan_container_images
 import ctx
 import dso.cvss
 import dso.labels
@@ -27,6 +25,9 @@ import protecode.model as pm
 
 __cmd_name__ = 'bdba'
 logger = logging.getLogger(__name__)
+
+# monkeypatch: disable html escaping
+tabulate.htmlescape = lambda x: x
 
 
 def retrieve(
@@ -288,12 +289,14 @@ def scan(
 
     cvss_version = CVSSVersion.V3
 
-    concourse.steps.scan_container_images.print_protecode_info_table(
-        protecode_group_url=protecode_group_url,
-        protecode_group_id=protecode_group_id,
-        reference_protecode_group_ids=reference_protecode_group_ids,
-        cvss_version=cvss_version,
+    headers = ('Protecode Scan Configuration', '')
+    entries = (
+        ('Protecode target group id', str(protecode_group_id)),
+        ('Protecode group URL', protecode_group_url),
+        ('Protecode reference group IDs', reference_protecode_group_ids),
+        ('Used CVSS version', cvss_version.value),
     )
+    print(tabulate.tabulate(entries, headers=headers))
 
     logger.info('running protecode scan for all components')
 
