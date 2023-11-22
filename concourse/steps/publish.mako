@@ -30,14 +30,27 @@ for image_descriptor in image_descriptors:
   if image_descriptor._platform:
     normalised_platform = model.concourse.Platform.normalise_oci_platform_name(
       image_descriptor._platform
-    )
-    specific_tag = base_image_ref_template + f'-{normalised_platform.replace("/", "-")}'
-  else:
-    specific_tag = base_image_ref_template
+    ).replace('/', '-')
 
-  image_ref_groups[base_image_ref_template].add(specific_tag)
+    specific_ref = base_image_ref_template + f'-{normalised_platform}'
+  else:
+    normalised_platform = ''
+    specific_ref = base_image_ref_template
+
+  image_ref_groups[base_image_ref_template].add(specific_ref)
   for tag in image_descriptor.additional_tags():
     extra_tags[base_image_ref_template].add(tag)
+
+  for extra_image_ref in image_descriptor.extra_push_targets:
+    if extra_image_ref.has_digest_tag:
+      raise ValueError(f'must not define digest-tag for extra-push-targets: {extra_image_ref=}')
+    elif extra_image_ref.has_symbolical_tag:
+      specific_ref = f'{extra_image_ref}-{normalised_platform}'
+      image_ref_groups[str(extra_image_ref)].add(specific_ref)
+    else:
+      extra_image_ref = f'{extra_image_ref}:{image_descriptor.tag_template()}'
+      specific_ref = f'{extra_image_ref}-{normalised_platform}'
+      image_ref_groups[str(extra_image_ref)].add(specific_ref)
 %>
 
 import logging

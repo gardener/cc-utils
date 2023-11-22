@@ -25,6 +25,15 @@ additional_img_refs = set(
   f'{image_descriptor.image_reference()}:{t}{platform_suffix}'
   for t in image_descriptor.additional_tags()
 )
+extra_push_targets_without_tag = set()
+for image_reference in image_descriptor.extra_push_targets:
+  if image_reference.has_digest_tag:
+    raise ValueError(f'must not set digest for extra-push-target: {image_reference=}')
+  elif image_reference.has_symbolical_tag:
+    additional_img_refs.add(str(image_reference) + platform_suffix)
+  else:
+    # image-references w/o tag are handled below (requires template-instantiation at runtime)
+    extra_push_targets_without_tag.add(image_reference)
 
 main_repo = job_variant.main_repository()
 main_repo_relpath = main_repo.resource_name()
@@ -90,6 +99,11 @@ image_tag += '-${normalised_oci_platform_name.replace("/", "-")}'
 % endif
 
 image_ref = f'${image_ref}:{image_tag}'
+
+extra_push_targets = set()
+% for image_reference in extra_push_targets_without_tag:
+extra_push_targets.add(f'${str(image_reference)}:{image_tag}')
+% endfor
 
 ${step_lib('build_oci_image')}
 
@@ -258,6 +272,11 @@ docker_argv += (
   '${build_ctx_dir}',
 )
 
+for image_reference in extra_push_targets:
+  docker_argv += (
+    '--tag', str(image_reference),
+  )
+
 env = os.environ.copy()
 env['EFFECTIVE_VERSION'] = effective_version
 % if oci_builder is cm_publish.OciBuilder.DOCKER and publish_trait.use_buildkit():
@@ -289,7 +308,7 @@ subprocess.run(
   env=env,
 )
 
-for img_ref in (image_ref, *${additional_img_refs}):
+for img_ref in (image_ref, *${additional_img_refs}, *extra_push_targets):
   if not (container_registry_cfg := mc.find_config(
     image_reference=img_ref,
     privileges=oa.Privileges.READWRITE,

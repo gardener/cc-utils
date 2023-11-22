@@ -23,6 +23,7 @@ from ci.util import not_none
 from model import NamedModelElement
 import concourse.paths
 import gci.componentmodel as cm
+import oci.model as om
 
 from concourse.model.job import (
     JobVariant,
@@ -56,6 +57,17 @@ IMG_DESCRIPTOR_ATTRIBS = (
         name='image',
         type=str,
         doc='image reference to publish the created container image to.',
+    ),
+    AttributeSpec.optional(
+        name='extra_push_targets',
+        default=[],
+        type=list[str],
+        doc='''
+        additional targets to publish built images to. Entries _may_ contain a tag (which is
+        honoured, if present). Entries without a tag will use the same tag as the "main" image
+        (defined by `image` attribute).
+        only supported for docker or docker-buildx OCI-Builder.
+        ''',
     ),
     AttributeSpec.optional(
         name='inputs',
@@ -185,6 +197,10 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
     def image_reference(self):
         return self.raw['image']
+
+    @property
+    def extra_push_targets(self) -> list[om.OciImageReference]:
+        return [om.OciImageReference(target) for target in self.raw['extra_push_targets']]
 
     def tag_as_latest(self) -> bool:
         return self.raw['tag_as_latest']
@@ -388,6 +404,12 @@ class PublishTrait(Trait):
             raise ModelValidationError(
                 'must not specify empty list of platforms (omit attr instead)'
             )
+        if not self.oci_builder() in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
+            for image in self.dockerimages():
+                if image.extra_push_targets:
+                    raise ModelValidationError(
+                        f'must not specify extra_push_targets if using {self.oci_builder()}'
+                    )
 
 
 class PublishTraitTransformer(TraitTransformer):
