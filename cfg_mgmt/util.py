@@ -266,7 +266,7 @@ def rotate_config_element_and_persist_in_cfg_repo(
     build_url = None
     if concourse.util._running_on_ci():
         try:
-            build_url = concourse.util.own_running_build_url()
+            build_url = concourse.util.own_running_build_url(cfg_factory=cfg_factory)
         except Exception as e:
             logger.warning(
                 'Unable to determine own job-url. Will not put it in commit-message if a '
@@ -356,7 +356,7 @@ def process_cfg_queue_and_persist_in_repo(
     build_url = None
     if concourse.util._running_on_ci():
         try:
-            build_url = concourse.util.own_running_build_url()
+            build_url = concourse.util.own_running_build_url(cfg_factory=cfg_factory)
         except Exception as e:
             logger.warning(
                 'Unable to determine own job-url. Will not put it in commit-message if a '
