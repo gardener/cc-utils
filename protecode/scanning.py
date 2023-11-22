@@ -50,6 +50,27 @@ def _resource_group_id(
     ))
 
 
+def find_related_groups(
+    group: tuple[cnudie.iter.ResourceNode],
+    groups: tuple[tuple[cnudie.iter.ResourceNode]],
+    omit_resource_version: bool=False,
+) -> typing.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
+    group_representative = group[0]
+
+    for g in groups:
+        node = g[0]
+        if group_representative.component.name != node.component.name:
+            continue
+        if group_representative.artefact.name != node.artefact.name:
+            continue
+        if group_representative.artefact.type != node.artefact.type:
+            continue
+        if (not omit_resource_version and
+            group_representative.artefact.version != node.artefact.version):
+            continue
+        yield g
+
+
 @functools.lru_cache(maxsize=200)
 def _wait_for_scan_result(
     protecode_client: protecode.client.ProtecodeApi,
@@ -99,6 +120,7 @@ class ResourceGroupProcessor:
     def iter_components_with_vulnerabilities_and_assessments(
         self,
         products_to_import_from: list[pm.Product],
+        use_product_cache: bool=True,
     ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]], None, None]:
         def _iter_vulnerabilities(
             result: pm.AnalysisResult,
@@ -129,10 +151,15 @@ class ResourceGroupProcessor:
         random.shuffle(products_to_import_from)
 
         for product in products_to_import_from:
-            result = _wait_for_scan_result(
-                protecode_client=self.protecode_client,
-                product_id=product.product_id(),
-            )
+            if use_product_cache:
+                result = _wait_for_scan_result(
+                    protecode_client=self.protecode_client,
+                    product_id=product.product_id(),
+                )
+            else:
+                result = self.protecode_client.wait_for_scan_result(
+                    product_id=product.product_id(),
+                )
             yield from iter_vulnerabilities_with_assessments(
                 result=result,
             )
@@ -350,6 +377,7 @@ class ResourceGroupProcessor:
         license_cfg: image_scan.LicenseCfg=None,
         cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
         auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
+        use_product_cache: bool=True,
     ) -> typing.Iterator[pm.BDBAScanResult]:
         r = resource_group[0].resource
         c = resource_group[0].component
@@ -362,6 +390,7 @@ class ResourceGroupProcessor:
         # todo: deduplicate/merge assessments
         assessments = self.iter_components_with_vulnerabilities_and_assessments(
             products_to_import_from=products_to_import_from,
+            use_product_cache=use_product_cache,
         )
 
         for scan_request in self.scan_requests(
@@ -675,6 +704,12 @@ def upload_grouped_images(
         resource_group: tuple[cnudie.iter.ResourceNode],
         processing_mode: pm.ProcessingMode,
     ) -> tuple[pm.BDBAScanResult]:
+        # only cache products if there is more than one resource group using them
+        use_product_cache = len(tuple(find_related_groups(
+            group=resource_group,
+            groups=groups,
+            omit_resource_version=True,
+        ))) > 1
         return tuple(processor.process(
             resource_group=resource_group,
             processing_mode=processing_mode,
@@ -684,6 +719,7 @@ def upload_grouped_images(
             license_cfg=license_cfg,
             cve_rescoring_rules=cve_rescoring_rules,
             auto_assess_max_severity=auto_assess_max_severity,
+            use_product_cache=use_product_cache,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
@@ -704,3 +740,5 @@ def upload_grouped_images(
                 logger.warning('Not uploading results to deliverydb, client not available')
             if yield_findings:
                 yield from scan_results
+
+    _wait_for_scan_result.cache_clear()
