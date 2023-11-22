@@ -1,6 +1,8 @@
 import collections
 import concurrent.futures
+import functools
 import logging
+import random
 import typing
 
 import botocore.exceptions
@@ -48,6 +50,14 @@ def _resource_group_id(
     ))
 
 
+@functools.lru_cache(maxsize=200)
+def _wait_for_scan_result(
+    protecode_client: protecode.client.ProtecodeApi,
+    product_id: int,
+) -> pm.AnalysisResult:
+    return protecode_client.wait_for_scan_result(product_id=product_id)
+
+
 class ResourceGroupProcessor:
     def __init__(
         self,
@@ -64,7 +74,7 @@ class ResourceGroupProcessor:
     def _products_with_relevant_triages(
         self,
         resource_group: tuple[cnudie.iter.ResourceNode],
-    ) -> typing.Iterator[pm.Product]:
+    ) -> typing.Generator[pm.Product, None, None]:
         relevant_group_ids = set(self.reference_group_ids)
         relevant_group_ids.add(self.group_id)
 
@@ -88,7 +98,7 @@ class ResourceGroupProcessor:
 
     def iter_components_with_vulnerabilities_and_assessments(
         self,
-        products_to_import_from: tuple[pm.Product],
+        products_to_import_from: list[pm.Product],
     ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]], None, None]:
         def _iter_vulnerabilities(
             result: pm.AnalysisResult,
@@ -105,9 +115,24 @@ class ResourceGroupProcessor:
                     continue
                 yield component, vulnerability, tuple(vulnerability.triages())
 
-        for product in products_to_import_from:
-            result = self.protecode_client.wait_for_scan_result(product_id=product.product_id())
+        # only consider the most recent 50 products to import assessments from
+        # assumption: assessments are copied anyways from older assessments to
+        # newer ones so considering old assessments won't have any extra value
+        products_to_import_from.sort(
+            key=lambda p: p.product_id(),
+            reverse=True,
+        )
+        products_to_import_from = products_to_import_from[:50]
 
+        # do a shuffle to increase cache hits as otherwise same product ids are
+        # more likely to be handled simultaneously among the different threads
+        random.shuffle(products_to_import_from)
+
+        for product in products_to_import_from:
+            result = _wait_for_scan_result(
+                protecode_client=self.protecode_client,
+                product_id=product.product_id(),
+            )
             yield from iter_vulnerabilities_with_assessments(
                 result=result,
             )
@@ -331,14 +356,12 @@ class ResourceGroupProcessor:
         group_name = f'{c.name}/{r.name}:{r.version} - {r.type}'
         logger.info(f'Processing {group_name}')
 
-        products_to_import_from = tuple(self._products_with_relevant_triages(
+        products_to_import_from = list(self._products_with_relevant_triages(
             resource_group=resource_group,
         ))
         # todo: deduplicate/merge assessments
-        component_vulnerabilities_with_assessments = tuple(
-            self.iter_components_with_vulnerabilities_and_assessments(
-                products_to_import_from=products_to_import_from,
-            )
+        assessments = self.iter_components_with_vulnerabilities_and_assessments(
+            products_to_import_from=products_to_import_from,
         )
 
         for scan_request in self.scan_requests(
@@ -402,7 +425,7 @@ class ResourceGroupProcessor:
             assessed_vulns_by_component = protecode.assessments.add_assessments_if_none_exist(
                 tgt=scan_result,
                 tgt_group_id=self.group_id,
-                assessments=component_vulnerabilities_with_assessments,
+                assessments=assessments,
                 protecode_client=self.protecode_client,
                 assessed_vulns_by_component=assessed_vulns_by_component,
             )
@@ -605,7 +628,12 @@ def upload_grouped_images(
     license_cfg: image_scan.LicenseCfg=None,
     cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
     auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
-) -> typing.Generator[pm.BDBAScanResult, None, None]:
+    yield_findings: bool=True,
+) -> typing.Generator[pm.BDBAScanResult, None, None] | None:
+    # clear cache to make sure current scan execution retrieves latest bdba
+    # products to copy existing assessments from
+    _wait_for_scan_result.cache_clear()
+
     protecode_api.set_maximum_concurrent_connections(parallel_jobs)
     protecode_api.login()
 
@@ -674,4 +702,5 @@ def upload_grouped_images(
                 )
             else:
                 logger.warning('Not uploading results to deliverydb, client not available')
-            yield from scan_results
+            if yield_findings:
+                yield from scan_results
