@@ -22,6 +22,7 @@ def upload_component_descriptor(
     on_exist:UploadMode|str=UploadMode.SKIP,
     ocm_repository: cm.OciOcmRepository | str = None,
     oci_client: oci.client.Client=None,
+    extra_layers: list[gci.oci.OciBlobRef]=[],
 ):
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -111,7 +112,7 @@ def upload_component_descriptor(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
             ),
-        ],
+        ] + extra_layers,
     )
 
     manifest_dict = manifest.as_dict()
