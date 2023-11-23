@@ -79,7 +79,7 @@ class LocalBlobAccess(Access):
     '''
     a blob that is accessible locally to the component-descriptor
 
-    see: https://github.com/open-component-model/ocm-spec/blob/main/doc/appendix/B/localBlob.md
+    see: https://github.com/open-component-model/ocm-spec/blob/d74b6a210ff8c8c3486aa9b21e22c169d014806e/doc/04-extensions/01-extensions.md#localblob # noqa
     '''
     type: AccessTypeOrStr = AccessType.LOCAL_BLOB
     localReference: str
