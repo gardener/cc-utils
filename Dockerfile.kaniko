@@ -9,7 +9,7 @@ RUN pip3 install --upgrade \
   pycryptodome \
 && pip3 install --root /pkgs gardener-component-model jsonschema
 
-FROM eu.gcr.io/gardener-project/cc/job-image-base:$BASE_IMAGE_TAG
+FROM $BASE_IMAGE
 COPY --from=gcr.io/kaniko-project/executor:v1.6.0 /kaniko/executor /kaniko/executor.tmp
 COPY --from=builder /pkgs/usr /usr
 
