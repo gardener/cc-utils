@@ -114,6 +114,10 @@ def iter_artefact_metadata(
                 creation_date=datetime.datetime.now()
             )
 
+            if not result.vulnerability.cvss:
+                # no cvss3_vector specified -> ignore cvss2_vector
+                continue
+
             cve = dso.model.CVE(
                 cve=result.vulnerability.cve(),
                 cvss3Score=result.vulnerability.cve_severity(),
