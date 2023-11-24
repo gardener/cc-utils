@@ -12,7 +12,8 @@ left_name: github.com/example/example
 left_version: 1.2.3
 right_name: github.com/example/example
 right_version: 2.0.0
-ctx_repo_url: eu.gcr.io/example/example-repo
+ocm_repo_urls:
+ - eu.gcr.io/example/example-repo
 ```
 '''
 
@@ -46,7 +47,7 @@ class DiffArguments:
     right_name: str
     left_version: str
     right_version: str
-    ctx_repo_url: str
+    ocm_repo_urls: list[str]
     exclude_component_names: list[str] = None
     exclude_component_resource_names: list[ComponentResourceNames] = None
     resource_types: list[str] = None
@@ -63,7 +64,7 @@ def diff(
     name_template: str=None,
     name_template_expr: str=None,
     resource_types: [str]=None,
-    ctx_repo_url: str=None,
+    ocm_repo_urls: [str]=None,
     cache_dir: str=_cfg.ctx.cache_dir,
     defaults_file: str=None,
     outfile_prefix: str='resource-diff'
@@ -81,8 +82,8 @@ def diff(
         params['left_version'] = left_version
     if right_version:
         params['right_version'] = right_version
-    if ctx_repo_url:
-        params['ctx_repo_url'] = ctx_repo_url
+    if ocm_repo_urls:
+        params['ocm_repo_urls'] = ocm_repo_urls
     if name_template:
         params['name_template'] = name_template
     if name_template_expr:
@@ -106,7 +107,7 @@ def diff(
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
-            parsed.ctx_repo_url,
+            *parsed.ocm_repo_urls,
         ),
         cache_dir=cache_dir,
     )
