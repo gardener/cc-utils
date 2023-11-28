@@ -1,5 +1,6 @@
 import ccc.oci
 import container.util
+import oci
 
 
 def filter_image(
@@ -11,6 +12,7 @@ def filter_image(
         source_ref=source_ref,
         target_ref=target_ref,
         remove_files=remove_files,
+        mode=oci.ReplicationMode.PREFER_MULTIARCH,
     )
 
 
