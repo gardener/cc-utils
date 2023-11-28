@@ -217,24 +217,24 @@ class DeliveryServiceClient:
         '''
 
         if any((name, version, ctx_repo_url)):
-            if not all((name, version, ctx_repo_url)):
-                raise ValueError('either all or not of name, version, ctx_repo_url must be set')
+            if not all((name, version)):
+                raise ValueError('either all or none of name and version must be set')
             elif component:
-                raise ValueError('must pass either name, version, ctx_repo_url, OR component')
+                raise ValueError('must pass either name, version (and ctx_repo_url) OR component')
         elif component and (component := cnudie.util.to_component(component)):
             name = component.name
             version = component.version
-            ctx_repo_url = component.current_repository_ctx().baseUrl
         else:
-            raise ValueError('must either pass component or name, version ctx_repo_url')
+            raise ValueError('must either pass component or name, version (and ctx_repo_url)')
 
         url = self._routes.component_responsibles()
 
         params = {
             'component_name': name,
             'version': version,
-            'ctx_repo_url': ctx_repo_url,
         }
+        if ctx_repo_url:
+            params['ctx_repo_url'] = ctx_repo_url
 
         if artifact:
             if isinstance(artifact, cm.Artifact):
