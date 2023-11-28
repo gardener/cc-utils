@@ -62,11 +62,17 @@ def get_pipeline_metadata():
     )
 
 
-def _current_concourse_config():
+def _current_concourse_config(cfg_factory=None):
     if not _running_on_ci():
         raise RuntimeError('Can only determine own concourse config if running on CI')
 
-    return ctx().cfg_set().concourse()
+    if cfg_factory:
+        cfg_set = cfg_factory.cfg_set(check_env('CONCOURSE_CURRENT_CFG'))
+        concourse_cfg = cfg_set.concourse()
+    else:
+        concourse_cfg = ctx().cfg_set().concourse()
+
+    return concourse_cfg
 
 
 def own_running_build_url(cfg_factory=None) -> str:
@@ -76,7 +82,7 @@ def own_running_build_url(cfg_factory=None) -> str:
     pipeline_metadata = get_pipeline_metadata()
 
     own_build = find_own_running_build(cfg_factory=cfg_factory)
-    cc_cfg = _current_concourse_config()
+    cc_cfg = _current_concourse_config(cfg_factory=cfg_factory)
 
     return ConcourseApiRoutesBase.running_build_url(
         cc_cfg.external_url(),
