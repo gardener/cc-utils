@@ -201,12 +201,46 @@ def filter_image(
 
     non_gzipped_layer_digests = {} # {gzipped-digest: sha256:non-gzipped-digest}
 
+    have_non_tar_layer = False
+    patch_cfg_blob = True
     for layer in manifest.layers:
         layer_hash = hashlib.sha256()
         cfg_hash = hashlib.sha256() # we need to write "non-gzipped" hash to cfg-blob
         leng = 0
         src_leng = 0 # required for calculating leng for gzip-footer
         crc = 0 # requried for calculcating crc32-checksum for gzip-footer
+
+        if not 'tar' in layer.mediaType:
+            have_non_tar_layer = True
+            cp_cfg_blob = True
+            patch_cfg_blob = False
+
+            # special-case: do not filter "layer", if it is not a tar (e.g. the case for
+            # "in-toto" (application/vnd.in-toto+json)
+            if oci_client.head_blob(
+                image_reference=target_ref,
+                digest=layer.digest,
+                absent_ok=True,
+            ):
+                continue # skip blob replication if already present in tgt
+
+            blob = oci_client.blob(
+                image_reference=str(source_ref),
+                digest=layer.digest,
+                stream=True,
+            )
+            oci_client.put_blob(
+                image_reference=target_ref,
+                digest=layer.digest,
+                octets_count=layer.size,
+                data=blob,
+            )
+            continue
+
+        if have_non_tar_layer:
+            raise RuntimeError(
+                'don\'t know how to process mixed image (tar + non-tar layers)'
+            )
 
         # unfortunately, GCR (our most important oci-registry) does not support chunked uploads,
         # so we have to resort to writing the streaming result into a local tempfile to be able
@@ -277,19 +311,26 @@ def filter_image(
             image_reference=str(source_ref),
             digest=manifest.config.digest,
             stream=False,
-        ).json() # cfg-blobs are small - no point in streaming
-        if not 'rootfs' in cfg_blob:
-            raise ValueError('expected attr `rootfs` not present on cfg-blob')
+        ).content # cfg-blobs are small - no point in streaming
     else:
         cfg_blob = json.loads(cfg_blob)
 
-    cfg_blob['rootfs'] = {
-        'diff_ids': [
-            non_gzipped_layer_digests[layer.digest] for layer in manifest.layers
-        ],
-        'type': 'layers',
-    }
-    cfg_blob = json.dumps(cfg_blob).encode('utf-8')
+    if patch_cfg_blob:
+        if isinstance(cfg_blob, bytes):
+            cfg_blob = json.loads(cfg_blob)
+
+        if not 'rootfs' in cfg_blob:
+            raise ValueError('expected attr `rootfs` not present on cfg-blob')
+        cfg_blob['rootfs'] = {
+            'diff_ids': [
+                non_gzipped_layer_digests[layer.digest] for layer in manifest.layers
+            ],
+            'type': 'layers',
+        }
+
+    if isinstance(cfg_blob, dict):
+        cfg_blob = json.dumps(cfg_blob).encode('utf-8')
+
     cfg_digest = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
     cfg_leng = len(cfg_blob)
     oci_client.put_blob(
