@@ -214,7 +214,7 @@ def oci_artefact_reference(
         component_version = component.version
 
     elif isinstance(component, str):
-        component_name, component_version = component.split[':']
+        component_name, component_version = component.split(':')
 
     elif isinstance(component, tuple):
         if not len(component) == 2 or not (
