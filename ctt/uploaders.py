@@ -184,6 +184,18 @@ class TagSuffixUploader:
         )
 
 
+class DigestUploader:
+    '''
+    sets `reference_target_by_digest` attribute in upload-request, which will result in
+    target-component-descriptor's resouce's access use digest rather than tag to reference
+    oci image.
+    '''
+    def process(self, processing_job: pm.ProcessingJob, target_as_source=False):
+        processing_job.upload_request.reference_target_by_digest = True
+
+        return processing_job
+
+
 class RBSCCustomerFacingRepoLoader:
     def __init__(
         self,

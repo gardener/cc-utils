@@ -13,6 +13,7 @@ class ContainerImageUploadRequest:
     source_ref: str
     target_ref: str
     remove_files: typing.Sequence[str] = ()
+    reference_target_by_digest: bool = False
 
 
 @dataclasses.dataclass

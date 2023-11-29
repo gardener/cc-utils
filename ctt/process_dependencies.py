@@ -438,7 +438,6 @@ def process_images(
     upload_mode_images=None,
     replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests=False,
-    replace_resource_tags_with_digests=False,
     skip_cd_validation=False,
     generate_cosign_signatures=False,
     cosign_repository=None,
@@ -564,7 +563,7 @@ def process_images(
                     digest=digest,
                 )
 
-        if replace_resource_tags_with_digests:
+        if processing_job.upload_request.reference_target_by_digest:
             processing_job.upload_request = dataclasses.replace(
                 processing_job.upload_request,
                 target_ref=set_digest(
