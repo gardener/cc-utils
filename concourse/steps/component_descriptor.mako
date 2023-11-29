@@ -228,7 +228,7 @@ else:
   )
   with open(v2_outfile, 'w') as f:
     f.write(dump_component_descriptor_v2(base_descriptor_v2))
-  logger.info(f'wrote component descriptor (v2): {v2_outfile=}')
+  logger.info(f'wrote OCM component descriptor: {v2_outfile=}')
 
 have_cd = os.path.exists(v2_outfile)
 
