@@ -328,7 +328,7 @@ def process_upload_request(
         accept=accept,
     )
     if bool(manifest_blob_ref):
-        logger.info(f'{tgt_ref=} exists - skipping processing')
+        logger.info(f'{tgt_ref=} exists - skipping upload')
 
         uploaded_image_refs_to_digests[tgt_ref] = manifest_blob_ref.digest
         upload_done_event.set()
@@ -336,7 +336,7 @@ def process_upload_request(
 
     src_ref = upload_request.source_ref
 
-    logger.info(f'start processing {src_ref} -> {tgt_ref=}')
+    logger.info(f'processing {src_ref} -> {tgt_ref=}')
     logger.info(f'{tgt_ref=} {upload_request.remove_files=} {replication_mode=} {platform_filter=}')
 
     component = processing_job.component
