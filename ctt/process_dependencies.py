@@ -408,7 +408,6 @@ def access_resource_via_digest(res: cm.Resource, docker_content_digest: str) -> 
         digest_ref = set_digest(res.access.imageReference, docker_content_digest)
         # pylint: disable-next=too-many-function-args
         digest_access = cm.OciAccess(
-            cm.AccessType.OCI_REGISTRY,
             imageReference=digest_ref,
         )
     elif res.access.type is cm.AccessType.RELATIVE_OCI_REFERENCE:
