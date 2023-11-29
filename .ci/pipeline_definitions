@@ -11,7 +11,7 @@ cc-utils:
               policy: 'skip'
               comment: 'used for publishing documentation on github.com - not part of payload'
 
-  background_image: https://images.app.goo.gl/1ApB5JRehGZk5TuW9
+  background_image: https://www.animationsoftware7.com/img/agifs/snow01.gif
   template: 'default'
   base_definition:
     repo:
