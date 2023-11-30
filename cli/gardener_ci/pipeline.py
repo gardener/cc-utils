@@ -234,7 +234,7 @@ def base_component_descriptor(
         base_definition = pipeline_definition.get('base_definition', {})
 
         for j_name, job in jobs.items():
-            jobs[j_name] = ci.util.merge_dicts(job, base_definition)
+            jobs[j_name] = ci.util.merge_dicts(base_definition, job)
 
         for j_name, job in jobs.items():
             if job_name and job_name != j_name:
