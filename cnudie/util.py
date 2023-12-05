@@ -578,7 +578,7 @@ def diff_resources(
 @dataclasses.dataclass
 class OcmResolverConfig:
     repository: cm.OciOcmRepository | str
-    prefix: str
+    prefix: str = ''
     priority: int = 10
     privileges: oa.Privileges | None = None
 
