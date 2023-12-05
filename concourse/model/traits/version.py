@@ -28,6 +28,7 @@ from concourse.model.base import (
   Trait,
   TraitTransformer,
   ScriptType,
+  ModelValidationError
 )
 
 
@@ -89,9 +90,6 @@ class VersionTrait(Trait):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.preprocess in self.PREPROCESS_OPS:
-            raise ValueError('preprocess must be one of: ' + ', '.join(self.PREPROCESS_OPS))
-
     @classmethod
     def _attribute_specs(cls):
         return ATTRIBUTES
@@ -115,9 +113,17 @@ class VersionTrait(Trait):
     def write_callback(self):
         return self.raw.get('write_callback')
 
-    @classmethod
     def transformer(self):
-        return VersionTraitTransformer()
+        return VersionTraitTransformer(trait=self)
+
+    def validate(self):
+        super().validate()
+
+        if not self.preprocess in self.PREPROCESS_OPS:
+            raise ValueError('preprocess must be one of: ' + ', '.join(self.PREPROCESS_OPS))
+
+        if self.read_callback() and (not self.write_callback()) or (not self.read_callback()) and self.write_callback():
+            raise ModelValidationError(f"write_callback is '{self.write_callback()}' and read_callback is '{self.read_callback()}'. Either set both callbacks or none!")
 
 
 ENV_VAR_NAME = 'version_path'
@@ -126,6 +132,13 @@ DIR_NAME = 'managed-version'
 
 class VersionTraitTransformer(TraitTransformer):
     name = 'version'
+
+    def __init__(self, trait: VersionTrait):
+        super().__init__()
+
+        # Set version_interface to 'callback' if write_callback and read_callback are set
+        if trait.read_callback() and trait.write_callback():
+            trait.raw['version_interface'] = 'callback'
 
     def inject_steps(self):
         self.version_step = PipelineStep(
