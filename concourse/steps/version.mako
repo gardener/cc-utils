@@ -4,6 +4,7 @@ import os
 from makoutil import indent_func
 from concourse.steps import step_lib
 from concourse.model.traits.release import TagConflictAction
+from concourse.model.traits.version import VersionInterface
 
 main_repo = job_variant.main_repository()
 head_sha_file = main_repo.head_sha_path()
@@ -21,12 +22,21 @@ path_to_repo_version_file = os.path.join(
 output_version_file = os.path.join(job_step.output('version_path'), 'version')
 legacy_version_file = os.path.join(job_step.output('version_path'), 'number')
 
-if (read_callback := version_trait.read_callback()):
+# Assign empty string to calbacks if None, as we'd template 'None' (the string) later otherwise
+if (read_callback := version_trait.read_callback() or ''):
   read_callback = os.path.join(main_repo.resource_name(), read_callback)
 
-# Assign empty string if None, as we'd template 'None' (the string) later otherwise
+
 if (write_callback := version_trait.write_callback() or ''):
   write_callback = os.path.join(main_repo.resource_name(), write_callback)
+
+# Validate that either both callbacks are set or none
+if (write_callback == '' and read_callback != '') or (write_callback != '' and read_callback == ''):
+  raise ValueError(f"write_callback is '{write_callback}' and read_callback is '{read_callback}'. Either set both callbacks or none!")
+
+# Set version_interface to 'callback' if write_callback and read_callback are set
+if (write_callback != '' and read_callback != ''):
+  version_trait.raw['version_interface']='callback'
 
 version_operation = version_trait.preprocess
 branch_name = main_repo.branch()

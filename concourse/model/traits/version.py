@@ -58,7 +58,7 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='version_interface',
         default=VersionInterface.FILE,
-        doc='how the version can be read/written',
+        doc='how the version can be read/written. This is done automatically set to "callback", if "read_callback" and "write_callback" are set. Only here for compatibility reasons.',
         type=VersionInterface,
     ),
     AttributeSpec.optional(
