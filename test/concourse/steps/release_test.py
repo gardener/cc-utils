@@ -6,6 +6,7 @@ import os
 import yaml
 
 import concourse.steps.release
+import concourse.model.traits.version as version_trait
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
@@ -22,7 +23,7 @@ class TestReleaseCommitStep:
         def _examinee(
             repo_dir=str(tmp_path),
             release_version='1.0.0',
-            repository_version_file_path='version_file',
+            version_path='version_file',
             repository_branch='master',
             release_commit_callback=None,
             ):
@@ -30,7 +31,8 @@ class TestReleaseCommitStep:
                 git_helper=MagicMock(),
                 repo_dir=repo_dir,
                 release_version=release_version,
-                repository_version_file_path=repository_version_file_path,
+                version_interface=version_trait.VersionInterface.FILE,
+                version_path=version_path,
                 repository_branch=repository_branch,
                 release_commit_message_prefix=None,
                 release_commit_callback=release_commit_callback,
@@ -43,8 +45,12 @@ class TestReleaseCommitStep:
         # create temporary files in the provided directory
         temporary_callback_file = tmp_path.joinpath('callback_script')
         temporary_callback_file.touch()
+        version_file = tmp_path.joinpath('version_file')
+        with open(version_file, 'w'):
+            pass
         examinee(
             release_commit_callback='callback_script',
+            version_path=version_file,
         ).validate()
 
     def test_validation_fail_on_missing_release_callback_script(self, examinee, tmp_path):
@@ -54,7 +60,7 @@ class TestReleaseCommitStep:
 
     def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
         with pytest.raises(ValueError):
-            examinee(repository_version_file_path='no_such_file').validate()
+            examinee(version_path='no_such_file').validate()
 
     def test_validation_fail_on_invalid_semver(self, examinee):
         with pytest.raises(ValueError):
@@ -71,7 +77,7 @@ class NextDevCycleCommitStep:
         def _examinee(
             repo_dir=str(tmp_path),
             release_version='1.0.0',
-            repository_version_file_path='version_file',
+            version_path='version_file',
             repository_branch='master',
             version_operation='bump_minor',
             prerelease_suffix='dev',
@@ -81,7 +87,7 @@ class NextDevCycleCommitStep:
                 git_helper=MagicMock(),
                 repo_dir=repo_dir,
                 release_version=release_version,
-                repository_version_file_path=repository_version_file_path,
+                version_path=version_path,
                 repository_branch=repository_branch,
                 version_operation=version_operation,
                 prerelease_suffix=prerelease_suffix,
@@ -104,7 +110,7 @@ class NextDevCycleCommitStep:
 
     def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
         with pytest.raises(ValueError):
-            examinee(repository_version_file_path='no_such_file').validate()
+            examinee(version_path='no_such_file').validate()
 
     def test_validation_fail_on_invalid_semver(self, examinee):
         with pytest.raises(ValueError):
