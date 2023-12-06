@@ -7,8 +7,10 @@ from makoutil import indent_func
 from concourse.steps import step_lib
 import ci.util
 import concourse.steps.component_descriptor_util as cdu
+import concourse.model.traits.version
 import gci.componentmodel
 import os
+VersionInterface = concourse.model.traits.version.VersionInterface
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 
@@ -16,6 +18,7 @@ if (release_commit_callback_image_reference := release_trait.release_callback_im
   release_commit_callback_image_reference = release_commit_callback_image_reference.image_reference()
 
 version_trait = job_variant.trait('version')
+version_interface = version_trait.version_interface()
 version_op = release_trait.nextversion()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
 next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
@@ -48,7 +51,12 @@ import ci.util
 import cnudie.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
+import concourse.model.traits.version
 import github.util
+
+${step_lib('release')}
+
+VersionInterface = concourse.model.traits.version.VersionInterface
 
 with open('${version_file}') as f:
   version_str = f.read()
@@ -88,7 +96,19 @@ release_commit_callback_image_reference = '${release_commit_callback_image_refer
 release_commit_callback_image_reference = None
 % endif
 
-concourse.steps.release.release_and_prepare_next_dev_cycle(
+version_interface = VersionInterface('${version_trait.version_interface().value}')
+% if version_interface is VersionInterface.FILE:
+version_path = '${os.path.join(repo.resource_name(), version_trait.versionfile_relpath())}'
+% elif version_interface is VersionInterface.CALLBACK:
+version_path = '${os.path.join(repo.resource_name(), version_trait.write_callback())}'
+% else:
+  <% raise ValueError('not implemented', version_interface) %>
+% endif
+
+print(f'{version_path=}')
+print(f'{version_interface=}')
+
+release_and_prepare_next_dev_cycle(
   component_name=component_name,
   component_descriptor_path='${component_descriptor_path}',
   % if has_slack_trait:
@@ -104,8 +124,9 @@ concourse.steps.release.release_and_prepare_next_dev_cycle(
   release_on_github=${release_trait.release_on_github()},
   githubrepobranch=githubrepobranch,
   repo_dir=repo_dir,
-  repository_version_file_path='${version_trait.versionfile_relpath()}',
   release_version=version_str,
+  version_path=version_path,
+  version_interface=version_interface,
   version_operation='${version_op}',
   release_notes_policy='${release_trait.release_notes_policy().value}',
   release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',

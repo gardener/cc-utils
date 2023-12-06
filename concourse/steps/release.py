@@ -28,6 +28,8 @@ from ci.util import (
     not_empty,
     not_none,
 )
+import concourse.steps.version
+import concourse.model.traits.version as version_trait
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.upload
@@ -189,7 +191,8 @@ class ReleaseCommitStep(TransactionalStep):
         git_helper: GitHelper,
         repo_dir: str,
         release_version: str,
-        repository_version_file_path: str,
+        version_interface: version_trait.VersionInterface,
+        version_path: str,
         repository_branch: str,
         release_commit_message_prefix: str,
         publishing_policy: ReleaseCommitPublishingPolicy,
@@ -200,10 +203,8 @@ class ReleaseCommitStep(TransactionalStep):
         self.repository_branch = not_empty(repository_branch)
         self.repo_dir = os.path.abspath(repo_dir)
         self.release_version = not_empty(release_version)
-        self.repository_version_file_path = os.path.join(
-            self.repo_dir,
-            repository_version_file_path,
-        )
+        self.version_interface = version_interface
+        self.version_path = version_path
         self.release_commit_message_prefix = release_commit_message_prefix
         self.publishing_policy = publishing_policy
         self.release_commit_callback_image_reference = release_commit_callback_image_reference
@@ -223,6 +224,8 @@ class ReleaseCommitStep(TransactionalStep):
     def validate(self):
         existing_dir(self.repo_dir)
         version.parse_to_semver(self.release_version)
+        if self.version_path and not os.path.isfile(self.version_path):
+            raise ValueError(f'not an existing file: {self.version_path=}')
         if(self.release_commit_callback):
             existing_file(
                 os.path.join(
@@ -231,17 +234,17 @@ class ReleaseCommitStep(TransactionalStep):
                 )
             )
 
-        existing_file(self.repository_version_file_path)
-
     def apply(self):
         # clean repository if required
         worktree_dirty = bool(self.git_helper._changed_file_paths())
         if worktree_dirty:
             self.git_helper.repo.head.reset(working_tree=True)
 
-        # prepare release commit
-        with open(self.repository_version_file_path, 'w') as f:
-            f.write(self.release_version)
+        concourse.steps.version.write_version(
+            version_interface=self.version_interface,
+            version_str=self.release_version,
+            path=self.version_path,
+        )
 
         # call optional release commit callback
         if self.release_commit_callback:
@@ -447,7 +450,8 @@ class NextDevCycleCommitStep(TransactionalStep):
         git_helper: GitHelper,
         repo_dir: str,
         release_version: str,
-        repository_version_file_path: str,
+        version_interface: version_trait.VersionInterface,
+        version_path: str,
         repository_branch: str,
         version_operation: str,
         prerelease_suffix: str,
@@ -459,15 +463,12 @@ class NextDevCycleCommitStep(TransactionalStep):
         self.repository_branch = not_empty(repository_branch)
         self.repo_dir = os.path.abspath(repo_dir)
         self.release_version = not_empty(release_version)
+        self.version_interface = version_interface
+        self.version_path = version_path
         self.version_operation = not_empty(version_operation)
         self.prerelease_suffix = not_empty(prerelease_suffix)
         self.publishing_policy = publishing_policy
         self.next_cycle_commit_message_prefix = next_cycle_commit_message_prefix
-
-        self.repository_version_file_path = os.path.join(
-            self.repo_dir,
-            repository_version_file_path,
-        )
 
         self.next_version_callback = next_version_callback
 
@@ -490,8 +491,6 @@ class NextDevCycleCommitStep(TransactionalStep):
                     self.next_version_callback,
                 )
             )
-
-        existing_file(self.repository_version_file_path)
 
         # perform version ops once to validate args
         _calculate_next_cycle_dev_version(
@@ -531,8 +530,11 @@ class NextDevCycleCommitStep(TransactionalStep):
         )
         logger.info(f'{next_version=}')
 
-        with open(self.repository_version_file_path, 'w') as f:
-            f.write(next_version)
+        concourse.steps.version.write_version(
+            version_interface=self.version_interface,
+            version_str=next_version,
+            path=self.version_path,
+        )
 
         # call optional dev cycle commit callback
         if self.next_version_callback:
@@ -950,7 +952,8 @@ def release_and_prepare_next_dev_cycle(
     release_notes_policy: str,
     release_version: str,
     repo_dir: str,
-    repository_version_file_path: str,
+    version_path: str,
+    version_interface: version_trait.VersionInterface,
     git_tags: list,
     github_release_tag: dict,
     release_commit_callback_image_reference: str,
@@ -1023,7 +1026,8 @@ def release_and_prepare_next_dev_cycle(
         git_helper=git_helper,
         repo_dir=repo_dir,
         release_version=release_version,
-        repository_version_file_path=repository_version_file_path,
+        version_interface=version_interface,
+        version_path=version_path,
         repository_branch=githubrepobranch.branch(),
         release_commit_message_prefix=release_commit_message_prefix,
         release_commit_callback=release_commit_callback,
@@ -1047,7 +1051,8 @@ def release_and_prepare_next_dev_cycle(
             git_helper=git_helper,
             repo_dir=repo_dir,
             release_version=release_version,
-            repository_version_file_path=repository_version_file_path,
+            version_interface=version_interface,
+            version_path=version_path,
             repository_branch=githubrepobranch.branch(),
             version_operation=version_operation,
             prerelease_suffix=prerelease_suffix,
