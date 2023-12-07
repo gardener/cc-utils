@@ -59,7 +59,11 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='version_interface',
         default=VersionInterface.FILE,
-        doc='how the version can be read/written. This is done automatically set to "callback", if "read_callback" and "write_callback" are set. Only here for compatibility reasons.',
+        doc='''\
+        how the version can be read/written. This is done automatically set to
+        "callback", if "read_callback" and "write_callback" are set. Only here
+        for compatibility reasons.
+        ''',
         type=VersionInterface,
     ),
     AttributeSpec.optional(
@@ -122,8 +126,11 @@ class VersionTrait(Trait):
         if not self.preprocess in self.PREPROCESS_OPS:
             raise ValueError('preprocess must be one of: ' + ', '.join(self.PREPROCESS_OPS))
 
-        if self.read_callback() and (not self.write_callback()) or (not self.read_callback()) and self.write_callback():
-            raise ModelValidationError(f"write_callback is '{self.write_callback()}' and read_callback is '{self.read_callback()}'. Either set both callbacks or none!")
+        if self.read_callback() and (not self.write_callback()) or \
+          (not self.read_callback()) and self.write_callback():
+            raise ModelValidationError(
+                f"{self.write_callback()=}' {self.read_callback()=}'. Set either both or none!"
+            )
 
 
 ENV_VAR_NAME = 'version_path'
