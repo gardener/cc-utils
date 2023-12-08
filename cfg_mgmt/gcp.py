@@ -38,7 +38,7 @@ def _create_service_account_key(
     try:
         key = key_request.execute()
     except googleapiclient.errors.HttpError as e:
-        logger.error('unable to create key, probably too many (10) active keys?')
+        logger.error('unable to create key')
         raise e
 
     logger.info('Created key: ' + key['name'])
