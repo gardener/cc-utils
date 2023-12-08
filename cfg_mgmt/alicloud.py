@@ -70,6 +70,7 @@ class ListAccessKeysResponse:
 def rotate_cfg_element(
     cfg_element: model.alicloud.AlicloudConfig,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 
     client = aliyunsdkcore.client.AcsClient(
@@ -116,6 +117,7 @@ def delete_config_secret(
     cfg_element: model.alicloud.AlicloudConfig,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
+    **kwargs,
 ) -> model.alicloud.AlicloudConfig | None:
     client = aliyunsdkcore.client.AcsClient(
         ak=cfg_element.access_key_id(),
@@ -141,6 +143,7 @@ def delete_config_secret(
 
 def validate_for_rotation(
     cfg_element: model.alicloud.AlicloudConfig,
+    **kwargs,
 ):
     access_key_id = cfg_element.access_key_id()
     client = aliyunsdkcore.client.AcsClient(

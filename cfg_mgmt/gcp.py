@@ -56,6 +56,7 @@ def delete_service_account_key(
 def rotate_cfg_element(
     cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
     client_email = cfg_element.client_email()
 
@@ -112,6 +113,7 @@ def delete_config_secret(
     cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) -> model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount | None:
     logger.info('deleting old gcr secret')
     iam_client = ccc.gcp.create_iam_client(

@@ -54,6 +54,7 @@ class ListAccessKeysResponse:
 def rotate_cfg_element(
     cfg_element: model.aws.AwsProfile,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 
     iam_client = boto3.client(
@@ -88,6 +89,7 @@ def delete_config_secret(
     cfg_element: model.aws.AwsProfile,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
+    **kwargs,
 ) -> model.aws.AwsProfile | None:
     iam_client = boto3.client(
         'iam',
@@ -102,6 +104,7 @@ def delete_config_secret(
 
 def validate_for_rotation(
     cfg_element: model.aws.AwsProfile,
+    **kwargs,
 ):
     access_key_id = cfg_element.access_key_id()
     iam_client = boto3.client(

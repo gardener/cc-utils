@@ -132,6 +132,7 @@ def _rotate_oauth_token(
 def rotate_cfg_element(
     cfg_element: model.github.GithubConfig,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 
     # copy passed cfg_element, since we update in-place.
@@ -276,6 +277,7 @@ def delete_config_secret(
     cfg_element: model.github.GithubConfig,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
+    **kwargs,
 ) -> model.github.GithubConfig | None:
     raw_cfg = copy.deepcopy(cfg_element.raw)
     cfg_element = model.github.GithubConfig(

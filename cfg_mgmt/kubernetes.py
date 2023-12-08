@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 def rotate_cfg_element(
     cfg_element: model.kubernetes.KubernetesConfig,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 
     # TODO: Cannot rotate kubeconfig without SA
@@ -229,6 +230,7 @@ def delete_config_secret(
     cfg_element: model.kubernetes.KubernetesConfig,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
+    **kwargs,
 ) -> model.kubernetes.KubernetesConfig | None:
     api_client = kubernetes.config.new_client_from_config_dict(cfg_element.kubeconfig())
     core_api = CoreV1Api(api_client)
@@ -245,6 +247,7 @@ def delete_config_secret(
 
 def validate_for_rotation(
     cfg_element: model.kubernetes.KubernetesConfig,
+    **kwargs,
 ):
     if not cfg_element.service_account():
         raise ValidationError("Cannot rotate kubeconfigs without service account configs.")

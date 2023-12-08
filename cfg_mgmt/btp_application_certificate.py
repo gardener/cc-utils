@@ -193,6 +193,7 @@ def _extract_client_certificate(cert_response: dict) -> str:
 def rotate_cfg_element(
     cfg_element: BtpApplicationCertificate,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) -> typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
     gbaas_auth = cfg_factory.btp_application_certificate(cfg_element.auth_application_certificate())
     gbaas_client = GBaasAppClient(gbaas_auth)
@@ -239,6 +240,7 @@ def delete_config_secret(
     cfg_element: BtpApplicationCertificate,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) -> BtpApplicationCertificate | None:
     logger.info('Deleting old certificates')
     gbaas_auth = cfg_factory.btp_application_certificate(cfg_element.auth_application_certificate())

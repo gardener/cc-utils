@@ -127,6 +127,7 @@ def _remove_password_credential(
 def rotate_cfg_element(
     cfg_element: model.azure.AzureServicePrincipal,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
 
     access_token = _get_access_token_for_principal(
@@ -177,6 +178,7 @@ def delete_config_secret(
     cfg_element: model.azure.AzureServicePrincipal,
     cfg_factory: model.ConfigFactory,
     cfg_queue_entry: CfgQueueEntry,
+    **kwargs,
 ) -> model.azure.AzureServicePrincipal | None:
     key_id = cfg_queue_entry.secretId['keyId']
     access_token = _get_access_token_for_principal(service_principal=cfg_element)

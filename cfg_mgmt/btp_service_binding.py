@@ -179,6 +179,7 @@ def _authenticate(
 def rotate_cfg_element(
     cfg_element: model.btp_service_binding.BtpServiceBinding,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) -> typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
     old_binding_id = cfg_element.binding_id()
     old_binding_name = cfg_element.binding_name()
@@ -209,6 +210,7 @@ def delete_config_secret(
     cfg_element: model.btp_service_binding.BtpServiceBinding,
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
+    **kwargs,
 ) -> model.btp_service_binding.BtpServiceBinding | None:
     logger.info('deleting old service binding')
     id = cfg_queue_entry.secretId.get('binding_id')
