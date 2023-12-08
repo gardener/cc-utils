@@ -76,6 +76,9 @@ class PrefixUploader:
         self._mangle = mangle
         self._convert_to_relative_refs = convert_to_relative_refs
 
+    def _target_tag(self, src_tag: str) -> str:
+        return calc_tgt_tag(src_tag)
+
     def process(
         self,
         processing_job: pm.ProcessingJob,
@@ -95,7 +98,7 @@ class PrefixUploader:
         if self._mangle:
             artifact_path = artifact_path.replace('.', '_')
 
-        tgt_tag = calc_tgt_tag(src_tag)
+        tgt_tag = self._target_tag(src_tag)
         artifact_path = ':'.join((artifact_path, tgt_tag))
         tgt_ref = ci.util.urljoin(self._prefix, artifact_path)
 
@@ -131,6 +134,24 @@ class PrefixUploader:
             processing_job,
             upload_request=upload_request
         )
+
+
+class UnfilteredImagePrefixUploader(PrefixUploader):
+    '''
+    An uploader that is identical to the PrefixUpload but assumes that the image was not modified
+    and therefore the sha-digest (if used as tag) remains valid.
+    '''
+    def __init__(
+        self,
+        prefix,
+        mangle=True,
+        convert_to_relative_refs=False,
+        **kwargs
+    ):
+        super().__init__(prefix, mangle, convert_to_relative_refs, **kwargs)
+
+    def _target_tag(self, src_tag: str) -> str:
+        return src_tag
 
 
 class TagSuffixUploader:
