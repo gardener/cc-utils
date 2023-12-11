@@ -135,12 +135,11 @@ class DeliveryServiceClient:
         max_versions: int=5,
         greatest_version: str=None,
         ocm_repo: cm.OcmRepository=None,
-        ignore_prerelease_versions: bool=False,
+        ignore_prerelease_versions: bool | None=None,
     ):
         params = {
             'component_name': component_name,
             'max': max_versions,
-            'ignore_prerelease_versions': ignore_prerelease_versions,
         }
         if greatest_version:
             params['version'] = greatest_version
@@ -149,6 +148,8 @@ class DeliveryServiceClient:
                 raise NotImplementedError(ocm_repo)
             params['ocm_repo_url'] = ocm_repo.baseUrl
             params['ctx_repo_url'] = ocm_repo.baseUrl # TODO remove once updated in delivery-service
+        if ignore_prerelease_versions is not None:
+            params['ignore_prerelease_versions'] = ignore_prerelease_versions
 
         res = requests.get(
             url=self._routes.greatest_component_versions(),
