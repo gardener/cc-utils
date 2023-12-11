@@ -571,17 +571,6 @@ def process_images(
                 ),
             )
 
-            if processing_job.processed_resource:
-                processing_job.processed_resource = access_resource_via_digest(
-                    processing_job.processed_resource,
-                    docker_content_digest,
-                )
-            else:
-                processing_job.resource = access_resource_via_digest(
-                    processing_job.resource,
-                    docker_content_digest,
-                )
-
         bom_resources.append(
             BOMEntry(
                 processing_job.upload_request.target_ref,
