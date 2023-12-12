@@ -108,6 +108,7 @@ class DeliveryServiceClient:
         name: str,
         version: str,
         ctx_repo_url: str=None,
+        ocm_repo_url: str=None,
         version_filter: str | None=None,
         validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
     ):
@@ -115,8 +116,8 @@ class DeliveryServiceClient:
             'component_name': name,
             'version': version,
         }
-        if ctx_repo_url:
-            params['ctx_repo_url'] = ctx_repo_url
+        if ocm_repo_url or ctx_repo_url:
+            params['ocm_repo_url'] = ocm_repo_url or ctx_repo_url
         if version_filter is not None:
             params['version_filter'] = version_filter
 
@@ -150,7 +151,6 @@ class DeliveryServiceClient:
             if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
             params['ocm_repo_url'] = ocm_repo.baseUrl
-            params['ctx_repo_url'] = ocm_repo.baseUrl # TODO remove once updated in delivery-service
         if version_filter is not None:
             params['version_filter'] = version_filter
 
@@ -200,6 +200,7 @@ class DeliveryServiceClient:
         name: str=None,
         version: str=None,
         ctx_repo_url: str=None,
+        ocm_repo_url: str=None,
         version_filter: str | None=None,
         component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
         artifact: typing.Union[cm.Artifact, str]=None,
@@ -221,16 +222,16 @@ class DeliveryServiceClient:
         ]
         '''
 
-        if any((name, version, ctx_repo_url)):
+        if any((name, version, ocm_repo_url, ctx_repo_url)):
             if not all((name, version)):
                 raise ValueError('either all or none of name and version must be set')
             elif component:
-                raise ValueError('must pass either name, version (and ctx_repo_url) OR component')
+                raise ValueError('must pass either name, version (and ocm_repo_url) OR component')
         elif component and (component := cnudie.util.to_component(component)):
             name = component.name
             version = component.version
         else:
-            raise ValueError('must either pass component or name, version (and ctx_repo_url)')
+            raise ValueError('must either pass component or name, version (and ocm_repo_url)')
 
         url = self._routes.component_responsibles()
 
@@ -238,8 +239,8 @@ class DeliveryServiceClient:
             'component_name': name,
             'version': version,
         }
-        if ctx_repo_url:
-            params['ctx_repo_url'] = ctx_repo_url
+        if ocm_repo_url or ctx_repo_url:
+            params['ocm_repo_url'] = ocm_repo_url or ctx_repo_url
         if version_filter is not None:
             params['version_filter'] = version_filter
 
