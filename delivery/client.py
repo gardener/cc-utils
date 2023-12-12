@@ -108,6 +108,7 @@ class DeliveryServiceClient:
         name: str,
         version: str,
         ctx_repo_url: str=None,
+        version_filter: str | None=None,
         validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
     ):
         params = {
@@ -116,6 +117,8 @@ class DeliveryServiceClient:
         }
         if ctx_repo_url:
             params['ctx_repo_url'] = ctx_repo_url
+        if version_filter is not None:
+            params['version_filter'] = version_filter
 
         res = requests.get(
             url=self._routes.component_descriptor(),
@@ -135,7 +138,7 @@ class DeliveryServiceClient:
         max_versions: int=5,
         greatest_version: str=None,
         ocm_repo: cm.OcmRepository=None,
-        ignore_prerelease_versions: bool | None=None,
+        version_filter: str | None=None,
     ):
         params = {
             'component_name': component_name,
@@ -148,8 +151,8 @@ class DeliveryServiceClient:
                 raise NotImplementedError(ocm_repo)
             params['ocm_repo_url'] = ocm_repo.baseUrl
             params['ctx_repo_url'] = ocm_repo.baseUrl # TODO remove once updated in delivery-service
-        if ignore_prerelease_versions is not None:
-            params['ignore_prerelease_versions'] = ignore_prerelease_versions
+        if version_filter is not None:
+            params['version_filter'] = version_filter
 
         res = requests.get(
             url=self._routes.greatest_component_versions(),
@@ -197,6 +200,7 @@ class DeliveryServiceClient:
         name: str=None,
         version: str=None,
         ctx_repo_url: str=None,
+        version_filter: str | None=None,
         component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
         artifact: typing.Union[cm.Artifact, str]=None,
     ) -> tuple[dict, list[dm.Status]]:
@@ -236,6 +240,8 @@ class DeliveryServiceClient:
         }
         if ctx_repo_url:
             params['ctx_repo_url'] = ctx_repo_url
+        if version_filter is not None:
+            params['version_filter'] = version_filter
 
         if artifact:
             if isinstance(artifact, cm.Artifact):
