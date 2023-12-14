@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from model.base import (
-    NamedModelElement,
-)
+import dacite
+
+import model.base
 
 
-class AwsProfile(NamedModelElement):
+class AwsProfile(model.base.NamedModelElement):
     def region(self):
         return self.raw['region']
 
@@ -28,5 +28,31 @@ class AwsProfile(NamedModelElement):
     def secret_access_key(self):
         return self.raw['secret_access_key']
 
+    def rotation_cfg(self) -> model.base.CfgElementReference:
+        '''
+        used to specify cfg-element to use for cross-rotation
+        '''
+        raw = self.raw.get('rotation_cfg')
+        if raw:
+            return dacite.from_dict(
+                data_class=model.base.CfgElementReference,
+                data=raw,
+            )
+
+        return None
+
+    def iam_user_name(self):
+        '''
+        used to specify own iam user when rotating with cross-rotation
+        '''
+        return self.raw.get('iam_user_name')
+
     def _required_attributes(self):
-        return ['region','access_key_id','secret_access_key']
+        static_attributes = [
+            'region',
+            'access_key_id',
+            'secret_access_key',
+        ]
+        dynamic_attributes = ['iam_user_name'] if self.rotation_cfg() else []
+
+        return static_attributes + dynamic_attributes
