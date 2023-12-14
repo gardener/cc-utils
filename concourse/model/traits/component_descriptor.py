@@ -209,6 +209,12 @@ ATTRIBUTES = (
         doc='inputs to expose to component-descriptor step',
     ),
     AttributeSpec.optional(
+        name='depends',
+        default=[],
+        type=list[str],
+        doc='steps that need to be run prior to running component-descriptor-step',
+    ),
+    AttributeSpec.optional(
         name='ocm_repository_mappings',
         default=[], # cannot define a proper default here because this depends on another (optional)
                     # config-value. At least not in a way that would be represented in our
@@ -429,6 +435,10 @@ class ComponentDescriptorTrait(Trait):
             for raw_input in self.raw['inputs']
         ]
 
+    @property
+    def depends(self) -> list[str]:
+        return self.raw['depends']
+
     def transformer(self):
         return ComponentDescriptorTraitTransformer(trait=self)
 
@@ -498,6 +508,10 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
                 main_repo.repo_path(),
             ))
             self.trait.raw['component_name'] = component_name
+
+        for step_name_to_depend_on in self.trait.depends:
+            step_to_depend_on = pipeline_args.step(step_name_to_depend_on)
+            self.descriptor_step._add_dependency(step_to_depend_on)
 
         # add configured (step-)inputs
         for step_input in self.trait.inputs():
