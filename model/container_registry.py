@@ -19,12 +19,15 @@ import logging
 import urllib.parse
 import typing
 
+import dacite
+
 import ci.log
 import ci.util
 import oci.util
 import oci.auth as oa
 import oci.model as om
 
+import model.base
 from model.base import (
     BasicCredentials,
     NamedModelElement,
@@ -58,6 +61,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'email',
             'api_base_url',
             'registry_type',
+            'rotation_cfg',
         }
 
     def _required_attributes(self):
@@ -65,6 +69,16 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'username',
             'password',
         }
+
+    def validate(self):
+        super().validate()
+        if (
+            self.rotation_cfg()
+            and self.registry_type() is not om.OciRegistryType.GCR
+        ):
+            raise model.base.ModelValidationError(
+                f'rotation_cfg not allowed for {self.registry_type()=}'
+            )
 
     def client_email(self) -> str:
         return json.loads(self.password())['client_email']
@@ -80,6 +94,19 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
 
     def api_base_url(self):
         return self.raw.get('api_base_url')
+
+    def rotation_cfg(self) -> model.base.CfgElementReference:
+        '''
+        used to specify cfg-element to use for cross-rotation
+        '''
+        raw = self.raw.get('rotation_cfg')
+        if raw:
+            return dacite.from_dict(
+                data_class=model.base.CfgElementReference,
+                data=raw,
+            )
+
+        return None
 
     def credentials(self):
         # XXX handle different container registry types

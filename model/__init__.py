@@ -18,6 +18,7 @@ import yaml
 import ci.log
 import ctx
 
+import model.base
 from model.base import (
     ConfigElementNotFoundError,
     ModelValidationError,
@@ -495,6 +496,15 @@ class ConfigFactory:
         serialised_elements[ConfigFactory.CFG_TYPES] = self._cfg_types_raw()
 
         return json.dumps(serialised_elements, indent=2)
+
+    def resolve_cfg_element_reference(
+        self,
+        cfg_element_reference: model.base.CfgElementReference,
+    ):
+        return self._cfg_element(
+            cfg_type_name=cfg_element_reference.type_name,
+            cfg_name=cfg_element_reference.element_name,
+        )
 
 
 class ConfigSetSerialiser:

@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
+
 import ci.util
 
 
@@ -175,3 +177,10 @@ class TokenCredentials(ModelBase):
 
     def _required_attributes(self):
         return ['token']
+
+
+@dataclasses.dataclass(frozen=True)
+class CfgElementReference:
+    type_name: str
+    element_name: str
+    purpose: str | None = None
