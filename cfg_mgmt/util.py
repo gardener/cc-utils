@@ -13,6 +13,7 @@ import cfg_mgmt.rotate as cmro
 import concourse.util
 import gitutil
 import model
+import model.base
 
 
 logger = logging.getLogger(__name__)
