@@ -10,9 +10,11 @@ import ccc.gcp
 import ccc.github
 import cfg_mgmt
 import cfg_mgmt.model as cmm
+import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
 import model
+import model.base
 import model.container_registry
 import model.gcp
 
@@ -55,14 +57,33 @@ def delete_service_account_key(
     logger.info('Deleted key: ' + service_account_key_name)
 
 
+def rotation_cfg_or_none(
+    gcp_cfg: GcpServiceAccount,
+    cfg_factory: model.ConfigFactory,
+):
+    if (rotation_cfg_reference := gcp_cfg.rotation_cfg()):
+        return cfg_factory.resolve_cfg_element_reference(
+            cfg_element_reference=rotation_cfg_reference,
+        )
+
+    return None
+
+
 def rotate_cfg_element(
     cfg_element: GcpServiceAccount,
     cfg_factory: model.ConfigFactory,
 ) ->  typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
+    rotation_cfg = rotation_cfg_or_none(
+        gcp_cfg=cfg_element,
+        cfg_factory=cfg_factory,
+    ) or cfg_element
+
+    logger.info(f'using {rotation_cfg.name()=} for rotation')
+
     client_email = cfg_element.client_email()
 
     iam_client = ccc.gcp.create_iam_client(
-        cfg_element=cfg_element,
+        cfg_element=rotation_cfg,
     )
 
     service_account_name = ccc.gcp.qualified_service_account_name(
@@ -115,9 +136,16 @@ def delete_config_secret(
     cfg_queue_entry: cmm.CfgQueueEntry,
     cfg_factory: model.ConfigFactory,
 ) -> GcpServiceAccount | None:
+    rotation_cfg = rotation_cfg_or_none(
+        gcp_cfg=cfg_element,
+        cfg_factory=cfg_factory,
+    ) or cfg_element
+
+    logger.info(f'using {rotation_cfg.name()=} for deletion')
+
     logger.info('deleting old gcr secret')
     iam_client = ccc.gcp.create_iam_client(
-        cfg_element=cfg_element,
+        cfg_element=rotation_cfg,
     )
     delete_service_account_key(
         iam_client=iam_client,
