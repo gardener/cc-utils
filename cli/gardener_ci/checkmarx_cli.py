@@ -3,25 +3,25 @@ import reutil
 
 import ccc.github
 import checkmarx.util
+import cnudie.retrieve
 import concourse.steps.scan_sources
-import concourse.steps.component_descriptor_util as cdu
 
+__cmd_name__ = 'cx'
 
 logger = logging.getLogger(__name__)
 
 
 def scan(
     checkmarx_cfg_name: str,
-    component_descriptor_path: str,
+    component: str,
     scan_timeout: int=3600,
     team_id: str=None,
     force: bool=False,
     exclude_regex: [str] = [],
     include_regex: [str] = [],
 ):
-    component_descriptor = cdu.component_descriptor_from_component_descriptor_path(
-        cd_path=component_descriptor_path,
-    )
+    lookup = cnudie.retrieve.create_default_component_descriptor_lookup()
+    component_descriptor = lookup(component)
 
     concourse.steps.scan_sources.scan_sources(
         checkmarx_cfg_name=checkmarx_cfg_name,
