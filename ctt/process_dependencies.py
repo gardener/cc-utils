@@ -539,7 +539,7 @@ def process_images(
                 )
 
         if processing_job.upload_request.reference_target_by_digest:
-            target_ref = om.OciImageReference.to_image_ref(processing_jo.upload_request.target_ref)
+            target_ref = om.OciImageReference.to_image_ref(processing_job.upload_request.target_ref)
             target_ref = f'{target_ref.ref_without_tag}@{docker_content_digest}'
 
             processing_job.upload_request = dataclasses.replace(
