@@ -546,7 +546,7 @@ def process_images(
                 processed_resource.access,
                 imageReference=target_ref,
             )
-            processed_resource = dataclsses.replace(
+            processed_resource = dataclasses.replace(
                 processed_resource,
                 access=access,
             )
