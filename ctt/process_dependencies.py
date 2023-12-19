@@ -402,30 +402,6 @@ def labels_with_original_tag(
     )
 
 
-def access_resource_via_digest(res: cm.Resource, docker_content_digest: str) -> cm.Resource:
-    if res.access.type is cm.AccessType.OCI_REGISTRY:
-        updated_labels = labels_with_original_tag(res, res.access.imageReference)
-        digest_ref = set_digest(res.access.imageReference, docker_content_digest)
-        # pylint: disable-next=too-many-function-args
-        digest_access = cm.OciAccess(
-            imageReference=digest_ref,
-        )
-    elif res.access.type is cm.AccessType.RELATIVE_OCI_REFERENCE:
-        updated_labels = labels_with_original_tag(res, res.access.reference)
-        digest_ref = set_digest(res.access.reference, docker_content_digest)
-        digest_access = cm.RelativeOciAccess(
-            reference=digest_ref
-        )
-    else:
-        raise NotImplementedError
-
-    return dataclasses.replace(
-        res,
-        access=digest_access,
-        labels=updated_labels,
-    )
-
-
 def process_images(
     processing_cfg_path,
     component_descriptor_v2,
