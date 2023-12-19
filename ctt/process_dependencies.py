@@ -542,11 +542,20 @@ def process_images(
             target_ref = om.OciImageReference.to_image_ref(processing_job.upload_request.target_ref)
             target_ref = f'{target_ref.ref_without_tag}@{docker_content_digest}'
 
+            access = dataclasses.replace(
+                processed_resource.access,
+                imageReference=target_ref,
+            )
+            processed_resource = dataclsses.replace(
+                processed_resource,
+                access=access,
+            )
+            processing_job.processed_resource = processed_resource
+
             processing_job.upload_request = dataclasses.replace(
                 processing_job.upload_request,
                 target_ref=target_ref,
             )
-            processed_resource.access.imageReference = target_ref
 
         bom_resources.append(
             BOMEntry(
