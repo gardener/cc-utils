@@ -25,6 +25,7 @@ COPY --from=builder /cc/utils/bin/component-cli /bin/component-cli
 
 # path is hardcoded in our trait
 COPY --from=builder /cc/utils/bin/launch-dockerd.sh /cc/utils/bin/launch-dockerd.sh
+ENV PATH=$PATH:/cc/utils/bin
 
 # place version file into container's filesystem to make it easier to
 # determine the image version during runtime
