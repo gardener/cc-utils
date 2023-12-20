@@ -8,7 +8,6 @@ import boto3
 import dacite
 
 import cfg_mgmt
-import cfg_mgmt.util as cmu
 import ci.log
 import model
 import model.aws

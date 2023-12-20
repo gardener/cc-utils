@@ -10,7 +10,6 @@ import ccc.gcp
 import ccc.github
 import cfg_mgmt
 import cfg_mgmt.model as cmm
-import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
 import model
