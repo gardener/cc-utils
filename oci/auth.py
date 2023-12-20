@@ -13,14 +13,17 @@ class AuthType(enum.Enum):
 class Privileges(enum.Enum):
     READONLY = 'readonly'
     READWRITE = 'readwrite'
+    ADMIN = 'admin'
 
     def _asint(self, privileges):
         if privileges is self.READONLY:
             return 0
         elif privileges is self.READWRITE:
             return 1
-        elif privileges is None:
+        elif privileges is self.ADMIN:
             return 2
+        elif privileges is None:
+            return 4
         else:
             raise NotImplementedError(privileges)
 
