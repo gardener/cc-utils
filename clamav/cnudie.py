@@ -44,7 +44,8 @@ def _may_reuse_existing_scan_result(
     )):
         return False
 
-    latest_finding: dso.model.MalwareSummary
+    latest_finding: dso.model.ArtefactMetadata
+    clamav_scan_result: dso.model.MalwareSummary = latest_finding.data
 
     if isinstance(latest_finding.data, dict):
         # In this case the previous scan we have available predates the current dataclasses.
@@ -62,10 +63,10 @@ def _may_reuse_existing_scan_result(
         return False
 
     # always rescan if there are malware-findings (e.g. to honour "rescorings"
-    if latest_finding.findings:
+    if clamav_scan_result.findings:
         return False
 
-    finding_clamav_metadata = latest_finding.data.metadata
+    finding_clamav_metadata = clamav_scan_result.metadata
 
     if finding_clamav_metadata.signature_version == current_version_info.signature_version:
         # No changes to virus signature database version. Safe to skip, as scan would not
