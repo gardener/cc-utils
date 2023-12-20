@@ -44,6 +44,8 @@ def _may_reuse_existing_scan_result(
     )):
         return False
 
+    latest_finding: dso.model.MalwareSummary
+
     if isinstance(latest_finding.data, dict):
         # In this case the previous scan we have available predates the current dataclasses.
         # Returning False here results in a rescan which will put a new scan result into
@@ -57,6 +59,10 @@ def _may_reuse_existing_scan_result(
                 'Encountered a malware scan result with outdated schema that was created '
                 'after introduction of the new schema.'
             )
+        return False
+
+    # always rescan if there are malware-findings (e.g. to honour "rescorings"
+    if latest_finding.findings:
         return False
 
     finding_clamav_metadata = latest_finding.data.metadata
