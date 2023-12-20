@@ -558,6 +558,8 @@ def process_images(
                 processing_job.upload_request,
                 target_ref=target_ref,
             )
+        else:
+            target_ref = processing_job.upload_request.target_ref
 
         bom_resources.append(
             BOMEntry(
