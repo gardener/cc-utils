@@ -174,7 +174,7 @@ SourceType = ArtefactType
 ResourceType = ArtefactType
 
 
-class ResourceRelation(enum.Enum):
+class ResourceRelation(enum.StrEnum):
     LOCAL = 'local'
     EXTERNAL = 'external'
 
