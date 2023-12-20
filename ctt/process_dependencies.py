@@ -542,14 +542,15 @@ def process_images(
             target_ref = om.OciImageReference.to_image_ref(processing_job.upload_request.target_ref)
             target_ref = f'{target_ref.ref_without_tag}@{docker_content_digest}'
 
-            access = dataclasses.replace(
-                processed_resource.access,
-                imageReference=target_ref,
-            )
-            processed_resource = dataclasses.replace(
-                processed_resource,
-                access=access,
-            )
+            if access.type is cm.AccessType.OCI_REGISTRY:
+                access = dataclasses.replace(
+                    processed_resource.access,
+                    imageReference=target_ref,
+                )
+                processed_resource = dataclasses.replace(
+                    processed_resource,
+                    access=access,
+                )
             processing_job.processed_resource = processed_resource
 
             processing_job.upload_request = dataclasses.replace(
