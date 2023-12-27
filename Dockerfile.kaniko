@@ -10,9 +10,7 @@ RUN pip3 install --upgrade \
 && pip3 install --root /pkgs gardener-component-model jsonschema
 
 FROM $BASE_IMAGE
-COPY --from=gcr.io/kaniko-project/executor:v1.6.0 /kaniko/executor /kaniko/executor.tmp
+COPY --from=gcr.io/kaniko-project/executor:v1.19.2 /kaniko/executor /bin/kaniko
 COPY --from=builder /pkgs/usr /usr
 
 COPY . /cc/utils/
-
-RUN mv /kaniko/executor.tmp /bin/kaniko
