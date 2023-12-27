@@ -325,7 +325,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         if self.target_name() and self.raw.get('targets', False):
             raise ModelValidationError('target and targets must not both be set')
 
-        if self.extra_push_targets and self.targets:
+        if self.extra_push_targets and self.raw('targets', False):
             raise ModelValidationError('targets and extra_push_targets must not both be set')
 
         for label in self.resource_labels():
