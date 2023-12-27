@@ -3,6 +3,7 @@
 import os
 
 import oci.auth as oa
+import oci.model as om
 import model.container_registry
 import model.secrets_server
 
@@ -355,20 +356,21 @@ on_abort:
 % endif
 % if job_step.image():
 <%
-image_reference, tag = job_step.image().split(':', 1)
+image_reference = om.OciImageReference.to_image_ref(job_step.image())
+tag = image_reference.tag
 if job_step.registry():
   registry_cfg = config_set.container_registry(job_step.registry())
 else:
   ## No containerregistry configured. Attempt to find a matching one on our side by looking
   ## at the configured prefixes of the container-registries.
   registry_cfg = model.container_registry.find_config(
-    image_reference=image_reference,
+    image_reference=image_reference.ref_without_tag,
     privileges=oa.Privileges.READONLY,
   )
 %>
     ${task_image_resource(
         registry_cfg=registry_cfg,
-        image_repository=image_reference,
+        image_repository=image_reference.ref_without_tag,
         image_tag=tag,
         indent=4,
     )}
