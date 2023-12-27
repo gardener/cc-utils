@@ -191,7 +191,8 @@ must be explicitly specified.</p>
 <td><p>additional targets to publish built images to. Entries _may_ contain a tag (which is
 honoured, if present). Entries without a tag will use the same tag as the “main” image
 (defined by <code class="code docutils literal notranslate"><span class="pre">image</span></code> attribute).
-only supported for docker or docker-buildx OCI-Builder.</p></td>
+only supported for docker or docker-buildx OCI-Builder. Must not be used in
+conjunction with <code class="code docutils literal notranslate"><span class="pre">targets</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p>inputs</p></td>
 <td><p>no</p></td>
@@ -247,9 +248,19 @@ dockerd will be available and running (docker excecutable accessible from PATH).
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
-<td><p>only for multistage builds: the target up to which to build</p></td>
+<td><p>only for multistage builds: the target up to which to build.
+must not be used if <code class="code docutils literal notranslate"><span class="pre">targets</span></code> is defined.</p></td>
 </tr>
-<tr class="row-even"><td><p>resource_labels</p></td>
+<tr class="row-even"><td><p>targets</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>list</p></td>
+<td><p>if set, the given targets are built in the given order in the same build environment.
+This is useful to reduce resource consumption for multiple builds sharing common
+prerequisite build steps.
+Only supported if oci-builder is set to <code class="code docutils literal notranslate"><span class="pre">docker-buildx</span></code> or <code class="code docutils literal notranslate"><span class="pre">docker</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>resource_labels</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -258,7 +269,7 @@ dockerd will be available and running (docker excecutable accessible from PATH).
 <td><p>List[Label]</p></td>
 <td><p>labels to add to the resource declaration for this image in base-component-descriptor</p></td>
 </tr>
-<tr class="row-odd"><td><p>build_args</p></td>
+<tr class="row-even"><td><p>build_args</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">{}</span>
 </pre></div>
@@ -267,7 +278,7 @@ dockerd will be available and running (docker excecutable accessible from PATH).
 <td><p>Dict[str, str]</p></td>
 <td><p>build-time arguments to pass to docker-build</p></td>
 </tr>
-<tr class="row-even"><td><p>platforms</p></td>
+<tr class="row-odd"><td><p>platforms</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>list</p></td>
