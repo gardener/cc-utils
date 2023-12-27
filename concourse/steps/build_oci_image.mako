@@ -12,7 +12,7 @@ import model.concourse
 container_registry_cfgs = cfg_set._cfg_elements(cfg_type_name='container_registry')
 
 publish_trait = job_variant.trait('publish')
-image_descriptor = job_step._extra_args['image_descriptor']
+image_descriptor: cm_pubtrait.PublishDockerImageDescriptor = job_step._extra_args['image_descriptor']
 if platform := image_descriptor.platform():
   normalised_oci_platform_name = model.concourse.Platform.normalise_oci_platform_name(platform)
   platform_suffix = f'-{normalised_oci_platform_name}'.replace('/', '-')
@@ -98,8 +98,6 @@ if 'EFFECTIVE_VERSION' not in build_args: ## preserve existing value if explicit
 image_tag += '-${normalised_oci_platform_name.replace("/", "-")}'
 % endif
 
-image_ref = f'${image_ref}:{image_tag}'
-
 extra_push_targets = set()
 % for image_reference in extra_push_targets_without_tag:
 extra_push_targets.add(f'${str(image_reference)}:{image_tag}')
@@ -146,6 +144,17 @@ else:
   logger.info('skipping setup of qemu - requested tgt platform matches local platform')
 %   endif
 
+% for target_spec in image_descriptor.targets:
+print(40 * '=')
+print("${f'{target_spec=}'}")
+print()
+image_name = '${target_spec.image}'
+image_ref = f'{image_name}:{image_tag}'
+additional_image_refs = []
+% if image_descriptor.tag_as_latest():
+additional_image_refs.append(f'{image_name}:latest')
+% endif
+
 docker_argv = (
   'docker',
   '--config', docker_cfg_dir,
@@ -163,17 +172,18 @@ docker_argv += (
 % if platform:
   '--platform', '${platform}',
 % endif
-% if (target := image_descriptor.target_name()):
+% if (target := target_spec.target):
     '--target', '${target}',
 % endif
     '--tag', image_ref,
-% for img_ref in additional_img_refs:
-    '--tag', '${img_ref}',
-% endfor
   '--file', '${dockerfile_relpath}',
   '${build_ctx_dir}',
 )
 
+for additional_image_ref in additional_image_refs:
+  docker_argv += ('--tag', additional_image_ref,)
+
+## XXX: needs to be made "multi-target-aware"
 for image_reference in extra_push_targets:
   docker_argv += (
     '--tag', str(image_reference),
@@ -210,7 +220,7 @@ subprocess.run(
   env=env,
 )
 
-for img_ref in (image_ref, *${additional_img_refs}, *extra_push_targets):
+for img_ref in (image_ref, *additional_image_refs, *extra_push_targets):
   if not (container_registry_cfg := mc.find_config(
     image_reference=img_ref,
     privileges=oa.Privileges.READWRITE,
@@ -234,12 +244,15 @@ for img_ref in (image_ref, *${additional_img_refs}, *extra_push_targets):
   ## (see oci.workarounds for details)
   oci_client = ccc.oci.oci_client()
   ow.sanitise_image(image_ref=img_ref, oci_client=oci_client)
+% endfor
 
 % elif oci_builder is cm_publish.OciBuilder.KANIKO:
 home = '/kaniko'
 docker_cfg_dir = os.path.join(home, '.docker')
 os.makedirs(docker_cfg_dir, exist_ok=True)
 docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
+image_ref = f'${image_ref}:{image_tag}'
+
 
 write_docker_cfg(
     dockerfile_path='${dockerfile_relpath}',

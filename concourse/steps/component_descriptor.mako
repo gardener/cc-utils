@@ -30,10 +30,12 @@ if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels
     )
   )
 
-# group images by _base_name
-images_by_base_name = collections.defaultdict(list)
+# group images by _base_name (deduplicate platform-variants)
+images_by_base_name = {}
 for image_descriptor in output_image_descriptors.values():
-  images_by_base_name[image_descriptor._base_name].append(image_descriptor)
+  if image_descriptor._base_name in images_by_base_name:
+    continue
+  images_by_base_name[image_descriptor._base_name] = image_descriptor
 %>
 import dataclasses
 import enum
@@ -137,20 +139,22 @@ component_v2.sources.append(
 % endfor
 
 # add own container image references
-% for name, image_descriptors in images_by_base_name.items():
+% for name, image_descriptor in images_by_base_name.items():
+%   for target_spec in image_descriptor.targets:
 component_v2.resources.append(
   cm.Resource(
-    name='${name}',
+    name='${target_spec.name}',
     version=effective_version, # always inherited from component
     type=cm.ResourceType.OCI_IMAGE,
     relation=cm.ResourceRelation.LOCAL,
     access=cm.OciAccess(
       type=cm.AccessType.OCI_REGISTRY,
-      imageReference='${image_descriptors[0].image_reference()}' + ':' + effective_version,
+      imageReference='${target_spec.image}' + ':' + effective_version,
     ),
-    labels=${image_descriptors[0].resource_labels()}
+    labels=${image_descriptor.resource_labels()}
   ),
 )
+%   endfor
 % endfor
 
 logger.info('default component descriptor:\n')

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import dataclasses
 import enum
 import textwrap
 import typing
@@ -46,6 +47,21 @@ from model.base import (
 )
 
 
+@dataclasses.dataclass
+class TargetSpec:
+    '''
+    OCI Image build target:
+    - target: the docker build target
+    - image: the image push target (to where build result should be published)
+    - name: image name (for use in component-descriptor)
+
+    if name is not passed, a fallback is calculated from <publish.dockerimages.<name>> + target.
+    '''
+    target: str
+    image: str
+    name: str | None = None # default value is injected after deserialisation
+
+
 IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
         name='registry',
@@ -66,7 +82,8 @@ IMG_DESCRIPTOR_ATTRIBS = (
         additional targets to publish built images to. Entries _may_ contain a tag (which is
         honoured, if present). Entries without a tag will use the same tag as the "main" image
         (defined by `image` attribute).
-        only supported for docker or docker-buildx OCI-Builder.
+        only supported for docker or docker-buildx OCI-Builder. Must not be used in
+        conjunction with `targets`.
         ''',
     ),
     AttributeSpec.optional(
@@ -120,7 +137,21 @@ IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
         name='target',
         default=None,
-        doc='only for multistage builds: the target up to which to build',
+        doc='''\
+            only for multistage builds: the target up to which to build.
+            must not be used if `targets` is defined.
+        ''',
+    ),
+    AttributeSpec.optional(
+        name='targets',
+        default=None,
+        doc='''\
+            if set, the given targets are built in the given order in the same build environment.
+            This is useful to reduce resource consumption for multiple builds sharing common
+            prerequisite build steps.
+            Only supported if oci-builder is set to `docker-buildx` or `docker`
+        ''',
+        type=list[TargetSpec],
     ),
     AttributeSpec.optional(
         name='resource_labels',
@@ -220,6 +251,38 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         return self.raw.get('target')
 
     @property
+    def targets(self):
+        if (target_name := self.target_name()):
+            return (
+                TargetSpec(
+                    target=target_name,
+                    image=self.image_reference(),
+                    name=self.name(),
+                ),
+            )
+        if not (raw_targets := self.raw.get('targets')):
+            return (
+                TargetSpec(
+                    target=None,
+                    image=self.image_reference(),
+                    name=self._base_name,
+                ),
+            )
+
+        targets = []
+        for raw_target in raw_targets:
+            target = dacite.from_dict(
+                data_class=TargetSpec,
+                data=raw_target,
+            )
+            if not target.name:
+                target.name = f'{self.name()}-{target.target}'
+
+            targets.append(target)
+
+        return targets
+
+    @property
     def prebuild_hook(self) -> str | None:
         return self.raw['prebuild_hook']
 
@@ -258,6 +321,13 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
     def validate(self):
         super().validate()
+
+        if self.target_name() and self.targets:
+            raise ModelValidationError('target and targets must not both be set')
+
+        if self.extra_push_targets and self.targets:
+            raise ModelValidationError('targets and extra_push_targets must not both be set')
+
         for label in self.resource_labels():
             try:
                 dacite.from_dict(

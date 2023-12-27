@@ -25,21 +25,22 @@ image_descriptors = publish_trait.dockerimages()
 image_ref_groups = collections.defaultdict(set)
 extra_tags = collections.defaultdict(set)
 for image_descriptor in image_descriptors:
-  base_image_ref_template = f'{image_descriptor.image_reference()}:{image_descriptor.tag_template()}'
+  for target_spec in image_descriptor.targets:
+    base_image_ref_template = f'{target_spec.image}:{image_descriptor.tag_template()}'
 
-  if image_descriptor._platform:
-    normalised_platform = model.concourse.Platform.normalise_oci_platform_name(
-      image_descriptor._platform
-    ).replace('/', '-')
+    if image_descriptor._platform:
+      normalised_platform = model.concourse.Platform.normalise_oci_platform_name(
+        image_descriptor._platform
+      ).replace('/', '-')
 
-    specific_ref = base_image_ref_template + f'-{normalised_platform}'
-  else:
-    normalised_platform = ''
-    specific_ref = base_image_ref_template
+      specific_ref = base_image_ref_template + f'-{normalised_platform}'
+    else:
+      normalised_platform = ''
+      specific_ref = base_image_ref_template
 
-  image_ref_groups[base_image_ref_template].add(specific_ref)
-  for tag in image_descriptor.additional_tags():
-    extra_tags[base_image_ref_template].add(tag)
+    image_ref_groups[base_image_ref_template].add(specific_ref)
+    for tag in image_descriptor.additional_tags():
+      extra_tags[base_image_ref_template].add(tag)
 
   for extra_image_ref in image_descriptor.extra_push_targets:
     if extra_image_ref.has_digest_tag:
