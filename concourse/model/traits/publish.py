@@ -322,7 +322,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
     def validate(self):
         super().validate()
 
-        if self.target_name() and self.targets:
+        if self.target_name() and self.raw.get('targets', False):
             raise ModelValidationError('target and targets must not both be set')
 
         if self.extra_push_targets and self.targets:
