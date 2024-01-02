@@ -1,5 +1,3 @@
-import typing
-
 import tabulate
 
 import clamav.model
@@ -7,7 +5,7 @@ import github.compliance.model
 
 
 def as_table(
-    scan_results: typing.Iterable[clamav.model.ClamAVResourceScanResult],
+    scan_result_group_collection: github.compliance.model.ScanResultGroupCollection,
     tablefmt: str='simple', # see tabulate module
 ):
     headers = ('resource', 'status', 'details')
@@ -37,8 +35,15 @@ def as_table(
             return resource, status, details
 
     def rows():
-        for result in scan_results:
-            yield row_from_result(scan_result=result)
+        def iter_groups():
+            yield from scan_result_group_collection.result_groups_with_findings
+            yield from scan_result_group_collection.result_groups_with_scan_errors
+            yield from scan_result_group_collection.result_groups_without_findings
+
+        for group in iter_groups():
+            group: github.compliance.model.ScanResultGroup
+            for result in group.results:
+                yield row_from_result(scan_result=result)
 
     return tabulate.tabulate(
         tabular_data=rows(),
