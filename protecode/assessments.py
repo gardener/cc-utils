@@ -54,6 +54,8 @@ def add_assessments_if_none_exist(
 
     tgt_components_by_name = collections.defaultdict(list)
     for c in tgt.components():
+        if not c.version():
+            continue # triages require component versions to be set
         tgt_components_by_name[c.name()].append(c)
 
     for component, vulnerability, triages in assessments:
