@@ -113,10 +113,10 @@ class GreatestCVE:
 
 @dataclasses.dataclass(frozen=True)
 class CVE:
-    cve: str
+    cve: str | None
     cvss3Score: float
     cvss: dso.cvss.CVSSV3 | dict | None
-    affected_package_name: str
+    affected_package_name: str | None
     affected_package_version: str | None
     reportUrl: str
     product_id: int
