@@ -221,11 +221,14 @@ def _create_issue(
             issue.create_comment(comment_body)
 
         if failed_milestones:
-            issue.create_comment(
-                'Failed to automatically assign ticket to one of these milestones: ' +
-                f'{", ".join([milestone.title for milestone in failed_milestones])}. ' +
-                'Milestones were probably closed before all associated findings were assessed.'
+            milestone_comment = (
+                'Failed to automatically assign ticket to one of these milestones: '
+                f'{", ".join([milestone.title for milestone in failed_milestones])}. '
+                'Milestones were probably closed before all associated findings were assessed. '
             )
+            if milestone:
+                milestone_comment += f'Ticket was assigned to {milestone.title} as a fallback.'
+            issue.create_comment(milestone_comment)
 
         return issue
 
