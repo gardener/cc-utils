@@ -312,7 +312,7 @@ class DeliveryServiceClient:
     def query_metadata_raw(
         self,
         components: typing.Iterable[cm.Component],
-        type: dso.model.Datatype=None,
+        type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
     ):
         if type:
             params = {
