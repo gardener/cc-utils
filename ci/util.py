@@ -236,10 +236,9 @@ def not_none(value):
     return value
 
 
-def load_yaml(stream, lint=False, linter_config=None, *args, **kwargs):
+def load_yaml(stream, lint=False, linter_config=None):
     '''
-    Parses YAML from the given stream in a (by default) safe manner. The given stream and any
-    *args and **kwargs are passed to `yaml.load`, by default using yaml.SafeLoader.
+    Parses YAML from the given stream in a (by default) safe manner.
 
     In addition to using SafeLoader, a mitigation against YAML Bombs (Billion Laughs Attack) is
     applied (by limiting amount of allowed elements)
@@ -254,10 +253,7 @@ def load_yaml(stream, lint=False, linter_config=None, *args, **kwargs):
         linting_result = LintingResult(yamllint.linter.run(input=stream, conf=linter_config))
         _print_linting_findings(linting_result)
 
-    if not 'Loader' in kwargs:
-        kwargs['Loader'] = yaml.SafeLoader
-
-    parsed = yaml.load(stream, *args, **kwargs)
+    parsed = yaml.safe_load(stream)
     _count_elements(parsed)
     return parsed
 
