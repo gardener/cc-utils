@@ -95,6 +95,9 @@ class DefinitionEnumerator:
             target_team = self.job_mapping.team_name() # noqa
 
         for name, definition in raw_definitions.items():
+            if not definition.get('render_pipeline', True):
+                continue
+
             pipeline_definition = deepcopy(definition)
             yield DefinitionDescriptor(
                 pipeline_name=name,

@@ -30,6 +30,8 @@ Attributes
 +===================+===========================================================================+
 | <name>            | the user-chosen pipeline name. Top-level attribute                        |
 +-------------------+---------------------------------------------------------------------------+
+| render_pipeline   | optional flag to disable rendering of the current pipeline                |
++-------------------+---------------------------------------------------------------------------+
 | template          | pipeline template to use. Defaults to 'default' (for future extensions)   |
 +-------------------+---------------------------------------------------------------------------+
 | base_definition   | inherited from all :doc:`Jobs </pipeline_job>`                            |
@@ -56,6 +58,7 @@ Example `.ci/pipeline_definitions`
 .. code-block:: yaml
 
   my_pipeline:
+    render_pipeline: True # default value - may be omitted
     template: 'default'   # default value - may be omitted
     base_definition:
       ... # same schema as for jobs applies
