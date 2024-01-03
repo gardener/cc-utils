@@ -1,0 +1,5 @@
+[tool.bandit]
+exclude_dirs = ['test']
+skips = [
+  'B413', # false-positive: we do not use pyCrypto, but pycryptodome
+]
