@@ -15,11 +15,9 @@ main_repo = job_variant.main_repository()
 main_repo_labels = main_repo.source_labels()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
 other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
-ctx_repository_base_url = descriptor_trait.ctx_repository_base_url()
+ctx_repository_base_url = descriptor_trait.ctx_repository_base_url() or ''
 retention_policy = descriptor_trait.retention_policy()
 ocm_repository_mappings = descriptor_trait.ocm_repository_mappings()
-
-snapshot_ctx_repository_base_url = descriptor_trait.snapshot_ctx_repository_base_url() or ""
 
 # label main repo as main
 if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels]:
@@ -72,8 +70,6 @@ logger = logging.getLogger('step.component_descriptor')
 ${step_lib('component_descriptor')}
 ${step_lib('component_descriptor_util')}
 
-snapshot_ctx_repository_base_url = "${snapshot_ctx_repository_base_url}"
-
 # retrieve effective version
 version_file_path = os.path.join(
   '${job_step.input('version_path')}',
@@ -85,7 +81,7 @@ with open(version_file_path) as f:
 component_name = '${descriptor_trait.component_name()}'
 component_labels = ${descriptor_trait.component_labels()}
 component_name_v2 = component_name.lower() # OCI demands lowercase
-ctx_repository_base_url = '${descriptor_trait.ctx_repository_base_url()}'
+ctx_repository_base_url = '${ctx_repository_base_url}'
 
 mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
     raw_mappings = ${ocm_repository_mappings},
@@ -252,22 +248,19 @@ else:
 
 % if descriptor_trait.upload is comp_descr_trait.UploadMode.LEGACY:
   % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
-if snapshot_ctx_repository_base_url:
-  if have_cd:
-    snapshot_descriptor = cm.ComponentDescriptor.from_dict(
-      ci.util.parse_yaml_file(v2_outfile)
-    )
-    if ctx_repository_base_url != snapshot_ctx_repository_base_url:
-      repo_ctx = cm.OciOcmRepository(
-        baseUrl=snapshot_ctx_repository_base_url,
-        type=cm.AccessType.OCI_REGISTRY,
-      )
-      snapshot_descriptor.component.repositoryContexts.append(repo_ctx)
+if descriptor_v2 and ctx_repository_base_url:
+  ocm_repository = cm.OciOcmRepository(baseUrl=ctx_repository_base_url)
 
-    cnudie.upload.upload_component_descriptor(
-      snapshot_descriptor,
-    )
-    logger.info(f'uploaded component-descriptor to {ctx_repository_base_url}')
+  if descriptor_v2.component.current_repository_ctx() != ocm_repository:
+    descriptor_v2.component.repositoryContexts.append(ocm_repository)
+
+  target_ref = cnudie.util.oci_artefact_reference(descriptor_v2.component)
+
+  cnudie.upload.upload_component_descriptor(
+    component_descriptor=descriptor_v2,
+    ocm_repository=ocm_repository,
+  )
+  logger.info(f'uploaded component-descriptor to {target_ref}')
   % endif
 % endif
 

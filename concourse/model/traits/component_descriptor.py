@@ -187,16 +187,6 @@ ATTRIBUTES = (
         '''
     ),
     AttributeSpec.optional(
-        name='snapshot_ctx_repository',
-        type=str,
-        default=None, # if not explicitly configured, will be injected from cicd-default
-        doc='''
-            the component descriptor context repository cfg name for snapshot-component-descriptors,
-            i.e. component descriptors that are not for release-versions.
-            If not configured, the CICD_landscape's default ctx will be used.
-        '''
-    ),
-    AttributeSpec.optional(
         name='component_labels',
         default=[],
         type=typing.List[Label],
@@ -325,20 +315,6 @@ class ComponentDescriptorTrait(Trait):
 
     def validation_policies(self):
         return ()
-
-    def snapshot_ctx_repository(self):
-        # work around unittests
-        if not self.cfg_set:
-            return None
-
-        if snapshot_ctx_repo_name := self.raw['snapshot_ctx_repository']:
-            return self.cfg_set.ctx_repository(snapshot_ctx_repo_name)
-        else:
-            return self.cfg_set.ctx_repository()
-
-    def snapshot_ctx_repository_base_url(self):
-        if snapshot_repo_cfg := self.snapshot_ctx_repository():
-            return snapshot_repo_cfg.base_url()
 
     @property
     def ocm_repository(self) -> cm.OciOcmRepository:
