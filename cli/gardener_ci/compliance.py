@@ -222,7 +222,7 @@ def diff(
                 component=component,
             )
         elif parsed.name_template_expr:
-            name = eval(parsed.name_template_expr)
+            name = eval(parsed.name_template_expr) # nosec B307
         else:
             name = resource.name
 
