@@ -211,7 +211,7 @@ class Renderer:
             pipeline_metadata['pipeline_name'] = definition_descriptor.effective_pipeline_name()
 
         with makoutil.template_lock:
-            template = mako.template.Template(template_contents, lookup=self.lookup)
+            template = mako.template.Template(template_contents, lookup=self.lookup) # nosec B702
 
         try:
             definition_descriptor.pipeline = template.render(

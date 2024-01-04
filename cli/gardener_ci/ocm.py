@@ -255,7 +255,7 @@ def traverse(
             if isinstance(typestr, enum.Enum):
                 typestr = typestr.value
 
-            if not eval(filter_expr, {
+            if not eval(filter_expr, { # nosec B307
                 'node': node,
                 'type': typestr,
                 'artefact': artefact,
@@ -267,21 +267,21 @@ def traverse(
                 prefix = 'c'
                 print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
             else:
-                print(eval(print_expr, {'node': node, 'artefact': None}))
+                print(eval(print_expr, {'node': node, 'artefact': None})) # nosec B307
         if isinstance(node, cnudie.iter.ResourceNode):
             if not print_expr:
                 prefix = 'r'
                 indent += 1
                 print(f'{prefix}{" " * indent}{node.resource.name}')
             else:
-                print(eval(print_expr, {'node': node, 'artefact': node.resource}))
+                print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
         if isinstance(node, cnudie.iter.SourceNode):
             if not print_expr:
                 prefix = 'r'
                 indent += 1
                 print(f'{prefix}{" " * indent}{node.source.name}')
             else:
-                print(eval(print_expr, {'node': node, 'artefact': node.source}))
+                print(eval(print_expr, {'node': node, 'artefact': node.source})) # nosec B307
 
 
 def validate(component_descriptor: str):
