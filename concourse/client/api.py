@@ -105,12 +105,8 @@ class ConcourseApiBase:
     def __init__(
         self,
         routes: ConcourseApiRoutesBase,
-        request_builder: AuthenticatedRequestBuilder=None,
         verify_ssl=False,
     ):
-        if request_builder:
-            logger.warning('passing-in requests-builder is deprecated')
-
         self.routes = routes
         self.request_builder = None
         self.verify_ssl = verify_ssl
@@ -156,7 +152,8 @@ class ConcourseApiBase:
             url=login_url,
             data=form_data,
             auth=(AUTH_TOKEN_REQUEST_USER, AUTH_TOKEN_REQUEST_PWD),
-            headers={'content-type': 'application/x-www-form-urlencoded'}
+            headers={'content-type': 'application/x-www-form-urlencoded'},
+            timeout=(4, 31),
         )
         response.raise_for_status()
         auth_token = response.json()[self.AUTH_TOKEN_ATTRIBUTE_NAME]

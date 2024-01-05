@@ -131,7 +131,7 @@ class SecretsServerClient:
                     return json.load(f)
 
         request_url = urljoin(self.url, self.concourse_secret_name)
-        response = requests.get(request_url)
+        response = requests.get(request_url, timeout=(4, 31))
 
         if not response.ok:
         # pylint: enable=no-member

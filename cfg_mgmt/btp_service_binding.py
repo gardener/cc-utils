@@ -65,7 +65,11 @@ class SBClient:
             'Authorization': f'Bearer {self.access_token}',
         }
         url = f'{self.sm_url}/v1/service_bindings/{id}'
-        resp = requests.delete(url, headers=headers)
+        resp = requests.delete(
+            url,
+            headers=headers,
+            timeout=(4, 31),
+        )
         if not resp.ok:
             msg = f'delete_service_binding failed: {resp.status_code} {resp.text}'
             logger.error(msg)
@@ -83,7 +87,12 @@ class SBClient:
             'Accept': 'application/json',
             'Authorization': f'Bearer {self.access_token}',
         }
-        resp = requests.post(url, json=data, headers=headers)
+        resp = requests.post(
+            url,
+            json=data,
+            headers=headers,
+            timeout=(4, 31),
+        )
         if not resp.ok:
             msg = f'create_service_binding failed: {resp.status_code} {resp.text}'
             logger.error(msg)
@@ -99,7 +108,11 @@ class SBClient:
             'Accept': 'application/json',
             'Authorization': f'Bearer {self.access_token}',
         }
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(
+            url,
+            headers=headers,
+            timeout=(4, 31),
+        )
         if not resp.ok:
             msg = f'get_service_binding failed: {resp.status_code} {resp.text}'
             logger.error(msg)
@@ -113,7 +126,11 @@ class SBClient:
             'Accept': 'application/json',
             'Authorization': f'Bearer {self.access_token}',
         }
-        resp = requests.get(url, headers=headers)
+        resp = requests.get(
+            url,
+            headers=headers,
+            timeout=(4, 31),
+        )
         if not resp.ok:
             msg = f'get_service_bindings failed: {resp.status_code} {resp.text}'
             logger.error(msg)
@@ -156,7 +173,12 @@ def _get_oauth_token(credentials: dict) -> str:
     headers = {
         'Accept': 'application/json',
     }
-    resp = requests.post(url, data=data, headers=headers)
+    resp = requests.post(
+        url,
+        data=data,
+        headers=headers,
+        timeout=(4, 31),
+    )
     if not resp.ok:
         msg = f'_get_oauth_token failed: {resp.status_code} {resp.reason}'
         logger.error(msg)
