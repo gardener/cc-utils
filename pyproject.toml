@@ -1,5 +1,10 @@
 [tool.bandit]
 exclude_dirs = ['test']
 skips = [
+  'B105', # we do not hardcode passwords
+  'B107', # we do not hardcode passwords
+  'B311', # we know when not to use pseudo-random number generators
+  'B404', # we know how to call subprocesses
   'B413', # false-positive: we do not use pyCrypto, but pycryptodome
+  'B603', # we know how to call subprocesses
 ]
