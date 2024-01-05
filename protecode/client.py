@@ -203,10 +203,12 @@ class ProtecodeApi:
         '''
         replaces "invalid" underscore characters (setting metadata fails silently if
         those are present). Note: dash characters are implcitly converted to underscore
-        by protecode.
+        by protecode. Also, translates `None` to an empty string as header fields with
+        `None` are going to be silently ignored while an empty string is used to remove
+        a metadata attribute
         '''
         return {
-            'META-' + str(k).replace('_', '-'): v
+            'META-' + str(k).replace('_', '-'): v if not None else ''
             for k,v in custom_attributes.items()
         }
 

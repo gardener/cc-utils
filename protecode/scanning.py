@@ -1,8 +1,10 @@
 import collections
 import concurrent.futures
+import datetime
+import dateutil.parser
 import functools
 import logging
-import random
+import pytz
 import typing
 
 import botocore.exceptions
@@ -117,11 +119,21 @@ class ResourceGroupProcessor:
             ))
             yield from products
 
-    def iter_components_with_vulnerabilities_and_assessments(
+    def iter_products(
         self,
         products_to_import_from: list[pm.Product],
         use_product_cache: bool=True,
+        delete_inactive_products_after_seconds: int=None,
     ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]], None, None]:
+        '''
+        Used to retrieve the triages of the supplied products grouped by components and
+        their vulnerabilities. Also, if `delete_inactive_products_after` is set, old
+        bdba products will be deleted according to it.
+        Note: `delete_inactive_products_after` must be greater than the interval in which
+        the resources are set or otherwise the products are going to be deleted immediately.
+        Also, old products of resources which are not scanned anymore at all (meaning in no
+        version) are _not_ going to be deleted.
+        '''
         def _iter_vulnerabilities(
             result: pm.AnalysisResult,
         ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
@@ -137,20 +149,26 @@ class ResourceGroupProcessor:
                     continue
                 yield component, vulnerability, tuple(vulnerability.triages())
 
-        # only consider the most recent 50 products to import assessments from
-        # assumption: assessments are copied anyways from older assessments to
-        # newer ones so considering old assessments won't have any extra value
-        products_to_import_from.sort(
-            key=lambda p: p.product_id(),
-            reverse=True,
+        now = datetime.datetime.now(tz=pytz.UTC)
+        delete_after = now + datetime.timedelta(
+            seconds=delete_inactive_products_after_seconds or 0,
         )
-        products_to_import_from = products_to_import_from[:50]
-
-        # do a shuffle to increase cache hits as otherwise same product ids are
-        # more likely to be handled simultaneously among the different threads
-        random.shuffle(products_to_import_from)
-
         for product in products_to_import_from:
+            if delete_inactive_products_after_seconds is not None:
+                if not (delete_after_flag := product.custom_data().get('DELETE_AFTER')):
+                    delete_after_flag = delete_after.isoformat()
+                    self.protecode_client.set_metadata(
+                        product_id=product.product_id(),
+                        custom_attribs={
+                            'DELETE_AFTER': delete_after_flag,
+                        },
+                    )
+
+                if now >= dateutil.parser.isoparse(delete_after_flag):
+                    self.protecode_client.delete_product(product_id=product.product_id())
+                    logger.info(f'deleted old bdba product {product.product_id()}')
+                    continue
+
             if use_product_cache:
                 result = _wait_for_scan_result(
                     protecode_client=self.protecode_client,
@@ -324,13 +342,14 @@ class ResourceGroupProcessor:
                     except botocore.exceptions.BotoCoreError as e:
                         raise_on_error(e)
 
-                # update name/metadata unless identical
+                # update name unless identical
                 if scan_result.name() != scan_request.display_name:
                     self.protecode_client.set_product_name(
                         product_id=existing_id,
                         name=scan_request.display_name,
                     )
-                if scan_result.custom_data() != scan_request.custom_metadata:
+                # update metadata if new metadata is not completely included in current one
+                if scan_result.custom_data().items() < scan_request.custom_metadata.items():
                     self.protecode_client.set_metadata(
                         product_id=existing_id,
                         custom_attribs=scan_request.custom_metadata,
@@ -378,6 +397,7 @@ class ResourceGroupProcessor:
         cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
         auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
         use_product_cache: bool=True,
+        delete_inactive_products_after_seconds: int=None,
     ) -> typing.Iterator[pm.BDBAScanResult]:
         r = resource_group[0].resource
         c = resource_group[0].component
@@ -388,9 +408,10 @@ class ResourceGroupProcessor:
             resource_group=resource_group,
         ))
         # todo: deduplicate/merge assessments
-        assessments = self.iter_components_with_vulnerabilities_and_assessments(
+        assessments = self.iter_products(
             products_to_import_from=products_to_import_from,
             use_product_cache=use_product_cache,
+            delete_inactive_products_after_seconds=delete_inactive_products_after_seconds,
         )
 
         for scan_request in self.scan_requests(
@@ -476,6 +497,18 @@ class ResourceGroupProcessor:
                 )
                 scan_result = self.protecode_client.wait_for_scan_result(
                     product_id=scan_result.product_id(),
+                )
+
+            if (
+                delete_inactive_products_after_seconds is not None and
+                scan_request.target_product_id
+            ):
+                # remove deletion flag for current product as it is still in use
+                self.protecode_client.set_metadata(
+                    product_id=scan_request.target_product_id,
+                    custom_attribs={
+                        'DELETE_AFTER': None,
+                    },
                 )
 
             seen_license_names = set()
@@ -658,6 +691,7 @@ def upload_grouped_images(
     cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
     auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
     yield_findings: bool=True,
+    delete_inactive_products_after_seconds: int=None,
 ) -> typing.Generator[pm.BDBAScanResult, None, None] | None:
     # clear cache to make sure current scan execution retrieves latest bdba
     # products to copy existing assessments from
@@ -720,6 +754,7 @@ def upload_grouped_images(
             cve_rescoring_rules=cve_rescoring_rules,
             auto_assess_max_severity=auto_assess_max_severity,
             use_product_cache=use_product_cache,
+            delete_inactive_products_after_seconds=delete_inactive_products_after_seconds,
         ))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=parallel_jobs) as tpe:
