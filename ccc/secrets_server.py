@@ -132,8 +132,8 @@ class SecretsServerClient:
 
         request_url = urljoin(self.url, self.concourse_secret_name)
         response = requests.get(request_url)
-        # pylint: disable=no-member
-        if not response.status_code == requests.codes.ok:
+
+        if not response.ok:
         # pylint: enable=no-member
             raise RuntimeError('secrets_server sent {d}: {m}'.format(
                 d=response.status_code,
