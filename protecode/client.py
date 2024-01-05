@@ -165,11 +165,18 @@ class ProtecodeApi:
             )
         else:
             raise NotImplementedError(auth_scheme)
+
+        try:
+            timeout = kwargs.pop('timeout')
+        except KeyError:
+            timeout = (4, 31)
+
         return partial(
             method,
             verify=self._tls_verify,
             cookies=cookies,
             headers=headers,
+            timeout=timeout,
         )(*args, **kwargs)
 
     @check_http_code

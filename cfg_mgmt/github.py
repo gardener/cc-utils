@@ -3,7 +3,6 @@ import copy
 import enum
 import hashlib
 import logging
-import sys
 import typing
 
 import requests
@@ -102,14 +101,16 @@ def _rotate_oauth_token(
     client_secret = '18867509d956965542b521a529a79bb883344c90'
 
     request_url = f'{github_api_url}/applications/{client_id}/token'
-    request_kwargs = {
-        'url': request_url,
-        'auth': (client_id, client_secret), # basic auth
-        'json': {'access_token': token_to_rotate},
-    }
+    session = requests.sessions.Session()
+    session.auth = (client_id, client_secret)
+
     # check token (to catch the case if the token not being associated with the git-credentials-
     # manager)
-    resp = requests.post(**request_kwargs)
+    resp = session.post(
+        request_url,
+        json={'access_token': token_to_rotate},
+        timeout=(4, 31),
+    )
     if not resp.ok:
         # No way for the user to see the oAuth token that belongs to the app, but at least checking
         # whether the given token is currently associated with the app can be done.
@@ -118,11 +119,15 @@ def _rotate_oauth_token(
             'oAuth token belong to the git-credentials-manager application and is valid?'
         )
         return None
+
     # fire request that causes the actual refresh (i.e. "rotation") to happen.
     # Note: If successful, old token is immediately invalidated.
-    resp = requests.patch(**request_kwargs)
-    if not resp.ok:
-        resp.raise_for_status()
+    resp = session.patch(
+        request_url,
+        json={'access_token': token_to_rotate},
+        timeout=(4, 31),
+    )
+    resp.raise_for_status()
 
     response_content = resp.json()
 
@@ -184,15 +189,12 @@ def rotate_cfg_element(
                     f"'{credential.username}' of github-config '{cfg_to_rotate.name()}' "
                     '- will not attempt rotation.'
                 )
-        except:
-            exception = sys.exception()
-            if isinstance(exception, requests.exceptions.HTTPError):
-                logger.error(
-                    f'Error when trying to refresh oAuth token: {exception}. Response from server: '
-                    f'{exception.response}'
-                )
-            else:
-                logger.error(f'Error when trying to refresh oAuth token: {exception}')
+        except requests.exceptions.HTTPError as http_error:
+            logger.error(f'Error while trying to refresh oAuth token: {http_error=}')
+            if i == 0:
+                raise
+        except Exception as e:
+            logger.error(f'Error while trying to refresh oAuth token: {e}')
 
             # we only abort here if the first rotation failed (assuming that the token was not
             # refreshed). Otherwise we keep on rotating keys/tokens to prevent the previously

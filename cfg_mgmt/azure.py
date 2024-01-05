@@ -69,6 +69,7 @@ def _retrieve_password_credentials(
     response = requests.get(
         url=f'{azure_app_root_url}/{service_principal.object_id()}',
         headers={'Authorization': f'Bearer {access_token}'},
+        timeout=(4, 31),
     )
     response_dict = response.json()
     if not (password_credentials := response_dict.get('passwordCredentials')):
@@ -99,6 +100,7 @@ def _add_password_credential(
         f'{azure_app_root_url}/{service_principal.object_id()}/addPassword',
         json=body,
         headers={'Authorization': f'Bearer {access_token}'},
+        timeout=(4, 31),
     )
     response.raise_for_status()
     response_dict = response.json()
@@ -119,6 +121,7 @@ def _remove_password_credential(
         f'{azure_app_root_url}/{service_principal.object_id()}/removePassword',
         json={"keyId": key_id},
         headers={'Authorization': f'Bearer {access_token}'},
+        timeout=(4, 31),
     )
     # successful request returns "204 No content"
     response.raise_for_status()

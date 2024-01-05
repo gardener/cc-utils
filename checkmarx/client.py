@@ -83,13 +83,14 @@ class CheckmarxClient:
         self.routes = CheckmarxRoutes(base_url=checkmarx_cfg.base_url())
         self.config = checkmarx_cfg
         self.auth = None
+        self.session = requests.sessions.Session()
 
     def _auth(self):
         if self.auth and self.auth.is_valid():
             return self.auth
 
         creds = self.config.credentials()
-        res = requests.post(
+        res = self.session.post(
             self.routes.auth(),
             data={
                 'username': creds.qualified_username(),
@@ -99,7 +100,10 @@ class CheckmarxClient:
                 'scope': creds.scope(),
                 'grant_type': 'password',
             },
+            timeout=(4, 31),
         )
+        res.raise_for_status()
+
         res = cxmodel.AuthResponse(**res.json())
         res.expires_at = datetime.datetime.fromtimestamp(
             datetime.datetime.now().timestamp() + res.expires_in - 10
@@ -121,7 +125,18 @@ class CheckmarxClient:
         if 'Accept' not in headers:
             headers['Accept'] = f'application/json;v={api_version}'
 
-        res = requests.request(method=method, headers=headers, *args, **kwargs)
+        try:
+            timeout = kwargs.pop('timeout')
+        except KeyError:
+            timeout = (4, 31)
+
+        res = self.session.request(
+            method=method,
+            headers=headers,
+            timeout=timeout,
+            *args,
+            **kwargs,
+        )
 
         if not res.ok:
             msg = f'{method} request to {res.url=} failed with {res.status_code=} {res.reason=}'

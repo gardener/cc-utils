@@ -89,6 +89,7 @@ def sign_with_signing_server(
         headers=headers,
         data=content,
         verify=root_ca_cert_path,
+        timeout=(4, 31),
     )
     response.raise_for_status()
 

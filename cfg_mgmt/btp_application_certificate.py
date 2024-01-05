@@ -45,7 +45,12 @@ class CertServiceClient:
         headers = {
             'Accept': 'application/json',
         }
-        resp = requests.post(f'{uaa["url"]}/oauth/token', data=data, headers=headers)
+        resp = requests.post(
+            f'{uaa["url"]}/oauth/token',
+            data=data,
+            headers=headers,
+            timeout=(4, 31),
+        )
         resp.raise_for_status()
         self.access_token = resp.json()['access_token']
 
@@ -60,7 +65,12 @@ class CertServiceClient:
             'validity': {'type': 'DAYS', 'value': validity_in_days},
         }}
         url = self.credentials['certificateservice']['profileurl']
-        resp = requests.post(url, json=data, headers=headers)
+        resp = requests.post(
+            url,
+            json=data,
+            headers=headers,
+            timeout=(4, 31),
+        )
         resp.raise_for_status()
         logger.info('Created certificate')
         return resp.json()['certificate-response']
@@ -108,7 +118,11 @@ class GBaasAppClient:
             'base64': cert_pem,
         }
         with self._session_with_cert() as session:
-            resp = session.put(self.url, json=data)
+            resp = session.put(
+                self.url,
+                json=data,
+                timeout=(4, 31),
+            )
         resp.raise_for_status()
         id = resp.json()['certificateId']
         logger.info(f'Added certificate {id}')
@@ -119,7 +133,11 @@ class GBaasAppClient:
             'certificateId': cert_id,
         }
         with self._session_with_cert() as session:
-            resp = session.delete(self.url, json=data)
+            resp = session.delete(
+                self.url,
+                json=data,
+                timeout=(4, 31),
+            )
         resp.raise_for_status()
         logger.info(f'Deleted certificate {common_name} ({cert_id})')
 
@@ -136,7 +154,10 @@ class GBaasAppClient:
         common_name_base: str
     ) -> typing.Generator[CertInfo, None, None]:
         with self._session_with_cert() as session:
-            resp = session.get(self.clienturl)
+            resp = session.get(
+                self.clienturl,
+                timeout=(4, 31),
+            )
         resp.raise_for_status()
         for item in resp.json():
             id = item['dnId']

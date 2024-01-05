@@ -176,12 +176,17 @@ class AuthenticatedRequestBuilder:
         if 'data' in kwargs:
             if 'content-type' not in headers:
                 headers['content-type'] = 'application/x-yaml'
+        try:
+            timeout = kwargs.pop('timeout')
+        except KeyError:
+            timeout = (4, 31)
 
         result = method(
             url,
             headers=headers,
             auth=self.auth,
             verify=self.verify_ssl,
+            timeout=timeout,
             **kwargs
         )
 

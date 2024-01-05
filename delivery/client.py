@@ -102,6 +102,7 @@ class DeliveryServiceClient:
         routes: DeliveryServiceRoutes,
     ):
         self._routes = routes
+        self.session = requests.sessions.Session()
 
     def component_descriptor(
         self,
@@ -121,9 +122,10 @@ class DeliveryServiceClient:
         if version_filter is not None:
             params['version_filter'] = version_filter
 
-        res = requests.get(
+        res = self.session.get(
             url=self._routes.component_descriptor(),
             params=params,
+            timeout=(4, 31),
         )
 
         res.raise_for_status()
@@ -154,9 +156,10 @@ class DeliveryServiceClient:
         if version_filter is not None:
             params['version_filter'] = version_filter
 
-        res = requests.get(
+        res = self.session.get(
             url=self._routes.greatest_component_versions(),
             params=params,
+            timeout=(4, 31),
         )
 
         res.raise_for_status()
@@ -167,7 +170,7 @@ class DeliveryServiceClient:
         self,
         data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        res = requests.post(
+        res = self.session.post(
             url=self._routes.upload_metadata(),
             json={'entries': [
                 dataclasses.asdict(
@@ -175,6 +178,7 @@ class DeliveryServiceClient:
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
+            timeout=(4, 31),
         )
 
         res.raise_for_status()
@@ -183,7 +187,7 @@ class DeliveryServiceClient:
         self,
         data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        res = requests.put(
+        res = self.session.put(
             url=self._routes.update_metadata(),
             json={'entries': [
                 dataclasses.asdict(
@@ -191,6 +195,7 @@ class DeliveryServiceClient:
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
+            timeout=(4, 31),
         )
 
         res.raise_for_status()
@@ -257,9 +262,10 @@ class DeliveryServiceClient:
         else:
             logger.info(f'{params=}')
 
-        resp = requests.get(
+        resp = self.session.get(
             url=url,
             params=params,
+            timeout=(4, 31),
         )
 
         resp.raise_for_status()
@@ -283,8 +289,9 @@ class DeliveryServiceClient:
         return responsibles, statuses
 
     def sprints(self) -> list[dm.Sprint]:
-        raw = requests.get(
-            url=self._routes.sprint_infos(),
+        raw = self.session.get(
+            self._routes.sprint_infos(),
+            timeout=(4, 31),
         ).json()['sprints']
 
         return [
@@ -300,9 +307,10 @@ class DeliveryServiceClient:
             else:
                 extra_args['before'] = before
 
-        resp = requests.get(
+        resp = self.session.get(
             url=self._routes.sprint_current(),
             params={'offset': offset, **extra_args},
+            timeout=(4, 31),
         )
 
         resp.raise_for_status()
@@ -330,10 +338,11 @@ class DeliveryServiceClient:
             ]
         }
 
-        res = requests.post(
+        res = self.session.post(
             url=self._routes.query_metadata(),
             json=query,
             params=params,
+            timeout=(4, 31),
         )
 
         return res.json()
@@ -341,7 +350,10 @@ class DeliveryServiceClient:
     def os_release_infos(self, os_id: str, absent_ok=False) -> list[dm.OsReleaseInfo]:
         url = self._routes.os_branches(os_id=os_id)
 
-        res = requests.get(url)
+        res = self.session.get(
+            url,
+            timeout=(4, 31),
+        )
 
         if not absent_ok:
             res.raise_for_status()
@@ -367,14 +379,15 @@ class DeliveryServiceClient:
         '''
         url = self._routes.components_metadata()
 
-        resp = requests.get(
+        resp = self.session.get(
             url=url,
             params={
                 'name': component_name,
                 'version': component_version,
                 'type': metadata_types,
                 'select': select,
-            }
+            },
+            timeout=(4, 31),
         )
 
         resp.raise_for_status()
