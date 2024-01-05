@@ -5,6 +5,8 @@
 
 ![libs](https://badge.fury.io/py/gardener-cicd-libs.svg)
 
+[![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+
 ## What is it
 
 `cc-utils` is a collection of re-usable utils intended to be used in the
