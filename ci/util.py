@@ -358,7 +358,7 @@ def random_str(
         length -= len(prefix)
     else:
         prefix = ''
-    return prefix + ''.join(random.choice(alphabet) for _ in range(length))
+    return prefix + ''.join(random.choice(alphabet) for _ in range(length)) # nosec B311
 
 
 def check_env(name: str):

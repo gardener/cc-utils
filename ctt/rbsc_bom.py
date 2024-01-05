@@ -173,8 +173,6 @@ def _pullGitForBranch(bom_repository_url: str, bom_branch: str, local_path: str)
 
     # setup remote
     origin = repo.create_remote('origin', bom_repository_url)
-    assert origin.exists()
-    assert origin == repo.remotes.origin == repo.remotes['origin']
     origin.fetch()
 
     remote_ref = origin.refs[bom_branch]

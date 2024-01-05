@@ -121,7 +121,7 @@ def iter_package_versions(
     keep_versions: list[str],
 ):
     for package in packages:
-        versions = subprocess.run(
+        versions = subprocess.run( # nosec B603
             (sys.executable, '-m', 'pip', 'index', 'versions', package),
             capture_output=True,
             check=True,
