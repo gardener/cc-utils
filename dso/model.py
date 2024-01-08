@@ -17,6 +17,7 @@ class ScanArtifact:
 
 
 class Datasource:
+    ARTEFACT_ENUMERATOR = 'artefact-enumerator'
     BDBA = 'bdba' # formerly protecode
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
@@ -75,6 +76,7 @@ class Datatype:
     FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
     RESCORING_VULNERABILITIES = 'rescoring/vulnerabilities'
+    COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
 
 
 class RelationKind:
@@ -243,6 +245,36 @@ class RescoringData:
 
 
 @dataclasses.dataclass(frozen=True)
+class ComplianceSnapshotStatuses:
+    ACTIVE = 'active'
+    INACTIVE = 'inactive'
+
+
+@dataclasses.dataclass(frozen=True)
+class ComplianceSnapshotState:
+    timestamp: datetime.datetime
+    status: str
+    datatype: str | None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class ComplianceSnapshot:
+    cfg_name: str
+    latest_processing_date: datetime.date
+    correlation_id: str
+    state: list[ComplianceSnapshotState]
+
+    def current_state(
+        self,
+        datatype: str=None,
+    ) -> ComplianceSnapshotState | None:
+        for state in sorted(self.state, key=lambda s: s.timestamp, reverse=True):
+            if datatype == state.datatype:
+                return state
+        return None
+
+
+@dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
@@ -257,6 +289,7 @@ class ArtefactMetadata:
         | MalwareSummary
         | OsID
         | RescoringData
+        | ComplianceSnapshot
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None

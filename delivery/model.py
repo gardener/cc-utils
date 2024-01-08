@@ -134,6 +134,7 @@ class ArtefactMetadata:
         | dso.model.MalwareSummary
         | dso.model.FilesystemPaths
         | dso.model.CodecheckSummary
+        | dso.model.ComplianceSnapshot
         | dict
     )
     discovery_date: datetime.date | None = None
