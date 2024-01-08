@@ -266,7 +266,7 @@ class ComplianceSnapshot:
 
     def current_state(
         self,
-        datatype: str=None,
+        datatype: str = None,
     ) -> ComplianceSnapshotState | None:
         for state in sorted(self.state, key=lambda s: s.timestamp, reverse=True):
             if datatype == state.datatype:
