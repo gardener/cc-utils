@@ -513,6 +513,10 @@ class ComponentDescriptorTraitTransformer(TraitTransformer):
             step_to_depend_on = pipeline_args.step(step_name_to_depend_on)
             self.descriptor_step._add_dependency(step_to_depend_on)
 
+            # avoid cyclic dependencies (user-defined depends should have precedence)
+            if self.descriptor_step.name in step_to_depend_on.depends():
+                step_to_depend_on._remove_dependency(self.descriptor_step)
+
         # add configured (step-)inputs
         for step_input in self.trait.inputs():
             if not step_input.type == 'step':
