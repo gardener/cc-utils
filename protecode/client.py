@@ -208,7 +208,7 @@ class ProtecodeApi:
         a metadata attribute
         '''
         return {
-            'META-' + str(k).replace('_', '-'): v if not None else ''
+            'META-' + str(k).replace('_', '-'): v if v is not None else ''
             for k,v in custom_attributes.items()
         }
 
