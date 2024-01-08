@@ -169,7 +169,7 @@ class ProtecodeApi:
         try:
             timeout = kwargs.pop('timeout')
         except KeyError:
-            timeout = (4, 31)
+            timeout = (4, 121)
 
         return partial(
             method,

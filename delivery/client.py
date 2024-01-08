@@ -185,7 +185,7 @@ class DeliveryServiceClient:
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
-            timeout=(4, 31),
+            timeout=(4, 121),
         )
 
         res.raise_for_status()
@@ -202,7 +202,7 @@ class DeliveryServiceClient:
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
-            timeout=(4, 31),
+            timeout=(4, 121),
         )
 
         res.raise_for_status()
@@ -219,7 +219,7 @@ class DeliveryServiceClient:
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
-            timeout=(4, 31),
+            timeout=(4, 121),
         )
 
         res.raise_for_status()
@@ -289,7 +289,7 @@ class DeliveryServiceClient:
         resp = self.session.get(
             url=url,
             params=params,
-            timeout=(4, 31),
+            timeout=(4, 301),
         )
 
         resp.raise_for_status()
@@ -366,7 +366,7 @@ class DeliveryServiceClient:
             url=self._routes.query_metadata(),
             json=query,
             params=params,
-            timeout=(4, 31),
+            timeout=(4, 121),
         )
 
         return res.json()
@@ -411,7 +411,7 @@ class DeliveryServiceClient:
                 'type': metadata_types,
                 'select': select,
             },
-            timeout=(4, 31),
+            timeout=(4, 121),
         )
 
         resp.raise_for_status()
