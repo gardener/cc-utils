@@ -423,7 +423,7 @@ class Client:
         try:
             timeout = kwargs.pop('timeout')
         except KeyError:
-            timeout = (4, 31)
+            timeout = (31, 121)
 
         res = self.session.request(
             method=method,
