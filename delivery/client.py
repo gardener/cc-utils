@@ -80,6 +80,13 @@ class DeliveryServiceRoutes:
             'query-metadata',
         )
 
+    def delete_metadata(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'artefacts',
+            'delete-metadata',
+        )
+
     def os_branches(self, os_id: str):
         return ci.util.urljoin(
             self._base_url,
@@ -189,6 +196,23 @@ class DeliveryServiceClient:
     ):
         res = self.session.put(
             url=self._routes.update_metadata(),
+            json={'entries': [
+                dataclasses.asdict(
+                    artefact_metadata,
+                    dict_factory=ci.util.dict_to_json_factory,
+                ) for artefact_metadata in data
+            ]},
+            timeout=(4, 31),
+        )
+
+        res.raise_for_status()
+
+    def delete_metadata(
+        self,
+        data: typing.Iterable[dso.model.ArtefactMetadata],
+    ):
+        res = self.session.delete(
+            url=self._routes.delete_metadata(),
             json={'entries': [
                 dataclasses.asdict(
                     artefact_metadata,
