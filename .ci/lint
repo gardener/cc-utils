@@ -35,7 +35,7 @@ echo 'running pylama for all modules (errors only)'
 )
 
 if ! which bandit &>/dev/null; then
-    pip3 install bandit
+    pip3 install bandit &>/dev/null
 fi
 
 bandit \
