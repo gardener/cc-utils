@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -eu
 
 # usage: $1: <src-dir>
 
@@ -33,5 +33,14 @@ echo 'running pylama for all modules (errors only)'
     fi
     popd
 )
+
+if ! which bandit &>/dev/null; then
+    pip3 install bandit
+fi
+
+bandit \
+    --configfile "${src_dir}/pyproject.toml" \
+    --recursive \
+    "${src_dir}"
 
 exit $?
