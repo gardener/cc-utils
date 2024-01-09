@@ -106,13 +106,16 @@ already in use be another component.</p>
 <tr class="row-even"><td><p>&lt;name&gt;</p></td>
 <td><p>the user-chosen pipeline name. Top-level attribute</p></td>
 </tr>
-<tr class="row-odd"><td><p>template</p></td>
+<tr class="row-odd"><td><p>render_pipeline</p></td>
+<td><p>optional flag to disable rendering of the current pipeline</p></td>
+</tr>
+<tr class="row-even"><td><p>template</p></td>
 <td><p>pipeline template to use. Defaults to ‘default’ (for future extensions)</p></td>
 </tr>
-<tr class="row-even"><td><p>base_definition</p></td>
+<tr class="row-odd"><td><p>base_definition</p></td>
 <td><p>inherited from all <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></p></td>
 </tr>
-<tr class="row-odd"><td><p>jobs</p></td>
+<tr class="row-even"><td><p>jobs</p></td>
 <td><p>defines <a class="reference internal" href="pipeline_job.html"><span class="doc">Jobs</span></a></p></td>
 </tr>
 </tbody>
@@ -134,6 +137,7 @@ and refrain from using whitespace of non-ASCII charaters.</p>
 <li><p>define two <a class="reference internal" href="pipeline_job.html"><span class="doc">Build Jobs</span></a> <code class="code docutils literal notranslate"><span class="pre">job_A</span></code>, <code class="code docutils literal notranslate"><span class="pre">job_B</span></code></p></li>
 </ul>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">my_pipeline</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">render_pipeline</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span><span class="w"> </span><span class="c1"># default value - may be omitted</span>
 <span class="w">  </span><span class="nt">template</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;default&#39;</span><span class="w">   </span><span class="c1"># default value - may be omitted</span>
 <span class="w">  </span><span class="nt">base_definition</span><span class="p">:</span>
 <span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">...</span><span class="w"> </span><span class="c1"># same schema as for jobs applies</span>
