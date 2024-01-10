@@ -132,7 +132,9 @@ mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
 )
 
 ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    ocm_repository_lookup=mapping_config,
+    ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+        mapping_config,
+    ),
 )
 version_lookup = cnudie.retrieve.version_lookup(
     ocm_repository_lookup=mapping_config,
