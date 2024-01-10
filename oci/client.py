@@ -759,6 +759,23 @@ class Client:
         else:
             raise RuntimeError('this case should not occur (this is a bug)')
 
+    def delete_blob(
+        self,
+        image_reference: om.OciImageReference | str,
+        digest: str,
+    ):
+        image_reference = om.OciImageReference(image_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        res = self._request(
+            url=self.routes.blob_url(image_reference=image_reference, digest=digest),
+            image_reference=image_reference,
+            scope=scope,
+            method='DELETE',
+        )
+        res.raise_for_status()
+        return res
+
     def blob(
         self,
         image_reference: typing.Union[str, om.OciImageReference],
