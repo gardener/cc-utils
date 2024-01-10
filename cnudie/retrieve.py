@@ -522,12 +522,15 @@ def version_lookup(
             if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
-            for version_tag in component_versions(
-                component_name=component_name,
-                ctx_repo=ocm_repo,
-                oci_client=oci_client,
-            ):
-                versions.add(version_tag)
+            try:
+                for version_tag in component_versions(
+                    component_name=component_name,
+                    ctx_repo=ocm_repo,
+                    oci_client=oci_client,
+                ):
+                    versions.add(version_tag)
+            except requests.exceptions.HTTPError:
+                continue
 
         if not versions and not absent_ok:
             raise om.OciImageNotFoundException()
