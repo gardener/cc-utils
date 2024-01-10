@@ -300,7 +300,7 @@ class Client:
         res = self.session.get(
             url=url,
             verify=not self.disable_tls_validation,
-            timeout=(4, 31),
+            timeout=(31, 121),
         )
 
         auth_challenge = www_authenticate.parse(res.headers.get('www-authenticate'))
@@ -340,7 +340,7 @@ class Client:
             url=realm,
             verify=not self.disable_tls_validation,
             auth=auth,
-            timeout=(4, 31),
+            timeout=(31, 121),
         )
 
         if not res.ok:
