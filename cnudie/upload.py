@@ -91,7 +91,6 @@ def upload_component_descriptor(
     on_exist:UploadMode|str=UploadMode.SKIP,
     ocm_repository: cm.OciOcmRepository | str = None,
     oci_client: oci.client.Client=None,
-    extra_layers: list[gci.oci.OciBlobRef]=[],
 ):
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -173,12 +172,14 @@ def upload_component_descriptor(
         data=cfg_raw,
     )
 
-    for blob_ref in _iter_oci_blob_refs(
-        component=component,
-        oci_client=oci_client,
-        oci_image_reference=target_ref,
-    ):
-        extra_layers.append(blob_ref)
+    local_blob_layers = [
+        blob_ref for blob_ref in
+        _iter_oci_blob_refs(
+            component=component,
+            oci_client=oci_client,
+            oci_image_reference=target_ref,
+        )
+    ]
 
     manifest = om.OciImageManifest(
         config=gci.oci.ComponentDescriptorOciCfgBlobRef(
@@ -190,7 +191,7 @@ def upload_component_descriptor(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
             ),
-        ] + extra_layers,
+        ] + local_blob_layers,
     )
 
     manifest_dict = manifest.as_dict()
