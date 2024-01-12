@@ -2,6 +2,7 @@ import dataclasses
 import enum
 import hashlib
 import json
+import typing
 
 import ccc.oci
 import cnudie.util
@@ -15,6 +16,74 @@ class UploadMode(enum.StrEnum):
     SKIP = 'skip'
     FAIL = 'fail'
     OVERWRITE = 'overwrite'
+
+
+def _oci_blob_ref_from_access(
+    access: cm.LocalBlobAccess,
+    oci_client: oci.client.Client=None,
+    oci_image_reference: om.OciImageReference=None,
+) -> om.OciBlobRef:
+    '''
+    create OciBlobRef from LocalBlobAccess. If access has a globalAccess attribute, all
+    values will be read from it and returned.
+    Otherwise, the `size` attribute will be looked up using the (then required) oci_client. A
+    blob with a digest matching the one from access.localReference (typically of form
+    sha256:<hexdigest>) must be present at the given oci_image_reference.
+
+    This function is useful for creating OCI Image Manifest layer entries from local blob access
+    objects from Component Descriptors.
+    '''
+    if (global_access := access.globalAccess):
+        return om.OciBlobRef(
+            digest=global_access.digest,
+            mediaType=global_access.mediaType,
+            size=global_access.size,
+        )
+    if not oci_client or not oci_image_reference:
+        raise ValueError(
+            'oci_client and oci_image_reference must both be set if no globalAccess is present',
+            access,
+        )
+
+    res = oci_client.head_blob(
+        image_reference=oci_image_reference,
+        digest=access.localReference,
+        absent_ok=True,
+    )
+
+    if not res.ok:
+        if res.status_code == 404:
+            raise ValueError(
+                f'{access.localReference=} not present at {oci_image_reference=}',
+                access,
+            )
+        res.raise_for_status()
+
+    length = int(res.headers.get('content-length'))
+
+    return om.OciBlobRef(
+        digest=access.localReference,
+        mediaType=access.mediaType,
+        size=length,
+    )
+
+
+def _iter_oci_blob_refs(
+    component: cm.Component,
+    oci_client: oci.client.Client=None,
+    oci_image_reference: om.OciImageReference=None,
+) -> typing.Generator[None, None, om.OciBlobRef]:
+    for artefact in component.iter_artefacts():
+        access = artefact.access
+        if not isinstance(access, cm.LocalBlobAccess):
+            continue
+
+        blob_ref = _oci_blob_ref_from_access(
+            access=access,
+            oci_client=oci_client,
+            oci_image_reference=oci_image_reference,
+        )
+        yield blob_ref
 
 
 def upload_component_descriptor(
@@ -36,6 +105,8 @@ def upload_component_descriptor(
             signatures=[],
         )
 
+    component = component_descriptor.component
+
     schema_version = component_descriptor.meta.schemaVersion
     if not schema_version is cm.SchemaVersion.V2:
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
@@ -48,10 +119,10 @@ def upload_component_descriptor(
         else:
             raise TypeError(type(ocm_repository))
 
-        if  not component_descriptor.component.current_repository_ctx() == ocm_repository:
-            component_descriptor.component.repositoryContexts.append(ocm_repository)
+        if not component.current_repository_ctx() == ocm_repository:
+            component.repositoryContexts.append(ocm_repository)
 
-    target_ref = cnudie.util.oci_artefact_reference(component_descriptor.component)
+    target_ref = cnudie.util.oci_artefact_reference(component)
 
     if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
         # check whether manifest exists (head_manifest does not return None)
@@ -101,6 +172,13 @@ def upload_component_descriptor(
         octets_count=cfg_octets,
         data=cfg_raw,
     )
+
+    for blob_ref in _iter_oci_blob_refs(
+        component=component,
+        oci_client=oci_client,
+        oci_image_reference=target_ref,
+    ):
+        extra_layers.append(blob_ref)
 
     manifest = om.OciImageManifest(
         config=gci.oci.ComponentDescriptorOciCfgBlobRef(
