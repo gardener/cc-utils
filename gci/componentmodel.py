@@ -83,6 +83,7 @@ class LocalBlobAccess(Access):
     '''
     type: AccessTypeOrStr = AccessType.LOCAL_BLOB
     localReference: str
+    size: int = None
     mediaType: str = 'application/data'
     referenceName: typing.Optional[str] = None
     globalAccess: typing.Optional[LocalBlobGlobalAccess | dict | None] = None
@@ -521,6 +522,12 @@ class Component(LabelMethodsMixin):
 
     def identity(self):
         return ComponentIdentity(name=self.name, version=self.version)
+
+    def iter_artefacts(self) -> typing.Generator[None, None, Source | Resource]:
+        if self.sources:
+            yield from self.sources
+        if self.resources:
+            yield from self.resources
 
 
 @functools.lru_cache
