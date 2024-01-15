@@ -200,6 +200,30 @@ class OciBlobRef:
         raw = {k:v for k,v in raw.items() if v is not None}
         return raw
 
+    def __hash__(self):
+        annotations = tuple(sorted(self.annotations.items())) if self.annotations else ()
+        return hash((self.digest, self.size, self.mediaType, annotations))
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, OciBlobRef):
+            return False
+
+        other: OciBlobRef
+
+        if not self.digest == other.digest:
+            return False
+
+        if not self.mediaType == other.mediaType:
+            return False
+
+        if not self.size == other.size:
+            return False
+
+        if not self.annotations == other.annotations:
+            return False
+
+        return True
+
 
 @dataclasses.dataclass
 class OciImageManifest:
