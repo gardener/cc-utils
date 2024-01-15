@@ -132,9 +132,11 @@ def edit(
     oci_cfg.componentDescriptorLayer.digest = content_digest
     oci_cfg_raw = json.dumps(dataclasses.asdict(oci_cfg)).encode('utf-8')
     oci_cfg_dig = f'sha256:{hashlib.sha256(oci_cfg_raw).hexdigest()}'
+    oci_cfg_len = len(oci_cfg_raw)
     manifest.config = dataclasses.replace(
         manifest.config,
         digest=oci_cfg_dig,
+        size=oci_cfg_len,
     )
 
     logger.info(f'uploading patched cfg-blob {oci_cfg_dig=}')
