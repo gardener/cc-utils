@@ -139,7 +139,7 @@ component_v2.sources.append(
 %   for target_spec in image_descriptor.targets:
 component_v2.resources.append(
   cm.Resource(
-    name='${target_spec.name}',
+    name='${name}',
     version=effective_version, # always inherited from component
     type=cm.ResourceType.OCI_IMAGE,
     relation=cm.ResourceRelation.LOCAL,
