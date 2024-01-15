@@ -1,6 +1,7 @@
 import concurrent.futures
 import enum
 import hashlib
+import json
 import pprint
 import sys
 import tabulate
@@ -334,14 +335,19 @@ def cfg(image_reference: str):
     oci_client = ccc.oci.oci_client()
 
     manifest = oci_client.manifest(image_reference=image_reference)
+    cfg_blob = oci_client.blob(
+        image_reference=image_reference,
+        digest=manifest.config.digest,
+        stream=False,
+    ).content
 
-    pprint.pprint(
-        oci_client.blob(
-            image_reference=image_reference,
-            digest=manifest.config.digest,
-            stream=False,
-        ).json(),
-    )
+    cfg_len = len(cfg_blob)
+    cfg_dig = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
+
+    pprint.pprint(json.loads(cfg_blob))
+
+    print(f'{cfg_len} octetts')
+    print(f'digest: {cfg_dig}')
 
 
 def blob(image_reference: str, digest: str, outfile: str='-'):
