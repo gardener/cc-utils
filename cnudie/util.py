@@ -597,7 +597,7 @@ class OcmResolverConfig:
 class OcmSoftwareConfig:
     resolvers: list[OcmResolverConfig]
     aliases: typing.Optional[dict[str, dict]] = None
-    type: str = 'credentials.config.ocm.software'
+    type: str = 'ocm.config.ocm.software'
 
 
 @dataclasses.dataclass
