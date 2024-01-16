@@ -9,6 +9,7 @@ import urllib.parse
 
 import dacite
 import dateutil.parser
+import deprecated
 import jsonschema
 import yaml
 
@@ -515,6 +516,13 @@ class Component(LabelMethodsMixin):
 
     labels: typing.List[Label] = dataclasses.field(default_factory=list)
 
+    @property
+    def current_ocm_repo(self):
+        if not self.repositoryContexts:
+            return None
+        return self.repositoryContexts[-1]
+
+    @deprecated.deprecated
     def current_repository_ctx(self):
         if not self.repositoryContexts:
             return None

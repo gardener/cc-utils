@@ -74,7 +74,8 @@ def iter(
     recursion_depth: int=-1,
     prune_unique: bool=True,
     node_filter: typing.Callable[[Node], bool]=None,
-    ctx_repo: cm.OcmRepository | str=None,
+    ocm_repo: cm.OcmRepository | str=None,
+    ctx_repo: cm.OcmRepository | str=None, # deprecated, use `ocm_repo` instead
 ) -> typing.Generator[Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
@@ -90,8 +91,12 @@ def iter(
                             component dependencies
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
-    @param ctx_repo:     optional OCM Repository to be used to override in the lookup
+    @param ocm_repo:     optional OCM Repository to be used to override in the lookup
+    @param ctx_repo:     deprecated, use `ocm_repo` instead
     '''
+    if not ocm_repo and ctx_repo:
+        ocm_repo = ctx_repo
+
     if isinstance(component, cm.ComponentDescriptor):
         component = component.component
 
@@ -135,8 +140,8 @@ def iter(
                 name=cref.componentName,
                 version=cref.version,
             )
-            if ctx_repo:
-                referenced_component_descriptor = lookup(cref_id, ctx_repo)
+            if ocm_repo:
+                referenced_component_descriptor = lookup(cref_id, ocm_repo)
             else:
                 referenced_component_descriptor = lookup(cref_id)
             referenced_component = referenced_component_descriptor.component
