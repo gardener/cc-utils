@@ -39,6 +39,17 @@ class ComponentArtefactId:
     artefact: LocalArtefactId
     artefact_kind: str = 'artefact' # artefact | resource | source
 
+    def as_frozenset(self) -> frozenset[str]:
+        return frozenset((
+            self.component_name,
+            self.component_version,
+            self.artefact_kind,
+            self.artefact.artefact_name,
+            self.artefact.artefact_version,
+            self.artefact.artefact_type,
+            frozenset(self.artefact.artefact_extra_id.items()),
+        ))
+
 
 def component_artefact_id_from_ocm(
     component: cm.Component,
