@@ -22,11 +22,8 @@ class SlackConfig(NamedModelElement):
     def api_token(self):
         return self.raw.get('api_token')
 
-    def oncall_app_signing_secret(self):
-        return self.raw.get('oncall_app_signing_secret')
-
-    def oncall_app_bot_token(self):
-        return self.raw.get('oncall_app_bot_token')
+    def signing_secret(self):
+        return self.raw.get('signing_secret')
 
     def _required_attributes(self):
         return ['api_token']
