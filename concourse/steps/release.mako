@@ -53,6 +53,7 @@ import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import concourse.model.traits.version
 import github.util
+import gitutil
 
 ${step_lib('release')}
 
@@ -108,8 +109,18 @@ version_path = '${os.path.join(repo.resource_name(), version_trait.write_callbac
 print(f'{version_path=}')
 print(f'{version_interface=}')
 
+git_helper = gitutil.GitHelper.from_githubrepobranch(
+  githubrepobranch=githubrepobranch,
+  repo_path=repo_dir,
+)
+github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
+branch = githubrepobranch.branch()
+
 release_and_prepare_next_dev_cycle(
   component_name=component_name,
+  branch=branch,
+  github_helper=github_helper,
+  git_helper=git_helper,
   component_descriptor_path='${component_descriptor_path}',
   % if has_slack_trait:
   slack_channel_configs=${slack_channel_cfgs},

@@ -947,6 +947,9 @@ def _conflicting_tags(
 
 def release_and_prepare_next_dev_cycle(
     component_name: str,
+    branch:str,
+    github_helper: GitHubRepositoryHelper,
+    git_helper: GitHelper,
     githubrepobranch: GitHubRepoBranch,
     release_commit_publishing_policy: str,
     release_notes_policy: str,
@@ -996,11 +999,6 @@ def release_and_prepare_next_dev_cycle(
     release_commit_publishing_policy = ReleaseCommitPublishingPolicy(
         release_commit_publishing_policy
     )
-    github_helper = GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
-    git_helper = GitHelper.from_githubrepobranch(
-        githubrepobranch=githubrepobranch,
-        repo_path=repo_dir,
-    )
 
     # make sure that desired tag(s) do not already exist. If configured to do so, increment
     # in case of collisions
@@ -1018,7 +1016,7 @@ def release_and_prepare_next_dev_cycle(
     if rebase_before_release:
         rebase_step = RebaseStep(
             git_helper=git_helper,
-            repository_branch=githubrepobranch.branch(),
+            repository_branch=branch,
         )
         step_list.append(rebase_step)
 
@@ -1028,7 +1026,7 @@ def release_and_prepare_next_dev_cycle(
         release_version=release_version,
         version_interface=version_interface,
         version_path=version_path,
-        repository_branch=githubrepobranch.branch(),
+        repository_branch=branch,
         release_commit_message_prefix=release_commit_message_prefix,
         release_commit_callback=release_commit_callback,
         release_commit_callback_image_reference=release_commit_callback_image_reference,
@@ -1041,7 +1039,7 @@ def release_and_prepare_next_dev_cycle(
         git_helper=git_helper,
         github_helper=github_helper,
         publishing_policy=release_commit_publishing_policy,
-        repository_branch=githubrepobranch.branch(),
+        repository_branch=branch,
         merge_commit_message_prefix=merge_release_to_default_branch_commit_message_prefix,
     )
     step_list.append(create_tag_step)
@@ -1053,7 +1051,7 @@ def release_and_prepare_next_dev_cycle(
             release_version=release_version,
             version_interface=version_interface,
             version_path=version_path,
-            repository_branch=githubrepobranch.branch(),
+            repository_branch=branch,
             version_operation=version_operation,
             prerelease_suffix=prerelease_suffix,
             next_version_callback=next_version_callback,
