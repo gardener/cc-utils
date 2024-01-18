@@ -74,6 +74,8 @@ def component_descriptors(
 
 
 class TransactionContext:
+    release_commit: str = None
+
     def __init__(self):
         self._step_outputs = {}
 
@@ -441,142 +443,6 @@ class CreateTagsStep(TransactionalStep):
         return {
             'release_tag': self.release_tag,
             'tags': self.tags_to_set[1:],
-        }
-
-
-class NextDevCycleCommitStep(TransactionalStep):
-    def __init__(
-        self,
-        git_helper: GitHelper,
-        repo_dir: str,
-        release_version: str,
-        version_interface: version_trait.VersionInterface,
-        version_path: str,
-        repository_branch: str,
-        version_operation: str,
-        prerelease_suffix: str,
-        publishing_policy: ReleaseCommitPublishingPolicy,
-        next_cycle_commit_message_prefix: str=None,
-        next_version_callback: str=None,
-    ):
-        self.git_helper = not_none(git_helper)
-        self.repository_branch = not_empty(repository_branch)
-        self.repo_dir = os.path.abspath(repo_dir)
-        self.release_version = not_empty(release_version)
-        self.version_interface = version_interface
-        self.version_path = version_path
-        self.version_operation = not_empty(version_operation)
-        self.prerelease_suffix = not_empty(prerelease_suffix)
-        self.publishing_policy = publishing_policy
-        self.next_cycle_commit_message_prefix = next_cycle_commit_message_prefix
-
-        self.next_version_callback = next_version_callback
-
-    def _next_dev_cycle_commit_message(self, version: str, message_prefix: str):
-        message = f'Prepare next Dev Cycle {version}'
-        if message_prefix:
-            message = f'{message_prefix} {message}'
-        return message
-
-    def name(self):
-        return 'Create next development cycle commit'
-
-    def validate(self):
-        existing_dir(self.repo_dir)
-        version.parse_to_semver(self.release_version)
-        if self.next_version_callback:
-            existing_file(
-                os.path.join(
-                    self.repo_dir,
-                    self.next_version_callback,
-                )
-            )
-
-        # perform version ops once to validate args
-        _calculate_next_cycle_dev_version(
-            release_version=self.release_version,
-            version_operation=self.version_operation,
-            prerelease_suffix=self.prerelease_suffix,
-        )
-
-    def apply(self):
-        # clean repository if required
-        worktree_dirty = bool(self.git_helper._changed_file_paths())
-        if worktree_dirty:
-            if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-                reset_to = self.context().release_commit
-            elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
-                reset_to = 'HEAD'
-            elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
-                reset_to = getattr(
-                    self.context(),
-                    'merge_release_back_to_default_branch_commit',
-                    'HEAD',
-                ) # release continues even if merging-back release-commit fails
-            else:
-                raise NotImplementedError
-
-            self.git_helper.repo.head.reset(
-                commit=reset_to,
-                index=True,
-                working_tree=True,
-            )
-
-        # prepare next dev cycle commit
-        next_version = _calculate_next_cycle_dev_version(
-            release_version=self.release_version,
-            version_operation=self.version_operation,
-            prerelease_suffix=self.prerelease_suffix,
-        )
-        logger.info(f'{next_version=}')
-
-        concourse.steps.version.write_version(
-            version_interface=self.version_interface,
-            version_str=next_version,
-            path=self.version_path,
-        )
-
-        # call optional dev cycle commit callback
-        if self.next_version_callback:
-            _invoke_callback(
-                callback_script_path=self.next_version_callback,
-                repo_dir=self.repo_dir,
-                effective_version=next_version,
-            )
-
-        # depending on publishing-policy, bump-commit should become successor of
-        # either the release commit, or just be pushed to branch-head
-        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-            parent_commits = [self.context().release_commit]
-        elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
-            parent_commits = None # default to current branch head
-        elif self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
-            parent_commit = getattr(
-                self.context(),
-                'merge_release_back_to_default_branch_commit',
-                None,
-            ) # release continues even if merging-back release-commit fails
-
-            if parent_commit:
-                parent_commits = [parent_commit]
-            else:
-                parent_commits = None # default to current branch head
-
-        next_cycle_commit = self.git_helper.index_to_commit(
-            message=self._next_dev_cycle_commit_message(
-                version=next_version,
-                message_prefix=self.next_cycle_commit_message_prefix,
-            ),
-            parent_commits=parent_commits,
-        )
-
-        # Push commit to remote
-        self.git_helper.push(
-            from_ref=next_cycle_commit.hexsha,
-            to_ref=self.repository_branch,
-        )
-        return {
-            'next cycle commit sha': next_cycle_commit.hexsha,
         }
 
 
@@ -962,9 +828,6 @@ def release_and_prepare_next_dev_cycle(
     release_commit_callback_image_reference: str,
     mapping_config,
     component_descriptor_path: str=None,
-    next_cycle_commit_message_prefix: str=None,
-    next_version_callback: str=None,
-    prerelease_suffix: str="dev",
     rebase_before_release: bool=False,
     release_on_github: bool=True,
     release_commit_callback: str=None,
@@ -1044,22 +907,6 @@ def release_and_prepare_next_dev_cycle(
     )
     step_list.append(create_tag_step)
 
-    if version_operation != version.NOOP:
-        next_cycle_commit_step = NextDevCycleCommitStep(
-            git_helper=git_helper,
-            repo_dir=repo_dir,
-            release_version=release_version,
-            version_interface=version_interface,
-            version_path=version_path,
-            repository_branch=branch,
-            version_operation=version_operation,
-            prerelease_suffix=prerelease_suffix,
-            next_version_callback=next_version_callback,
-            publishing_policy=release_commit_publishing_policy,
-            next_cycle_commit_message_prefix=next_cycle_commit_message_prefix,
-        )
-        step_list.append(next_cycle_commit_step)
-
     if release_on_github:
         github_release_step = GitHubReleaseStep(
             github_helper=github_helper,
@@ -1101,7 +948,11 @@ def release_and_prepare_next_dev_cycle(
         logger.warning('An error occured while cleaning up draft releases')
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
-        return logger.info('release notes were disabled - skipping')
+        logger.info('release notes were disabled - skipping')
+        return (
+            transaction_ctx.release_commit,
+            getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
+        )
     elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
         pass
     else:
@@ -1142,28 +993,130 @@ def release_and_prepare_next_dev_cycle(
             exception = sys.exception()
             logger.warning(f'There was an error when pushing created git-notes: {exception}')
 
-    if slack_channel_configs:
-        if not release_on_github:
-            raise RuntimeError('Cannot post to slack without a github release')
+    try:
+        if slack_channel_configs:
+            if not release_on_github:
+                raise RuntimeError('Cannot post to slack without a github release')
 
-        all_slack_releases_successful = True
-        for slack_cfg in slack_channel_configs:
-            slack_cfg_name = slack_cfg['slack_cfg_name']
-            slack_channel = slack_cfg['channel_name']
-            post_to_slack_step = PostSlackReleaseStep(
-                slack_cfg_name=slack_cfg_name,
-                slack_channel=slack_channel,
-                release_version=release_version,
-                release_notes_markdown=release_notes_markdown,
-                githubrepobranch=githubrepobranch,
-            )
-            slack_transaction = Transaction(
-                ctx=transaction_ctx,
-                steps=(post_to_slack_step,),
-            )
-            slack_transaction.validate()
-            all_slack_releases_successful = (
-                all_slack_releases_successful and slack_transaction.execute()
-            )
-        if not all_slack_releases_successful:
-            raise RuntimeError('An error occurred while posting the release notes to Slack.')
+            all_slack_releases_successful = True
+            for slack_cfg in slack_channel_configs:
+                slack_cfg_name = slack_cfg['slack_cfg_name']
+                slack_channel = slack_cfg['channel_name']
+                post_to_slack_step = PostSlackReleaseStep(
+                    slack_cfg_name=slack_cfg_name,
+                    slack_channel=slack_channel,
+                    release_version=release_version,
+                    release_notes_markdown=release_notes_markdown,
+                    githubrepobranch=githubrepobranch,
+                )
+                slack_transaction = Transaction(
+                    ctx=transaction_ctx,
+                    steps=(post_to_slack_step,),
+                )
+                slack_transaction.validate()
+                all_slack_releases_successful = (
+                    all_slack_releases_successful and slack_transaction.execute()
+                )
+            if not all_slack_releases_successful:
+                raise RuntimeError('An error occurred while posting the release notes to Slack.')
+    except Exception:
+        logger.warning('an exception occurred whilst trying to post release-notes to slack')
+        traceback.print_exc()
+
+    return (
+        transaction_ctx.release_commit,
+        getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
+    )
+
+
+def create_and_push_bump_commit(
+    git_helper: GitHelper,
+    repo_dir: str,
+    release_commit: str,
+    merge_release_back_to_default_branch_commit,
+    release_version: str,
+    version_interface: version_trait.VersionInterface,
+    version_path: str,
+    repository_branch: str,
+    version_operation: str,
+    prerelease_suffix: str,
+    publishing_policy: ReleaseCommitPublishingPolicy,
+    next_cycle_commit_message_prefix: str='',
+    next_version_callback: str=None,
+):
+    # clean repository if required
+    worktree_dirty = bool(git_helper._changed_file_paths())
+
+    if worktree_dirty:
+        if publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+            reset_to = release_commit
+        elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+            reset_to = 'HEAD'
+        elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+            reset_to = merge_release_back_to_default_branch_commit or 'HEAD'
+        else:
+            raise NotImplementedError
+
+        git_helper.repo.head.reset(
+            commit=reset_to,
+            index=True,
+            working_tree=True,
+        )
+
+    # prepare next dev cycle commit
+    next_version = _calculate_next_cycle_dev_version(
+        release_version=release_version,
+        version_operation=version_operation,
+        prerelease_suffix=prerelease_suffix,
+    )
+    logger.info(f'{next_version=}')
+
+    concourse.steps.version.write_version(
+        version_interface=version_interface,
+        version_str=next_version,
+        path=version_path,
+    )
+
+    # call optional dev cycle commit callback
+    if next_version_callback:
+        _invoke_callback(
+            callback_script_path=next_version_callback,
+            repo_dir=repo_dir,
+            effective_version=next_version,
+        )
+
+    # depending on publishing-policy, bump-commit should become successor of
+    # either the release commit, or just be pushed to branch-head
+    if publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+        parent_commits = [release_commit]
+    elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+        parent_commits = None # default to current branch head
+    elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+        parent_commit = merge_release_back_to_default_branch_commit
+
+        if parent_commit:
+            parent_commits = [parent_commit]
+        else:
+            parent_commits = None # default to current branch head
+
+    def next_dev_cycle_commit_message(version: str, message_prefix: str):
+        message = f'Prepare next Dev Cycle {version}'
+        if message_prefix:
+            message = f'{message_prefix} {message}'
+        return message
+
+    next_cycle_commit = git_helper.index_to_commit(
+        message=next_dev_cycle_commit_message(
+            version=next_version,
+            message_prefix=next_cycle_commit_message_prefix,
+        ),
+        parent_commits=parent_commits,
+    )
+
+    git_helper.push(
+        from_ref=next_cycle_commit.hexsha,
+        to_ref=repository_branch,
+    )
+    return {
+        'next cycle commit sha': next_cycle_commit.hexsha,
+    }

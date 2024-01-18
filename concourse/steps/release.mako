@@ -3,13 +3,15 @@
   filter="indent_func(indent),trim"
 >
 <%
+import os
+
 from makoutil import indent_func
 from concourse.steps import step_lib
 import ci.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.model.traits.version
 import gci.componentmodel
-import os
+import version
 VersionInterface = concourse.model.traits.version.VersionInterface
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
@@ -19,7 +21,7 @@ if (release_commit_callback_image_reference := release_trait.release_callback_im
 
 version_trait = job_variant.trait('version')
 version_interface = version_trait.version_interface()
-version_op = release_trait.nextversion()
+version_operation = release_trait.nextversion()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
 next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
 merge_release_to_default_branch_commit_message_prefix = release_trait.merge_release_to_default_branch_commit_message_prefix()
@@ -52,6 +54,7 @@ import cnudie.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import concourse.model.traits.version
+import concourse.model.traits.release
 import github.util
 import gitutil
 
@@ -116,7 +119,7 @@ git_helper = gitutil.GitHelper.from_githubrepobranch(
 github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
 branch = githubrepobranch.branch()
 
-release_and_prepare_next_dev_cycle(
+release_commit, merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle(
   component_name=component_name,
   branch=branch,
   github_helper=github_helper,
@@ -128,9 +131,6 @@ release_and_prepare_next_dev_cycle(
   % if release_callback_path:
   release_commit_callback='${release_callback_path}',
   % endif
-  % if next_version_callback_path:
-  next_version_callback='${next_version_callback_path}',
-  % endif
   rebase_before_release=${release_trait.rebase_before_release()},
   release_on_github=${release_trait.release_on_github()},
   githubrepobranch=githubrepobranch,
@@ -138,7 +138,7 @@ release_and_prepare_next_dev_cycle(
   release_version=version_str,
   version_path=version_path,
   version_interface=version_interface,
-  version_operation='${version_op}',
+  version_operation='${version_operation}',
   release_notes_policy='${release_trait.release_notes_policy().value}',
   release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
   release_commit_callback_image_reference=release_commit_callback_image_reference,
@@ -148,11 +148,30 @@ release_and_prepare_next_dev_cycle(
   % if merge_release_to_default_branch_commit_message_prefix:
   merge_release_to_default_branch_commit_message_prefix='${merge_release_to_default_branch_commit_message_prefix}',
   % endif
-  % if next_cycle_commit_message_prefix:
-  next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',
-  % endif
   github_release_tag=${github_release_tag},
   git_tags=${git_tags},
   mapping_config=mapping_config,
 )
+
+% if version_operation != version.NOOP:
+create_and_push_bump_commit(
+  git_helper=git_helper,
+  repo_dir=repo_dir,
+  release_version=version_str,
+  release_commit=release_commit,
+  merge_release_back_to_default_branch_commit=merge_release_back_to_default_branch_commit,
+  version_interface=version_interface,
+  version_path=version_path,
+  repository_branch=branch,
+  version_operation='${version_operation}',
+  prerelease_suffix='dev',
+  publishing_policy=concourse.model.traits.release.ReleaseCommitPublishingPolicy(
+    '${release_trait.release_commit_publishing_policy().value}'
+  ),
+  next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',
+  % if next_version_callback_path:
+  next_version_callback='${next_version_callback_path}',
+  % endif
+)
+% endif
 </%def>
