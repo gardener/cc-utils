@@ -17,14 +17,18 @@ def cfg(
         raise ValueError(privileges)
 
     for prefix in image_ref_prefixes:
-        cfgs.add(mcr.find_config(
-                image_reference=prefix,
-                privileges=privileges,
-            )
+        cfg = mcr.find_config(
+            image_reference=prefix,
+            privileges=privileges,
         )
+        if not cfg:
+            continue
+
+        cfgs.add(cfg)
 
     if not cfgs:
-        print('did not find any cfg for given prefixes')
+        print(f'did not find any cfg for given prefixes {image_ref_prefixes=}')
+        exit(1)
 
     def iter_auths():
         for cfg in cfgs:

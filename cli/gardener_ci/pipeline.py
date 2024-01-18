@@ -172,7 +172,7 @@ def base_component_descriptor(
     pipeline_name: str=None, # only required if there is more than one
     job_name: str=None,
     component_name: str=None,
-    ctx_repo: str='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/development',
+    ocm_repo: str='europe-docker.pkg.dev/gardener-project/public',
     version: str=None,
     outfile: str=None,
 ):
@@ -302,7 +302,7 @@ def base_component_descriptor(
             repositoryContexts=[
                 cm.OciOcmRepository(
                     type=cm.AccessType.OCI_REGISTRY,
-                    baseUrl=ctx_repo,
+                    baseUrl=ocm_repo,
                     subPath='',
                 ),
             ],
@@ -347,7 +347,7 @@ def component_descriptor(
     component_name: str=None,
     version: str=None,
     outfile: str=None,
-    component_repo: str='eu.gcr.io/gardener-project/development',
+    component_repo: str='europe-docker.pkg.dev/gardener-project/public',
     component_descriptor_script: str=None,
     base_component_descriptor_path: str=None,
 ):
