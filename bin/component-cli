@@ -108,10 +108,18 @@ def component_archive_resource_add(argv):
 
   for resource in iter_resources():
     rid = resource_id(resource)
-    # existing resources w/ same id are overwritten by newly added ones
-    component.resources = [
-      r for r in component.resources if not resource_id(r) == rid
-    ]
+    # existing resources w/ same id are merged with newly added ones
+    # more specifically: in case of OCI-Images, access.imageReference is kept; everything else
+    # is overwritten by data from imagevector
+    for existing_resource in component.resources:
+      if not resource_id(existing_resource) == rid:
+        continue
+
+      component.resources.remove(existing_resource)
+
+      if existing_resource.type is cm.OCI_IMAGE:
+        resource.access.imageReference = existing_resource.access.imageReference
+
     component.resources.append(resource)
   added_resources_count = len(component.resources) - resources_len
 
