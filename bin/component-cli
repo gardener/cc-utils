@@ -9,6 +9,7 @@ import sys
 import yaml
 
 import gci.componentmodel as cm
+import oci.model as om
 
 import ci.util
 
@@ -218,6 +219,8 @@ def image_vector(argv):
           continue
 
         tag = resource.version
+        # image-references from pipeline (base_component_descriptor) has precedence
+        img_repo = om.OciImageReference(resource.access.imageReference).ref_without_tag
         component.resources.remove(resource)
         if not 'relation' in image_dict:
           relation = resource.relation.value
