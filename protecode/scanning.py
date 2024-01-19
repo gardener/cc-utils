@@ -499,13 +499,10 @@ class ResourceGroupProcessor:
                     product_id=scan_result.product_id(),
                 )
 
-            if (
-                delete_inactive_products_after_seconds is not None and
-                scan_request.target_product_id
-            ):
+            if delete_inactive_products_after_seconds is not None:
                 # remove deletion flag for current product as it is still in use
                 self.protecode_client.set_metadata(
-                    product_id=scan_request.target_product_id,
+                    product_id=scan_result.product_id(),
                     custom_attribs={
                         'DELETE_AFTER': None,
                     },
