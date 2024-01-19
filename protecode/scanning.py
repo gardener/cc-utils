@@ -40,7 +40,7 @@ def _resource_group_id(
 ) -> tuple[str, cm.ResourceIdentity, cm.ArtefactType|str]:
     '''
     return resource-id, identifying resource by
-    - component-name, component-version ("component id)
+    - component-name ("component id)
     - resource-name, resource-version ("resource id")
     - resource-type
     '''
