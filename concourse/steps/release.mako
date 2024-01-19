@@ -10,8 +10,10 @@ from concourse.steps import step_lib
 import ci.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.model.traits.version
+import concourse.model.traits.release
 import gci.componentmodel
 import version
+ReleaseCommitPublishingPolicy = concourse.model.traits.release.ReleaseCommitPublishingPolicy
 VersionInterface = concourse.model.traits.version.VersionInterface
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
@@ -42,7 +44,6 @@ component_descriptor_path = os.path.join(
 )
 
 component_descriptor_trait = job_variant.trait('component_descriptor')
-component_name = component_descriptor_trait.component_name()
 ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
 release_callback_path = release_trait.release_callback_path()
@@ -86,13 +87,9 @@ mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
     raw_mappings = ${ocm_repository_mappings},
 )
 
-try:
-  component_descriptor = cdu.component_descriptor_from_dir(
-    '${job_step.input('component_descriptor_dir')}'
-  )
-  component_name = component_descriptor.component.name
-except NotImplementedError:
-  component_name = '${component_name}'
+component_descriptor = cdu.component_descriptor_from_dir(
+  '${job_step.input('component_descriptor_dir')}'
+)
 
 % if release_commit_callback_image_reference:
 release_commit_callback_image_reference = '${release_commit_callback_image_reference}'
@@ -126,31 +123,43 @@ rebase(
 )
 % endif
 
-release_commit, merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle(
-  component_name=component_name,
+release_commit = create_release_commit(
+  git_helper=git_helper,
+  branch=branch,
+  version=version_str,
+  version_interface=version_interface,
+  version_path=version_path,
+% if release_commit_message_prefix:
+  release_commit_message_prefix='${release_commit_message_prefix}',
+% endif
+% if release_callback_path:
+  release_commit_callback='${release_callback_path}',
+  release_commit_callback_image_reference=release_commit_callback_image_reference,
+% endif
+)
+
+% if release_trait.release_commit_publishing_policy() is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+git_helper.push(
+  from_ref=release_commit.hexsha,
+  to_ref=branch,
+)
+% endif
+
+merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle(
+  component_descriptor=component_descriptor,
   branch=branch,
   github_helper=github_helper,
   git_helper=git_helper,
-  component_descriptor_path='${component_descriptor_path}',
+  release_commit=release_commit,
   % if has_slack_trait:
   slack_channel_configs=${slack_channel_cfgs},
-  % endif
-  % if release_callback_path:
-  release_commit_callback='${release_callback_path}',
   % endif
   release_on_github=${release_trait.release_on_github()},
   githubrepobranch=githubrepobranch,
   repo_dir=repo_dir,
   release_version=version_str,
-  version_path=version_path,
-  version_interface=version_interface,
-  version_operation='${version_operation}',
   release_notes_policy='${release_trait.release_notes_policy().value}',
   release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
-  release_commit_callback_image_reference=release_commit_callback_image_reference,
-  % if release_commit_message_prefix:
-  release_commit_message_prefix='${release_commit_message_prefix}',
-  % endif
   % if merge_release_to_default_branch_commit_message_prefix:
   merge_release_to_default_branch_commit_message_prefix='${merge_release_to_default_branch_commit_message_prefix}',
   % endif

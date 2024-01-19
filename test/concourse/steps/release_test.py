@@ -6,65 +6,7 @@ import os
 import yaml
 
 import concourse.steps.release
-import concourse.model.traits.version as version_trait
-from concourse.model.traits.release import (
-    ReleaseCommitPublishingPolicy,
-)
 import gci.componentmodel as cm
-
-
-class TestReleaseCommitStep:
-    @pytest.fixture()
-    def examinee(self, tmp_path):
-        # create required temporary file relative to the provided temporary directory
-        temporary_version_file = tmp_path.joinpath('version_file')
-        temporary_version_file.touch()
-
-        def _examinee(
-            repo_dir=str(tmp_path),
-            release_version='1.0.0',
-            version_path='version_file',
-            repository_branch='master',
-            release_commit_callback=None,
-            ):
-            return concourse.steps.release.ReleaseCommitStep(
-                git_helper=MagicMock(),
-                repo_dir=repo_dir,
-                release_version=release_version,
-                version_interface=version_trait.VersionInterface.FILE,
-                version_path=version_path,
-                repository_branch=repository_branch,
-                release_commit_message_prefix=None,
-                release_commit_callback=release_commit_callback,
-                release_commit_callback_image_reference=None,
-                publishing_policy=ReleaseCommitPublishingPolicy.TAG_ONLY,
-            )
-        return _examinee
-
-    def test_validation(self, examinee, tmp_path):
-        # create temporary files in the provided directory
-        temporary_callback_file = tmp_path.joinpath('callback_script')
-        temporary_callback_file.touch()
-        version_file = tmp_path.joinpath('version_file')
-        with open(version_file, 'w'):
-            pass
-        examinee(
-            release_commit_callback='callback_script',
-            version_path=version_file,
-        ).validate()
-
-    def test_validation_fail_on_missing_release_callback_script(self, examinee, tmp_path):
-        with pytest.raises(ValueError):
-            # pass non-existing relative file-name
-            examinee(release_commit_callback='no_such_file').validate()
-
-    def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
-        with pytest.raises(ValueError):
-            examinee(version_path='no_such_file').validate()
-
-    def test_validation_fail_on_invalid_semver(self, examinee):
-        with pytest.raises(ValueError):
-            examinee(release_version='invalid_semver').validate()
 
 
 class NextDevCycleCommitStep:

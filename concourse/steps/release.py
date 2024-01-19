@@ -23,8 +23,6 @@ import gci.componentmodel as cm
 
 import ci.util
 from ci.util import (
-    existing_file,
-    existing_dir,
     not_empty,
     not_none,
 )
@@ -53,24 +51,6 @@ import model.container_registry as cr
 import oci.model
 
 logger = logging.getLogger('step.release')
-
-
-def component_descriptors(
-    component_descriptor_path: str,
-):
-    have_cd = os.path.exists(component_descriptor_path)
-
-    if have_cd:
-        component_descriptor = cm.ComponentDescriptor.from_dict(
-                component_descriptor_dict=ci.util.parse_yaml_file(
-                    component_descriptor_path,
-                ),
-                validation_mode=cm.ValidationMode.WARN,
-        )
-        yield component_descriptor.component
-        return
-    else:
-        raise RuntimeError('did not find component-descriptor')
 
 
 class TransactionContext:
@@ -172,109 +152,6 @@ class Transaction:
         return True
 
 
-class ReleaseCommitStep(TransactionalStep):
-    def __init__(
-        self,
-        git_helper: GitHelper,
-        repo_dir: str,
-        release_version: str,
-        version_interface: version_trait.VersionInterface,
-        version_path: str,
-        repository_branch: str,
-        release_commit_message_prefix: str,
-        publishing_policy: ReleaseCommitPublishingPolicy,
-        release_commit_callback_image_reference: str,
-        release_commit_callback: str=None,
-    ):
-        self.git_helper = not_none(git_helper)
-        self.repository_branch = not_empty(repository_branch)
-        self.repo_dir = os.path.abspath(repo_dir)
-        self.release_version = not_empty(release_version)
-        self.version_interface = version_interface
-        self.version_path = version_path
-        self.release_commit_message_prefix = release_commit_message_prefix
-        self.publishing_policy = publishing_policy
-        self.release_commit_callback_image_reference = release_commit_callback_image_reference
-
-        self.release_commit_callback = release_commit_callback
-
-    def _release_commit_message(self, version: str, release_commit_message_prefix: str=''):
-        message = f'Release {version}'
-        if release_commit_message_prefix:
-            return f'{release_commit_message_prefix} {message}'
-        else:
-            return message
-
-    def name(self):
-        return 'Create Release Commit'
-
-    def validate(self):
-        existing_dir(self.repo_dir)
-        version.parse_to_semver(self.release_version)
-        if self.version_path and not os.path.isfile(self.version_path):
-            raise ValueError(f'not an existing file: {self.version_path=}')
-        if(self.release_commit_callback):
-            existing_file(
-                os.path.join(
-                    self.repo_dir,
-                    self.release_commit_callback,
-                )
-            )
-
-    def apply(self):
-        # clean repository if required
-        worktree_dirty = bool(self.git_helper._changed_file_paths())
-        if worktree_dirty:
-            self.git_helper.repo.head.reset(working_tree=True)
-
-        concourse.steps.version.write_version(
-            version_interface=self.version_interface,
-            version_str=self.release_version,
-            path=self.version_path,
-        )
-
-        # call optional release commit callback
-        if self.release_commit_callback:
-            _invoke_callback(
-                callback_script_path=self.release_commit_callback,
-                repo_dir=self.repo_dir,
-                effective_version=self.release_version,
-                callback_image_reference=self.release_commit_callback_image_reference,
-            )
-
-        release_commit = self.git_helper.index_to_commit(
-            message=self._release_commit_message(
-                self.release_version,
-                self.release_commit_message_prefix
-            ),
-        )
-
-        # clean up after ourselves
-        if self.git_helper._changed_file_paths():
-            self.git_helper.repo.head.reset(index=True, working_tree=True)
-
-        self.context().release_commit = release_commit # pass to other steps
-
-        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-            # push commit to remote
-            self.git_helper.push(
-                from_ref=release_commit.hexsha,
-                to_ref=self.repository_branch
-            )
-        elif self.publishing_policy in (
-            ReleaseCommitPublishingPolicy.TAG_ONLY,
-            ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK,
-        ):
-            # handled when creating all release tags
-            pass
-        else:
-            raise NotImplementedError
-
-        return {
-            'release_commit_sha1': release_commit.hexsha,
-        }
-
-
 class CreateTagsStep(TransactionalStep):
     def __init__(
         self,
@@ -284,9 +161,12 @@ class CreateTagsStep(TransactionalStep):
         publishing_policy: ReleaseCommitPublishingPolicy,
         repository_branch: str,
         merge_commit_message_prefix: str,
+        release_commit: git.Commit,
     ):
         self.github_helper = github_helper
         self.git_helper = git_helper
+
+        self.release_commit = release_commit
 
         self.publishing_policy = publishing_policy
 
@@ -307,9 +187,6 @@ class CreateTagsStep(TransactionalStep):
     def apply(
         self,
     ):
-        release_commit_step_output = self.context().step_output('Create Release Commit')
-        release_commit_sha = release_commit_step_output['release_commit_sha1']
-
         # depending on the publishing policy either push the release commit to all tag-refs or
         # create tags pointing to the commit on the release-branch
         self.tags_created = []
@@ -321,7 +198,7 @@ class CreateTagsStep(TransactionalStep):
         ]:
             def _push_tag(tag):
                 self.git_helper.push(
-                    from_ref=release_commit_sha,
+                    from_ref=self.release_commit.hexsha,
                     to_ref=tag,
                 )
                 self.tags_created.append(tag)
@@ -797,50 +674,28 @@ def _conflicting_tags(
 
 
 def release_and_prepare_next_dev_cycle(
-    component_name: str,
+    component_descriptor,
     branch:str,
     github_helper: GitHubRepositoryHelper,
     git_helper: GitHelper,
     githubrepobranch: GitHubRepoBranch,
+    release_commit: git.Commit,
     release_commit_publishing_policy: str,
     release_notes_policy: str,
     release_version: str,
     repo_dir: str,
-    version_path: str,
-    version_interface: version_trait.VersionInterface,
     git_tags: list,
     github_release_tag: dict,
-    release_commit_callback_image_reference: str,
     mapping_config,
-    component_descriptor_path: str=None,
     release_on_github: bool=True,
-    release_commit_callback: str=None,
-    release_commit_message_prefix: str=None,
     merge_release_to_default_branch_commit_message_prefix: str=None,
     slack_channel_configs: list=[],
-    version_operation: str='bump_minor',
 ):
-    components = tuple(
-        component_descriptors(
-            component_descriptor_path=component_descriptor_path,
-        )
-    )
-    if len(components) == 1:
-        component = components[0]
-    elif len(components) == 0:
-        logger.fatal('no component-descriptors could be found - aborting release')
-        exit(1)
-    else:
-        for component in components:
-            if component.name == component_name:
-                break # found it - `component` is used later
-        else:
-            logger.fatal(f'could not find component w/ {component_name=} - aborting release')
-            exit(1)
-
+    component = component_descriptor.component
     version.parse_to_semver(release_version)
 
     transaction_ctx = TransactionContext() # shared between all steps/trxs
+    transaction_ctx.release_commit = release_commit
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
     release_commit_publishing_policy = ReleaseCommitPublishingPolicy(
@@ -860,24 +715,11 @@ def release_and_prepare_next_dev_cycle(
 
     step_list = []
 
-    release_commit_step = ReleaseCommitStep(
-        git_helper=git_helper,
-        repo_dir=repo_dir,
-        release_version=release_version,
-        version_interface=version_interface,
-        version_path=version_path,
-        repository_branch=branch,
-        release_commit_message_prefix=release_commit_message_prefix,
-        release_commit_callback=release_commit_callback,
-        release_commit_callback_image_reference=release_commit_callback_image_reference,
-        publishing_policy=release_commit_publishing_policy,
-    )
-    step_list.append(release_commit_step)
-
     create_tag_step = CreateTagsStep(
         tags_to_set=tags_to_set,
         git_helper=git_helper,
         github_helper=github_helper,
+        release_commit=release_commit,
         publishing_policy=release_commit_publishing_policy,
         repository_branch=branch,
         merge_commit_message_prefix=merge_release_to_default_branch_commit_message_prefix,
@@ -889,14 +731,14 @@ def release_and_prepare_next_dev_cycle(
             github_helper=github_helper,
             githubrepobranch=githubrepobranch,
             repo_dir=repo_dir,
-            component_name=component_name,
+            component_name=component.name,
             release_version=release_version,
         )
         step_list.append(github_release_step)
 
     upload_component_descriptor_step = UploadComponentDescriptorStep(
         github_helper=github_helper,
-        components=components,
+        components=(component,),
         release_on_github=release_on_github,
         mapping_config=mapping_config,
     )
@@ -926,10 +768,7 @@ def release_and_prepare_next_dev_cycle(
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
         logger.info('release notes were disabled - skipping')
-        return (
-            transaction_ctx.release_commit,
-            getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
-        )
+        return getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD')
     elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
         pass
     else:
@@ -1000,10 +839,7 @@ def release_and_prepare_next_dev_cycle(
         logger.warning('an exception occurred whilst trying to post release-notes to slack')
         traceback.print_exc()
 
-    return (
-        transaction_ctx.release_commit,
-        getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
-    )
+    return getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD')
 
 
 def rebase(
@@ -1017,10 +853,54 @@ def rebase(
     git_helper.rebase(commit_ish=upstream_commit_sha)
 
 
+def create_release_commit(
+    git_helper,
+    branch: str,
+    version: str,
+    version_interface,
+    version_path: str,
+    release_commit_message_prefix: str='',
+    release_commit_callback: str=None,
+    release_commit_callback_image_reference: str=None,
+) -> git.Commit:
+    # clean repository if required
+    worktree_dirty = bool(git_helper._changed_file_paths())
+    if worktree_dirty:
+        git_helper.repo.head.reset(working_tree=True)
+
+    commit_message = f'Release {version}'
+    if release_commit_message_prefix:
+        commit_message = f'{release_commit_message_prefix} {commit_message}'
+
+    concourse.steps.version.write_version(
+        version_interface=version_interface,
+        version_str=version,
+        path=version_path,
+    )
+
+    if release_commit_callback:
+        _invoke_callback(
+            callback_script_path=release_commit_callback,
+            repo_dir=git_helper.repo.working_tree_dir,
+            effective_version=version,
+            callback_image_reference=release_commit_callback_image_reference,
+        )
+
+    release_commit = git_helper.index_to_commit(
+        message=commit_message,
+    )
+
+    # make sure working tree is clean for later git operations
+    if git_helper._changed_file_paths():
+        git_helper.repo.head.reset(index=True, working_tree=True)
+
+    return release_commit
+
+
 def create_and_push_bump_commit(
     git_helper: GitHelper,
     repo_dir: str,
-    release_commit: str,
+    release_commit: git.Commit,
     merge_release_back_to_default_branch_commit,
     release_version: str,
     version_interface: version_trait.VersionInterface,
@@ -1037,7 +917,7 @@ def create_and_push_bump_commit(
 
     if worktree_dirty:
         if publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-            reset_to = release_commit
+            reset_to = release_commit.hexsha
         elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
             reset_to = 'HEAD'
         elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
@@ -1076,7 +956,7 @@ def create_and_push_bump_commit(
     # depending on publishing-policy, bump-commit should become successor of
     # either the release commit, or just be pushed to branch-head
     if publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
-        parent_commits = [release_commit]
+        parent_commits = [release_commit.hexsha]
     elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
         parent_commits = None # default to current branch head
     elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
