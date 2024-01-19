@@ -1,14 +1,8 @@
-import copy
 import logging
-import typing
 import requests
 
-import cfg_mgmt
 import ci.log
 import ci.util
-import model
-import model.sugar
-import model.github
 
 
 ci.log.configure_default_logging()
@@ -50,36 +44,3 @@ class SugarUpdateClient:
             logger.error(msg)
             raise requests.HTTPError(msg)
         logger.info('Updated github_token for %s', id)
-
-
-def _authenticate(
-    cfg_element: model.sugar.Sugar,
-    cfg_factory: model.ConfigFactory,
-) -> SugarUpdateClient:
-    team_id = cfg_element.name()
-    credentials = cfg_factory.sugar(team_id).credentials()
-    service_account = credentials['service_account']
-    password = credentials['password']
-    github = cfg_element.github()
-    auth_token = cfg_factory.github(github).credentials().auth_token()
-    return SugarUpdateClient(service_account, password, auth_token)
-
-
-def rotate_cfg_element(
-    cfg_element: model.sugar.Sugar,
-    cfg_factory: model.ConfigFactory,
-) -> typing.Tuple[cfg_mgmt.revert_function, dict, model.NamedModelElement]:
-    client = _authenticate(cfg_element, cfg_factory)
-    team_id = cfg_element.name()
-    client.update_github_token(team_id)
-
-    secret_id = {'team_id': team_id}
-    raw_cfg = copy.deepcopy(cfg_element.raw)
-    updated_elem = model.sugar.Sugar(
-        name=cfg_element.name(), raw_dict=raw_cfg, type_name=cfg_element._type_name
-    )
-
-    def revert():
-        pass
-
-    return revert, secret_id, updated_elem

@@ -9,6 +9,7 @@ import ccc.github
 import ccc.secrets_server
 import cfg_mgmt.model as cmm
 import cfg_mgmt.reporting as cmr
+from cfg_mgmt.sugar import SugarUpdateClient
 import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
@@ -225,6 +226,24 @@ def _put_secrets_server_secret(
     )
 
 
+def _put_sugar_solinas_service_secret(
+    cfg_factory: model.ConfigFactory,
+    target: model.config_repo.SugarSolinasServiceTarget,
+):
+    team_id = target.team_id
+    credentials = cfg_factory.sugar(team_id).credentials()
+    service_account = credentials['service_account']
+    password = credentials['password']
+    github = target.github
+    auth_token = cfg_factory.github(github).credentials().auth_token()
+    client = SugarUpdateClient(service_account, password, auth_token)
+    logger.info(
+        f"updating github_token for solinas service (sugar) team id '{team_id}' "
+        f"with token from github '{github}'"
+    )
+    client.update_github_token(team_id)
+
+
 def replicate_secrets(
     cfg_factory: model.ConfigFactory,
     replication_target_config: model.config_repo.ReplicationTargetConfig,
@@ -244,6 +263,11 @@ def replicate_secrets(
                 cfg_factory=cfg_factory,
                 target=target,
                 cfg_sets=cfg_sets,
+            )
+        elif isinstance(target, model.config_repo.SugarSolinasServiceTarget):
+            _put_sugar_solinas_service_secret(
+                cfg_factory=cfg_factory,
+                target=target,
             )
         else:
             raise NotImplementedError(type(mapping))
