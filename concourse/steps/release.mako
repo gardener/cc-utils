@@ -119,6 +119,13 @@ git_helper = gitutil.GitHelper.from_githubrepobranch(
 github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
 branch = githubrepobranch.branch()
 
+% if release_trait.rebase_before_release():
+rebase(
+  git_helper=git_helper,
+  branch=branch,
+)
+% endif
+
 release_commit, merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle(
   component_name=component_name,
   branch=branch,
@@ -131,7 +138,6 @@ release_commit, merge_release_back_to_default_branch_commit = release_and_prepar
   % if release_callback_path:
   release_commit_callback='${release_callback_path}',
   % endif
-  rebase_before_release=${release_trait.rebase_before_release()},
   release_on_github=${release_trait.release_on_github()},
   githubrepobranch=githubrepobranch,
   repo_dir=repo_dir,

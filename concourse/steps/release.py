@@ -172,21 +172,6 @@ class Transaction:
         return True
 
 
-class RebaseStep(TransactionalStep):
-    def __init__(self, git_helper: GitHelper, repository_branch: str):
-        self.git_helper = not_none(git_helper)
-        self.repository_branch = not_empty(repository_branch)
-
-    def name(self):
-        return f'Rebase against {self.repository_branch}'
-
-    def apply(self):
-        upstream_commit_sha = self.git_helper.fetch_head(
-            f'refs/heads/{self.repository_branch}'
-        ).hexsha
-        self.git_helper.rebase(commit_ish=upstream_commit_sha)
-
-
 class ReleaseCommitStep(TransactionalStep):
     def __init__(
         self,
@@ -828,7 +813,6 @@ def release_and_prepare_next_dev_cycle(
     release_commit_callback_image_reference: str,
     mapping_config,
     component_descriptor_path: str=None,
-    rebase_before_release: bool=False,
     release_on_github: bool=True,
     release_commit_callback: str=None,
     release_commit_message_prefix: str=None,
@@ -875,13 +859,6 @@ def release_and_prepare_next_dev_cycle(
         exit(1)
 
     step_list = []
-
-    if rebase_before_release:
-        rebase_step = RebaseStep(
-            git_helper=git_helper,
-            repository_branch=branch,
-        )
-        step_list.append(rebase_step)
 
     release_commit_step = ReleaseCommitStep(
         git_helper=git_helper,
@@ -1027,6 +1004,17 @@ def release_and_prepare_next_dev_cycle(
         transaction_ctx.release_commit,
         getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
     )
+
+
+def rebase(
+    git_helper,
+    branch: str,
+):
+    logging.info('Rebasing..')
+    upstream_commit_sha = git_helper.fetch_head(
+        f'refs/heads/{branch}'
+    ).hexsha
+    git_helper.rebase(commit_ish=upstream_commit_sha)
 
 
 def create_and_push_bump_commit(
