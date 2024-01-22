@@ -176,7 +176,7 @@ class GitHelper:
             return git.Actor(credentials.username(), credentials.email_address())
         return None
 
-    def index_to_commit(self, message, parent_commits=None):
+    def index_to_commit(self, message, parent_commits=None) -> git.Commit:
         '''moves all diffs from worktree to a new commit without modifying branches.
         The worktree remains unchanged after the method returns.
 
