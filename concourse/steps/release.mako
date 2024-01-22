@@ -26,7 +26,6 @@ version_interface = version_trait.version_interface()
 version_operation = release_trait.nextversion()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
 next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
-merge_release_to_default_branch_commit_message_prefix = release_trait.merge_release_to_default_branch_commit_message_prefix()
 
 has_slack_trait = job_variant.has_trait('slack')
 if has_slack_trait:
@@ -48,6 +47,22 @@ ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
+
+
+release_commit_publishing_policy = release_trait.release_commit_publishing_policy()
+if release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
+  merge_back = False
+  push_release_commit = False
+elif release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+  merge_back = False
+  push_release_commit = True
+elif release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
+  push_release_commit = False
+  merge_back = True
+else:
+  raise ValueError(release_commit_publishing_policy)
+
+mergeback_commit_msg_prefix = release_trait.merge_release_to_default_branch_commit_message_prefix()
 %>
 import ccc.github
 import ci.util
@@ -58,6 +73,10 @@ import concourse.model.traits.version
 import concourse.model.traits.release
 import github.util
 import gitutil
+
+import git
+
+import traceback
 
 ${step_lib('release')}
 
@@ -117,6 +136,7 @@ github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubr
 branch = githubrepobranch.branch()
 
 % if release_trait.rebase_before_release():
+logger.info('Rebasing against branch-head')
 rebase(
   git_helper=git_helper,
   branch=branch,
@@ -138,16 +158,58 @@ release_commit = create_release_commit(
 % endif
 )
 
-% if release_trait.release_commit_publishing_policy() is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+% if push_release_commit:
 git_helper.push(
   from_ref=release_commit.hexsha,
   to_ref=branch,
 )
 % endif
 
+tags = _calculate_tags(
+  version=version_str,
+  github_release_tag=${github_release_tag},
+  git_tags=${git_tags},
+)
+
+if have_tag_conflicts(
+  github_helper=github_helper,
+  tags=tags,
+):
+  exit(1)
+
+
+create_and_push_tags(
+  git_helper=git_helper,
+  tags=tags,
+  release_commit=release_commit,
+)
+
+% if merge_back:
+try:
+  old_head = git_helper.repo.head
+
+  create_and_push_mergeback_commit(
+    git_helper=git_helper,
+    github_helper=github_helper,
+    tags=tags,
+    branch=branch,
+    merge_commit_message_prefix='${mergeback_commit_msg_prefix or ''}',
+    release_commit=release_commit,
+  )
+except git.GitCommandError:
+  # do not fail release upon mergeback-errors; tags have already been pushed. Missing merge-back
+  # will only cause bump-commit to not be merged back to default branch (which is okay-ish)
+  logger.warning(f'pushing of mergeback-commit failed; release continues, you need to bump manually')
+  traceback.print_exc()
+  git_helper.repo.head.reset(
+    commit=old_head.hexsha,
+    index=True,
+    working_tree=True,
+  )
+% endif
+
 merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle(
   component_descriptor=component_descriptor,
-  branch=branch,
   github_helper=github_helper,
   git_helper=git_helper,
   release_commit=release_commit,
@@ -159,12 +221,9 @@ merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle
   repo_dir=repo_dir,
   release_version=version_str,
   release_notes_policy='${release_trait.release_notes_policy().value}',
-  release_commit_publishing_policy='${release_trait.release_commit_publishing_policy().value}',
-  % if merge_release_to_default_branch_commit_message_prefix:
-  merge_release_to_default_branch_commit_message_prefix='${merge_release_to_default_branch_commit_message_prefix}',
-  % endif
   github_release_tag=${github_release_tag},
   git_tags=${git_tags},
+  release_tag=tags[0],
   mapping_config=mapping_config,
 )
 
@@ -183,7 +242,7 @@ create_and_push_bump_commit(
   publishing_policy=concourse.model.traits.release.ReleaseCommitPublishingPolicy(
     '${release_trait.release_commit_publishing_policy().value}'
   ),
-  next_cycle_commit_message_prefix='${next_cycle_commit_message_prefix}',
+  commit_message_prefix='${next_cycle_commit_message_prefix or ''}',
   % if next_version_callback_path:
   next_version_callback='${next_version_callback_path}',
   % endif

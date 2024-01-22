@@ -152,162 +152,6 @@ class Transaction:
         return True
 
 
-class CreateTagsStep(TransactionalStep):
-    def __init__(
-        self,
-        tags_to_set,
-        github_helper: GitHubRepositoryHelper,
-        git_helper: GitHelper,
-        publishing_policy: ReleaseCommitPublishingPolicy,
-        repository_branch: str,
-        merge_commit_message_prefix: str,
-        release_commit: git.Commit,
-    ):
-        self.github_helper = github_helper
-        self.git_helper = git_helper
-
-        self.release_commit = release_commit
-
-        self.publishing_policy = publishing_policy
-
-        self.tags_to_set = tags_to_set
-
-        self.repository_branch = repository_branch
-        self.release_tag = tags_to_set[0]
-
-        self.merge_commit_message_prefix = merge_commit_message_prefix
-
-    def name(self):
-        return 'Create Tags'
-
-    def validate(self):
-        # already happened before the transaction started
-        pass
-
-    def apply(
-        self,
-    ):
-        # depending on the publishing policy either push the release commit to all tag-refs or
-        # create tags pointing to the commit on the release-branch
-        self.tags_created = []
-
-        if self.publishing_policy in [
-            ReleaseCommitPublishingPolicy.TAG_ONLY,
-            ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH,
-            ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK,
-        ]:
-            def _push_tag(tag):
-                self.git_helper.push(
-                    from_ref=self.release_commit.hexsha,
-                    to_ref=tag,
-                )
-                self.tags_created.append(tag)
-
-            for tag in self.tags_to_set:
-                try:
-                    _push_tag(tag)
-                except GitCommandError:
-                    logger.error(
-                        f"Error when trying to push to tag {tag}. Please check whether the tag "
-                        'already exists in the repository and consider incrementing the Version '
-                        'if it does.\n'
-                        'Re-raising error ...'
-                    )
-                    raise
-
-        else:
-            raise NotImplementedError
-
-        if self.publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
-            def _merge_commit_message(
-                tag: str,
-                merge_commit_message_prefix: str='',
-            ) -> str:
-                message = f'Merge release-commit from tag {tag}'
-                if merge_commit_message_prefix:
-                    return f'{merge_commit_message_prefix} {message}'
-                else:
-                    return message
-
-            def create_merge_commit(head: git.types.Commit_ish):
-                merge_base = self.git_helper.repo.merge_base(
-                    head,
-                    self.context().release_commit,
-                )
-
-                self.git_helper.repo.index.merge_tree(
-                    rhs=self.context().release_commit,
-                    base=merge_base,
-                )
-
-                return self.git_helper.index_to_commit(
-                    message=_merge_commit_message(
-                        tag=self.release_tag,
-                        merge_commit_message_prefix=self.merge_commit_message_prefix,
-                    ),
-                    parent_commits=(
-                        head,
-                        self.context().release_commit,
-                    ),
-                )
-
-            def merge_release_into_current_target_branch_head():
-                upstream_commit = self.git_helper.fetch_head(
-                    f'refs/heads/{self.repository_branch}'
-                )
-                self.git_helper.rebase(commit_ish=upstream_commit.hexsha)
-
-                # if repository contains submodules, update worktree to prevent
-                # subsequent "git add" from worktree will not overwrite
-                # received upstream changes from rebase. for repositories w/o
-                # submodules, this is (almost) a no-op
-                self.git_helper.repo.submodule_update()
-
-                merge_commit = create_merge_commit(upstream_commit)
-                self.context().merge_release_back_to_default_branch_commit = merge_commit
-
-                self.git_helper.push(
-                    from_ref=merge_commit.hexsha,
-                    to_ref=self.repository_branch
-                )
-
-                self.git_helper.repo.head.reset(
-                    commit=merge_commit.hexsha,
-                    index=True,
-                    working_tree=True,
-                ) # make sure next dev-cycle commit does not undo the merge-commit
-
-            head_before_merge = self.git_helper.repo.head
-
-            self.git_helper.repo.head.reset(
-                commit=self.context().release_commit,
-                index=True,
-                working_tree=True,
-            )
-
-            try:
-                merge_release_into_current_target_branch_head()
-
-            except (GitCommandError, RuntimeError):
-                # should only occur on merge conflicts or head-update during release
-                logger.warning(f'Merging release-commit from tag {self.release_tag} failed.')
-                traceback.print_exc()
-
-                self.git_helper.repo.head.reset(
-                    commit=head_before_merge.commit.hexsha,
-                    index=True,
-                    working_tree=True,
-                ) # clean repo for subsequent steps
-
-                # do not fail release-step here as release-tag is created already and next dev-cycle
-                # commit must still be processed
-
-        return {
-            'release_tag': self.release_tag,
-            'tags': self.tags_to_set[1:],
-        }
-
-
 class GitHubReleaseStep(TransactionalStep):
     def __init__(
         self,
@@ -316,10 +160,12 @@ class GitHubReleaseStep(TransactionalStep):
         repo_dir: str,
         component_name: str,
         release_version: str,
+        release_tag: str,
     ):
         self.github_helper = not_none(github_helper)
         self.githubrepobranch = githubrepobranch
         self.release_version = not_empty(release_version)
+        self.release_tag = release_tag
         self.repo_dir = repo_dir
         self.component_name = component_name
 
@@ -332,8 +178,7 @@ class GitHubReleaseStep(TransactionalStep):
     def apply(
         self,
     ):
-        create_tags_step_output = self.context().step_output('Create Tags')
-        release_tag = create_tags_step_output['release_tag']
+        release_tag = self.release_tag
 
         # github3.py expects the tags's name, not the whole ref
         if release_tag.startswith('refs/tags/'):
@@ -644,51 +489,35 @@ def _calculate_next_cycle_dev_version(
 
 
 def _calculate_tags(
-    release_version: str,
+    version: str,
     github_release_tag: dict,
     git_tags: list,
 ) -> typing.Sequence[str]:
-    tag_template_vars = {'VERSION': release_version}
-
-     # render tag-templates
     github_release_tag_candidate = github_release_tag['ref_template'].format(
-        **tag_template_vars
+        VERSION=version,
     )
     git_tag_candidates = [
-        tag_template['ref_template'].format(**tag_template_vars)
+        tag_template['ref_template'].format(VERSION=version)
         for tag_template in git_tags
     ]
 
     return [github_release_tag_candidate] + git_tag_candidates
 
 
-def _conflicting_tags(
-    tags_to_set: typing.Sequence[str],
-    github_helper,
-):
-    return set(
-        tag
-        for tag in tags_to_set
-        if github_helper.tag_exists(tag.removeprefix('refs/tags/'))
-    )
-
-
 def release_and_prepare_next_dev_cycle(
     component_descriptor,
-    branch:str,
     github_helper: GitHubRepositoryHelper,
     git_helper: GitHelper,
     githubrepobranch: GitHubRepoBranch,
     release_commit: git.Commit,
-    release_commit_publishing_policy: str,
     release_notes_policy: str,
     release_version: str,
     repo_dir: str,
     git_tags: list,
+    release_tag: str,
     github_release_tag: dict,
     mapping_config,
     release_on_github: bool=True,
-    merge_release_to_default_branch_commit_message_prefix: str=None,
     slack_channel_configs: list=[],
 ):
     component = component_descriptor.component
@@ -698,33 +527,8 @@ def release_and_prepare_next_dev_cycle(
     transaction_ctx.release_commit = release_commit
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
-    release_commit_publishing_policy = ReleaseCommitPublishingPolicy(
-        release_commit_publishing_policy
-    )
-
-    # make sure that desired tag(s) do not already exist. If configured to do so, increment
-    # in case of collisions
-
-    tags_to_set = _calculate_tags(release_version, github_release_tag, git_tags)
-    logger.info(f'Making sure that required tags {tags_to_set} do not exist, yet')
-    if (existing_tags := _conflicting_tags(tags_to_set, github_helper)):
-        logger.error(
-            f'conflict: {existing_tags=}. Increment version or delete tags.'
-        )
-        exit(1)
 
     step_list = []
-
-    create_tag_step = CreateTagsStep(
-        tags_to_set=tags_to_set,
-        git_helper=git_helper,
-        github_helper=github_helper,
-        release_commit=release_commit,
-        publishing_policy=release_commit_publishing_policy,
-        repository_branch=branch,
-        merge_commit_message_prefix=merge_release_to_default_branch_commit_message_prefix,
-    )
-    step_list.append(create_tag_step)
 
     if release_on_github:
         github_release_step = GitHubReleaseStep(
@@ -733,6 +537,7 @@ def release_and_prepare_next_dev_cycle(
             repo_dir=repo_dir,
             component_name=component.name,
             release_version=release_version,
+            release_tag=release_tag,
         )
         step_list.append(github_release_step)
 
@@ -853,6 +658,23 @@ def rebase(
     git_helper.rebase(commit_ish=upstream_commit_sha)
 
 
+def have_tag_conflicts(
+    github_helper,
+    tags,
+):
+    found_tags = 0
+    for tag in tags:
+        if github_helper.tag_exists(tag.removeprefix('refs/tags/')):
+            logger.error(f'{tag=} exists in remote repository - aborting release')
+            found_tags += 1
+
+    if not found_tags:
+        return False
+
+    logger.error('HINT: manually bump VERSION or remove tag')
+    return True
+
+
 def create_release_commit(
     git_helper,
     branch: str,
@@ -901,7 +723,7 @@ def create_and_push_bump_commit(
     git_helper: GitHelper,
     repo_dir: str,
     release_commit: git.Commit,
-    merge_release_back_to_default_branch_commit,
+    merge_release_back_to_default_branch_commit: git.Commit,
     release_version: str,
     version_interface: version_trait.VersionInterface,
     version_path: str,
@@ -909,7 +731,7 @@ def create_and_push_bump_commit(
     version_operation: str,
     prerelease_suffix: str,
     publishing_policy: ReleaseCommitPublishingPolicy,
-    next_cycle_commit_message_prefix: str='',
+    commit_message_prefix: str='',
     next_version_callback: str=None,
 ):
     # clean repository if required
@@ -960,24 +782,19 @@ def create_and_push_bump_commit(
     elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
         parent_commits = None # default to current branch head
     elif publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
-        parent_commit = merge_release_back_to_default_branch_commit
+        parent_commit = git_helper.repo.head.commit
 
         if parent_commit:
             parent_commits = [parent_commit]
         else:
             parent_commits = None # default to current branch head
 
-    def next_dev_cycle_commit_message(version: str, message_prefix: str):
-        message = f'Prepare next Dev Cycle {version}'
-        if message_prefix:
-            message = f'{message_prefix} {message}'
-        return message
+    commit_message = f'Prepare next Development Cycle {version}'
+    if commit_message_prefix:
+        commit_message = f'{commit_message_prefix} {commit_message}'
 
     next_cycle_commit = git_helper.index_to_commit(
-        message=next_dev_cycle_commit_message(
-            version=next_version,
-            message_prefix=next_cycle_commit_message_prefix,
-        ),
+        message=commit_message,
         parent_commits=parent_commits,
     )
 
@@ -985,6 +802,80 @@ def create_and_push_bump_commit(
         from_ref=next_cycle_commit.hexsha,
         to_ref=repository_branch,
     )
+
+    # XXX remove?
     return {
         'next cycle commit sha': next_cycle_commit.hexsha,
     }
+
+
+def create_and_push_tags(
+    git_helper,
+    tags,
+    release_commit: git.Commit,
+):
+    for tag in tags:
+        try:
+            git_helper.push(
+                from_ref=release_commit.hexsha,
+                to_ref=tag,
+            )
+        except GitCommandError:
+            logger.error(f'failed to push {tag=}')
+            raise
+
+
+def create_and_push_mergeback_commit(
+    git_helper,
+    github_helper,
+    tags,
+    branch: str,
+    merge_commit_message_prefix: str,
+    release_commit: git.Commit,
+):
+    release_tag = tags[0]
+    commit_message = f'Merge release-commit from {release_tag} into {branch}'
+    if merge_commit_message_prefix:
+        commit_message = f'{merge_commit_message_prefix} {commit_message}'
+
+    git_repo = git_helper.repo
+
+    git_repo.head.reset(
+        commit=release_commit.hexsha,
+        index=True,
+        working_tree=True,
+    )
+
+    # fetch and rebase (again, in case there was a head-update)
+    upstream_commit = git_helper.fetch_head(
+        f'refs/heads/{branch}'
+    )
+    git_helper.rebase(commit_ish=upstream_commit.hexsha)
+
+    # update submodules (if any), to avoid local diff to be included in subsequent `git add`.
+    # otherwise, upstream submodule-updates might be reverted by us.
+    git_repo.submodule_update()
+
+    # create merge commit
+    git_repo.index.merge_tree(
+        release_commit,
+        git_repo.merge_base(upstream_commit, release_commit),
+    )
+    merge_commit = git_helper.index_to_commit(
+        message=commit_message,
+        parent_commits=(
+            upstream_commit,
+            release_commit,
+        ),
+    )
+
+    git_helper.push(
+        from_ref=merge_commit.hexsha,
+        to_ref=branch
+    )
+
+    git_repo.head.reset(
+        commit=merge_commit.hexsha,
+        index=True,
+        working_tree=True,
+    ) # make sure next dev-cycle commit does not undo the merge-commit
