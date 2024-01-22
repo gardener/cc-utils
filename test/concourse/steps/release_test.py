@@ -106,6 +106,7 @@ class TestGitHubReleaseStep:
                 githubrepobranch=githubrepobranch,
                 repo_dir=repo_dir,
                 release_version=release_version,
+                release_tag=release_version,
                 component_name=component_name,
             )
         return _examinee
