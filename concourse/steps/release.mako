@@ -109,6 +109,7 @@ mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
 component_descriptor = cdu.component_descriptor_from_dir(
   '${job_step.input('component_descriptor_dir')}'
 )
+component = component_descriptor.component
 
 % if release_commit_callback_image_reference:
 release_commit_callback_image_reference = '${release_commit_callback_image_reference}'
@@ -183,6 +184,15 @@ create_and_push_tags(
   tags=tags,
   release_commit=release_commit,
 )
+
+% if release_trait.release_on_github():
+github_release(
+  github_helper=github_helper,
+  release_tag=tags[0],
+  release_version=version_str,
+  component_name=component.name,
+)
+% endif
 
 % if merge_back:
 try:
