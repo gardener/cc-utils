@@ -26,13 +26,14 @@ class KubernetesSecretTarget:
 @dataclasses.dataclass
 class SugarSolinasServiceTarget:
     type: str
+    sugar_config_name: str
     team_id: str
     github: str
 
 
 @dataclasses.dataclass
 class ReplicationMapping:
-    target: SecretsServerTarget | KubernetesSecretTarget
+    target: SecretsServerTarget | KubernetesSecretTarget | SugarSolinasServiceTarget
     cfg_set: str
 
 

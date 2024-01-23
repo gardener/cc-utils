@@ -14,6 +14,12 @@ class Sugar(NamedModelElement):
         '''
         return self.raw['github']
 
+    def team_id(self):
+        '''
+        solinas API team_id
+        '''
+        return self.raw['team_id']
+
     def credentials(self):
         '''
         credentials (service_account and password) used for updating github_token
@@ -21,4 +27,4 @@ class Sugar(NamedModelElement):
         return self.raw['credentials']
 
     def _required_attributes(self):
-        return ['github', 'credentials']
+        return ['team_id', 'github', 'credentials']

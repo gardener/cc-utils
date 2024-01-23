@@ -230,10 +230,11 @@ def _put_sugar_solinas_service_secret(
     cfg_factory: model.ConfigFactory,
     target: model.config_repo.SugarSolinasServiceTarget,
 ):
-    team_id = target.team_id
-    credentials = cfg_factory.sugar(team_id).credentials()
+    cfg_name = target.sugar_config_name
+    credentials = cfg_factory.sugar(cfg_name).credentials()
     service_account = credentials['service_account']
     password = credentials['password']
+    team_id = target.team_id
     github = target.github
     auth_token = cfg_factory.github(github).credentials().auth_token()
     client = SugarUpdateClient(service_account, password, auth_token)
