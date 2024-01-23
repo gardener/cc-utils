@@ -152,65 +152,6 @@ class Transaction:
         return True
 
 
-class GitHubReleaseStep(TransactionalStep):
-    def __init__(
-        self,
-        github_helper: GitHubRepositoryHelper,
-        githubrepobranch: GitHubRepoBranch,
-        repo_dir: str,
-        component_name: str,
-        release_version: str,
-        release_tag: str,
-    ):
-        self.github_helper = not_none(github_helper)
-        self.githubrepobranch = githubrepobranch
-        self.release_version = not_empty(release_version)
-        self.release_tag = release_tag
-        self.repo_dir = repo_dir
-        self.component_name = component_name
-
-    def name(self):
-        return "Create Release"
-
-    def validate(self):
-        version.parse_to_semver(self.release_version)
-
-    def apply(
-        self,
-    ):
-        release_tag = self.release_tag
-
-        # github3.py expects the tags's name, not the whole ref
-        if release_tag.startswith('refs/tags/'):
-            release_tag = release_tag[10:]
-        else:
-            raise RuntimeError(
-                f'unexpected {release_tag=}. Expected a ref, e.g. `refs/tags/foo`'
-            )
-
-        # Create GitHub-release
-        if release := self.github_helper.draft_release_with_name(f'{self.release_version}-draft'):
-            self.github_helper.promote_draft_release(
-                draft_release=release,
-                release_tag=release_tag,
-                release_version=self.release_version,
-                component_name=self.component_name,
-            )
-        else:
-            release = self.github_helper.create_release(
-                tag_name=release_tag,
-                body="",
-                draft=False,
-                prerelease=False,
-                name=self.release_version,
-                component_name=self.component_name,
-            )
-
-        return {
-            'release_tag_name': release_tag,
-        }
-
-
 class UploadComponentDescriptorStep(TransactionalStep):
     def __init__(
         self,
@@ -218,10 +159,12 @@ class UploadComponentDescriptorStep(TransactionalStep):
         components: tuple[cm.Component],
         release_on_github: bool,
         mapping_config: cnudie.util.OcmLookupMappingConfig,
+        github_release_tag: str=None,
     ):
         self.github_helper = not_none(github_helper)
         self.components = components
         self.release_on_github = release_on_github
+        self.github_release_tag = github_release_tag
         self.ocm_lookup = cnudie.retrieve.oci_component_descriptor_lookup(
             ocm_repository_lookup=mapping_config,
         )
@@ -264,8 +207,7 @@ class UploadComponentDescriptorStep(TransactionalStep):
 
     def apply(self):
         if self.release_on_github:
-            create_release_step_output = self.context().step_output('Create Release')
-            release_tag_name = create_release_step_output['release_tag_name']
+            release_tag_name = self.github_release_tag.removeprefix('refs/tags/')
 
         components = tuple(cnudie.util.iter_sorted(self.components))
         components_by_id = {
@@ -530,21 +472,11 @@ def release_and_prepare_next_dev_cycle(
 
     step_list = []
 
-    if release_on_github:
-        github_release_step = GitHubReleaseStep(
-            github_helper=github_helper,
-            githubrepobranch=githubrepobranch,
-            repo_dir=repo_dir,
-            component_name=component.name,
-            release_version=release_version,
-            release_tag=release_tag,
-        )
-        step_list.append(github_release_step)
-
     upload_component_descriptor_step = UploadComponentDescriptorStep(
         github_helper=github_helper,
         components=(component,),
         release_on_github=release_on_github,
+        github_release_tag=release_tag,
         mapping_config=mapping_config,
     )
 
@@ -879,3 +811,30 @@ def create_and_push_mergeback_commit(
         index=True,
         working_tree=True,
     ) # make sure next dev-cycle commit does not undo the merge-commit
+
+
+def github_release(
+    github_helper: GitHubRepositoryHelper,
+    release_tag: str,
+    release_version: str,
+    component_name: str,
+):
+    # github-api expects unqualified tagname
+    release_tag = release_tag.removeprefix('refs/tags/')
+
+    if release := github_helper.draft_release_with_name(f'{release_version}-draft'):
+        github_helper.promote_draft_release(
+            draft_release=release,
+            release_tag=release_tag,
+            release_version=release_version,
+            component_name=component_name,
+        )
+    else:
+        release = github_helper.create_release(
+            tag_name=release_tag,
+            body='',
+            draft=False,
+            prerelease=False,
+            name=release_version,
+            component_name=component_name,
+        )

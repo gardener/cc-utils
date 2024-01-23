@@ -1,12 +1,8 @@
-import dataclasses
 import pytest
 from unittest.mock import MagicMock
-from github.util import GitHubRepositoryHelper, GitHubRepoBranch
-import os
-import yaml
+from github.util import GitHubRepoBranch
 
 import concourse.steps.release
-import gci.componentmodel as cm
 
 
 class NextDevCycleCommitStep:
@@ -55,66 +51,6 @@ class NextDevCycleCommitStep:
             examinee(version_path='no_such_file').validate()
 
     def test_validation_fail_on_invalid_semver(self, examinee):
-        with pytest.raises(ValueError):
-            examinee(release_version='invalid_semver').validate()
-
-
-class TestGitHubReleaseStep:
-    @pytest.fixture()
-    def examinee(self, tmp_path):
-        # prepare test component descriptor file and fill it with test content
-
-        component_descriptor_v2 = os.path.join(tmp_path, 'component_descriptor_v2')
-        cd_v2 = cm.ComponentDescriptor(
-            component=cm.Component(
-                name='test.url/foo/bar',
-                version='1.2.3',
-                repositoryContexts=[],
-                provider={
-                    'name': 'some provider',
-                },
-                sources=[],
-                componentReferences=[],
-                resources=[],
-            ),
-            meta=cm.Metadata(),
-        )
-        with open(component_descriptor_v2, 'w') as f:
-            yaml.dump(
-                data=dataclasses.asdict(cd_v2),
-                stream=f,
-                Dumper=cm.EnumValueYamlDumper,
-            )
-
-        def _examinee(
-            githubrepobranch=GitHubRepoBranch(
-                github_config='test_config',
-                repo_owner='test_owner',
-                repo_name='test_name',
-                branch='master',
-            ),
-            repo_dir=str(tmp_path),
-            release_version='1.0.0',
-            component_name='github.test/test/component',
-            tag_helper_return_value=False,
-        ):
-            # Create a github_helper mock that always reports a tag as existing/not existing,
-            # depending on the passed value
-            github_helper_mock = MagicMock(spec=GitHubRepositoryHelper)
-            return concourse.steps.release.GitHubReleaseStep(
-                github_helper=github_helper_mock,
-                githubrepobranch=githubrepobranch,
-                repo_dir=repo_dir,
-                release_version=release_version,
-                release_tag=release_version,
-                component_name=component_name,
-            )
-        return _examinee
-
-    def test_validation(self, examinee):
-        examinee().validate()
-
-    def test_validation_fails_on_invalid_semver(self, examinee):
         with pytest.raises(ValueError):
             examinee(release_version='invalid_semver').validate()
 
