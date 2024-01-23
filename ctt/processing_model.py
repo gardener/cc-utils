@@ -23,3 +23,4 @@ class ProcessingJob:
     upload_request: ContainerImageUploadRequest
     processed_resource: cm.Resource | None = None  # added after re-upload
     inject_ocm_coordinates_into_oci_manifest: bool = False
+    extra_tags: tuple[str] = ()

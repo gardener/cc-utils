@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import dataclasses
+import typing
 
 import ci.util
-import gci.componentmodel as cm
-import oci.client
-
 import ctt.processing_model as pm
 import ctt.util as ctt_util
+import gci.componentmodel as cm
+import oci.client
 import oci.model as om
 
 original_ref_label_name = 'cloud.gardener.cnudie/migration/original_ref'
@@ -178,6 +178,20 @@ class TagSuffixUploader:
             processing_job,
             upload_request=upload_request
         )
+
+
+class ExtraTagUploader:
+    '''
+    Uploader that will push additional (static) tags to uploaded images. Useful to e.g. add
+    `latest` tag. Extra-Tags will be overwritten as a hardcoded behaviour of this uploader.
+    '''
+    def __init__(self, extra_tags: typing.Iterable[str]):
+        self.extra_tags = tuple(extra_tags)
+
+    def process(self, processing_job, target_as_source=False):
+        processing_job.extra_tags = self.extra_tags
+
+        return processing_job
 
 
 class DigestUploader:
