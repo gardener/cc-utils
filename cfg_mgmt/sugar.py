@@ -43,4 +43,4 @@ class SugarUpdateClient:
             msg = f'update_github_token failed: {resp.status_code} {resp.text}'
             logger.error(msg)
             raise requests.HTTPError(msg)
-        logger.info('Updated github_token for %s', id)
+        logger.info(f'Updated github_token for {team_id=}')
