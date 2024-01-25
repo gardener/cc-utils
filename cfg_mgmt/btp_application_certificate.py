@@ -55,10 +55,6 @@ class CertServiceClient:
         self.access_token = resp.json()['access_token']
 
     def create_client_certificate_chain(self, csr_pem: str, validity_in_days: int) -> dict:
-        '''
-        see https://pages.github.tools.sap/sap-pki-certificate-service/consumer-guide/getting-started/get-client-certificate/
-        see https://pages.github.tools.sap/sap-pki-certificate-service/consumer-guide/specifications/api/
-        '''
         headers = {
             'Accept': 'application/json',
             'Authorization': f'Bearer {self.access_token}',
@@ -214,10 +210,10 @@ def _extract_client_certificate(cert_response: dict) -> str:
     certs = pkcs7.load_pem_pkcs7_certificates(pkcs7_pem.encode('utf-8'))
     if not certs:
         raise ValueError('no certificates found in response')
-    allCerts = ""
+    all_certs = ""
     for c in certs:
-        allCerts += c.public_bytes(serialization.Encoding.PEM).decode('utf-8')
-    return allCerts
+        all_certs += c.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+    return all_certs
 
 
 def rotate_cfg_element(
@@ -280,10 +276,3 @@ def delete_config_secret(
             gbaas_client.delete_certificate(info.cn, info.id)
 
     return None
-
-
-def test(cfg_factory: model.ConfigFactory):
-    gbaas_auth = cfg_factory.btp_application_certificate("dev-i503479-gbaas-rotation")
-    gbaas_client = GBaasAppClient(gbaas_auth)
-    for info in  gbaas_client.list_certificates_by_base("dev.k8s.ondemand.com"):
-      print(info)
