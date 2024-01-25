@@ -55,16 +55,22 @@ class CertServiceClient:
         self.access_token = resp.json()['access_token']
 
     def create_client_certificate_chain(self, csr_pem: str, validity_in_days: int) -> dict:
+        '''
+        see https://pages.github.tools.sap/sap-pki-certificate-service/consumer-guide/getting-started/get-client-certificate/
+        see https://pages.github.tools.sap/sap-pki-certificate-service/consumer-guide/specifications/api/
+        '''
         headers = {
             'Accept': 'application/json',
             'Authorization': f'Bearer {self.access_token}',
         }
-        data = {'certificate-signing-request':{
-            'value': csr_pem,
-            'type': 'pkcs10-pem',
+        data = {
+            'csr':{
+              'value': csr_pem,
+            },
+            'policy': self.credentials['certificateservice']['policy'],
             'validity': {'type': 'DAYS', 'value': validity_in_days},
-        }}
-        url = self.credentials['certificateservice']['profileurl']
+        }
+        url = self.credentials['certificateservice']['apiurl'] + '/v3/synchronous/certificate'
         resp = requests.post(
             url,
             json=data,
@@ -73,7 +79,7 @@ class CertServiceClient:
         )
         resp.raise_for_status()
         logger.info('Created certificate')
-        return resp.json()['certificate-response']
+        return resp.json()['certificateChain']
 
 
 def _write_temp_file(temp_dir: str, fname: str, content: str) -> str:
@@ -185,7 +191,7 @@ _str_to_names = {
 
 def _create_csr(subject: str) -> tuple[str, str]:
     logger.info(f'Creating CSR for {subject}')
-    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    key = rsa.generate_private_key(public_exponent=65537, key_size=3072)
     key_pem = key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -208,7 +214,10 @@ def _extract_client_certificate(cert_response: dict) -> str:
     certs = pkcs7.load_pem_pkcs7_certificates(pkcs7_pem.encode('utf-8'))
     if not certs:
         raise ValueError('no certificates found in response')
-    return certs[0].public_bytes(serialization.Encoding.PEM).decode('utf-8')
+    allCerts = ""
+    for c in certs:
+        allCerts += c.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+    return allCerts
 
 
 def rotate_cfg_element(
@@ -271,3 +280,10 @@ def delete_config_secret(
             gbaas_client.delete_certificate(info.cn, info.id)
 
     return None
+
+
+def test(cfg_factory: model.ConfigFactory):
+    gbaas_auth = cfg_factory.btp_application_certificate("dev-i503479-gbaas-rotation")
+    gbaas_client = GBaasAppClient(gbaas_auth)
+    for info in  gbaas_client.list_certificates_by_base("dev.k8s.ondemand.com"):
+      print(info)
