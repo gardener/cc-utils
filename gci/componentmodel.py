@@ -230,6 +230,10 @@ class DigestSpec:
     normalisationAlgorithm: str
     value: str
 
+    @property
+    def oci_tag(self) -> str:
+        return f'sha256:{self.value}'
+
 
 # EXCLUDE_FROM_SIGNATURE used in digest field for normalisationAlgorithm
 # (in combination with NO_DIGEST for hashAlgorithm and value) to indicate

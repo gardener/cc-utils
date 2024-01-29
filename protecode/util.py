@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import datetime
+import hashlib
 import logging
 import time
 import typing
@@ -23,6 +24,8 @@ import delivery.client
 import dso.model
 import gci.componentmodel as cm
 import github.compliance.model
+import oci.client
+import oci.model
 import protecode.model as pm
 
 
@@ -250,6 +253,7 @@ def component_artifact_metadata(
     artefact: cm.Artifact,
     omit_component_version: bool,
     omit_resource_version: bool,
+    oci_client: oci.client.Client,
 ):
     ''' returns a dict for querying bdba scan results (use for custom-data query)
     '''
@@ -262,7 +266,12 @@ def component_artifact_metadata(
         metadata['IMAGE_REFERENCE_NAME'] = artefact.name
         metadata['RESOURCE_TYPE'] = 'ociImage'
         if not omit_resource_version:
-            metadata['IMAGE_REFERENCE'] = artefact.access.imageReference
+            image_reference = image_ref_with_digest(
+                image_reference=artefact.access.imageReference,
+                digest=artefact.digest,
+                oci_client=oci_client,
+            )
+            metadata['IMAGE_REFERENCE'] = image_reference
             metadata['IMAGE_VERSION'] = artefact.version
     elif isinstance(artefact.access, cm.S3Access):
         metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'
@@ -310,3 +319,26 @@ def _matching_analysis_result_id(
         return result.product_id()
     else:
         return None
+
+
+def image_ref_with_digest(
+    image_reference: str | oci.model.OciImageReference,
+    digest: cm.DigestSpec,
+    oci_client: oci.client.Client,
+) -> str:
+    image_reference = oci.model.OciImageReference.to_image_ref(image_reference=image_reference)
+
+    if image_reference.has_digest_tag:
+        return image_reference.original_image_reference
+
+    if not (digest and digest.value):
+        digest = cm.DigestSpec(
+            hashAlgorithm=None,
+            normalisationAlgorithm=None,
+            value=hashlib.sha256(oci_client.manifest_raw(
+                image_reference=image_reference,
+                accept=oci.model.MimeTypes.prefer_multiarch,
+            ).content).hexdigest(),
+        )
+
+    return image_reference.with_tag(tag=digest.oci_tag)

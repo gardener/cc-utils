@@ -157,6 +157,11 @@ class OciImageReference:
             return urllib.parse.urlparse(f'https://{img_ref}')
         return urllib.parse.urlparse(img_ref)
 
+    def with_tag(self, tag: str) -> str:
+        if 'sha256' in tag:
+            return f'{self.ref_without_tag}@{tag}'
+        return f'{self.ref_without_tag}:{tag}'
+
     def __str__(self) -> str:
         return self.normalised_image_reference
 

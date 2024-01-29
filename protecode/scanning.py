@@ -85,14 +85,16 @@ class ResourceGroupProcessor:
     def __init__(
         self,
         protecode_client: protecode.client.ProtecodeApi,
+        oci_client: oci.client.Client,
         group_id: int=None,
         reference_group_ids: typing.Sequence[int]=(),
         cvss_threshold: float=7.0,
     ):
+        self.protecode_client = protecode_client
+        self.oci_client = oci_client
         self.group_id = group_id
         self.reference_group_ids = reference_group_ids
         self.cvss_threshold = cvss_threshold
-        self.protecode_client = protecode_client
 
     def _products_with_relevant_triages(
         self,
@@ -110,6 +112,7 @@ class ResourceGroupProcessor:
             # we want to find all possibly relevant scans, so omit all version data
             omit_component_version=True,
             omit_resource_version=True,
+            oci_client=self.oci_client,
         )
 
         for id in relevant_group_ids:
@@ -189,7 +192,6 @@ class ResourceGroupProcessor:
             tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
             tuple[pm.Product],
         ],
-        oci_client: oci.client.Client,
         s3_client: 'botocore.client.S3',
     ) -> typing.Generator[pm.ScanRequest, None, None]:
         c = resource_group[0].component
@@ -211,6 +213,7 @@ class ResourceGroupProcessor:
                     artefact=r,
                     omit_component_version=False,
                     omit_resource_version=False,
+                    oci_client=self.oci_client
                 )
                 target_product_id = protecode.util._matching_analysis_result_id(
                     component_artifact_metadata=component_artifact_metadata,
@@ -222,10 +225,14 @@ class ResourceGroupProcessor:
                     logger.info(f'{group_name=}: did not find old scan')
 
                 def iter_content():
-                    image_reference = r.access.imageReference
+                    image_reference = protecode.util.image_ref_with_digest(
+                        image_reference=r.access.imageReference,
+                        digest=r.digest,
+                        oci_client=self.oci_client,
+                    )
                     yield from oci.image_layers_as_tarfile_generator(
                         image_reference=image_reference,
-                        oci_client=oci_client,
+                        oci_client=self.oci_client,
                         include_config_blob=False,
                         fallback_to_first_subimage_if_index=True,
                     )
@@ -246,6 +253,7 @@ class ResourceGroupProcessor:
                 artefact=r,
                 omit_component_version=False,
                 omit_resource_version=False,
+                oci_client=self.oci_client
             )
             target_product_id = protecode.util._matching_analysis_result_id(
                 component_artifact_metadata=component_artifact_metadata,
@@ -391,7 +399,6 @@ class ResourceGroupProcessor:
             tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
             tuple[pm.Product],
         ],
-        oci_client: oci.client.Client,
         s3_client: 'botocore.client.S3',
         license_cfg: image_scan.LicenseCfg=None,
         cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
@@ -417,7 +424,6 @@ class ResourceGroupProcessor:
         for scan_request in self.scan_requests(
             resource_group=resource_group,
             known_artifact_scans=known_scan_results,
-            oci_client=oci_client,
             s3_client=s3_client,
         ):
             try:
@@ -588,6 +594,7 @@ def _retrieve_existing_scan_results(
     protecode_client: protecode.client.ProtecodeApi,
     group_id: int,
     resource_groups: typing.Iterable[tuple[cnudie.iter.ResourceNode]],
+    oci_client: oci.client.Client,
 ) -> dict[
     tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
     list[pm.Product],
@@ -611,6 +618,7 @@ def _retrieve_existing_scan_results(
                 artefact=r,
                 omit_component_version=False,
                 omit_resource_version=True,
+                oci_client=oci_client,
             )
         else:
             query_data = protecode.util.component_artifact_metadata(
@@ -618,6 +626,7 @@ def _retrieve_existing_scan_results(
                 artefact=r,
                 omit_component_version=True,
                 omit_resource_version=True,
+                oci_client=oci_client,
             )
 
         meta = frozenset([(k, v) for k, v in query_data.items()])
@@ -723,12 +732,14 @@ def upload_grouped_images(
         protecode_client=protecode_api,
         group_id=protecode_group_id,
         resource_groups=groups,
+        oci_client=oci_client,
     )
     processor = ResourceGroupProcessor(
         group_id=protecode_group_id,
         reference_group_ids=reference_group_ids,
         cvss_threshold=cve_threshold,
         protecode_client=protecode_api,
+        oci_client=oci_client,
     )
 
     def task_function(
@@ -745,7 +756,6 @@ def upload_grouped_images(
             resource_group=resource_group,
             processing_mode=processing_mode,
             known_scan_results=known_scan_results,
-            oci_client=oci_client,
             s3_client=s3_client,
             license_cfg=license_cfg,
             cve_rescoring_rules=cve_rescoring_rules,
