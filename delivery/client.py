@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import logging
 import requests
+import time
 import typing
 
 import dacite
@@ -286,11 +287,17 @@ class DeliveryServiceClient:
         else:
             logger.info(f'{params=}')
 
-        resp = self.session.get(
-            url=url,
-            params=params,
-            timeout=(4, 301),
-        )
+        # wait for responsibles result
+        # -> delivery service is waiting up to ~2 min for contributor statistics
+        for _ in range(24):
+            resp = self.session.get(
+                url=url,
+                params=params,
+                timeout=(4, 121),
+            )
+            if resp.status_code != 202:
+                break
+            time.sleep(5)
 
         resp.raise_for_status()
         resp_json: dict = resp.json()
