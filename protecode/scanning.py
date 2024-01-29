@@ -211,7 +211,7 @@ class ResourceGroupProcessor:
                 component_artifact_metadata = protecode.util.component_artifact_metadata(
                     component=c,
                     artefact=r,
-                    omit_component_version=False,
+                    omit_component_version=True,
                     omit_resource_version=False,
                     oci_client=self.oci_client
                 )
@@ -251,7 +251,7 @@ class ResourceGroupProcessor:
             component_artifact_metadata = protecode.util.component_artifact_metadata(
                 component=c,
                 artefact=r,
-                omit_component_version=False,
+                omit_component_version=True,
                 omit_resource_version=False,
                 oci_client=self.oci_client
             )
@@ -610,24 +610,13 @@ def _retrieve_existing_scan_results(
         c = resource_group[0].component
         r = resource_group[0].resource
 
-        # special-handling for vm-image-rootfs - we keep different component-versions in parallel
-        # for those
-        if r.type == 'application/tar+vm-image-rootfs':
-            query_data = protecode.util.component_artifact_metadata(
-                component=c,
-                artefact=r,
-                omit_component_version=False,
-                omit_resource_version=True,
-                oci_client=oci_client,
-            )
-        else:
-            query_data = protecode.util.component_artifact_metadata(
-                component=c,
-                artefact=r,
-                omit_component_version=True,
-                omit_resource_version=True,
-                oci_client=oci_client,
-            )
+        query_data = protecode.util.component_artifact_metadata(
+            component=c,
+            artefact=r,
+            omit_component_version=True,
+            omit_resource_version=True,
+            oci_client=oci_client,
+        )
 
         meta = frozenset([(k, v) for k, v in query_data.items()])
 
