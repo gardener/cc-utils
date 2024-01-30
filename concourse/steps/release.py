@@ -151,29 +151,6 @@ class Transaction:
         return True
 
 
-class TryCleanupDraftReleasesStep(TransactionalStep):
-    def name(self):
-        return "Try to Cleanup Draft Releases"
-
-    def __init__(
-        self,
-        github_helper: GitHubRepositoryHelper,
-    ):
-        self.github_helper = not_none(github_helper)
-
-    def validate(self):
-        # nothing to validate
-        pass
-
-    def apply(self):
-        for release, deletion_successful in self.github_helper.delete_outdated_draft_releases():
-            if deletion_successful:
-                logger.info(f'Deleted {release.name=}')
-            else:
-                logger.warning(f'Could not delete {release.name=}')
-        return
-
-
 class PostSlackReleaseStep(TransactionalStep):
     def name(self):
         return f"Post Slack Release ({self.slack_channel})"
@@ -345,18 +322,6 @@ def release_and_prepare_next_dev_cycle(
     transaction_ctx.release_commit = release_commit
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
-
-    cleanup_draft_releases_step = TryCleanupDraftReleasesStep(
-        github_helper=github_helper,
-    )
-
-    cleanup_draft_releases_transaction = Transaction(
-        ctx=transaction_ctx,
-        steps=(cleanup_draft_releases_step,),
-    )
-
-    if not cleanup_draft_releases_transaction.execute():
-        logger.warning('An error occured while cleaning up draft releases')
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
         logger.info('release notes were disabled - skipping')
@@ -739,3 +704,13 @@ def upload_component_descriptor(
         )
     except ConnectionError:
         logger.warning('Unable to attach component-descriptors to release as release-asset.')
+
+
+def clean_draft_releases(
+    github_helper: GitHubRepositoryHelper,
+):
+    for release, deletion_successful in github_helper.delete_outdated_draft_releases():
+        if deletion_successful:
+            logger.info(f'Deleted draft {release.name=}')
+        else:
+            logger.warning(f'Could not delete draft {release.name=}')

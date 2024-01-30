@@ -55,21 +55,6 @@ class NextDevCycleCommitStep:
             examinee(release_version='invalid_semver').validate()
 
 
-class TestTryCleanupDraftReleaseStep:
-    @pytest.fixture()
-    def examinee(self):
-        def _examinee(
-            github_helper=MagicMock(),
-        ):
-            return concourse.steps.release.TryCleanupDraftReleasesStep(
-                github_helper=github_helper,
-            )
-        return _examinee
-
-    def test_validation(self, examinee):
-        examinee().validate()
-
-
 class TestSlackReleaseStep:
     @pytest.fixture()
     def examinee(self):
