@@ -129,17 +129,6 @@ def _invoke_callback(
                 docker_cfg_dir.cleanup()
 
 
-def _add_all_and_create_commit(git_helper: GitHelper, message: str):
-    commit = git_helper.index_to_commit(
-        message=message,
-    )
-    git_helper.repo.head.reset(
-        commit=commit,
-        working_tree=True,
-    )
-    return commit
-
-
 def _calculate_next_cycle_dev_version(
     release_version: str,
     version_operation: str,
