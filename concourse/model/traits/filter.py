@@ -68,10 +68,10 @@ class MatchingConfig:
 
 def filter_for_matching_configs(
     configs: typing.Collection[MatchingConfig]
-) -> typing.Callable[[cnudie.iter.ResourceNode], bool]:
+) -> typing.Callable[[cnudie.iter.Node], bool]:
     configs = tuple(configs) if configs else ()
     if not configs:
-        def match_all(node: cnudie.iter.ResourceNode):
+        def match_all(node: cnudie.iter.Node):
             return True
 
         return match_all
@@ -90,7 +90,7 @@ def filter_for_matching_configs(
 
 def filter_for_matching_config(
     config: MatchingConfig,
-) -> typing.Callable[[cnudie.iter.ResourceNode], bool]:
+) -> typing.Callable[[cnudie.iter.Node], bool]:
     # A filter for a single matching configs is the combination of the filters for its rules joined
     # with a boolean AND
     rule_filters = [
@@ -133,12 +133,18 @@ def filter_for_rule(
         case _:
             raise NotImplementedError(rule.matching_semantics)
 
-    def filter_func(node: cnudie.iter.ResourceNode):
+    def filter_func(node: cnudie.iter.Node):
         match rule.target.split('.'):
             case ['component', *tail]:
                 return re_filter(pydash.get(node.component, tail))
             case ['resource', *tail]:
+                if not isinstance(node, cnudie.iter.ResourceNode):
+                    return True
                 return re_filter(pydash.get(node.resource, tail))
+            case ['source', *tail]:
+                if not isinstance(node, cnudie.iter.SourceNode):
+                    return True
+                return re_filter(pydash.get(node.source, tail))
             case _:
                 raise ValueError(f"Unable to parse matching rule '{rule.target}'")
 
