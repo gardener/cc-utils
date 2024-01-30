@@ -101,7 +101,7 @@ class SlackHelper:
 
 def post_to_slack(
     release_notes_markdown: str,
-    github_repository_name: str,
+    component_name: str,
     slack_cfg_name: str,
     slack_channel: str,
     release_version: str,
@@ -118,7 +118,7 @@ def post_to_slack(
 
     try:
         while True:
-            title = f'[{github_repository_name}:{release_version} released'
+            title = f'[{component_name}:{release_version} released'
 
             # abort on last
             if idx + max_msg_size_bytes > len(release_notes_markdown):

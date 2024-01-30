@@ -234,7 +234,7 @@ except git.GitCommandError:
   )
 % endif
 
-merge_release_back_to_default_branch_commit = release_and_prepare_next_dev_cycle(
+merge_release_back_to_default_branch_commit, release_notes_md = release_and_prepare_next_dev_cycle(
   component_descriptor=component_descriptor,
   github_helper=github_helper,
   git_helper=git_helper,
@@ -273,5 +273,20 @@ create_and_push_bump_commit(
   next_version_callback='${next_version_callback_path}',
   % endif
 )
+% endif
+
+% if has_slack_trait:
+  % for slack_channel_cfg in slack_channel_cfgs:
+try:
+  post_to_slack(
+    release_notes_markdown=release_notes_md,
+    component=component,
+    slack_cfg_name='${slack_channel_cfg["slack_cfg_name"]}',
+    slack_channel='${slack_channel_cfg["channel_name"]}',
+  )
+except:
+  logger.warning('An error occurred whilst trying to post release-notes to slack')
+  traceback.print_exc()
+  % endfor
 % endif
 </%def>

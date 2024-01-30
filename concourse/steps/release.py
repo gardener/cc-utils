@@ -1,11 +1,9 @@
-import abc
 import dataclasses
 import logging
 import os
 import subprocess
 import sys
 import tempfile
-import traceback
 import typing
 import version
 
@@ -21,11 +19,6 @@ import git.types
 
 import gci.componentmodel as cm
 
-import ci.util
-from ci.util import (
-    not_empty,
-    not_none,
-)
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import cnudie.iter
@@ -68,126 +61,6 @@ class TransactionContext:
         if self.has_output(step_name):
             raise RuntimeError(f"Context already contains output of step '{step_name}'")
         self._step_outputs[step_name] = output
-
-
-class TransactionalStep(metaclass=abc.ABCMeta):
-    '''Abstract base class for operations that are to be executed with transactional semantics.
-
-    Instances represent operations which typically cause external and persistent side effects.
-    Typically, a sequence of (different) steps are grouped in a `Transaction`
-
-    Subclasses *may* overwrite the `validate` method, which performs optional checks that indicate
-    whether the operation would probably fail. Those checks are intended to be run for all steps of
-    a `Transaction` before actually executing it. Validation *must not* cause any persistent side
-    effects to external resources.
-
-    Subclasses *must* overwrite the `apply` method, which performs the actual payload of the step,
-    typically resulting in persistent external side effects. The `apply` method *may* also return
-    an object (e.g.: a `dict`) that is then made available to later steps
-    when part of a `Transaction`.
-
-    '''
-    def set_context(self, context: TransactionContext):
-        self._context = context
-
-    def context(self):
-        return self._context
-
-    def validate(self):
-        pass
-
-    @abc.abstractmethod
-    def apply(self):
-        return None
-
-    @abc.abstractmethod
-    def name(self):
-        pass
-
-
-class Transaction:
-    '''Represents a transaction using `TransactionalStep`s
-
-    After creation, invoke `validate` to have the transaction validate all steps. Invoke
-    `execute` to execute all steps. Both operations are done in the original step order.
-
-    '''
-    def __init__(
-        self,
-        ctx: TransactionContext,
-        steps: typing.Iterable[TransactionalStep],
-    ):
-        self._context = ci.util.check_type(ctx, TransactionContext)
-        # validate type of args and set context
-        for step in steps:
-            ci.util.check_type(step, TransactionalStep)
-            step.set_context(self._context)
-        self._steps = steps
-
-    def validate(self):
-        for step in self._steps:
-            logger.info(f'validating {step.name()=}')
-            step.validate()
-
-    def execute(self):
-        executed_steps = list()
-        for step in self._steps:
-            step_name = step.name()
-            logger.info(f'executing {step_name=}')
-            executed_steps.append(step)
-            try:
-                output = step.apply()
-                self._context.set_step_output(step_name, output)
-            except BaseException as e:
-                logger.warning(f'An error occured while running {step_name=} {e=}')
-                traceback.print_exc()
-                logger.info('the following steps were executed:')
-                print()
-                for step in executed_steps:
-                    print(f' - {step.name()}')
-                print()
-                logger.warning('manual cleanups may be required')
-                return False
-        return True
-
-
-class PostSlackReleaseStep(TransactionalStep):
-    def name(self):
-        return f"Post Slack Release ({self.slack_channel})"
-
-    def __init__(
-        self,
-        slack_cfg_name: str,
-        slack_channel: str,
-        release_version: str,
-        release_notes_markdown: str,
-        githubrepobranch: GitHubRepoBranch,
-    ):
-        self.slack_cfg_name = not_empty(slack_cfg_name)
-        self.slack_channel = not_empty(slack_channel)
-        self.release_version = not_empty(release_version)
-        self.githubrepobranch = not_none(githubrepobranch)
-        self.release_notes_markdown = not_none(release_notes_markdown)
-
-    def validate(self):
-        version.parse_to_semver(self.release_version)
-
-    def apply(self):
-        responses = slackclient.util.post_to_slack(
-            release_notes_markdown=self.release_notes_markdown,
-            github_repository_name=self.githubrepobranch.github_repo_path(),
-            slack_cfg_name=self.slack_cfg_name,
-            slack_channel=self.slack_channel,
-            release_version=self.release_version,
-        )
-
-        for response in responses:
-            if response and response.get('file', None):
-                uploaded_file_id = response.get('file').get('id')
-                logger.info(f'uploaded {uploaded_file_id=} to slack')
-            else:
-                raise RuntimeError('Unable to get file id from Slack response')
-        logger.info('successfully posted contents to slack')
 
 
 def _invoke_callback(
@@ -325,7 +198,7 @@ def release_and_prepare_next_dev_cycle(
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
         logger.info('release notes were disabled - skipping')
-        return getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD')
+        return getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'), None
     elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
         pass
     else:
@@ -365,38 +238,13 @@ def release_and_prepare_next_dev_cycle(
         except:
             exception = sys.exception()
             logger.warning(f'There was an error when pushing created git-notes: {exception}')
+    else:
+        release_notes_markdown = 'no release notes available'
 
-    try:
-        if slack_channel_configs:
-            if not release_on_github:
-                raise RuntimeError('Cannot post to slack without a github release')
-
-            all_slack_releases_successful = True
-            for slack_cfg in slack_channel_configs:
-                slack_cfg_name = slack_cfg['slack_cfg_name']
-                slack_channel = slack_cfg['channel_name']
-                post_to_slack_step = PostSlackReleaseStep(
-                    slack_cfg_name=slack_cfg_name,
-                    slack_channel=slack_channel,
-                    release_version=release_version,
-                    release_notes_markdown=release_notes_markdown,
-                    githubrepobranch=githubrepobranch,
-                )
-                slack_transaction = Transaction(
-                    ctx=transaction_ctx,
-                    steps=(post_to_slack_step,),
-                )
-                slack_transaction.validate()
-                all_slack_releases_successful = (
-                    all_slack_releases_successful and slack_transaction.execute()
-                )
-            if not all_slack_releases_successful:
-                raise RuntimeError('An error occurred while posting the release notes to Slack.')
-    except Exception:
-        logger.warning('an exception occurred whilst trying to post release-notes to slack')
-        traceback.print_exc()
-
-    return getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD')
+    return (
+        getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
+        release_notes_markdown,
+    )
 
 
 def rebase(
@@ -714,3 +562,26 @@ def clean_draft_releases(
             logger.info(f'Deleted draft {release.name=}')
         else:
             logger.warning(f'Could not delete draft {release.name=}')
+
+
+def post_to_slack(
+    release_notes_markdown,
+    component: cm.Component,
+    slack_cfg_name: str,
+    slack_channel: str,
+):
+    responses = slackclient.util.post_to_slack(
+        release_notes_markdown=release_notes_markdown,
+        component_name=component.name,
+        release_version=component.version,
+        slack_cfg_name=slack_cfg_name,
+        slack_channel=slack_channel,
+    )
+
+    for response in responses:
+        if response and response.get('file', None):
+            uploaded_file_id = response.get('file').get('id')
+            logger.info(f'uploaded {uploaded_file_id=} to slack')
+        else:
+            raise RuntimeError('Unable to get file id from Slack response')
+    logger.info('successfully posted contents to slack')
