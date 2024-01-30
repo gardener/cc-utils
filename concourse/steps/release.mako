@@ -186,6 +186,15 @@ create_and_push_tags(
 )
 
 % if release_trait.release_on_github():
+try:
+  clean_draft_releases(
+    github_helper=github_helper,
+  )
+except:
+  logger.warning('An Error occurred whilst trying to remove draft-releases')
+  traceback.print_exc()
+  # keep going
+
 github_release(
   github_helper=github_helper,
   release_tag=tags[0],
