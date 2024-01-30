@@ -1,54 +1,51 @@
+import os
 import pytest
-from unittest.mock import MagicMock
 
-import concourse.steps.release
+import git
+
+import gitutil
+
+import concourse.steps.release as release_step
+import concourse.model.traits.version as version_trait
 
 
-class NextDevCycleCommitStep:
-    @pytest.fixture()
-    def examinee(self, tmp_path):
-        # create required temporary file relative to the provided temporary directory
-        temporary_version_file = tmp_path.joinpath('version_file')
-        temporary_version_file.touch()
+@pytest.fixture
+def git_helper(tmpdir):
+    print(tmpdir)
+    repo = git.Repo.init(tmpdir)
+    repo.index.commit(message='first (empty) commit')
 
-        def _examinee(
-            repo_dir=str(tmp_path),
-            release_version='1.0.0',
-            version_path='version_file',
-            repository_branch='master',
-            version_operation='bump_minor',
-            prerelease_suffix='dev',
-            dev_cycle_commit_callback=None,
-            ):
-            return concourse.steps.release.NextDevCycleCommitStep(
-                git_helper=MagicMock(),
-                repo_dir=repo_dir,
-                release_version=release_version,
-                version_path=version_path,
-                repository_branch=repository_branch,
-                version_operation=version_operation,
-                prerelease_suffix=prerelease_suffix,
-                next_version_callback=dev_cycle_commit_callback,
-            )
-        return _examinee
+    git_helper = gitutil.GitHelper(repo=repo, github_cfg=None, github_repo_path='org/repo')
 
-    def test_validation(self, examinee, tmp_path):
-        # create temporary files in the provided directory
-        temporary_callback_file = tmp_path.joinpath('callback_script')
-        temporary_callback_file.touch()
-        examinee(
-            dev_cycle_commit_callback='callback_script',
-        ).validate()
+    return git_helper
 
-    def test_validation_fail_on_missing_dev_cycle_callback_script(self, examinee, tmp_path):
-        with pytest.raises(ValueError):
-            # pass non-existing relative file-name
-            examinee(dev_cycle_commit_callback='no_such_file').validate()
 
-    def test_validation_fail_on_missing_version_file(self, examinee, tmp_path):
-        with pytest.raises(ValueError):
-            examinee(version_path='no_such_file').validate()
+def test_create_release_commit(git_helper):
+    work_tree = git_helper.repo.working_tree_dir
+    version_file = os.path.join(work_tree, 'version.txt')
+    with open(version_file, 'w') as f:
+        f.write('dummy')
+    git_helper.add_and_commit('add version')
 
-    def test_validation_fail_on_invalid_semver(self, examinee):
-        with pytest.raises(ValueError):
-            examinee(release_version='invalid_semver').validate()
+    release_commit = release_step.create_release_commit(
+        git_helper=git_helper,
+        branch='master',
+        version='1.2.3',
+        version_interface=version_trait.VersionInterface.FILE,
+        version_path=version_file,
+        release_commit_message_prefix='my prefix',
+    )
+
+    repo = git_helper.repo
+
+    # check returned commit is contained in repository (-> was created)
+    assert 'my prefix' in release_commit.message
+
+    # release-commit should not be visible in working tree
+    with open(version_file) as f:
+        assert f.read() == 'dummy'
+
+    # check commit actually contains correct (versionfile) diff
+    repo.head.reset(release_commit, working_tree=True)
+    with open(version_file) as f:
+        assert f.read() == '1.2.3'
