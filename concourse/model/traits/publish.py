@@ -75,6 +75,7 @@ IMG_DESCRIPTOR_ATTRIBS = (
         doc='''\
         image reference to publish the created container image to. required if on `targets` are set
         ''',
+        default=None,
     ),
     AttributeSpec.optional(
         name='extra_push_targets',
