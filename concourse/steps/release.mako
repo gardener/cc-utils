@@ -194,6 +194,13 @@ github_release(
 )
 % endif
 
+upload_component_descriptor(
+  github_helper=github_helper,
+  github_release_tag=tags[0],
+  component=component,
+  upload_as_github_release_asset=${release_trait.release_on_github()},
+)
+
 % if merge_back:
 try:
   old_head = git_helper.repo.head
