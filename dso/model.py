@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 
 import gci.componentmodel as cm
 
@@ -255,8 +256,7 @@ class RescoringData:
     rescorings: list[Rescoring]
 
 
-@dataclasses.dataclass(frozen=True)
-class ComplianceSnapshotStatuses:
+class ComplianceSnapshotStatuses(enum.StrEnum):
     ACTIVE = 'active'
     INACTIVE = 'inactive'
 
@@ -264,8 +264,9 @@ class ComplianceSnapshotStatuses:
 @dataclasses.dataclass(frozen=True)
 class ComplianceSnapshotState:
     timestamp: datetime.datetime
-    status: str
-    datatype: str | None = None
+    datatype: str | None = None # TODO: remove once removed in delivery-gear-extensions
+    status: ComplianceSnapshotStatuses | str | int | None = None
+    service: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -278,9 +279,12 @@ class ComplianceSnapshot:
     def current_state(
         self,
         datatype: str = None,
+        service: str = None,
     ) -> ComplianceSnapshotState | None:
         for state in sorted(self.state, key=lambda s: s.timestamp, reverse=True):
-            if datatype == state.datatype:
+            if service and service == state.service:
+                return state
+            if datatype and datatype == state.datatype:
                 return state
         return None
 
