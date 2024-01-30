@@ -112,8 +112,8 @@ def digest_label(
 
 
 def _search_labels(
-    scanned_element: gcm.Target | None,
     issue_type: str,
+    scanned_element: gcm.Target=None,
     extra_labels: typing.Iterable[str]=(),
     latest_processing_date: datetime.date=None,
 ) -> typing.Generator[str, None, None]:
@@ -142,9 +142,9 @@ def _search_labels(
 
 @github.retry.retry_and_throttle
 def enumerate_issues(
-    scanned_element: gcm.Target | None,
     known_issues: typing.Sequence[github3.issues.issue.ShortIssue],
     issue_type: str,
+    scanned_element: gcm.Target=None,
     extra_labels: typing.Iterable[str]=(),
     state: str | None = None, # 'open' | 'closed ; `None` ignores issue state
     latest_processing_date: datetime.date=None,
@@ -175,11 +175,11 @@ def enumerate_issues(
 
 @github.retry.retry_and_throttle
 def _create_issue(
-    scanned_element: gcm.Target,
     issue_type: str,
     repository: github3.repos.Repository,
     body: str,
     title: str,
+    scanned_element: gcm.Target=None,
     extra_labels: typing.Iterable[str]=(),
     assignees: typing.Iterable[str]=(),
     assignees_statuses: set[delivery.model.Status] = set(),
