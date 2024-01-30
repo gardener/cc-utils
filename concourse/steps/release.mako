@@ -234,21 +234,14 @@ except git.GitCommandError:
   )
 % endif
 
-merge_release_back_to_default_branch_commit, release_notes_md = release_and_prepare_next_dev_cycle(
+release_notes_md = release_and_prepare_next_dev_cycle(
   component_descriptor=component_descriptor,
   github_helper=github_helper,
   git_helper=git_helper,
-  release_commit=release_commit,
-  % if has_slack_trait:
-  slack_channel_configs=${slack_channel_cfgs},
-  % endif
   release_on_github=${release_trait.release_on_github()},
-  githubrepobranch=githubrepobranch,
   repo_dir=repo_dir,
   release_version=version_str,
   release_notes_policy='${release_trait.release_notes_policy().value}',
-  github_release_tag=${github_release_tag},
-  git_tags=${git_tags},
   release_tag=tags[0],
   mapping_config=mapping_config,
 )
@@ -259,7 +252,7 @@ create_and_push_bump_commit(
   repo_dir=repo_dir,
   release_version=version_str,
   release_commit=release_commit,
-  merge_release_back_to_default_branch_commit=merge_release_back_to_default_branch_commit,
+  merge_release_back_to_default_branch_commit='HEAD',
   version_interface=version_interface,
   version_path=version_path,
   repository_branch=branch,

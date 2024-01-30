@@ -34,7 +34,6 @@ import slackclient.util
 from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
-    GitHubRepoBranch,
 )
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
@@ -43,24 +42,6 @@ from concourse.model.traits.release import (
 import model.container_registry as cr
 
 logger = logging.getLogger('step.release')
-
-
-class TransactionContext:
-    release_commit: str = None
-
-    def __init__(self):
-        self._step_outputs = {}
-
-    def has_output(self, step_name: str):
-        return step_name in self._step_outputs.keys()
-
-    def step_output(self, step_name: str):
-        return self._step_outputs[step_name]
-
-    def set_step_output(self, step_name: str, output):
-        if self.has_output(step_name):
-            raise RuntimeError(f"Context already contains output of step '{step_name}'")
-        self._step_outputs[step_name] = output
 
 
 def _invoke_callback(
@@ -165,29 +146,20 @@ def release_and_prepare_next_dev_cycle(
     component_descriptor,
     github_helper: GitHubRepositoryHelper,
     git_helper: GitHelper,
-    githubrepobranch: GitHubRepoBranch,
-    release_commit: git.Commit,
     release_notes_policy: str,
     release_version: str,
     repo_dir: str,
-    git_tags: list,
     release_tag: str,
-    github_release_tag: dict,
     mapping_config,
     release_on_github: bool=True,
-    slack_channel_configs: list=[],
 ):
     component = component_descriptor.component
-    version.parse_to_semver(release_version)
-
-    transaction_ctx = TransactionContext() # shared between all steps/trxs
-    transaction_ctx.release_commit = release_commit
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
 
     if release_notes_policy == ReleaseNotesPolicy.DISABLED:
         logger.info('release notes were disabled - skipping')
-        return getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'), None
+        return None
     elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
         pass
     else:
@@ -230,10 +202,7 @@ def release_and_prepare_next_dev_cycle(
     else:
         release_notes_markdown = 'no release notes available'
 
-    return (
-        getattr(transaction_ctx, 'merge_release_back_to_default_branch_commit', 'HEAD'),
-        release_notes_markdown,
-    )
+    return release_notes_markdown
 
 
 def rebase(
@@ -391,11 +360,6 @@ def create_and_push_bump_commit(
         from_ref=next_cycle_commit.hexsha,
         to_ref=repository_branch,
     )
-
-    # XXX remove?
-    return {
-        'next cycle commit sha': next_cycle_commit.hexsha,
-    }
 
 
 def create_and_push_tags(
