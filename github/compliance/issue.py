@@ -44,6 +44,8 @@ _label_undefined_policy = 'cfg/policy-violation/undefined-policy'
 _label_prefix_ocm_artefact = 'ocm/artefact'
 _label_prefix_cicd_cfg_element = 'cicd-cfg-element'
 _label_prefix_ctx = 'ctx'
+_label_overdue = 'overdue'
+_label_scan_pending = 'scan-pending'
 
 
 def prefix_for_element(
