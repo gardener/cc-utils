@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import enum
 
 import gci.componentmodel as cm
 
@@ -255,8 +256,7 @@ class RescoringData:
     rescorings: list[Rescoring]
 
 
-@dataclasses.dataclass(frozen=True)
-class ComplianceSnapshotStatuses:
+class ComplianceSnapshotStatuses(enum.StrEnum):
     ACTIVE = 'active'
     INACTIVE = 'inactive'
 
@@ -264,8 +264,9 @@ class ComplianceSnapshotStatuses:
 @dataclasses.dataclass(frozen=True)
 class ComplianceSnapshotState:
     timestamp: datetime.datetime
-    status: str
-    datatype: str | None = None
+    datatype: str | None = None # TODO-42: remove once removed in delivery-gear-extensions
+    status: ComplianceSnapshotStatuses | str | int | None = None
+    service: str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -277,10 +278,17 @@ class ComplianceSnapshot:
 
     def current_state(
         self,
-        datatype: str = None,
+        datatype: str = None, # TODO-42
+        service: str = None,
     ) -> ComplianceSnapshotState | None:
         for state in sorted(self.state, key=lambda s: s.timestamp, reverse=True):
-            if datatype == state.datatype:
+            if service and service == state.service: # TODO-42: if service == state.service:
+                return state
+            if datatype and datatype == state.datatype: # TODO-42: remove
+                return state
+            # in case the service independent status is meant, all values must be `None`
+            # TODO-42: can be omitted when `datatype` is removed
+            if not (service or datatype or state.service or state.datatype):
                 return state
         return None
 
