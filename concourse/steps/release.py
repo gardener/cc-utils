@@ -48,7 +48,6 @@ from concourse.model.traits.release import (
     ReleaseNotesPolicy,
 )
 import model.container_registry as cr
-import oci.model
 
 logger = logging.getLogger('step.release')
 
@@ -150,129 +149,6 @@ class Transaction:
                 logger.warning('manual cleanups may be required')
                 return False
         return True
-
-
-class UploadComponentDescriptorStep(TransactionalStep):
-    def __init__(
-        self,
-        github_helper: GitHubRepositoryHelper,
-        components: tuple[cm.Component],
-        release_on_github: bool,
-        mapping_config: cnudie.util.OcmLookupMappingConfig,
-        github_release_tag: str=None,
-    ):
-        self.github_helper = not_none(github_helper)
-        self.components = components
-        self.release_on_github = release_on_github
-        self.github_release_tag = github_release_tag
-        self.ocm_lookup = cnudie.retrieve.oci_component_descriptor_lookup(
-            ocm_repository_lookup=mapping_config,
-        )
-
-    def name(self):
-        return "Upload Component Descriptor"
-
-    def validate(self):
-        components: tuple[cm.Component] = tuple(
-            cnudie.util.iter_sorted(
-                self.components,
-            )
-        )
-
-        if not components:
-            ci.util.fail('No component descriptor found')
-
-        def iter_components():
-            for component in components:
-                yield from cnudie.iter.iter(
-                    lookup=self.ocm_lookup,
-                    component=component,
-                    recursion_depth=0,
-                )
-
-        validation_errors = tuple(
-            cnudie.validate.iter_violations(nodes=iter_components())
-        )
-
-        if not validation_errors:
-            return
-
-        for validation_error in validation_errors:
-            logger.error(validation_error.as_error_message)
-
-        logger.error(
-            'there were validation-errors in component-descriptor - aborting release (see above)'
-        )
-        exit(1)
-
-    def apply(self):
-        if self.release_on_github:
-            release_tag_name = self.github_release_tag.removeprefix('refs/tags/')
-
-        components = tuple(cnudie.util.iter_sorted(self.components))
-        components_by_id = {
-            component.identity(): component
-            for component in components
-        }
-
-        # todo: mv to `validate`
-        def resolve_dependencies(component: cm.Component):
-            for _ in cnudie.retrieve.components(
-                component=component,
-                component_descriptor_lookup=self.ocm_lookup,
-            ):
-                pass
-
-        def upload_component_descriptors(components: tuple[cm.Component]):
-            for component in components:
-                try:
-                    resolve_dependencies(component=component)
-                except oci.model.OciImageNotFoundException as e:
-                    logger.error(
-                        f'{component.name=} {component.version=} has dangling component-reference'
-                    )
-                    raise e
-
-                component = components_by_id[component.identity()]
-
-                tgt_ref = cnudie.util.target_oci_ref(component=component)
-
-                logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
-                cnudie.upload.upload_component_descriptor(
-                    component_descriptor=component,
-                )
-
-        upload_component_descriptors(components=components)
-
-        def upload_component_descriptor_as_release_asset():
-            try:
-                release = self.github_helper.repository.release_from_tag(release_tag_name)
-
-                for component in components:
-                    component_descriptor = cm.ComponentDescriptor(
-                        component=component,
-                        meta=cm.Metadata(),
-                        signatures=[],
-                    )
-
-                    descriptor_str = yaml.dump(
-                        data=dataclasses.asdict(component_descriptor),
-                        Dumper=cm.EnumValueYamlDumper,
-                    )
-
-                    normalized_component_name = component.name.replace('/', '_')
-                    asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
-                    release.upload_asset(
-                        content_type='application/x-yaml',
-                        name=asset_name,
-                        asset=descriptor_str.encode('utf-8'),
-                        label=asset_name,
-                    )
-            except ConnectionError:
-                logger.warning('Unable to attach component-descriptors to release as release-asset.')
-
-        if self.release_on_github:
-            upload_component_descriptor_as_release_asset()
 
 
 class TryCleanupDraftReleasesStep(TransactionalStep):
@@ -469,27 +345,6 @@ def release_and_prepare_next_dev_cycle(
     transaction_ctx.release_commit = release_commit
 
     release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
-
-    step_list = []
-
-    upload_component_descriptor_step = UploadComponentDescriptorStep(
-        github_helper=github_helper,
-        components=(component,),
-        release_on_github=release_on_github,
-        github_release_tag=release_tag,
-        mapping_config=mapping_config,
-    )
-
-    step_list.append(upload_component_descriptor_step)
-
-    release_transaction = Transaction(
-        ctx=transaction_ctx,
-        steps=step_list,
-    )
-
-    release_transaction.validate()
-    if not release_transaction.execute():
-        raise RuntimeError('An error occurred while creating the Release.')
 
     cleanup_draft_releases_step = TryCleanupDraftReleasesStep(
         github_helper=github_helper,
@@ -721,7 +576,7 @@ def create_and_push_bump_commit(
         else:
             parent_commits = None # default to current branch head
 
-    commit_message = f'Prepare next Development Cycle {version}'
+    commit_message = f'Prepare next Development Cycle {next_version}'
     if commit_message_prefix:
         commit_message = f'{commit_message_prefix} {commit_message}'
 
@@ -838,3 +693,49 @@ def github_release(
             name=release_version,
             component_name=component_name,
         )
+
+
+def upload_component_descriptor(
+    github_helper: GitHubRepositoryHelper,
+    github_release_tag: str,
+    component,
+    upload_as_github_release_asset: bool,
+):
+    # todo: cnudie.validate -> separate function
+    # todo: resolve dependencies for validation
+
+    tgt_ref = cnudie.util.target_oci_ref(component=component)
+    logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
+    cnudie.upload.upload_component_descriptor(
+        component_descriptor=component,
+    )
+
+    if not upload_as_github_release_asset:
+        return
+
+    # upload copy as release-asset
+    release_tag_name = github_release_tag.removeprefix('refs/tags/')
+    try:
+        release = github_helper.repository.release_from_tag(release_tag_name)
+
+        component_descriptor = cm.ComponentDescriptor(
+            component=component,
+            meta=cm.Metadata(),
+            signatures=[],
+        )
+
+        descriptor_str = yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            Dumper=cm.EnumValueYamlDumper,
+        )
+
+        normalized_component_name = component.name.replace('/', '_')
+        asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
+        release.upload_asset(
+            content_type='application/x-yaml',
+            name=asset_name,
+            asset=descriptor_str.encode('utf-8'),
+            label=asset_name,
+        )
+    except ConnectionError:
+        logger.warning('Unable to attach component-descriptors to release as release-asset.')
