@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import MagicMock
-from github.util import GitHubRepoBranch
 
 import concourse.steps.release
 
@@ -51,37 +50,5 @@ class NextDevCycleCommitStep:
             examinee(version_path='no_such_file').validate()
 
     def test_validation_fail_on_invalid_semver(self, examinee):
-        with pytest.raises(ValueError):
-            examinee(release_version='invalid_semver').validate()
-
-
-class TestSlackReleaseStep:
-    @pytest.fixture()
-    def examinee(self):
-        def _examinee(
-            slack_cfg_name='test_config',
-            slack_channel='test_channel',
-            githubrepobranch=GitHubRepoBranch(
-                github_config='test_config',
-                repo_owner='test_owner',
-                repo_name='test_name',
-                branch='master',
-            ),
-            release_notes_markdown="",
-            release_version='1.0.0',
-        ):
-            return concourse.steps.release.PostSlackReleaseStep(
-                slack_cfg_name=slack_cfg_name,
-                slack_channel=slack_channel,
-                githubrepobranch=githubrepobranch,
-                release_notes_markdown=release_notes_markdown,
-                release_version=release_version,
-            )
-        return _examinee
-
-    def test_validation(self, examinee):
-        examinee().validate()
-
-    def test_validation_fails_on_invalid_semver(self, examinee):
         with pytest.raises(ValueError):
             examinee(release_version='invalid_semver').validate()
