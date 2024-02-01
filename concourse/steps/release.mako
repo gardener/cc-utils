@@ -14,6 +14,7 @@ import concourse.model.traits.release
 import gci.componentmodel
 import version
 ReleaseCommitPublishingPolicy = concourse.model.traits.release.ReleaseCommitPublishingPolicy
+ReleaseNotesPolicy = concourse.model.traits.release.ReleaseNotesPolicy
 VersionInterface = concourse.model.traits.version.VersionInterface
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
@@ -48,6 +49,13 @@ ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
 
+release_notes_policy = release_trait.release_notes_policy()
+if release_notes_policy is ReleaseNotesPolicy.DEFAULT:
+  process_release_notes = True
+elif release_notes_policy is ReleaseNotesPolicy.DISABLED:
+  process_release_notes = False
+else:
+  raise ValueError(release_notes_policy)
 
 release_commit_publishing_policy = release_trait.release_commit_publishing_policy()
 if release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
@@ -66,6 +74,7 @@ mergeback_commit_msg_prefix = release_trait.merge_release_to_default_branch_comm
 %>
 import ccc.github
 import ci.util
+import cnudie.retrieve
 import cnudie.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
@@ -104,6 +113,13 @@ githubrepobranch = github.util.GitHubRepoBranch(
 
 mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
     raw_mappings = ${ocm_repository_mappings},
+)
+
+component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+  ocm_repository_lookup=mapping_config,
+)
+version_lookup = cnudie.retrieve.version_lookup(
+  ocm_repository_lookup=mapping_config,
 )
 
 component_descriptor = cdu.component_descriptor_from_dir(
@@ -234,17 +250,29 @@ except git.GitCommandError:
   )
 % endif
 
-release_notes_md = release_and_prepare_next_dev_cycle(
-  component_descriptor=component_descriptor,
-  github_helper=github_helper,
-  git_helper=git_helper,
-  release_on_github=${release_trait.release_on_github()},
-  repo_dir=repo_dir,
-  release_version=version_str,
-  release_notes_policy='${release_trait.release_notes_policy().value}',
-  release_tag=tags[0],
-  mapping_config=mapping_config,
-)
+% if process_release_notes:
+try:
+  release_notes_md = collect_release_notes(
+    repo_dir=repo_dir,
+    release_version=version_str,
+    component=component,
+    component_descriptor_lookup=component_descriptor_lookup,
+    version_lookup=version_lookup,
+  )
+  github_helper.update_release_notes(
+    tag_name=version_str,
+    body=release_notes_md,
+    component_name=component.name,
+  )
+  git_helper.push('refs/notes/commits', 'refs/notes/commits')
+except:
+  logger.warning('an error occurred whilst trying to collect release-notes')
+  logger.warning('release will continue')
+  traceback.print_exc()
+  release_notes_md = None
+% else:
+release_notes_md = None
+% endif
 
 % if version_operation != version.NOOP:
 create_and_push_bump_commit(
@@ -271,12 +299,13 @@ create_and_push_bump_commit(
 % if has_slack_trait:
   % for slack_channel_cfg in slack_channel_cfgs:
 try:
-  post_to_slack(
-    release_notes_markdown=release_notes_md,
-    component=component,
-    slack_cfg_name='${slack_channel_cfg["slack_cfg_name"]}',
-    slack_channel='${slack_channel_cfg["channel_name"]}',
-  )
+  if release_notes_md:
+    post_to_slack(
+      release_notes_markdown=release_notes_md,
+      component=component,
+      slack_cfg_name='${slack_channel_cfg["slack_cfg_name"]}',
+      slack_channel='${slack_channel_cfg["channel_name"]}',
+    )
 except:
   logger.warning('An error occurred whilst trying to post release-notes to slack')
   traceback.print_exc()
