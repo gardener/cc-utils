@@ -2,7 +2,6 @@ import dataclasses
 import logging
 import os
 import subprocess
-import sys
 import tempfile
 import typing
 import version
@@ -37,7 +36,6 @@ from github.util import (
 )
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
-    ReleaseNotesPolicy,
 )
 import model.container_registry as cr
 
@@ -142,65 +140,29 @@ def _calculate_tags(
     return [github_release_tag_candidate] + git_tag_candidates
 
 
-def release_and_prepare_next_dev_cycle(
-    component_descriptor,
-    github_helper: GitHubRepositoryHelper,
-    git_helper: GitHelper,
-    release_notes_policy: str,
+def collect_release_notes(
+    repo_dir,
     release_version: str,
-    repo_dir: str,
-    release_tag: str,
-    mapping_config,
-    release_on_github: bool=True,
-):
-    component = component_descriptor.component
+    component,
+    component_descriptor_lookup,
+    version_lookup,
+) -> str:
+    release_note_blocks = release_notes.fetch.fetch_release_notes(
+        repo_path=repo_dir,
+        component=component,
+        version_lookup=version_lookup,
+        component_descriptor_lookup=component_descriptor_lookup,
+        current_version=release_version,
+    )
 
-    release_notes_policy = ReleaseNotesPolicy(release_notes_policy)
+    release_notes_markdown = '\n'.join(
+        str(i) for i in release_notes.markdown.render(release_note_blocks)
+    ) or 'no release notes available'
 
-    if release_notes_policy == ReleaseNotesPolicy.DISABLED:
-        logger.info('release notes were disabled - skipping')
-        return None
-    elif release_notes_policy == ReleaseNotesPolicy.DEFAULT:
-        pass
-    else:
-        raise NotImplementedError(release_notes_policy)
-
-    if release_on_github:
-        version_lookup = cnudie.retrieve.version_lookup(
-            ocm_repository_lookup=mapping_config,
-        )
-        component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-            ocm_repository_lookup=mapping_config,
-        )
-
-        release_note_blocks = release_notes.fetch.fetch_release_notes(
-            repo_path=repo_dir,
-            component=component,
-            version_lookup=version_lookup,
-            component_descriptor_lookup=component_descriptor_lookup,
-            current_version=release_version,
-        )
-        release_notes_markdown = '\n'.join(
-            str(i) for i in release_notes.markdown.render(release_note_blocks)
-        ) or 'no release notes available'
-
-        if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
-            component=component,
-        )):
-            release_notes_markdown += '\n\n' + component_resources_markdown
-
-        github_helper.update_release_notes(
-            tag_name=release_version,
-            body=release_notes_markdown,
-            component_name=component.name,
-        )
-        try:
-            git_helper.push('refs/notes/commits', 'refs/notes/commits')
-        except:
-            exception = sys.exception()
-            logger.warning(f'There was an error when pushing created git-notes: {exception}')
-    else:
-        release_notes_markdown = 'no release notes available'
+    if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
+        component=component,
+    )):
+        release_notes_markdown += '\n\n' + component_resources_markdown
 
     return release_notes_markdown
 
