@@ -113,6 +113,10 @@ class GitHelper:
             github_repo_path=githubrepobranch.github_repo_path(),
         )
 
+    @property
+    def is_dirty(self):
+        return len(self._changed_file_paths()) > 0
+
     def _changed_file_paths(self):
         lines = git.cmd.Git(self.repo.working_tree_dir).status('--porcelain=1', '-z').split('\x00')
         # output of git status --porcelain=1 and -z is guaranteed to not change in the future
@@ -185,6 +189,16 @@ class GitHelper:
         '''
         if not parent_commits:
             parent_commits = [self.repo.head.commit]
+        else:
+            def to_commit(commit: git.Commit | str):
+                if isinstance(commit, git.Commit):
+                    return commit
+                elif isinstance(commit, str):
+                    return self.repo.commit(commit)
+                else:
+                    raise ValueError(commit)
+            parent_commits = [to_commit(commit) for commit in parent_commits]
+
         # add all changes
         git.cmd.Git(self.repo.working_tree_dir).add('.')
         tree = self.repo.index.write_tree()
