@@ -320,7 +320,7 @@ def _matching_analysis_result_id(
         )
 
     # there is at least one result and they are ordered (latest product id first)
-    return filtered_results[0]
+    return filtered_results[0].product_id()
 
 
 def image_ref_with_digest(
