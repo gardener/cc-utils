@@ -301,24 +301,26 @@ def _matching_analysis_result_id(
                 return False
         return True
 
-    filtered_results = (
-            r for r in analysis_results
-            if filter_func(r.custom_data())
-        )
-    result = next(filtered_results, None)
+    filtered_results = tuple(r for r in analysis_results if filter_func(r.custom_data()))
 
-    # There should be at most one possible candidate
-    if next_result := next(filtered_results, None):
-        raise RuntimeError(
-            'More than one scan result found for component artifact. '
-            f'Found {result} and {next_result} - aborting, but there might be more. Please check '
-            'for additional protecode scans with identical custom data'
-        )
-
-    if result:
-        return result.product_id()
-    else:
+    if not filtered_results:
         return None
+
+    # there may be multiple possible candidates since we switched from including the component
+    # version in the component artefact metadata to excluding it
+    if len(filtered_results) > 1:
+        logger.warning(
+            'more than one scan result found for component artefact with '
+            f'{component_artifact_metadata=}, will use latest scan result...'
+        )
+        filtered_results = sorted(
+            filtered_results,
+            key=lambda result: result.product_id(),
+            reverse=True,
+        )
+
+    # there is at least one result and they are ordered (latest product id first)
+    return filtered_results[0]
 
 
 def image_ref_with_digest(
