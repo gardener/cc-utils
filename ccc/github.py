@@ -267,8 +267,7 @@ def github_cfg_for_repo_url(
         raise model.base.ConfigElementNotFoundError(f'No github cfg found for {repo_url=}')
 
     gh_cfg = matching_cfgs[-1]
-    # do not interfere with cli.py
-    logger.info(f'using {gh_cfg.name()=} for {repo_url=}')
+    logger.debug(f'using {gh_cfg.name()=} for {repo_url=}')
     return gh_cfg
 
 
