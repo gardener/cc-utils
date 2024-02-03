@@ -135,16 +135,29 @@ def _iter_resources(
         return
 
     for name, image in images.items():
-        yield cm.Resource(
-            name=name,
-            version=version,
-            type=cm.ArtefactType.OCI_IMAGE,
-            access=cm.OciAccess(
-                type=cm.AccessType.OCI_REGISTRY,
-                imageReference=image['image'] + ':' + version,
-            ),
-            labels=image.get('resource_labels', []),
-        )
+        if 'image' in image:
+            yield cm.Resource(
+                name=name,
+                version=version,
+                type=cm.ArtefactType.OCI_IMAGE,
+                access=cm.OciAccess(
+                    type=cm.AccessType.OCI_REGISTRY,
+                    imageReference=image['image'] + ':' + version,
+                ),
+                labels=image.get('resource_labels', []),
+            )
+        else:
+            for target in image['targets']:
+                yield cm.Resource(
+                    name=target['name'],
+                    version=version,
+                    type=cm.ArtefactType.OCI_IMAGE,
+                    access=cm.OciAccess(
+                        type=cm.AccessType.OCI_REGISTRY,
+                        imageReference=target['image'] + ':' + version,
+                    ),
+                    labels=image.get('resource_labels', []),
+                )
 
 
 def _repo(repo: str=None):
