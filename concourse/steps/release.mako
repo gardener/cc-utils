@@ -153,11 +153,11 @@ github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubr
 branch = githubrepobranch.branch()
 
 % if release_trait.rebase_before_release():
-logger.info('Rebasing against branch-head')
-rebase(
-  git_helper=git_helper,
-  branch=branch,
-)
+logger.info(f'will fetch and rebase refs/heads/{branch}')
+upstream_commit_sha = git_helper.fetch_head(
+    f'refs/heads/{branch}'
+).hexsha
+git_helper.rebase(commit_ish=upstream_commit_sha)
 % endif
 
 release_commit = create_release_commit(

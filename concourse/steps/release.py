@@ -167,17 +167,6 @@ def collect_release_notes(
     return release_notes_markdown
 
 
-def rebase(
-    git_helper,
-    branch: str,
-):
-    logging.info('Rebasing..')
-    upstream_commit_sha = git_helper.fetch_head(
-        f'refs/heads/{branch}'
-    ).hexsha
-    git_helper.rebase(commit_ish=upstream_commit_sha)
-
-
 def have_tag_conflicts(
     github_helper,
     tags,
