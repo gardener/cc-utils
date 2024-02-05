@@ -39,6 +39,7 @@ class OciTagType(enum.Enum):
 
 
 class OciRegistryType(enum.Enum):
+    GAR = 'gar'
     GCR = 'gcr'
     DOCKERHUB = 'dockerhub'
     ARTIFACTORY = 'artifactory'

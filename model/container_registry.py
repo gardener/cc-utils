@@ -74,7 +74,10 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         super().validate()
         if (
             self.rotation_cfg()
-            and self.registry_type() is not om.OciRegistryType.GCR
+            and self.registry_type() not in (
+                om.OciRegistryType.GAR,
+                om.OciRegistryType.GCR,
+            )
         ):
             raise model.base.ModelValidationError(
                 f'rotation_cfg not allowed for {self.registry_type()=}'

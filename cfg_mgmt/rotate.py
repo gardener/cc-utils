@@ -34,7 +34,10 @@ def delete_expired_secret(
     delete_func: typing.Callable[[model.NamedModelElement, str, cmm.CfgQueueEntry], None] = None
 
     if (type_name := cfg_queue_entry.target.type) == 'container_registry':
-        if cfg_element.registry_type() == om.OciRegistryType.GCR:
+        if cfg_element.registry_type() in (
+            om.OciRegistryType.GAR,
+            om.OciRegistryType.GCR,
+        ):
             delete_func = cmg.delete_config_secret
         else:
             f'{cfg_element.registry_type()} is not (yet) supported for automated deletion'
@@ -120,7 +123,10 @@ def rotate_cfg_element(
     rotation_validation_function: typing.Callable[[model.NamedModelElement], None] = None
 
     if type_name == 'container_registry':
-        if cfg_element.registry_type() == om.OciRegistryType.GCR:
+        if cfg_element.registry_type() in (
+            om.OciRegistryType.GAR,
+            om.OciRegistryType.GCR,
+        ):
             # service accounts require role "Service Account Key Admin"
             logger.info(f'rotating {cfg_element.name()} {type_name=}')
             update_secret_function = cmg.rotate_cfg_element
