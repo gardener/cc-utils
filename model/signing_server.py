@@ -87,22 +87,3 @@ class SigningServerConfig(NamedModelElement):
 
     def ingress_config(self) -> SigningServerIngressConfig:
         return SigningServerIngressConfig(self.raw['ingress'])
-
-    def _required_attributes(self):
-        return {
-            'image',
-            'namespace',
-            'replica_count',
-            'image_pull_secret_name',
-            'private_key_secret_name',
-            'private_key',
-            'certificate_configmap_name',
-            'certificate',
-            'ca_certificates_configmap_name',
-            'ca_certificates',
-            'max_body_size',
-            'disable_auth',
-            'host',
-            'ingress',
-            'cosign_repository',
-        }
