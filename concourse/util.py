@@ -108,7 +108,7 @@ def has_metadata() -> bool:
 
 
 @functools.lru_cache()
-def find_own_running_build(cfg_factory=None):
+def find_own_running_build(cfg_factory=None) -> concourse.client.model.Build:
     '''
     Determines the current build job running on concourse by relying on the "meta" contract (
     see steps/meta), which prints a JSON document containing a UUID. By iterating through all
