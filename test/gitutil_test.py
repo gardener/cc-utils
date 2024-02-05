@@ -55,7 +55,7 @@ def test_index_to_commit(git_helper):
         assert f.read() == 'new_file'
 
     # add "another" file to initial commit
-    another_file = os.path.join('another_file')
+    another_file = os.path.join(repo_dir, 'another_file')
     with open(another_file, 'w') as f:
         f.write('another_file')
 
