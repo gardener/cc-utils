@@ -14,8 +14,11 @@
 # limitations under the License.
 
 import enum
+import dataclasses
 import textwrap
 import typing
+
+import dacite
 
 import version
 import ci.util
@@ -99,7 +102,29 @@ class TagConflictAction(enum.StrEnum):
     INCREMENT_PATCH_VERSION = 'increment-patch-version'
 
 
+@dataclasses.dataclass(kw_only=True)
+class Asset:
+    type: str = 'build-step-log'
+    step_name: str
+    name: str = None
+    target: str = 'component-descriptor/source'
+    ocm_labels: list[dict[str, object]] = dataclasses.field(default_factory=list)
+
+    def __post_init__(self):
+        if not self.name:
+            self.name = f'{self.step_name}-build-step'
+
+
 ATTRIBUTES = (
+    AttributeSpec.optional(
+        name='assets',
+        default=[],
+        doc='''
+        additional release-assets to publish. For now it is only supported to define
+        build-step-logs as additional sources within component-descriptor.
+        ''',
+        type=list[Asset],
+    ),
     AttributeSpec.optional(
         name='nextversion',
         default=NextVersion.BUMP_MINOR.value,
@@ -233,6 +258,18 @@ class ReleaseTrait(Trait):
     def _attribute_specs(cls):
         return ATTRIBUTES
 
+    @property
+    def assets(self) -> list[Asset]:
+        if not (raw_assets := self.raw.get('assets')):
+            return []
+
+        return [
+            dacite.from_dict(
+                data_class=Asset,
+                data=raw_asset,
+            ) for raw_asset in raw_assets
+        ]
+
     def nextversion(self):
         return self.raw['nextversion']
 
@@ -350,6 +387,12 @@ class ReleaseTraitTransformer(TraitTransformer):
         if main_repo:
             if 'trigger' not in pipeline_args.raw['repo']:
                 main_repo._trigger = False
+
+        # validate assets if present
+        step_names = {step.name for step in pipeline_args.steps()}
+        for asset in self.trait.assets:
+            if asset.step_name not in step_names:
+                raise ValueError(f'{asset=}\'s step_name refers to an absent build-step')
 
     @classmethod
     def dependencies(cls):

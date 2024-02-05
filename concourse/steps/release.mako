@@ -71,8 +71,16 @@ else:
   raise ValueError(release_commit_publishing_policy)
 
 mergeback_commit_msg_prefix = release_trait.merge_release_to_default_branch_commit_message_prefix()
+
+assets = release_trait.assets
 %>
+import hashlib
+import tempfile
+import zlib
+
+import ccc.concourse
 import ccc.github
+import ccc.oci
 import ci.util
 import cnudie.retrieve
 import cnudie.util
@@ -80,6 +88,7 @@ import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import concourse.model.traits.version
 import concourse.model.traits.release
+import gci.componentmodel as cm
 import github.util
 import gitutil
 
@@ -126,6 +135,55 @@ component_descriptor = cdu.component_descriptor_from_dir(
   '${job_step.input('component_descriptor_dir')}'
 )
 component = component_descriptor.component
+
+% if assets:
+oci_client = ccc.oci.oci_client()
+component_descriptor_target_ref = cnudie.util.target_oci_ref(component=component)
+concourse_client = ccc.concourse.client_from_env()
+current_build = concourse.util.find_own_running_build()
+build_plan = current_build.plan()
+% for asset in assets:
+task_id = build_plan.task_id(task_name='${asset.step_name}')
+build_events = concourse_client.build_events(build_id=current_build.id())
+leng = 0
+hash = hashlib.sha256()
+compressor = zlib.compressobj(wbits=31) # 31: be compatible to gzip
+with tempfile.TemporaryFile() as f:
+  for line in build_events.iter_buildlog(task_id=task_id):
+    line = line.encode('utf-8')
+    buf = compressor.compress(line)
+    leng += len(buf)
+    hash.update(buf)
+    f.write(buf)
+  buf = compressor.flush()
+  leng += len(buf)
+  hash.update(buf)
+  f.write(buf)
+
+  f.seek(0)
+  logger.info(f'pushing blob for asset ${asset.name} to {component_descriptor_target_ref}')
+  digest = f'sha256:{hash.hexdigest()}'
+  oci_client.put_blob(
+    image_reference=component_descriptor_target_ref,
+    digest=digest,
+    octets_count=leng,
+    data=f,
+  )
+component.sources.append(
+  cm.Source(
+    name='${asset.name}',
+    version=version_str,
+    type='text/plain',
+    access=cm.LocalBlobAccess(
+      mediaType='application/gzip',
+      localReference=digest,
+      size=leng,
+    ),
+    labels=${asset.ocm_labels},
+  ),
+)
+% endfor
+% endif
 
 % if release_commit_callback_image_reference:
 release_commit_callback_image_reference = '${release_commit_callback_image_reference}'
