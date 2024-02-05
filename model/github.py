@@ -144,7 +144,8 @@ class GithubConfig(NamedModelElement):
             'httpUrl',
             'purpose_labels',
             'sshUrl',
-            'repo_urls'
+            'repo_urls',
+            'webhook_token',
         )
 
     def _required_attributes(self):
@@ -152,7 +153,6 @@ class GithubConfig(NamedModelElement):
             'apiUrl',
             'available_protocols',
             'disable_tls_validation',
-            'webhook_token',
             'technical_users',
         ]
 

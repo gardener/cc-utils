@@ -26,7 +26,6 @@ def required_dict():
             'httpUrl': 'foo',
             'apiUrl': 'foo',
             'disable_tls_validation': 'foo',
-            'webhook_token': 'foo',
             'available_protocols': ['https', 'ssh'],
             'technical_users': [{
                 'username': 'foo',
