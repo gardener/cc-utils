@@ -107,13 +107,23 @@
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>nextversion</p></td>
+<tr class="row-even"><td><p>assets</p></td>
+<td><p>no</p></td>
+<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+</p></td>
+<td><p>list</p></td>
+<td><p>additional release-assets to publish. For now it is only supported to define
+build-step-logs as additional sources within component-descriptor.</p></td>
+</tr>
+<tr class="row-odd"><td><p>nextversion</p></td>
 <td><p>no</p></td>
 <td><p>bump_minor</p></td>
 <td><p>NextVersion</p></td>
 <td><p>specifies how the next development version is to be calculated</p></td>
 </tr>
-<tr class="row-odd"><td><p>release_callback</p></td>
+<tr class="row-even"><td><p>release_callback</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
@@ -121,21 +131,21 @@
 the absolute path to the main repository’s work tree via environment variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
 Any changes left inside the worktree are added to the resulting release commit.</p></td>
 </tr>
-<tr class="row-even"><td><p>release_callback_image_reference</p></td>
+<tr class="row-odd"><td><p>release_callback_image_reference</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>OciImageCfg</p></td>
 <td><p>if specified, the release_callback will be run in a virtualisation container using the
 chosen container image (if not specified, the callback is run as a subprocess)</p></td>
 </tr>
-<tr class="row-odd"><td><p>rebase_before_release</p></td>
+<tr class="row-even"><td><p>rebase_before_release</p></td>
 <td><p>no</p></td>
 <td><p>False</p></td>
 <td><p>bool</p></td>
 <td><p>whether or not a rebase against latest branch head should be done before publishing
 release commits.</p></td>
 </tr>
-<tr class="row-even"><td><p>next_version_callback</p></td>
+<tr class="row-odd"><td><p>next_version_callback</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
@@ -145,39 +155,39 @@ variable <code class="code docutils literal notranslate"><span class="pre">REPO_
 Any changes left inside the worktree are added to the commit bumping the version
 immediately after the release-commit.</p></td>
 </tr>
-<tr class="row-odd"><td><p>release_notes_policy</p></td>
+<tr class="row-even"><td><p>release_notes_policy</p></td>
 <td><p>no</p></td>
 <td><p>default</p></td>
 <td><p>ReleaseNotesPolicy</p></td>
 <td><p>configures the release notes handling policy</p></td>
 </tr>
-<tr class="row-even"><td><p>release_commit_publishing_policy</p></td>
+<tr class="row-odd"><td><p>release_commit_publishing_policy</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">push_to_branch</span></code></p></td>
 <td><p>ReleaseCommitPublishingPolicy</p></td>
 <td><p>configures how the release commit should be published</p></td>
 </tr>
-<tr class="row-odd"><td><p>commit_message_prefix</p></td>
+<tr class="row-even"><td><p>commit_message_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for release commit messages</p></td>
 </tr>
-<tr class="row-even"><td><p>next_version_commit_message_prefix</p></td>
+<tr class="row-odd"><td><p>next_version_commit_message_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for the commit message of the commit bumping the release version
 immediately after the release-commit</p></td>
 </tr>
-<tr class="row-odd"><td><p>merge_release_to_default_branch_commit_message_prefix</p></td>
+<tr class="row-even"><td><p>merge_release_to_default_branch_commit_message_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for the merge-commit message when merging back release-commit from tag
 to default branch</p></td>
 </tr>
-<tr class="row-even"><td><p>git_tags</p></td>
+<tr class="row-odd"><td><p>git_tags</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">ref_template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">refs/tags/{VERSION}</span>
 </pre></div>
@@ -192,13 +202,13 @@ placeholders are available:</p>
 <p>The first tag will be used to create the GitHub-release.</p>
 </p></td>
 </tr>
-<tr class="row-odd"><td><p>release_on_github</p></td>
+<tr class="row-even"><td><p>release_on_github</p></td>
 <td><p>no</p></td>
 <td><p>True</p></td>
 <td><p>bool</p></td>
 <td><p>if true, a github release is published.</p></td>
 </tr>
-<tr class="row-even"><td><p>on_tag_conflict</p></td>
+<tr class="row-odd"><td><p>on_tag_conflict</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">ignore</span></code></p></td>
 <td><p>TagConflictAction</p></td>
