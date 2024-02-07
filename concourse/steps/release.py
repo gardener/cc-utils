@@ -345,7 +345,7 @@ def create_and_push_mergeback_commit(
     git_repo = git_helper.repo
 
     git_repo.head.reset(
-        commit=release_commit.hexsha,
+        commit=release_commit,
         index=True,
         working_tree=True,
     )
