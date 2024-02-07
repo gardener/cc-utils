@@ -136,7 +136,15 @@ component_v2.sources.append(
 
 # add own container image references
 % for name, image_descriptor in images_by_base_name.items():
+<%
+  target_names = set()
+%>
 %   for target_spec in image_descriptor.targets:
+<%
+  if target_spec.name in target_names:
+    continue
+  target_names.add(target_spec.name)
+%>
 component_v2.resources.append(
   cm.Resource(
     name='${target_spec.name}',

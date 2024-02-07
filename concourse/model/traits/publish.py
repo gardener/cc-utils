@@ -254,6 +254,12 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         return self.raw.get('target')
 
     @property
+    def is_multitarget(self):
+        if self.raw.get('targets'):
+            return True
+        return False
+
+    @property
     def targets(self):
         if (target_name := self.target_name()):
             return (
