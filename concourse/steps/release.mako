@@ -302,7 +302,7 @@ except git.GitCommandError:
   logger.warning(f'pushing of mergeback-commit failed; release continues, you need to bump manually')
   traceback.print_exc()
   git_helper.repo.head.reset(
-    commit=old_head.hexsha,
+    commit=old_head.commit,
     index=True,
     working_tree=True,
   )
