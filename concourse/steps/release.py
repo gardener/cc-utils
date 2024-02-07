@@ -358,7 +358,7 @@ def create_and_push_mergeback_commit(
 
     # update submodules (if any), to avoid local diff to be included in subsequent `git add`.
     # otherwise, upstream submodule-updates might be reverted by us.
-    git_repo.submodule_update()
+    git_helper.submodule_update()
 
     # create merge commit
     git_repo.index.merge_tree(
