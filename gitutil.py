@@ -158,6 +158,21 @@ class GitHelper:
             if protocol is Protocol.SSH:
                 os.unlink(tmp_id.name)
 
+    def submodule_update(self):
+        protocol = self.github_cfg.preferred_protocol()
+        if protocol is Protocol.SSH:
+            cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
+        else:
+            cmd_env = {}
+            tmp_id = None
+
+        try:
+            with self.repo.git.custom_environment(**cmd_env):
+                self.repo.submodule_update()
+        finally:
+            if tmp_id:
+                os.unlink(tmp_id)
+
     def check_tag_availability(
         self,
         tags: typing.Iterable[str],
