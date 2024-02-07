@@ -260,7 +260,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
                 TargetSpec(
                     target=target_name,
                     image=self.image_reference(),
-                    name=self.name(),
+                    name=self._base_name,
                 ),
             )
         if not (raw_targets := self.raw.get('targets')):
