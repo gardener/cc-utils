@@ -142,6 +142,12 @@ component_descriptor_target_ref = cnudie.util.target_oci_ref(component=component
 concourse_client = ccc.concourse.client_from_env()
 current_build = concourse.util.find_own_running_build()
 build_plan = current_build.plan()
+
+main_source = cnudie.util.main_source(component)
+main_source_ref = {
+  'name': main_source.name,
+  'version': main_source.version,
+}
 % for asset in assets:
 task_id = build_plan.task_id(task_name='${asset.step_name}')
 build_events = concourse_client.build_events(build_id=current_build.id())
@@ -169,8 +175,8 @@ with tempfile.TemporaryFile() as f:
     octets_count=leng,
     data=f,
   )
-component.sources.append(
-  cm.Source(
+component.resources.append(
+  cm.Resource(
     name='${asset.name}',
     version=version_str,
     type='text/plain',
@@ -180,6 +186,7 @@ component.sources.append(
       size=leng,
     ),
     labels=${asset.ocm_labels},
+    srcRef=main_source_ref,
   ),
 )
 % endfor
