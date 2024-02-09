@@ -99,7 +99,7 @@ class TestVersionValidation(unittest.TestCase):
                     'labels': [],
                     'name': 'test_resource',
                     'relation': 'local',
-                    'srcRefs': [],
+                    'srcRef': {},
                     'type': 'ociImage',
                     'version': resource_version,
                 }],

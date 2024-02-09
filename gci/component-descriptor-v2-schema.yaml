@@ -222,10 +222,9 @@ definitions:
         $ref: '#/definitions/relaxedSemver'
       type:
         type: 'string'
-      srcRefs:
-        type: 'array'
-        items:
-          $ref: '#/definitions/srcRef'
+      srcRef:
+        type: 'object'
+        $ref: '#/definitions/srcRef'
       relation:
         type: 'string'
         enum: ['local', 'external']
