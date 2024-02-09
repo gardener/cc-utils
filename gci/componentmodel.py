@@ -410,8 +410,8 @@ class ComponentReference(Artifact, LabelMethodsMixin):
 
 @dc(frozen=True)
 class SourceReference(LabelMethodsMixin):
-    identitySelector: typing.Dict[str, str]
-    labels: typing.List[Label] = dataclasses.field(default_factory=tuple)
+    identitySelector: dict[str, str]
+    labels: list[Label] = dataclasses.field(default_factory=tuple)
 
 
 @dc(frozen=True)
