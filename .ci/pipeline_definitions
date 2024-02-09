@@ -98,6 +98,14 @@ cc-utils:
 
     release_job_image:
       <<: *gh_pages_repo
+      repo:
+        source_labels:
+          - name: cloud.gardener.cnudie/dso/scanning-hints/source_analysis/v1
+            value:
+              policy: skip
+              comment: |
+                we use bandit for sast scanning (part of release-pipeline)
+                see attached buildlog
       steps:
         test: ~
         lint: ~
@@ -163,6 +171,17 @@ cc-utils:
           release_commit_publishing_policy: tag_and_merge_back
           release_notes_policy: disabled
           release_on_github: False
+          assets:
+            - type: build-step-log
+              step_name: lint
+              purposes:
+                - lint
+                - sast
+                - pybandit
+              comment: |
+                we use bandit (linter) for SAST scans
+                see: https://bandit.readthedocs.io/en/latest/
+
 
 alpine-sap-image:
   jobs:
