@@ -104,15 +104,51 @@ class TagConflictAction(enum.StrEnum):
 
 @dataclasses.dataclass(kw_only=True)
 class Asset:
-    type: str = 'build-step-log'
+    '''
+    An (additional) release asset to be included as part of a release. Hardcoded for the
+    special-case of including build-step-logs as resource in released component-descriptor
+    with a srcRef to main repository (all of which might be made more flexible if needed).
+
+    In other words: do not overwrite/change values for (behaviour is undefined):
+    - type
+    - target
+
+    step_name:  name of buildstep from whcih to include logs
+    name:       name of resource in component-descriptor
+    ocm_labels: ocm-labels to pass-through (no processing)
+    purposes:   labels specifying the purpose of included buildstep-log (see below)
+
+    Purpose-labels are used to identify (in a machine-readable manner) the purpose / semantics
+    of the included logs. Values are not (yet) standardised. It is recommended to use the
+    following labels (multiple may be specified):
+
+    build
+    codecoverage
+    integrationtest
+    linter
+    sast          static code analysis results
+    test
+    unittest
+
+    Purpose-labels will be added as OCM-Label:
+        gardener.cloud/purposes
+    '''
+    type: str = 'buildstep-log'
     step_name: str
     name: str = None
     target: str = 'component-descriptor/source'
     ocm_labels: list[dict[str, object]] = dataclasses.field(default_factory=list)
+    purposes: list[str] = dataclasses.field(default_factory=list)
 
     def __post_init__(self):
         if not self.name:
             self.name = f'{self.step_name}-build-step'
+
+        if self.purposes:
+            self.purposes.append({
+                'name': 'gardener.cloud/purposes',
+                'value': self.purposes,
+            })
 
 
 ATTRIBUTES = (
