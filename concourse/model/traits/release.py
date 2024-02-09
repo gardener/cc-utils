@@ -117,6 +117,7 @@ class Asset:
     name:       name of resource in component-descriptor
     ocm_labels: ocm-labels to pass-through (no processing)
     purposes:   labels specifying the purpose of included buildstep-log (see below)
+    comment:    additional explanations (e.g. for auditing)
 
     Purpose-labels are used to identify (in a machine-readable manner) the purpose / semantics
     of the included logs. Values are not (yet) standardised. It is recommended to use the
@@ -139,6 +140,7 @@ class Asset:
     target: str = 'component-descriptor/source'
     ocm_labels: list[dict[str, object]] = dataclasses.field(default_factory=list)
     purposes: list[str] = dataclasses.field(default_factory=list)
+    comment: str | None = None
 
     def __post_init__(self):
         if not self.name:
@@ -148,6 +150,12 @@ class Asset:
             self.purposes.append({
                 'name': 'gardener.cloud/purposes',
                 'value': self.purposes,
+            })
+
+        if self.comment:
+            self.ocm_labels.append({
+                'name': 'gardener.cloud/comment',
+                'value': self.comment,
             })
 
 
