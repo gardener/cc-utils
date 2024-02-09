@@ -147,7 +147,7 @@ class Asset:
             self.name = f'{self.step_name}-build-step'
 
         if self.purposes:
-            self.purposes.append({
+            self.ocm_labels.append({
                 'name': 'gardener.cloud/purposes',
                 'value': self.purposes,
             })
