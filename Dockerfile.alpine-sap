@@ -3,12 +3,7 @@ FROM alpine:3
 # makes debugging easier
 COPY ALPINE_SAP_VERSION /ALPINE_SAP_VERSION
 
-# cannot install numpy, scipy via pypi
-RUN apk add --no-cache \
-    bash \
-    ca-certificates \
-    curl
-
+RUN apk add --no-cache ca-certificates
 
 ADD http://aia.pki.co.sap.com/aia/SAP%20Global%20Root%20CA.crt \
     /usr/local/share/ca-certificates/SAP_Global_Root_CA.crt
