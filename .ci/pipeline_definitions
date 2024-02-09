@@ -163,3 +163,18 @@ cc-utils:
           release_commit_publishing_policy: tag_and_merge_back
           release_notes_policy: disabled
           release_on_github: False
+
+alpine-sap-image:
+  jobs:
+    update-alpine-sap-image:
+      traits:
+        version:
+          preprocess: noop
+          versionfile: ALPINE_SAP_VERSION
+          inject_effective_version: True
+        publish:
+          dockerimages:
+            alpine-sap:
+              image: europe-docker.pkg.dev/gardener-project/snapshots/cicd/alpine-sap
+              dockerfile: Dockerfile.alpine-sap
+              tag_as_latest: True
