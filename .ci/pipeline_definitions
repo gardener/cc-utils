@@ -168,6 +168,8 @@ alpine-sap-image:
   jobs:
     update-alpine-sap-image:
       traits:
+        cronjob:
+          interval: 24h
         version:
           preprocess: noop
           versionfile: ALPINE_SAP_VERSION
