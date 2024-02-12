@@ -186,9 +186,9 @@ component.resources.append(
       size=leng,
     ),
     labels=${asset.ocm_labels},
-    srcRef={
+    srcRefs=[{
       'identitySelector': main_source_ref,
-    }
+    },]
   ),
 )
 % endfor

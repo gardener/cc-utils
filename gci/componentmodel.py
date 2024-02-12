@@ -435,7 +435,7 @@ class Resource(Artifact, LabelMethodsMixin):
     extraIdentity: typing.Dict[str, str] = dataclasses.field(default_factory=dict)
     relation: ResourceRelation = ResourceRelation.LOCAL
     labels: typing.List[Label] = dataclasses.field(default_factory=tuple)
-    srcRef: SourceReference | None = None
+    srcRefs: list[SourceReference] = dataclasses.field(default_factory=tuple)
 
 
 @dc(frozen=True, kw_only=True)

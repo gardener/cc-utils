@@ -70,7 +70,7 @@ def iref():
             type=cm.AccessType.OCI_REGISTRY,
             extraIdentity={},
             labels=[],
-            srcRef={},
+            srcRefs=[],
             relation=None,
         )
 
