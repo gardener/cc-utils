@@ -160,7 +160,7 @@ class DeliveryServiceClient:
         if ocm_repo:
             if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
-            params['ocm_repo_url'] = ocm_repo.baseUrl
+            params['ocm_repo_url'] = ocm_repo.oci_ref
         if version_filter is not None:
             params['version_filter'] = version_filter
 
