@@ -348,11 +348,22 @@ def delivery_service_component_descriptor_lookup(
                 return delivery_client.component_descriptor(
                     name=component_id.name,
                     version=component_id.version,
-                    ctx_repo_url=ocm_repo.oci_ref,
+                    ocm_repo_url=ocm_repo.oci_ref,
                 )
             except requests.exceptions.HTTPError:
                 # XXX: might want to warn about errors other than http-404
                 pass
+
+        # try to find component descriptor without specifying ocm repo
+        # -> fallback to default ocm repo mapping of delivery service
+        try:
+            return delivery_client.component_descriptor(
+                name=component_id.name,
+                version=component_id.version,
+            )
+        except requests.exceptions.HTTPError:
+            # XXX: might want to warn about errors other than http-404
+            pass
 
         # component descriptor not found in lookup
         if absent_ok:
