@@ -201,3 +201,5 @@ def upload_component_descriptor(
         image_reference=target_ref,
         manifest=manifest_bytes,
     )
+
+    return manifest_bytes

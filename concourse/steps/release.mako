@@ -286,12 +286,16 @@ github_release(
 )
 % endif
 
-upload_component_descriptor(
+uploaded_oci_manifest_bytes = upload_component_descriptor(
   github_helper=github_helper,
   github_release_tag=tags[0],
   component=component,
   upload_as_github_release_asset=${release_trait.release_on_github()},
 )
+try:
+  print(f'{uploaded_oci_manifest_bytes=}')
+except:
+  pass
 
 % if merge_back:
 try:
