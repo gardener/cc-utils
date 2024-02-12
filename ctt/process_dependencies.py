@@ -699,10 +699,9 @@ def process_images(
             except Exception as e:
                 c = component_descriptor.component
                 component_id = f'{c.name}:{c.version}'
-                logger.error(
+                logger.warning(
                     f'Schema validation for component-descriptor {component_id} failed with {e}'
                 )
-                raise
 
         if processing_mode is ProcessingMode.REGULAR:
             if component.name == source_comp.name and component.version == source_comp.version:
