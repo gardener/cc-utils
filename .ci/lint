@@ -38,6 +38,7 @@ if ! which bandit &>/dev/null; then
     pip3 install bandit &>/dev/null
 fi
 
+echo 'running bandit (sast-linter)'
 bandit \
     --configfile "${src_dir}/pyproject.toml" \
     --recursive \
