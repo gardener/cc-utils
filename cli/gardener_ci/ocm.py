@@ -1,5 +1,6 @@
 import dataclasses
 import enum
+import functools
 import hashlib
 import io
 import json
@@ -8,8 +9,10 @@ import logging
 import os
 import pprint
 import subprocess
+import sys
 import tarfile
 import tempfile
+import zlib
 
 import dacite
 import yaml
@@ -175,6 +178,86 @@ def retrieve(
     else:
         print(f'Error: don\'t know {format=}')
         exit(1)
+
+
+def artefact(
+    name: str,
+    artefact_name: str,
+    ocm_repo: str=None,
+    unzip: bool=True,
+    out='-',
+):
+    if not ocm_repo:
+        ocm_lookup = ctx.cfg.ctx.ocm_lookup
+    else:
+        ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo),
+        )
+
+    component = ocm_lookup(name).component
+
+    for artefact in component.iter_artefacts():
+        if artefact.name == artefact_name:
+            break
+    else:
+        print(f'did not find {artefact=}')
+        exit(1)
+
+    access = artefact.access
+    if not isinstance(access, cm.LocalBlobAccess):
+        print(f'unsupported {access.type=}')
+        print('only localBlobAccess is implemented')
+        exit(1)
+
+    access: cm.LocalBlobAccess
+
+    if out == '-' and sys.stdout.isatty():
+        print('refusing to print blob to terminal (redirect stdout or set --out)')
+        exit(1)
+
+    log = functools.partial(print, file=sys.stderr)
+
+    if out == '-':
+        fh = sys.stdout.buffer
+    else:
+        fh = open(out, 'wb')
+
+    oci_client = ccc.oci.oci_client()
+
+    oci_ref = component.current_ocm_repo.component_oci_ref(component)
+
+    if access.globalAccess:
+        digest = access.globalAccess
+        size = access.globalAccess.size
+    else:
+        digest = access.localReference
+        size = access.size
+
+    if unzip:
+        if access.mediaType.endswith('/gzip'):
+            decompressor = zlib.decompressobj(wbits=31)
+        else:
+            decompressor = None
+    else:
+        decompressor = None
+
+    log(f'retrieving {size} octets ({digest=})')
+
+    blob = oci_client.blob(
+        image_reference=oci_ref,
+        digest=digest,
+    )
+    for chunk in blob.iter_content(4096):
+        if decompressor:
+            chunk = decompressor.decompress(chunk)
+
+        fh.write(chunk)
+
+    if decompressor:
+        fh.write(decompressor.flush())
+
+    fh.flush()
+    fh.close()
 
 
 def upload(
