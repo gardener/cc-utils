@@ -320,8 +320,8 @@ def delivery_service_component_descriptor_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         ctx_repo: cm.OcmRepository=default_ctx_repo,
+        ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
         component_id = cnudie.util.to_component_id(component_id)
@@ -578,7 +578,10 @@ def composite_component_descriptor_lookup(
             res = None
             try:
                 if ctx_repo:
-                    res = lookup(component_id, ctx_repo)
+                    res = lookup(
+                        component_id,
+                        ctx_repo=ctx_repo,
+                    )
                 else:
                     res = lookup(component_id)
             except om.OciImageNotFoundException:
