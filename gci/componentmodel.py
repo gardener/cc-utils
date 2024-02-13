@@ -520,6 +520,8 @@ class Component(LabelMethodsMixin):
 
     labels: typing.List[Label] = dataclasses.field(default_factory=list)
 
+    creationTime: str | None = None
+
     @property
     def current_ocm_repo(self):
         if not self.repositoryContexts:

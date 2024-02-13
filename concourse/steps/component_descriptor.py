@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import logging
 
 import git
@@ -48,7 +49,6 @@ def base_component_descriptor_v2(
     commit: str,
     repo_url: str,
 ):
-    import datetime
     import cnudie.migrate
     import gci.componentmodel as cm
     import version as version_util
@@ -110,6 +110,7 @@ def base_component_descriptor_v2(
         componentReferences=[], # added later
         resources=[], # added later
         labels=component_labels,
+        creationTime=datetime.datetime.now(datetime.timezone.utc).isoformat(),
       ),
     )
 
