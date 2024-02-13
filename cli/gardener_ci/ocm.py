@@ -152,6 +152,7 @@ def edit(
 def retrieve(
     name: str,
     ocm_repo: str=None,
+    format: str='pretty',
 ):
     if not ocm_repo:
         ocm_lookup = ctx.cfg.ctx.ocm_lookup
@@ -162,7 +163,18 @@ def retrieve(
 
     component_descriptor = ocm_lookup(name)
 
-    pprint.pprint(component_descriptor)
+    if format == 'pretty':
+        pprint.pprint(component_descriptor)
+    elif format == 'yaml':
+        print(
+            yaml.dump(
+                dataclasses.asdict(component_descriptor),
+                Dumper=cm.EnumValueYamlDumper,
+            )
+        )
+    else:
+        print(f'Error: don\'t know {format=}')
+        exit(1)
 
 
 def upload(
