@@ -82,8 +82,11 @@ import ccc.concourse
 import ccc.github
 import ccc.oci
 import ci.util
+import cnudie.iter
 import cnudie.retrieve
+import cnudie.upload
 import cnudie.util
+import cnudie.validate
 import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import concourse.model.traits.version
@@ -286,12 +289,18 @@ github_release(
 )
 % endif
 
-## todo: cnudie.validate -> separate function
-## todo: resolve dependencies for validation
+logger.info('validating component-descriptor')
+nodes = cnudie.iter.iter(
+  component=component,
+  lookup=component_descriptor_lookup,
+)
+for validation_error in cnudie.validate.iter_violations(nodes=nodes):
+  logger.warning(f'{validation_error=}')
+
 tgt_ref = cnudie.util.target_oci_ref(component=component)
 logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
-uploaded_oci_manifest_bytes = cnudie.util.upload_component_descriptor(
-  component=component,
+uploaded_oci_manifest_bytes = cnudie.upload.upload_component_descriptor(
+  component_descriptor=component,
 )
 try:
   print(f'{uploaded_oci_manifest_bytes=}')
