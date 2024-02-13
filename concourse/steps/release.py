@@ -20,11 +20,6 @@ import gci.componentmodel as cm
 
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
-import cnudie.iter
-import cnudie.retrieve
-import cnudie.upload
-import cnudie.util
-import cnudie.validate
 import dockerutil
 import release_notes.fetch
 import release_notes.markdown
@@ -412,24 +407,11 @@ def github_release(
         )
 
 
-def upload_component_descriptor(
+def upload_github_release_asset(
     github_helper: GitHubRepositoryHelper,
     github_release_tag: str,
     component,
-    upload_as_github_release_asset: bool,
 ):
-    # todo: cnudie.validate -> separate function
-    # todo: resolve dependencies for validation
-
-    tgt_ref = cnudie.util.target_oci_ref(component=component)
-    logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
-    cnudie.upload.upload_component_descriptor(
-        component_descriptor=component,
-    )
-
-    if not upload_as_github_release_asset:
-        return
-
     # upload copy as release-asset
     release_tag_name = github_release_tag.removeprefix('refs/tags/')
     try:

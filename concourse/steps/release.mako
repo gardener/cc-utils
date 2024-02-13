@@ -286,16 +286,25 @@ github_release(
 )
 % endif
 
-uploaded_oci_manifest_bytes = upload_component_descriptor(
-  github_helper=github_helper,
-  github_release_tag=tags[0],
+## todo: cnudie.validate -> separate function
+## todo: resolve dependencies for validation
+tgt_ref = cnudie.util.target_oci_ref(component=component)
+logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
+uploaded_oci_manifest_bytes = cnudie.util.upload_component_descriptor(
   component=component,
-  upload_as_github_release_asset=${release_trait.release_on_github()},
 )
 try:
   print(f'{uploaded_oci_manifest_bytes=}')
 except:
   pass
+
+% if release_trait.release_on_github():
+upload_github_release_asset(
+  github_helper=github_helper,
+  github_release_tag=tags[0],
+  component=component,
+)
+% endif
 
 % if merge_back:
 try:
