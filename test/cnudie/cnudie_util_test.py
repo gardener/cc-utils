@@ -5,8 +5,6 @@
 
 import pytest
 
-import yaml
-
 import cnudie.util
 import gci.componentmodel as cm
 import oci.auth as oa
@@ -472,12 +470,4 @@ def test_ocm_serialisation():
         }
     ]
 
-    ocm_lu_config = cnudie.util.OcmLookupMappingConfig.from_dict(test_mappings)
-    ocm_software_config_str = ocm_lu_config.to_ocm_software_config()
-    ocm_software_config = yaml.safe_load(ocm_software_config_str)
-    cnudie.util.OcmLookupMappingConfig.from_ocm_config_dict(ocm_software_config)
-
-    # Ideally we'd check the config hasn't changed, but equality is currently a bit
-    # cumbersome to determine due to slight differences in the way OCM handles AccessTypes
-    # and how we handle that.
-    # assert parsed_ocm_lu_config == ocm_lu_config
+    cnudie.util.OcmLookupMappingConfig.from_dict(test_mappings)

@@ -700,22 +700,6 @@ class OcmLookupMappingConfig:
         )
 
     @staticmethod
-    def from_ocm_config_dict(
-        ocm_config_dict: dict,
-    ) -> 'OcmLookupMappingConfig':
-        ocm_config = dacite.from_dict(
-            data_class=OcmGenericConfig,
-            data=ocm_config_dict,
-            config=dacite.Config(cast=(enum.Enum,)),
-        )
-        for c in ocm_config.configurations:
-            if isinstance(c, OcmSoftwareConfig):
-                mappings = c.resolvers
-                return OcmLookupMappingConfig(mappings)
-        else:
-            raise RuntimeError("No resolvers found in OCM config.")
-
-    @staticmethod
     def from_dict(
         raw_mappings: dict,
     ) -> 'OcmLookupMappingConfig':
