@@ -1,4 +1,6 @@
 # CICD, Delivery, Compliance and Security Automation for Gardener
+[![REUSE status](https://api.reuse.software/badge/github.com/gardener/cc-utils)](https://api.reuse.software/info/github.com/gardener/cc-utils)
+
 
 ![tests](https://concourse.ci.gardener.cloud/api/v1/teams/cicd/pipelines/cc-utils-master/jobs/master-head-update-job/badge?title=tests)
 ![release](https://concourse.ci.gardener.cloud/api/v1/teams/cicd/pipelines/cc-utils-master/jobs/master-release_job_image-job/badge?title=build)
