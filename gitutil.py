@@ -166,7 +166,10 @@ class GitHelper:
             cmd_env = {}
 
         with self.repo.git.custom_environment(**cmd_env):
-            self.repo.submodule_update()
+            # avoid GitPython's submodule implementation due to bugs and lack of maintenance as
+            # recommended by maintainers:
+            # https://github.com/gitpython-developers/GitPython/discussions/1536
+            self.repo.git.submodule('update')
 
     def check_tag_availability(
         self,
