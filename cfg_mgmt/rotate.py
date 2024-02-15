@@ -10,6 +10,7 @@ import cfg_mgmt.btp_service_binding as cmb
 import cfg_mgmt.gcp as cmg
 import cfg_mgmt.github as cmgh
 import cfg_mgmt.kubernetes as cmk
+import cfg_mgmt.gardener_sa as cmgsa
 import cfg_mgmt.model as cmm
 import model
 import model.github
@@ -162,6 +163,10 @@ def rotate_cfg_element(
     elif type_name == 'kubernetes':
         rotation_validation_function = cmk.validate_for_rotation
         update_secret_function = cmk.rotate_cfg_element
+
+    elif type_name == 'gardener_sa':
+        rotation_validation_function = cmgsa.validate_for_rotation
+        update_secret_function = cmgsa.rotate_cfg_element
 
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
