@@ -344,26 +344,26 @@ def delivery_service_component_descriptor_lookup(
             if not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
-            try:
-                return delivery_client.component_descriptor(
-                    name=component_id.name,
-                    version=component_id.version,
-                    ocm_repo_url=ocm_repo.oci_ref,
-                )
-            except requests.exceptions.HTTPError:
-                # XXX: might want to warn about errors other than http-404
-                pass
+            component_descriptor = delivery_client.component_descriptor(
+                name=component_id.name,
+                version=component_id.version,
+                ocm_repo_url=ocm_repo.oci_ref,
+                ignore_errors=(requests.exceptions.HTTPError, requests.exceptions.ConnectionError),
+            )
+
+            if component_descriptor:
+                return component_descriptor
 
         # try to find component descriptor without specifying ocm repo
         # -> fallback to default ocm repo mapping of delivery service
-        try:
-            return delivery_client.component_descriptor(
-                name=component_id.name,
-                version=component_id.version,
-            )
-        except requests.exceptions.HTTPError:
-            # XXX: might want to warn about errors other than http-404
-            pass
+        component_descriptor = delivery_client.component_descriptor(
+            name=component_id.name,
+            version=component_id.version,
+            ignore_errors=(requests.exceptions.HTTPError, requests.exceptions.ConnectionError),
+        )
+
+        if component_descriptor:
+            return component_descriptor
 
         # component descriptor not found in lookup
         if absent_ok:
