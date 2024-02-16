@@ -227,7 +227,7 @@ def artefact(
     oci_ref = component.current_ocm_repo.component_oci_ref(component)
 
     if access.globalAccess:
-        digest = access.globalAccess
+        digest = access.globalAccess.digest
         size = access.globalAccess.size
     else:
         digest = access.localReference
