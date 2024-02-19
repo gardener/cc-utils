@@ -586,6 +586,8 @@ def composite_component_descriptor_lookup(
                     res = lookup(component_id)
             except om.OciImageNotFoundException:
                 pass
+            except dacite.DaciteError as ce:
+                ce.add_note(f'{component_id=}')
 
             if isinstance(res, cm.ComponentDescriptor):
                 for wb in writebacks: wb(component_id, res)
@@ -616,7 +618,7 @@ def composite_component_descriptor_lookup(
                 to_repo_url(ocm_repository) for ocm_repository
                 in ocm_repository_lookup(component_id)
             )
-            error = 'Did not find {component_id=} in any of the following\n'
+            error = f'Did not find {component_id=} in any of the following\n'
             error += f'ocm-repositories:\n{ocm_repository_urls}:\n{str(component_id)}'
         else:
             error = f'<no ocm-repo given>: {str(component_id)}'
