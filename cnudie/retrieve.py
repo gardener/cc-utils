@@ -588,6 +588,7 @@ def composite_component_descriptor_lookup(
                 pass
             except dacite.DaciteError as ce:
                 ce.add_note(f'{component_id=}')
+                raise ce
 
             if isinstance(res, cm.ComponentDescriptor):
                 for wb in writebacks: wb(component_id, res)
