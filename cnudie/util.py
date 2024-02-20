@@ -4,12 +4,9 @@ import graphlib
 import typing
 
 import dacite
-import yaml
 
 import ci.util
-import ctx
 import gci.componentmodel as cm
-import model.container_registry
 import oci.model as om
 import oci.auth as oa
 
@@ -594,43 +591,6 @@ class OcmResolverConfig:
 
 
 @dataclasses.dataclass
-class OcmSoftwareConfig:
-    resolvers: list[OcmResolverConfig]
-    aliases: typing.Optional[dict[str, dict]] = None
-    type: str = 'ocm.config.ocm.software'
-
-
-@dataclasses.dataclass
-class OcmCredentials:
-    username: str
-    password: str
-
-
-@dataclasses.dataclass
-class OcmCredentialsCredentialsConfig:
-    properties: OcmCredentials
-    type: str = 'Credentials'
-
-
-@dataclasses.dataclass
-class OcmCredentialsConsumerConfig:
-    identity: cm.OciRepositoryContext
-    credentials: list[OcmCredentialsCredentialsConfig]
-
-
-@dataclasses.dataclass
-class OcmCredentialsConfig:
-    consumers: list[OcmCredentialsConsumerConfig]
-    type: str = 'credentials.config.ocm.software'
-
-
-@dataclasses.dataclass
-class OcmGenericConfig:
-    configurations: list[OcmSoftwareConfig | OcmCredentialsConfig]
-    type: str = 'generic.config.ocm.software/v1'
-
-
-@dataclasses.dataclass
 class OcmLookupMappingConfig:
     mappings: list[OcmResolverConfig]
 
@@ -652,52 +612,6 @@ class OcmLookupMappingConfig:
         for mapping in self.mappings:
             if mapping.matches(component_name):
                 yield cm.OciOcmRepository(baseUrl=mapping.repository.baseUrl)
-
-    def to_ocm_software_config(
-        self,
-        cfg_factory=None,
-    ) -> str:
-        if not cfg_factory:
-            cfg_factory = ctx.cfg_factory()
-
-        consumers = []
-        for m in self.mappings:
-            m: OcmResolverConfig
-            container_registry_config = model.container_registry.find_config(
-                image_reference=m.repository.oci_ref,
-                privileges=m.privileges,
-                cfg_factory=cfg_factory,
-            )
-            if container_registry_config:
-                credentials = container_registry_config.credentials()
-                consumer_credentials = [
-                    OcmCredentialsCredentialsConfig(
-                        properties=OcmCredentials(
-                            username=credentials.username(),
-                            password=credentials.passwd()
-                        ),
-                    ),
-                ]
-            else:
-                consumer_credentials = []
-
-            consumer = OcmCredentialsConsumerConfig(
-                identity=m.repository,
-                credentials=consumer_credentials,
-            )
-            consumers.append(consumer)
-
-        config = OcmGenericConfig(
-            configurations=[
-                OcmSoftwareConfig(resolvers=self.mappings),
-                OcmCredentialsConfig(consumers=consumers),
-            ]
-        )
-
-        return yaml.dump(
-            dataclasses.asdict(config),
-            Dumper=cm.EnumValueYamlDumper,
-        )
 
     @staticmethod
     def from_dict(
