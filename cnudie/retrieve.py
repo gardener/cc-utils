@@ -41,11 +41,14 @@ VersionLookupByComponent = typing.Callable[
     typing.Sequence[str]
 ]
 
-OcmRepositoryCfg = \
-    str | typing.Iterable[str] | \
-    cnudie.util.OcmLookupMappingConfig | \
-    cnudie.util.OcmResolverConfig | \
-    typing.Iterable[cnudie.util.OcmResolverConfig]
+
+@dataclasses.dataclass(frozen=True)
+class OcmRepositoryMappingEntry:
+    repository: str
+    prefix: str | None = None
+
+
+OcmRepositoryCfg = str | typing.Iterable[str]
 
 
 OcmRepositoryLookup = typing.Callable[
@@ -71,15 +74,6 @@ def _iter_ocm_repositories(
     if isinstance(repository_cfg, str):
         yield repository_cfg
         return
-
-    if isinstance(repository_cfg, cnudie.util.OcmResolverConfig):
-        repository_cfg: cnudie.util.OcmResolverConfig
-        if repository_cfg.matches(component):
-            yield repository_cfg.repository
-        return
-
-    if isinstance(repository_cfg, cnudie.util.OcmLookupMappingConfig):
-        yield from repository_cfg.iter_ocm_repositories(component)
 
     # recurse into elements in case repository_cfg is iterable
     if hasattr(repository_cfg, '__iter__'):

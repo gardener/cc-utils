@@ -1,14 +1,10 @@
 import dataclasses
-import enum
 import graphlib
 import typing
-
-import dacite
 
 import ci.util
 import gci.componentmodel as cm
 import oci.model as om
-import oci.auth as oa
 
 ComponentId = (
     cm.Component
@@ -570,65 +566,3 @@ def diff_resources(
             _add_if_not_duplicate(resource_diff.resource_refs_only_right, i)
 
     return resource_diff
-
-
-@dataclasses.dataclass
-class OcmResolverConfig:
-    repository: cm.OciOcmRepository | str
-    prefix: str = ''
-    priority: int = 10
-    privileges: oa.Privileges | None = None
-
-    def matches(self, component: ComponentId):
-        return to_component_name(component).startswith(self.prefix)
-
-    def __post_init__(self):
-        if isinstance(base_url := self.repository, str):
-            self.repository = cm.OciOcmRepository(
-                baseUrl=base_url,
-                type='OCIRegistry'  # Use this (legal) variant of cm.AccessType.OCI_REGISTRY
-            )                       # since the OCM-CLI does not recognize Enum's `ociRegistry`
-
-
-@dataclasses.dataclass
-class OcmLookupMappingConfig:
-    mappings: list[OcmResolverConfig]
-
-    def __post_init__(self):
-        self.mappings = sorted(
-            sorted(
-                self.mappings,
-                key=lambda m: len(m.prefix),
-                reverse=True,
-            ),
-            key=lambda m: m.priority,
-            reverse=True,
-        )
-
-    def iter_ocm_repositories(
-        self,
-        component_name: str,
-    ) -> typing.Generator[cm.OciOcmRepository, None, None]:
-        for mapping in self.mappings:
-            if mapping.matches(component_name):
-                yield cm.OciOcmRepository(baseUrl=mapping.repository.baseUrl)
-
-    @staticmethod
-    def from_dict(
-        raw_mappings: dict,
-    ) -> 'OcmLookupMappingConfig':
-
-        # TODO: backwards-compatibility, rm once users (LSS/D) are updated
-        for mapping in raw_mappings:
-            if 'ocm_repo_url' in mapping and isinstance(mapping['ocm_repo_url'], str):
-                mapping['repository'] = mapping.pop('ocm_repo_url')
-
-        mappings = [
-            dacite.from_dict(
-                data_class=OcmResolverConfig,
-                data=e,
-                config=dacite.Config(cast=(enum.Enum,)),
-            ) for e in raw_mappings
-        ]
-
-        return OcmLookupMappingConfig(mappings)

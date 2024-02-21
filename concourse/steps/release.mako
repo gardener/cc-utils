@@ -123,10 +123,12 @@ githubrepobranch = github.util.GitHubRepoBranch(
     branch=repository_branch,
 )
 
-mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
-    raw_mappings = ${ocm_repository_mappings},
-)
-ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(mapping_config)
+<%
+import concourse.steps
+template = concourse.steps.step_template('component_descriptor')
+ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
+%>
+${ocm_repository_lookup(ocm_repository_mappings)}
 
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
   ocm_repository_lookup=ocm_repository_lookup,

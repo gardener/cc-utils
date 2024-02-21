@@ -13,10 +13,9 @@ import dacite
 from ci.util import not_none
 from gci.componentmodel import Label
 import ci.util
-import cnudie.util
+import cnudie.retrieve
 import gci.componentmodel as cm
 import model.base
-import oci.auth
 import version
 
 from concourse.model.job import (
@@ -35,6 +34,8 @@ from concourse.model.base import (
     TraitTransformer,
 )
 import model.ctx_repository
+
+OcmRepositoryMappingEntry = cnudie.retrieve.OcmRepositoryMappingEntry
 
 
 @dataclasses.dataclass(frozen=True)
@@ -199,8 +200,8 @@ ATTRIBUTES = (
         default=[], # cannot define a proper default here because this depends on another (optional)
                     # config-value. At least not in a way that would be represented in our
                     # rendered documentation.
-        type=typing.List[cnudie.util.OcmResolverConfig],
-        doc='''
+        type=list[OcmRepositoryMappingEntry],
+        doc='''\
             used to explicitly configure where to lookup component descriptors. If given,
             ocm_repository *must* be defined.
 
@@ -212,22 +213,10 @@ ATTRIBUTES = (
                   prefix: github.com/some-org/
                 - repository: ocm_repo_url
                   prefix: github.com/another-org/
-                  priority: 10 # default
                 - repository: another_ocm_repo_url
                   prefix: github.com/yet-another-org/
 
-            If not given, a default mapping will be applied that is equivalent to the following:
-
-            .. code-block:: yaml
-
-                - repository: <ctx_repository_base_url>
-                  prefix: ''
-                  priority: 10
-
-            .. note::
-                If multiple mappings match a component name, they will be tried in order of priority
-                with longest matching prefix first.
-
+            Value from ocm_repository is implicitly added as entry.
         '''
     ),
 )
@@ -351,49 +340,32 @@ class ComponentDescriptorTrait(Trait):
     def component_labels(self):
         return self.raw['component_labels']
 
-    def ocm_repository_mappings(self) -> list:
+    def ocm_repository_mappings(self) -> list[OcmRepositoryMappingEntry]:
         ocm_repository_url = self.ctx_repository_base_url()
         ocm_repository_mappings: list[dict] = self.raw['ocm_repository_mappings']
 
-        if ocm_repository_url:
-            mapping_for_repository_url = {
-                'repository': ocm_repository_url,
-                'prefix': '',
-                'priority': 10,
-                'privileges': oci.auth.Privileges.READWRITE.value,
-            }
-
         if not ocm_repository_url and not ocm_repository_mappings:
             return []
-        elif not ocm_repository_url and ocm_repository_mappings:
-            raise ValueError('ocm_repository_url must be defined if ocm_repository_mappings are')
-        elif ocm_repository_url and not ocm_repository_mappings:
-            return [mapping_for_repository_url]
 
-        # check if mapping contains entry for ocm_repository; if no, add it, if yes, set privileges
-        for mapping in ocm_repository_mappings:
+        mappings = [
+            dacite.from_dict(
+                data_class=OcmRepositoryMappingEntry,
+                data=raw_mapping,
+            ) for raw_mapping in ocm_repository_mappings
+        ]
 
-            if 'repository' in mapping:
-                repo_url = mapping['repository']
+        if ocm_repository_url:
+            for mapping in mappings:
+                if mapping.repository == ocm_repository_url:
+                    break
             else:
-                repo_url = mapping['ocm_repo_url']
+                mappings.append(
+                    OcmRepositoryMappingEntry(
+                        repository=ocm_repository_url,
+                    )
+                )
 
-            if isinstance(repo_url, dict):
-                repo_url = dacite.from_dict(
-                    data_class=cm.OciRepositoryContext,
-                    data=repo_url,
-                ).oci_ref
-
-            if repo_url != ocm_repository_url:
-                continue
-
-            # for target-ocm-repository, we will need write-privileges
-            mapping['privileges'] = oci.auth.Privileges.READWRITE.value
-            break
-        else:
-            ocm_repository_mappings.append(mapping_for_repository_url)
-
-        return ocm_repository_mappings
+        return mappings
 
     def inputs(self) -> typing.List[StepInput]:
         return [
@@ -410,6 +382,14 @@ class ComponentDescriptorTrait(Trait):
 
     def validate(self):
         super().validate()
+
+        ocm_repository_url = self.ctx_repository_base_url()
+        ocm_repository_mappings: list[dict] = self.raw['ocm_repository_mappings']
+        if not ocm_repository_url and ocm_repository_mappings:
+            raise ModelValidationError(
+                'ocm_repository_url must be defined if ocm_repository_mappings are'
+            )
+
         for label in self.component_labels():
             try:
                 dacite.from_dict(

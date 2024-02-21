@@ -127,17 +127,18 @@ upstream_update_policy = concourse.model.traits.update_component_deps.UpstreamUp
     '${upstream_update_policy.value}'
 )
 
-mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
-    raw_mappings = ${ocm_repository_mappings},
-)
+<%
+import concourse.steps
+template = concourse.steps.step_template('component_descriptor')
+ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
+%>
+${ocm_repository_lookup(ocm_repository_mappings)}
 
 ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
-        mapping_config,
-    ),
+    ocm_repository_lookup=ocm_repository_lookup,
 )
 version_lookup = cnudie.retrieve.version_lookup(
-    ocm_repository_lookup=mapping_config,
+    ocm_repository_lookup=ocm_repository_lookup,
 )
 
 # we at most need to do this once

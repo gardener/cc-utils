@@ -7,7 +7,6 @@ import pytest
 
 import cnudie.util
 import gci.componentmodel as cm
-import oci.auth as oa
 
 # functions under test
 diff_components = cnudie.util.diff_components
@@ -447,27 +446,3 @@ def test_to_component_name():
 
     test_tuple = 'Foo', '1.2.3'
     assert cnudie.util.to_component_name(test_tuple) == base_name
-
-
-def test_ocm_serialisation():
-    test_mappings = [
-        {
-            'repository': 'foo.baz',
-            'prefix': 'foo/bar/baz',
-            'priority': 15,
-            'privileges': oa.Privileges.READWRITE,
-        },{
-            'repository': 'fizz.buzz',
-            'prefix': 'fizz/buzz',
-            'privileges': oa.Privileges.READONLY,
-        },{
-            'repository': {
-                'baseUrl': 'spam/ham/eggs',
-                'subPath': None,
-                'type': 'OCIRegistry',
-            },
-            'prefix': 'fizz/buzz',
-        }
-    ]
-
-    cnudie.util.OcmLookupMappingConfig.from_dict(test_mappings)

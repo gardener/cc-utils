@@ -83,8 +83,12 @@ component_labels = ${descriptor_trait.component_labels()}
 component_name_v2 = component_name.lower() # OCI demands lowercase
 ctx_repository_base_url = '${ctx_repository_base_url}'
 
-mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
-    raw_mappings = ${ocm_repository_mappings},
+${ocm_repository_lookup(ocm_repository_mappings)}
+component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+  ocm_repository_lookup=ocm_repository_lookup,
+)
+version_lookup = cnudie.retrieve.version_lookup(
+  ocm_repository_lookup=ocm_repository_lookup,
 )
 
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
@@ -267,13 +271,6 @@ if descriptor_v2 and ctx_repository_base_url:
   % endif
 % endif
 
-component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-  ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(mapping_config),
-)
-version_lookup = cnudie.retrieve.version_lookup(
-  ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(mapping_config),
-)
-
 # determine "bom-diff" (changed component references)
 try:
   bom_diff = component_diff_since_last_release(
@@ -317,9 +314,6 @@ logger.info('the following versions were identified for being purged')
 component = descriptor_v2.component
 oci_client = ccc.oci.oci_client()
 
-lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    ocm_repository_lookup=mapping_config,
-)
 
 for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
     component=component,
@@ -333,7 +327,7 @@ for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
   print(f'{idx} {component_id.name}:{component_id.version}')
   if retention_policy.dry_run:
    continue
-  component_to_purge = lookup(
+  component_to_purge = component_descriptor_lookup(
     cm.ComponentIdentity(
       name=component.name,
       version=component_id.version,
@@ -347,7 +341,7 @@ for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
    cnudie.purge.remove_component_descriptor_and_referenced_artefacts(
     component=component_to_purge,
     oci_client=oci_client,
-    lookup=lookup,
+    lookup=component_descriptor_lookup,
     recursive=False,
    )
   except Exception as e:
@@ -356,4 +350,37 @@ for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
 % else:
 logger.info('no retention-policy was defined - will not purge component-descriptors')
 % endif
+</%def>
+
+<%def
+  name="ocm_repository_lookup(ocm_repository_mappings)",
+  filter="trim"
+>
+<%
+'''
+generates a function `ocm_repository_lookup`; handy for being used in cnudie.retrieve
+'''
+import cnudie.retrieve
+OcmRepositoryMappingEntry = cnudie.retrieve.OcmRepositoryMappingEntry
+for mapping in ocm_repository_mappings:
+  if not isinstance(mapping, OcmRepositoryMappingEntry):
+    raise ValueError(mapping)
+%>
+import oci.model as om
+import gci.componentmodel as cm
+import cnudie.util
+def ocm_repository_lookup(component: cm.ComponentIdentity, /):
+% if not ocm_repository_mappings:
+  return
+% endif
+% for mapping in ocm_repository_mappings:
+  % if not mapping.prefix:
+  yield '${mapping.repository}'
+  % else:
+  component_name = cnudie.util.to_component_name(component)
+  if component_name.startswith('${mapping.prefix}'):
+    yield '${mapping.repository}'
+  % endif
+% endfor
+
 </%def>
