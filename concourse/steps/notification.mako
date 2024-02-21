@@ -49,13 +49,6 @@ if job_variant.has_main_repository():
 
 if (component_descriptor_trait := job_variant.trait('component_descriptor', None)):
   ocm_repo_mappings = component_descriptor_trait.ocm_repository_mappings()
-else:
-  ocm_repo_url = cfg_set.ctx_repository().base_url()
-  ocm_repo_mappings = [{
-    'ocm_repo_url': ocm_repo_url,
-    'prefix': '',
-    'use_for': 'readonly'
-   }]
 %>
 import logging
 import sys
@@ -206,6 +199,7 @@ if not email_cfg.get('mail_body'):
         task_name='${job_step.name}',
     )
 
+% if component_descriptor_trait:
 ocm_repository_lookup = cnudie.util.OcmLookupMappingConfig.from_dict(
   raw_mappings=${ocm_repo_mappings},
 )
@@ -224,7 +218,6 @@ def retr_component(component_name: str):
   comp_descr = component_descriptor_lookup((component_name, greatest_version))
   return comp_descr.component
 
-
 components = [
   retr_component(component_name=cname) for cname in email_cfg.get('component_name_recipients', ())
 ]
@@ -234,6 +227,8 @@ recipients = resolve_recipients_by_component(
     github_cfg_name="${default_github_cfg_name}",
 )
 email_cfg['recipients'] = email_cfg['recipients'] | set(recipients)
+% endif
+
 
 ## Send mail
 email_cfg_name = "${cc_email_cfg.name()}"
