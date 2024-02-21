@@ -75,16 +75,18 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
   ),
 )
 
-ocm_mapping_cfg = cnudie.util.OcmLookupMappingConfig.from_dict(
-  raw_mappings=${component_descriptor_trait.ocm_repository_mappings()},
-)
+<%
+import concourse.steps
+template = concourse.steps.step_template('component_descriptor')
+ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
+%>
+${ocm_repository_lookup(component_descriptor_trait.ocm_repository_mappings())}
 
-ocm_repo = component.current_repository_ctx()
-ocm_version_lookup = cnudie.retrieve.version_lookup(
-    ocm_repository_lookup=ocm_mapping_cfg,
-)
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    ocm_repository_lookup=ocm_mapping_cfg,
+    ocm_repository_lookup=ocm_repository_lookup,
+)
+ocm_version_lookup = cnudie.retrieve.version_lookup(
+    ocm_repository_lookup=ocm_repository_lookup,
 )
 
 githubrepobranch = GitHubRepoBranch(

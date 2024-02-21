@@ -39,24 +39,27 @@ class CtxCfg:
     github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
     cache_dir: str | None = None # used (e.g.) for caching component-descriptors
     ocm_repo_base_url: str | None = None # fka ctx_repo_url
-    ocm_repository_mappings: list[dict] | None = None # list[cnudie.util.OcmResolverConfig]
+    ocm_repository_mappings: list | None = None
 
     @property
     def ocm_repository_lookup(self) -> 'cnudie.retrieve.OcmRepositoryLookup | None':
         if not self.ocm_repository_mappings:
             return None
 
-        import cnudie.retrieve
         import cnudie.util
+        import gci.componentmodel as cm
 
-        mapping_cfg = cnudie.util.OcmLookupMappingConfig(
-            mappings=[
-                dacite.from_dict(cnudie.util.OcmResolverConfig, mapping) for mapping
-                in self.ocm_repository_mappings
-            ]
-        )
+        def iter_ocm_repositories(component: cm.ComponentIdentity, /):
+            for entry in self.ocm_repository_mappings:
+                if not entry.prefix:
+                    yield entry.repository
+                    continue
 
-        return cnudie.retrieve.ocm_repository_lookup(mapping_cfg)
+                component_name = cnudie.util.to_component_name(component)
+                if component_name.startswith(entry.prefix):
+                    yield entry.repository
+
+        return iter_ocm_repositories
 
     @property
     def ocm_lookup(self) -> 'cnudie.retrieve.ComponentDescriptorLookupById | None':
@@ -74,6 +77,21 @@ class CtxCfg:
             return None
         else:
             return os.path.join(self.cache_dir, 'component-descriptors')
+
+    def __post_init__(self):
+        if not self.ocm_repository_mappings:
+            return
+
+        # late import to avoid cyclic imports
+        import cnudie.retrieve
+        OcmRepositoryMappingEntry = cnudie.retrieve.OcmRepositoryMappingEntry
+
+        self.ocm_repository_mappings = [
+            dacite.from_dict(
+                data_class=OcmRepositoryMappingEntry,
+                data=mapping
+            ) for mapping in self.ocm_repository_mappings
+        ]
 
 
 @dataclasses.dataclass

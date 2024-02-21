@@ -200,9 +200,12 @@ if not email_cfg.get('mail_body'):
     )
 
 % if component_descriptor_trait:
-ocm_repository_lookup = cnudie.util.OcmLookupMappingConfig.from_dict(
-  raw_mappings=${ocm_repo_mappings},
-)
+<%
+import concourse.steps
+template = concourse.steps.step_template('component_descriptor')
+ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
+%>
+${ocm_repository_lookup(ocm_repo_mappings)}
 version_lookup = cnudie.retrieve.version_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
 )
