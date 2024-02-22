@@ -272,11 +272,19 @@ if descriptor_v2 and ctx_repository_base_url:
   % endif
 % endif
 
+component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+  ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(mapping_config),
+)
+version_lookup = cnudie.retrieve.version_lookup(
+  ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(mapping_config),
+)
+
 # determine "bom-diff" (changed component references)
 try:
   bom_diff = component_diff_since_last_release(
       component_descriptor=descriptor_v2,
-      mapping_config=mapping_config,
+      component_descriptor_lookup=component_descriptor_lookup,
+      version_lookup=version_lookup,
   )
 except:
   logger.warning('failed to determine component-diff')

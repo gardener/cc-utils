@@ -109,15 +109,13 @@ def base_component_descriptor_v2(
 
 def component_diff_since_last_release(
     component_descriptor: cm.ComponentDescriptor,
-    mapping_config: cnudie.util.OcmLookupMappingConfig,
+    component_descriptor_lookup,
+    version_lookup,
 ):
     component: cm.Component = ci.util.not_none(
         component_descriptor.component,
     )
 
-    version_lookup = cnudie.retrieve.version_lookup(
-        ocm_repository_lookup=mapping_config,
-    )
     versions = version_lookup(
         component.identity()
     )
@@ -134,11 +132,6 @@ def component_diff_since_last_release(
 
     greatest_release_version = str(greatest_release_version)
     logger.info('last released version: ' + str(greatest_release_version))
-
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=mapping_config,
-        default_absent_ok=False,
-    )
 
     greatest_released_cd = component_descriptor_lookup(cm.ComponentIdentity(
         name=component.name,
