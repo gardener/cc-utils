@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import enum
 import typing
 
 from model.base import (
@@ -23,6 +24,10 @@ class ServiceAccountConfig(ModelBase):
     def namespace(self) -> str:
         return self.raw['namespace']
 
+
+class RotationStrategy(enum.StrEnum):
+    SECRET = 'secret'
+    TOKEN_REQUEST = 'tokenRequest'
 
 class KubernetesConfig(NamedModelElement):
     def _required_attributes(self):
@@ -47,3 +52,8 @@ class KubernetesConfig(NamedModelElement):
         fallback to default if no namespace is configured
         '''
         return self.raw.get('namespace', 'default')
+
+    def rotation_strategy(self) -> RotationStrategy:
+        raw = self.raw.get('rotation_strategy', 'secret')
+        return RotationStrategy(raw)
+
