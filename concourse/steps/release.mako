@@ -126,12 +126,13 @@ githubrepobranch = github.util.GitHubRepoBranch(
 mapping_config = cnudie.util.OcmLookupMappingConfig.from_dict(
     raw_mappings = ${ocm_repository_mappings},
 )
+ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(mapping_config)
 
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-  ocm_repository_lookup=mapping_config,
+  ocm_repository_lookup=ocm_repository_lookup,
 )
 version_lookup = cnudie.retrieve.version_lookup(
-  ocm_repository_lookup=mapping_config,
+  ocm_repository_lookup=ocm_repository_lookup,
 )
 
 component_descriptor = cdu.component_descriptor_from_dir(
