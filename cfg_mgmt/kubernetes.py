@@ -47,72 +47,127 @@ def rotate_cfg_element(
 
     # find service-account
     service_account_config = cfg_to_rotate.service_account()
+
     sa: V1ServiceAccount = core_api.read_namespaced_service_account(
         name=service_account_config.name(),
         namespace=service_account_config.namespace(),
     )
-    old_tokens = [{"name": token.name} for token in sa.secrets] if sa.secrets else []
-    secret_id = {
-        'old_tokens': old_tokens,
-    }
 
-    # create new token
-    new_access_token_name = _create_token_for_sa(
-        core_api=core_api,
-        service_account=sa,
-    )
+    if cfg_element.rotation_strategy() == model.kubernetes.RotationStrategy.TOKEN_REQUEST:
+        if not (bound_secret_name := cfg_to_rotate.raw.get('bound_secret_name')):
+            raise ValueError('Token request rotation requires attribute "bound_secret_name" in kubernetes-cfg.')
 
-    new_access_token = _wait_for_token_secret(
-        core_api=core_api,
-        token_name=new_access_token_name,
-        token_namespace=service_account_config.namespace(),
-    )
+        secret_id = {
+            'old_tokens': [{"name": bound_secret_name}],
+        }
 
-    if not new_access_token:
-        # the cluster controller did not update the secret in the given time. Clean up
-        # and raise
-        core_api.delete_namespaced_secret(
-            new_access_token_name,
-            service_account_config.namespace(),
-        )
-        raise RuntimeError(
-            'Service account token-secret was not populated with the required data in time.'
-        )
-
-    # patch service-account with new secret (this updates the secret that will be mounted to
-    # k8s-pods)
-    patched_sa = _update_sa(
-        core_api=core_api,
-        service_account=sa,
-        token_list=[{'name': new_access_token_name}]
-    )
-
-    # create new kubeconfig from new access token
-    updated_kubeconfig = _update_kubeconfig(
-        kubeconfig=cfg_element.kubeconfig(),
-        patched_service_account=patched_sa,
-        new_access_token=new_access_token,
-    )
-    cfg_to_rotate.raw['kubeconfig'] = updated_kubeconfig
-
-    def revert():
-        logger.warning(
-            f"An error occurred during update of kubernetes config '{cfg_to_rotate.name()}', "
-            'rolling back'
-        )
-        # revert changes to service-account
-        _update_sa(
+        binding_secret_name = _create_secret_for_token_bind(
             core_api=core_api,
-            service_account=patched_sa,
-            token_list=old_tokens,
+            service_account=sa,
         )
 
-        # delete newly created service-account token
-        _delete_sa_token(
-            core_api=core_api,
+        expiration_seconds = 60 * 60 * 24 * 90 # 7776000s = 90d is max
+        new_sa_access_token = core_api.create_namespaced_service_account_token(
+            name=service_account_config.name(),
             namespace=service_account_config.namespace(),
-            token_name=new_access_token_name,
+            body={
+                "spec": {"expirationSeconds": expiration_seconds},
+                "bound_object_ref": {"name": binding_secret_name, "kind": "Secret"},
+            },
         )
+
+        if not new_sa_access_token:
+            # the token was not created for service account. Clean up
+            # and raise
+            core_api.delete_namespaced_secret(
+                name=binding_secret_name,
+                namespace=service_account_config.namespace(),
+            )
+            raise RuntimeError('Error creating new service account token.')
+
+        # update kubeconfig with new token
+        cfg_to_rotate.kubeconfig()["users"][0]["user"]["token"] = new_sa_access_token.status.token
+
+        cfg_to_rotate.raw["bound_secret_name"] = binding_secret_name
+
+        def revert():
+            logger.warning(
+                f"An error occurred during update of kubernetes config '{cfg_to_rotate.name()}', "
+                'rolling back'
+            )
+
+            # delete newly created service-account token
+            core_api.delete_namespaced_secret(
+                name=binding_secret_name,
+                namespace=service_account_config.namespace(),
+            )
+
+    elif cfg_element.rotation_strategy() == model.kubernetes.RotationStrategy.SECRET:
+        old_tokens = [{"name": token.name} for token in sa.secrets] if sa.secrets else []
+        secret_id = {
+            'old_tokens': old_tokens,
+        }
+
+        # create new token
+        new_access_token_name = _create_token_for_sa(
+            core_api=core_api,
+            service_account=sa,
+        )
+
+        new_access_token = _wait_for_token_secret(
+            core_api=core_api,
+            token_name=new_access_token_name,
+            token_namespace=service_account_config.namespace(),
+        )
+
+        if not new_access_token:
+            # the cluster controller did not update the secret in the given time. Clean up
+            # and raise
+            core_api.delete_namespaced_secret(
+                new_access_token_name,
+                service_account_config.namespace(),
+            )
+            raise RuntimeError(
+                'Service account token-secret was not populated with the required data in time.'
+            )
+
+        # patch service-account with new secret (this updates the secret that will be mounted to
+        # k8s-pods)
+        patched_sa = _update_sa(
+            core_api=core_api,
+            service_account=sa,
+            token_list=[{'name': new_access_token_name}]
+        )
+
+        # create new kubeconfig from new access token
+        updated_kubeconfig = _update_kubeconfig(
+            kubeconfig=cfg_element.kubeconfig(),
+            patched_service_account=patched_sa,
+            new_access_token=new_access_token,
+        )
+        cfg_to_rotate.raw['kubeconfig'] = updated_kubeconfig
+
+        def revert():
+            logger.warning(
+                f"An error occurred during update of kubernetes config '{cfg_to_rotate.name()}', "
+                'rolling back'
+            )
+            # revert changes to service-account
+            _update_sa(
+                core_api=core_api,
+                service_account=patched_sa,
+                token_list=old_tokens,
+            )
+
+            # delete newly created service-account token
+            _delete_sa_token(
+                core_api=core_api,
+                namespace=service_account_config.namespace(),
+                token_name=new_access_token_name,
+            )
+
+    else:
+        raise NotImplementedError(f'{cfg_element.rotation_strategy()=}')
 
     return revert, secret_id, cfg_to_rotate
 
@@ -156,6 +211,28 @@ def _create_token_for_sa(
     )
     # not all required values are set on the returned object yet. Return only name so that we can
     # fetch it later (name will be generated by the kube-apiserver)
+    return token.metadata.name
+
+
+def _create_secret_for_token_bind(
+    core_api: CoreV1Api,
+    service_account: V1ServiceAccount,
+) -> str:
+    service_account_name = service_account.metadata.name
+    service_account_namespace = service_account.metadata.namespace
+    token = core_api.create_namespaced_secret(
+        namespace=service_account_namespace,
+        body=V1Secret(
+            api_version='v1',
+            kind='Secret',
+            metadata=V1ObjectMeta(
+                generate_name=f'{service_account_name}-token-bind-',
+            ),
+            type='Opaque',
+        ),
+    )
+    # not all required values are set on the returned object yet. Return only name so that we can
+    # store it for deleting on next rotation
     return token.metadata.name
 
 

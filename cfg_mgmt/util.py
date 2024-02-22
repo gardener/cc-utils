@@ -168,6 +168,11 @@ def write_named_element(
     # To avoid this for kubernetes configs, only update the part that holds the kubeconfig
     if cfg_element._type_name == 'kubernetes':
         file_contents[cfg_element.name()]['kubeconfig'] = cfg_element.raw['kubeconfig']
+
+        if not cfg_element.raw.get('bound_secret_name'):
+            return
+
+        file_contents[cfg_element.name()]['bound_secret_name'] = cfg_element.raw['bound_secret_name']
     # for all other cases, just replace the contents of the top-level element (this will resolve
     # anchors)
     else:
