@@ -112,7 +112,15 @@ class Metadata:
     datasource: str
     type: str
     relation: Relation | None = None
-    creation_date: datetime.datetime | str = datetime.datetime.now()
+    creation_date: datetime.datetime | str = None
+
+    def __post_init__(self):
+        # only determine creation date on/post init because otherwise the creation date will
+        # be the date when this module was imported
+        if not self.creation_date:
+            # since the dataclass is frozen, `__setattr__` must be used
+            # [ref](https://docs.python.org/3/library/dataclasses.html#frozen-instances)
+            object.__setattr__(self, 'creation_date', datetime.datetime.now())
 
 
 @dataclasses.dataclass(frozen=True)
