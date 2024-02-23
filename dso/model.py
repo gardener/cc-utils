@@ -284,6 +284,21 @@ class ComplianceSnapshot:
                 return state
         return None
 
+    def purge_old_states(
+        self,
+        service: str = None,
+    ):
+        current_state = None
+        for state in sorted(self.state, key=lambda s: s.timestamp, reverse=True):
+            if not service == state.service:
+                continue
+
+            if not current_state:
+                current_state = state
+                continue
+
+            self.state.remove(state)
+
 
 @dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
