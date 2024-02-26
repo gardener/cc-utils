@@ -138,6 +138,7 @@ class ArtefactMetadata:
         | dso.model.CustomRescoring
         | dict
     )
+    id: int | None = None
     discovery_date: datetime.date | None = None
 
     @staticmethod
@@ -169,6 +170,7 @@ class ArtefactMetadata:
             ),
             meta=self.meta,
             data=self.data,
+            id=self.id,
             discovery_date=self.discovery_date,
         )
 

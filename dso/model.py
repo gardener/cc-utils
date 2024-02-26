@@ -351,4 +351,5 @@ class ArtefactMetadata:
         | ComplianceSnapshot
         | dict # fallback, there should be a type
     )
+    id: int | None = None
     discovery_date: datetime.date | None = None
