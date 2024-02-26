@@ -90,11 +90,11 @@ class OsReleaseInfo:
 
 @dataclasses.dataclass(frozen=True)
 class ComponentArtefactId:
-    componentName: str
-    componentVersion: str
-    artefactName: str
+    componentName: str | None
+    componentVersion: str | None
+    artefactName: str | None
     artefactKind: str
-    artefactVersion: str
+    artefactVersion: str | None
     artefactType: str
     artefactExtraId: dict
 
@@ -135,6 +135,7 @@ class ArtefactMetadata:
         | dso.model.FilesystemPaths
         | dso.model.CodecheckSummary
         | dso.model.ComplianceSnapshot
+        | dso.model.CustomRescoring
         | dict
     )
     discovery_date: datetime.date | None = None

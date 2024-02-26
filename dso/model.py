@@ -27,16 +27,16 @@ class Datasource:
 
 @dataclasses.dataclass(frozen=True)
 class LocalArtefactId:
-    artefact_name: str
-    artefact_version: str
+    artefact_name: str | None
+    artefact_version: str | None
     artefact_type: str
     artefact_extra_id: dict
 
 
 @dataclasses.dataclass(frozen=True)
 class ComponentArtefactId:
-    component_name: str
-    component_version: str
+    component_name: str | None
+    component_version: str | None
     artefact: LocalArtefactId
     artefact_kind: str = 'artefact' # artefact | resource | source
 
@@ -88,6 +88,7 @@ class Datatype:
     FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
     RESCORING_VULNERABILITIES = 'rescoring/vulnerabilities'
+    RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
 
 
@@ -264,6 +265,29 @@ class RescoringData:
     rescorings: list[Rescoring]
 
 
+@dataclasses.dataclass(frozen=True)
+class RescoringVulnerabilityFinding:
+    cve: str
+    affected_package_name: str
+
+
+@dataclasses.dataclass(frozen=True)
+class RescoringLicenseFinding:
+    name: str
+
+
+@dataclasses.dataclass(frozen=True)
+class CustomRescoring:
+    finding: (
+        RescoringVulnerabilityFinding
+        | RescoringLicenseFinding
+    )
+    severity: str
+    matching_rules: list[str]
+    user: dict
+    comment: str | None = None
+
+
 class ComplianceSnapshotStatuses(enum.StrEnum):
     ACTIVE = 'active'
     INACTIVE = 'inactive'
@@ -323,6 +347,7 @@ class ArtefactMetadata:
         | MalwareSummary
         | OsID
         | RescoringData
+        | CustomRescoring
         | ComplianceSnapshot
         | dict # fallback, there should be a type
     )
