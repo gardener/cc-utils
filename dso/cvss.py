@@ -128,6 +128,33 @@ class CVSSV3:
             availability=Availability(parts['A']),
         )
 
+    @staticmethod
+    def from_dict(cvss: dict) -> 'CVSSV3':
+        return dacite.from_dict(
+            data_class=CVSSV3,
+            data=cvss,
+            config=dacite.Config(
+                cast=[
+                    AccessVector,
+                    AttackComplexity,
+                    UserInteraction,
+                    PrivilegesRequired,
+                    Scope,
+                    Confidentiality,
+                    Integrity,
+                    Availability,
+                ],
+            ),
+        )
+
+    def __str__(self) -> str:
+        return (
+            f'AV:{self.access_vector.value}/AC:{self.attack_complexity.value}/'
+            f'PR:{self.privileges_required.value}/UI:{self.user_interaction.value}/'
+            f'S:{self.scope.value}/C:{self.confidentiality.value}/'
+            f'I:{self.integrity.value}/A:{self.availability.value}'
+        )
+
 
 class NetworkExposure(enum.Enum):
     PRIVATE = 'private'
