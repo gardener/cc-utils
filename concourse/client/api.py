@@ -391,7 +391,7 @@ class ConcourseApiBase:
         team_name: str,
         username: str,
         role: str='member',
-        github_auth_team: str=None,
+        github_auth_teams: list[str]=[],
     ):
         body = {
             "auth": {
@@ -402,11 +402,9 @@ class ConcourseApiBase:
                 }
             }
         }
-        if github_auth_team:
+        if github_auth_teams:
             body["auth"][role].update({
-                "groups": [
-                    "github:" + github_auth_team,
-                ]
+                'groups': [f'github:{team}' for team in github_auth_teams]
             })
 
         team_url = self.routes.team_url(team_name)
