@@ -295,16 +295,11 @@ class ConcourseTeamConfig(NamedModelElement):
     def role(self) -> str:
         return self.raw.get('role')
 
-    def github_auth_team(self, split: bool = False) -> typing.Optional[str]:
+    def github_auth_teams(self) -> list[str]:
         """
-        returns the github auth team (org:team)
-
-        @param split: if `true` return [org, team]
+        returns the github auth teams: [org:team, ...]
         """
-        git_auth_team = self.raw.get('git_auth_team')
-        if split and git_auth_team:
-            return git_auth_team.split(':')
-        return git_auth_team
+        return self.raw.get('github_auth_teams', [])
 
     def has_basic_auth_credentials(self) -> bool:
         if self.username() or self.password():
@@ -314,7 +309,7 @@ class ConcourseTeamConfig(NamedModelElement):
     def _required_attributes(self):
         return [
             'concourse_endpoint_name',
-            'git_auth_team',
+            'github_auth_teams',
             'role',
             'service_user',
             'team_name',
