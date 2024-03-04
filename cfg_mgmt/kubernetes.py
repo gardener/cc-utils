@@ -55,7 +55,9 @@ def rotate_cfg_element(
 
     if cfg_element.rotation_strategy() == model.kubernetes.RotationStrategy.TOKEN_REQUEST:
         if not (bound_secret_name := cfg_to_rotate.raw.get('bound_secret_name')):
-            raise ValueError('Token request rotation requires attribute "bound_secret_name" in kubernetes-cfg.')
+            raise ValueError(
+                'Token request rotation requires attribute "bound_secret_name" in kubernetes-cfg.'
+            )
 
         secret_id = {
             'old_tokens': [{"name": bound_secret_name}],

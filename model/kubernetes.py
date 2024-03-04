@@ -29,6 +29,7 @@ class RotationStrategy(enum.StrEnum):
     SECRET = 'secret'
     TOKEN_REQUEST = 'tokenRequest'
 
+
 class KubernetesConfig(NamedModelElement):
     def _required_attributes(self):
         return {
@@ -56,4 +57,3 @@ class KubernetesConfig(NamedModelElement):
     def rotation_strategy(self) -> RotationStrategy:
         raw = self.raw.get('rotation_strategy', 'secret')
         return RotationStrategy(raw)
-
