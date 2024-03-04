@@ -37,9 +37,10 @@ def test_deserialisation_of_custom_resources():
     )
     component = component_descriptor.component
 
-    assert isinstance(component.resources[0].access, cm.Access)
+    assert isinstance(component.resources[0].access, dict)
+    assert component.resources[0].access.type == 'localFilesystemBlob'
     assert component.resources[1].access is None
-    assert isinstance(component.resources[2].access, cm.Access)
+    assert isinstance(component.resources[2].access, dict)
     assert isinstance(component.resources[3].access, cm.RelativeOciAccess)
 
 

@@ -66,6 +66,21 @@ class Access:
     type: typing.Optional[AccessTypeOrStr] = AccessType.NONE
 
 
+class AccessDict(dict):
+    '''
+    fallback for unknown access-types; it is api-compatible to `Access` in that it exposes its type
+    via the `type` attribute mimicking behaviour of `dataclasses` from this module, but otherwise
+    behaves as a `dict` (thus allowing de/reserialisation using dacite/dataclasses.asdict w/o losing
+    attributes).
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not 'type' in self:
+            raise ValueError('attribute `type` must be present')
+
+        self.type = self.get('type')
+
+
 @dc(frozen=True, kw_only=True)
 class LocalBlobGlobalAccess:
     digest: str
@@ -414,7 +429,7 @@ class SourceReference(LabelMethodsMixin):
     labels: list[Label] = dataclasses.field(default_factory=tuple)
 
 
-@dc(frozen=True)
+@dc
 class Resource(Artifact, LabelMethodsMixin):
     name: str
     version: str
@@ -428,7 +443,7 @@ class Resource(Artifact, LabelMethodsMixin):
         OciAccess,
         RelativeOciAccess,
         S3Access,
-        Access,
+        dict,
         None,
     ]
     digest: typing.Optional[DigestSpec] = None
@@ -436,6 +451,15 @@ class Resource(Artifact, LabelMethodsMixin):
     relation: ResourceRelation = ResourceRelation.LOCAL
     labels: typing.List[Label] = dataclasses.field(default_factory=tuple)
     srcRefs: list[SourceReference] = dataclasses.field(default_factory=tuple)
+
+    def __post_init__(self):
+        if dataclasses.is_dataclass((access := self.access)):
+            return
+
+        if isinstance(access, dict):
+            if not 'type' in access:
+                raise ValueError('attribute `type` must be present')
+            self.access = AccessDict(access)
 
 
 @dc(frozen=True, kw_only=True)
@@ -495,11 +519,20 @@ OciRepositoryContext = OciOcmRepository
 @dc
 class Source(Artifact, LabelMethodsMixin):
     name: str
-    access: GithubAccess | Access
+    access: GithubAccess | dict
     version: typing.Optional[str] = None  # introduce this backwards-compatible for now
     extraIdentity: typing.Dict[str, str] = dataclasses.field(default_factory=dict)
     type: typing.Union[ArtefactType, str] = ArtefactType.GIT
     labels: typing.List[Label] = dataclasses.field(default_factory=list)
+
+    def __post_init__(self):
+        if dataclasses.is_dataclass((access := self.access)):
+            return
+
+        if isinstance(access, dict):
+            if not 'type' in access:
+                raise ValueError('attribute `type` must be present')
+            self.access = AccessDict(access)
 
 
 # backwards-compatibility
