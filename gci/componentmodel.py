@@ -84,7 +84,7 @@ class LocalBlobAccess(Access):
     '''
     type: AccessTypeOrStr = AccessType.LOCAL_BLOB
     localReference: str
-    size: int = None
+    size: int | None = None
     mediaType: str = 'application/data'
     referenceName: typing.Optional[str] = None
     globalAccess: typing.Optional[LocalBlobGlobalAccess | dict | None] = None
