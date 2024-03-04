@@ -262,7 +262,7 @@ instead of repository-url, may also be the name of a cfg-element.</p></td>
 </pre></div>
 </div>
 </p></td>
-<td><p>List[OcmResolverConfig]</p></td>
+<td><p>list</p></td>
 <td><p><p>used to explicitly configure where to lookup component descriptors. If given,
 ocm_repository <em>must</em> be defined.</p>
 <p><strong>Example:</strong></p>
@@ -270,22 +270,11 @@ ocm_repository <em>must</em> be defined.</p>
 <span class="w">  </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/some-org/</span>
 <span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ocm_repo_url</span>
 <span class="w">  </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/another-org/</span>
-<span class="w">  </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w"> </span><span class="c1"># default</span>
 <span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">another_ocm_repo_url</span>
 <span class="w">  </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.com/yet-another-org/</span>
 </pre></div>
 </div>
-<p>If not given, a default mapping will be applied that is equivalent to the following:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">repository</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;ctx_repository_base_url&gt;</span>
-<span class="w">  </span><span class="nt">prefix</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;&#39;</span>
-<span class="w">  </span><span class="nt">priority</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-</pre></div>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>If multiple mappings match a component name, they will be tried in order of priority
-with longest matching prefix first.</p>
-</div>
+<p>Value from ocm_repository is implicitly added as entry.</p>
 </p></td>
 </tr>
 </tbody>
