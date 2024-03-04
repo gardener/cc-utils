@@ -2,6 +2,8 @@
 
 set -e
 
+pip3 install pytest==8.0.0 # pytest 8.1.0 uses a deprecated function which raises an error
+
 if ! which pytest &>/dev/null; then
   echo "pytest is required (install with pip(3) install pytest)"
   exit 1
