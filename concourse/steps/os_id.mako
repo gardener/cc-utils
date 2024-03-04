@@ -125,7 +125,6 @@ github.compliance.report.create_or_update_github_issues(
 % endif
   delivery_svc_client=delivery_db_client,
   delivery_svc_endpoints=delivery_svc_endpoints,
-  license_cfg=None,
 )
 
 </%def>

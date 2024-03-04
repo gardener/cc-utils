@@ -10,16 +10,12 @@ import urllib.parse
 import cachetools
 import github3
 import github3.issues
-import github3.issues.milestone
 import github3.issues.issue
-import github3.orgs
 import github3.repos
-import github3.users
 
 import gci.componentmodel as cm
 import requests
 
-import ccc.delivery
 import ccc.github
 import checkmarx.model
 import cfg_mgmt.model as cmm
@@ -29,7 +25,6 @@ import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import delivery.model
-import dso.cvss
 import github.codeowners
 import github.compliance.issue
 import github.compliance.milestone as gcmi
@@ -38,13 +33,9 @@ import github.retry
 import github.user
 import github.util
 import model.delivery
-import protecode.model as pm
-import protecode.report as pr
 
 logger = logging.getLogger(__name__)
 
-_compliance_label_vulnerabilities = github.compliance.issue._label_bdba
-_compliance_label_licenses = github.compliance.issue._label_licenses
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 _compliance_label_malware = github.compliance.issue._label_malware
@@ -55,10 +46,6 @@ _compliance_label_no_status = github.compliance.issue._label_no_status
 _compliance_label_undefined_policy = github.compliance.issue._label_undefined_policy
 
 _ctx_label_prefix = github.compliance.issue._label_prefix_ctx
-
-
-def _criticality_label(classification: gcm.Severity):
-    return f'compliance-priority/{str(classification)}'
 
 
 @cachetools.cached(cache={})
@@ -126,7 +113,6 @@ def _compliance_status_summary(
     report_urls: tuple[str] | set[str],
     issue_description: str,
     issue_value: str,
-    latest_processing_date: datetime.date=None,
 ):
     if isinstance(artifacts[0].type, enum.Enum):
         artifact_type = artifacts[0].type.value
@@ -152,9 +138,6 @@ def _compliance_status_summary(
         | URLs | {artifact_urls} |
         | {issue_description} | {issue_value} |
     ''')
-
-    if latest_processing_date:
-        summary += f'| Latest Processing Date | {latest_processing_date.isoformat()} |\n'
 
     summary += textwrap.dedent(f'''
         The aforementioned {_pluralise(artifact_type, len(artifacts))} yielded findings
@@ -195,88 +178,6 @@ def _ocm_result_group_template_vars(
         'artifact_version': artifact_versions,
         'artifact_type': artifact_types,
         'delivery_dashboard_url': delivery_dashboard_url,
-    }
-
-
-def _vulnerability_template_vars(
-    result_group: gcm.ScanResultGroup,
-    cfg_set=None,
-    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
-    latest_processing_date: datetime.date=None,
-) -> dict:
-    results: tuple[pm.VulnerabilityScanResult] = result_group.results_with_findings
-    analysis_results = [r.result for r in results]
-    component = result_group.component
-    artefact = result_group.artifact
-
-    cve_summary = pr.scan_result_group_to_report_str(
-        results=result_group.results,
-        rescoring_rules=rescoring_rules,
-    )
-
-    def bdba_rescoring_cmd(cfg_set):
-        nonlocal component
-
-        try:
-            protecode_cfg = cfg_set.protecode()
-        except Exception as e:
-            rescoring_cmd = f'warning: {e}'
-            return rescoring_cmd
-
-        bdba_product_ids = [str(ar.product_id()) for ar in analysis_results]
-        ctx_repo = component.current_repository_ctx()
-        ctx_repo_url = ctx_repo.baseUrl
-
-        return textwrap.dedent(f'''\
-            for app in {' '.join(bdba_product_ids)}; do
-                gardener-ci bdba rescore \\
-                    --ctx-repo {ctx_repo_url} \\
-                    --protecode-cfg {protecode_cfg._name} \\
-                    --product-id $app \\
-                    --rescoring-rules rescoring-rules.yaml \\
-                    --assess
-            done
-        ''')
-
-    if cfg_set:
-        rescoring_cmd = f'```\n{bdba_rescoring_cmd(cfg_set=cfg_set)}\n```'
-    else:
-        rescoring_cmd = 'warning: bdba-command not available (check scanlog)'
-
-    return {
-        'summary': _compliance_status_summary(
-            component=component,
-            artifacts=[artefact],
-            report_urls={ar.report_url() for ar in analysis_results},
-            issue_description='CVEs',
-            issue_value='See below for further information',
-            latest_processing_date=latest_processing_date,
-        ) + '\n' + cve_summary,
-        'rescoring_cmd': rescoring_cmd,
-    }
-
-
-def _license_template_vars(
-    result_group: gcm.ScanResultGroup,
-    license_cfg: image_scan.LicenseCfg=None,
-    latest_processing_date: datetime.date=None,
-) -> dict:
-    results: tuple[pm.LicenseScanResult] = result_group.results_with_findings
-    analysis_results = [r.result for r in results]
-    component = result_group.component
-    artifact = result_group.artifact
-
-    prohibited_licenses = {r.license.name for r in results if r._severity(license_cfg=license_cfg)}
-
-    return {
-        'summary': _compliance_status_summary(
-            component=component,
-            artifacts=[artifact],
-            report_urls={ar.report_url() for ar in analysis_results},
-            issue_description='Prohibited Licenses',
-            issue_value=' ,'.join(prohibited_licenses),
-            latest_processing_date=latest_processing_date,
-        ),
     }
 
 
@@ -391,11 +292,7 @@ def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> di
 
 def _template_vars(
     result_group: gcm.ScanResultGroup,
-    license_cfg: image_scan.LicenseCfg=None,
     delivery_dashboard_url: str='',
-    cfg_set=None,
-    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
-    latest_processing_date: datetime.date=None,
 ) -> dict:
     scanned_element = result_group.results[0].scanned_element
     issue_type = result_group.issue_type
@@ -417,22 +314,7 @@ def _template_vars(
     else:
         raise TypeError(result_group)
 
-    if issue_type == _compliance_label_vulnerabilities:
-        template_variables |= _vulnerability_template_vars(
-            result_group=result_group,
-            cfg_set=cfg_set,
-            rescoring_rules=rescoring_rules,
-            latest_processing_date=latest_processing_date,
-        )
-
-    elif issue_type == _compliance_label_licenses:
-        template_variables |= _license_template_vars(
-            result_group=result_group,
-            license_cfg=license_cfg,
-            latest_processing_date=latest_processing_date,
-        )
-
-    elif issue_type == _compliance_label_os_outdated:
+    if issue_type == _compliance_label_os_outdated:
         template_variables |= _os_info_template_vars(result_group)
 
     elif issue_type == _compliance_label_checkmarx:
@@ -586,19 +468,12 @@ def _scanned_element_assignees(
 def _scanned_element_title(
     scanned_element: gcm.Target,
     issue_type: str,
-    target_milestone: github3.repos.repo.milestone.Milestone=None,
 ) -> str:
     if gcm.is_ocm_artefact_node(scanned_element):
         c = scanned_element.component
         a = gcm.artifact_from_node(scanned_element)
-        if (issue_type == _compliance_label_vulnerabilities or
-            issue_type == _compliance_label_licenses):
-            title = f'[{issue_type}] - {c.name}:{c.version}:{a.name}:{a.version}'
-            if target_milestone:
-                title += f' - {target_milestone.title}'
-            return title
-        else:
-            return f'[{issue_type}] - {c.name}:{a.name}'
+
+        return f'[{issue_type}] - {c.name}:{a.name}'
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
         return f'[{issue_type}] - {scanned_element.name}'
@@ -647,10 +522,7 @@ def create_or_update_github_issues(
     github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg]=None,
     delivery_svc_client: delivery.client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
-    license_cfg: image_scan.LicenseCfg=None, # XXX -> callback
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
-    cfg_set=None,
-    rescoring_rules: tuple[dso.cvss.RescoringRule]=None,
 ):
     result_groups = result_group_collection.result_groups
     result_groups_with_findings = result_group_collection.result_groups_with_findings
@@ -670,7 +542,6 @@ def create_or_update_github_issues(
         result_group: gcm.ScanResultGroup,
         action: PROCESSING_ACTION,
     ):
-        nonlocal cfg_set
         nonlocal gh_api
         nonlocal err_count
         nonlocal max_processing_days
@@ -698,25 +569,16 @@ def create_or_update_github_issues(
         known_issues = _all_issues(repository)
 
         if action == PROCESSING_ACTION.DISCARD:
-            latest_processing_date = scan_result.calculate_latest_processing_date(
-                max_processing_days=max_processing_days,
-                delivery_svc_client=delivery_svc_client,
-                repository=repository,
-            )
-
             github.compliance.issue.close_issue_if_present(
                 scanned_element=scan_result.scanned_element,
                 issue_type=issue_type,
                 repository=repository,
                 known_issues=known_issues,
                 ctx_labels=ctx_labels,
-                latest_processing_date=latest_processing_date,
             )
 
             element_name = github.compliance.issue.unique_name_for_element(
                 scanned_element=scan_result.scanned_element,
-                issue_type=issue_type,
-                latest_processing_date=latest_processing_date,
             )
             logger.info(f'closed (if existing) gh-issue for {element_name=}')
 
@@ -798,11 +660,7 @@ def create_or_update_github_issues(
 
             template_variables = _template_vars(
                 result_group=result_group,
-                license_cfg=license_cfg,
                 delivery_dashboard_url=delivery_dashboard_url,
-                cfg_set=cfg_set,
-                rescoring_rules=rescoring_rules,
-                latest_processing_date=latest_processing_date,
             )
 
             for issue_cfg in github_issue_template_cfgs:
@@ -830,18 +688,14 @@ def create_or_update_github_issues(
                     title=_scanned_element_title(
                         scanned_element=scan_result.scanned_element,
                         issue_type=issue_type,
-                        target_milestone=target_milestone,
                     ),
                 )
 
                 element_name = github.compliance.issue.unique_name_for_element(
                     scanned_element=scan_result.scanned_element,
-                    issue_type=issue_type,
-                    latest_processing_date=latest_processing_date,
                 )
                 logger.info(
-                    f'updated gh-issue for {element_name=} '
-                    f'{issue_type=}: {issue.html_url=}'
+                    f'updated gh-issue for {element_name=} {issue_type=}: {issue.html_url=}'
                 )
             except github3.exceptions.GitHubError as ghe:
                 err_count += 1
@@ -904,9 +758,6 @@ def create_or_update_github_issues(
             known_issues=known_issues,
             issue_type=issue_type,
             ctx_labels=all_ctx_labels,
-            max_processing_days=max_processing_days,
-            delivery_svc_client=delivery_svc_client,
-            repository=overwrite_repository,
         )
 
     if err_count > 0:
@@ -921,9 +772,6 @@ def close_issues_for_absent_or_assessed_resources(
     known_issues: typing.Iterator[github3.issues.issue.ShortIssue],
     issue_type: str | None,
     ctx_labels: typing.Iterable[str]=(),
-    max_processing_days: gcm.MaxProcessingTimesDays=None,
-    delivery_svc_client: delivery.client.DeliveryServiceClient=None,
-    repository: github3.repos.Repository=None,
 ):
     '''
     closes all open issues for scanned elements that are not present in given result-groups.
@@ -995,19 +843,10 @@ def close_issues_for_absent_or_assessed_resources(
 
     resources_in_bom = set()
     for result_group in result_groups:
-        scan_result = result_group.results[0]
-        scanned_element = scan_result.scanned_element
-
-        latest_processing_date = scan_result.calculate_latest_processing_date(
-            max_processing_days=max_processing_days,
-            delivery_svc_client=delivery_svc_client,
-            repository=repository,
-        )
+        scanned_element = result_group.results[0].scanned_element
 
         name = github.compliance.issue.unique_name_for_element(
             scanned_element=scanned_element,
-            issue_type=issue_type,
-            latest_processing_date=latest_processing_date,
         )
         prefix = github.compliance.issue.prefix_for_element(scanned_element)
 
@@ -1019,10 +858,7 @@ def close_issues_for_absent_or_assessed_resources(
         logger.info(f'Digest-Label for {result_group.name=}: {resource_label=}')
         component_resources_to_issues.pop(resource_label, None)
 
-        resources_in_bom.add(github.compliance.issue.unique_name_for_element(
-            scanned_element=scanned_element,
-            issue_type=issue_type,
-        ))
+        resources_in_bom.add(name)
 
     # any issues that have not been removed thus far were not referenced by given result_groups
     close_issues(
