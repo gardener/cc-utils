@@ -453,7 +453,7 @@ class Resource(Artifact, LabelMethodsMixin):
     srcRefs: list[SourceReference] = dataclasses.field(default_factory=tuple)
 
     def __post_init__(self):
-        if dataclasses.is_dataclass((access := self.access)):
+        if dataclasses.is_dataclass(access := self.access):
             return
 
         if isinstance(access, dict):
@@ -526,7 +526,7 @@ class Source(Artifact, LabelMethodsMixin):
     labels: typing.List[Label] = dataclasses.field(default_factory=list)
 
     def __post_init__(self):
-        if dataclasses.is_dataclass((access := self.access)):
+        if dataclasses.is_dataclass(access := self.access):
             return
 
         if isinstance(access, dict):
