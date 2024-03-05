@@ -175,6 +175,12 @@ def retrieve(
                 Dumper=cm.EnumValueYamlDumper,
             )
         )
+    elif format == 'json':
+        print(
+            json.dumps(
+                dataclasses.asdict(component_descriptor),
+            )
+        )
     else:
         print(f'Error: don\'t know {format=}')
         exit(1)
