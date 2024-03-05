@@ -21,5 +21,5 @@ class ProcessingJob:
     component: cm.Component
     resource: cm.Resource
     upload_request: ContainerImageUploadRequest
-    processed_resource: cm.Resource = None  # added after re-upload
+    processed_resource: cm.Resource | None = None  # added after re-upload
     inject_ocm_coordinates_into_oci_manifest: bool = False
