@@ -125,16 +125,6 @@ class Metadata:
 
 
 @dataclasses.dataclass(frozen=True)
-class GreatestCVE:
-    greatestCvss3Score: float
-    reportUrl: str
-    product_id: int
-    group_id: int
-    base_url: str
-    bdba_cfg_name: str
-
-
-@dataclasses.dataclass(frozen=True)
 class CVE:
     cve: str | None
     cvss3Score: float
@@ -151,13 +141,6 @@ class CVE:
 @dataclasses.dataclass(frozen=True)
 class OsID:
     os_info: unixutil.model.OperatingSystemId
-
-
-@dataclasses.dataclass(frozen=True)
-class LicenseSummary:
-    licenses: list[str]
-    reportUrl: str
-    productId: int
 
 
 @dataclasses.dataclass(frozen=True)
@@ -340,9 +323,7 @@ class ArtefactMetadata:
         CodecheckSummary
         | ComponentSummary
         | FilesystemPaths
-        | GreatestCVE
         | CVE
-        | LicenseSummary
         | License
         | MalwareSummary
         | OsID
