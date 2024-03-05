@@ -82,7 +82,7 @@ class PrefixUploader:
         src_tag = src_ref.tag
 
         if self._mangle:
-            src_base_ref  = src_base_ref.replace('.', '_')
+            src_base_ref = src_base_ref.replace('.', '_')
 
         tgt_ref = ci.util.urljoin(
             self._prefix,
