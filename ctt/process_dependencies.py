@@ -465,6 +465,21 @@ def process_images(
             oci_client=oci_client,
         )
 
+        if extra_tags := processing_job.extra_tags:
+            target_ref = om.OciImageReference(processing_job.upload_request.target_ref)
+            target_repo = target_ref.ref_without_tag
+            manifest_bytes = oci_client.manifest_raw(
+                image_reference=f'{target_repo}{docker_content_digest}',
+            ).content
+
+        for extra_tag in extra_tags:
+            push_target = f'{target_repo}:{extra_tag}'
+
+            oci_client.put_manifest(
+                image_reference=push_target,
+                manifest=manifest_bytes,
+            )
+
         if not docker_content_digest:
             raise RuntimeError(f'No Docker_Content_Digest returned for {processing_job=}')
 
