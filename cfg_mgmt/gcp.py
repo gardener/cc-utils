@@ -5,6 +5,7 @@ import logging
 import typing
 
 import googleapiclient
+import googleapiclient.errors
 
 import ccc.gcp
 import ccc.github
@@ -50,10 +51,17 @@ def delete_service_account_key(
     iam_client: googleapiclient.discovery.Resource,
     service_account_key_name: str,
 ):
-    iam_client.projects().serviceAccounts().keys().delete(
-        name=service_account_key_name,
-    ).execute()
-    logger.info('Deleted key: ' + service_account_key_name)
+    try:
+        iam_client.projects().serviceAccounts().keys().delete(
+            name=service_account_key_name,
+        ).execute()
+        logger.info('Deleted key: ' + service_account_key_name)
+
+    except googleapiclient.errors.HttpError as e:
+        if not e.status_code == 404:
+            raise
+
+        logger.warning(f'{service_account_key_name=} not found, will remove entry from config queue')
 
 
 def rotation_cfg_or_none(
