@@ -50,7 +50,7 @@ requests<3.0.0
 ruamel.yaml==0.17.21
 semver<4.0.0
 slackclient<3.0.0
-sphinx_rtd_theme<2.0.0
+sphinx_rtd_theme
 sseclient-py<2.0.0
 tabulate
 termcolor
