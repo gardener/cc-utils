@@ -380,28 +380,6 @@ def set_digest(image_reference: str, docker_content_digest: str) -> str:
     return f'{src_name}@{docker_content_digest}'
 
 
-def labels_with_original_tag(
-    resource: cm.Resource,
-    src_ref: str,
-) -> typing.Sequence[cm.Label]:
-    last_part = src_ref.split('/')[-1]
-    if '@' in last_part:
-        raise RuntimeError(
-            f'cannot extract tag from resource that is referenced via digest. {resource=}'
-        )
-
-    _, src_tag = src_ref.rsplit(':', 1)
-    original_tag_label = cm.Label(
-        name=original_tag_label_name,
-        value=src_tag,
-    )
-    src_labels = resource.labels or []
-    return ctt_util.add_label(
-        src_labels=src_labels,
-        label=original_tag_label,
-    )
-
-
 def process_images(
     processing_cfg_path,
     component_descriptor_v2,
