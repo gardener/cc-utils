@@ -458,7 +458,7 @@ def process_images(
         else:
             raise NotImplementedError(processing_mode)
 
-        docker_content_digest = process_upload_request(
+        oci_manifest_digest = process_upload_request(
             processing_job=processing_job,
             replication_mode=replication_mode,
             platform_filter=platform_filter,
@@ -469,7 +469,7 @@ def process_images(
             target_ref = om.OciImageReference(processing_job.upload_request.target_ref)
             target_repo = target_ref.ref_without_tag
             manifest_bytes = oci_client.manifest_raw(
-                image_reference=f'{target_repo}{docker_content_digest}',
+                image_reference=f'{target_repo}{oci_manifest_digest}',
             ).content
 
         for extra_tag in extra_tags:
@@ -480,13 +480,13 @@ def process_images(
                 manifest=manifest_bytes,
             )
 
-        if not docker_content_digest:
-            raise RuntimeError(f'No Docker_Content_Digest returned for {processing_job=}')
+        if not oci_manifest_digest:
+            raise RuntimeError(f'No oci_manifest_digest returned for {processing_job=}')
 
         if generate_cosign_signatures:
             digest_ref = set_digest(
                 processing_job.upload_request.target_ref,
-                docker_content_digest,
+                oci_manifest_digest,
             )
             cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
 
@@ -546,7 +546,7 @@ def process_images(
             # update the digest, because we might have changed the oci-artefact
             if digest.hashAlgorithm.upper() == 'SHA-256' and \
               digest.normalisationAlgorithm == 'ociArtifactDigest/v1':
-                digest.value = docker_content_digest.removeprefix('sha256:')
+                digest.value = oci_manifest_digest.removeprefix('sha256:')
 
                 processed_resource = dataclasses.replace(
                     processed_resource,
@@ -555,7 +555,7 @@ def process_images(
 
         if processing_job.upload_request.reference_target_by_digest:
             target_ref = om.OciImageReference.to_image_ref(processing_job.upload_request.target_ref)
-            target_ref = f'{target_ref.ref_without_tag}@{docker_content_digest}'
+            target_ref = f'{target_ref.ref_without_tag}@{oci_manifest_digest}'
 
             access = processed_resource.access
             if access.type is cm.AccessType.OCI_REGISTRY:
