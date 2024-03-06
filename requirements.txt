@@ -15,7 +15,7 @@ dacite
 deepmerge
 deprecated<2.0.0,>=1.2
 dockerfile-parse>=1.2
-docutils>=0.15,<0.20.0
+docutils
 elasticsearch<8.0.0,>=7.13
 ensure
 flake8
