@@ -20,6 +20,12 @@ cc-utils:
       version: ~
       component_descriptor:
         ocm_repository: europe-docker.pkg.dev/gardener-project/snapshots
+        component_labels:
+        - name: 'cloud.gardener.cnudie/responsibles'
+          value:
+          - type: 'githubTeam'
+            teamname: 'gardener/ci-maintainers'
+            github_hostname: 'github.com'
   jobs:
     head-update:
       steps:
