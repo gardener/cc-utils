@@ -87,7 +87,6 @@ class Datatype:
     COMPONENTS = 'components'
     FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
-    RESCORING_VULNERABILITIES = 'rescoring/vulnerabilities'
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
 
@@ -100,9 +99,8 @@ class RelationKind:
 class Relation:
     '''
     Describes relation between artefact_metadata.
-    This is necessary as "rescorings" (type: "rescoring/vulnerabilities") are stored as
-    artefact_metadata, but relate to artefact_metadata (of type "vulnerabilities/cve") as they
-    rescore vulnerability findings.
+    This is necessary as "rescorings" are stored as artefact_metadata, but relate to
+    artefact_metadata (of type "vulnerabilities/cve") as they rescore vulnerability findings.
     '''
     refers_to: str # see `Datatype` for supported values
     relation_kind: str # see `RelationKind` for supported values
@@ -223,32 +221,6 @@ class CodecheckSummary:
 
 
 @dataclasses.dataclass(frozen=True)
-class Vulnerability:
-    cve: str
-    rescored_severity: dso.cvss.CVESeverity
-    matching_rules: list[str]
-    comment: str | None # optional additional assessment message
-
-
-@dataclasses.dataclass(frozen=True)
-class BDBAComponent:
-    name: str
-    version: str | None # bdba might be unable to determine a version
-    source: str
-
-
-@dataclasses.dataclass(frozen=True)
-class Rescoring:
-    bdba_component: BDBAComponent
-    vulnerabilities: list[Vulnerability]
-
-
-@dataclasses.dataclass(frozen=True)
-class RescoringData:
-    rescorings: list[Rescoring]
-
-
-@dataclasses.dataclass(frozen=True)
 class RescoringVulnerabilityFinding:
     cve: str
     affected_package_name: str
@@ -327,7 +299,6 @@ class ArtefactMetadata:
         | License
         | MalwareSummary
         | OsID
-        | RescoringData
         | CustomRescoring
         | ComplianceSnapshot
         | dict # fallback, there should be a type
