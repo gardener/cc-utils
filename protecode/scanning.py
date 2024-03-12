@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import concurrent.futures
 import datetime
 import dateutil.parser
@@ -22,6 +23,7 @@ import delivery.client
 import dso.cvss
 import dso.labels
 import github.compliance.model as gcm
+import dso.model
 import oci.client
 import protecode.assessments
 import protecode.client
@@ -405,7 +407,7 @@ class ResourceGroupProcessor:
         auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
         use_product_cache: bool=True,
         delete_inactive_products_after_seconds: int=None,
-    ) -> typing.Iterator[pm.BDBAScanResult]:
+    ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
         r = resource_group[0].resource
         c = resource_group[0].component
         group_name = f'{c.name}/{r.name}:{r.version} - {r.type}'
@@ -514,37 +516,10 @@ class ResourceGroupProcessor:
                     },
                 )
 
-            seen_license_names = set()
-            for affected_package in scan_result.components():
-                for vulnerability in affected_package.vulnerabilities():
-                    if vulnerability.historical() or vulnerability.has_triage():
-                        continue
-                    yield pm.VulnerabilityScanResult(
-                        scanned_element=scanned_element,
-                        status=pm.UploadStatus.DONE,
-                        result=scan_result,
-                        state=state,
-                        affected_package=affected_package,
-                        vulnerability=vulnerability,
-                    )
-                for license in affected_package.licenses:
-                    if license.name in seen_license_names:
-                        continue
-                    seen_license_names.add(license.name)
-                    yield  pm.LicenseScanResult(
-                        scanned_element=scanned_element,
-                        status=pm.UploadStatus.DONE,
-                        result=scan_result,
-                        state=state,
-                        affected_package=affected_package,
-                        license=license,
-                        license_cfg=license_cfg,
-                    )
-            yield pm.ComponentsScanResult(
+            yield from protecode.util.iter_artefact_metadata(
                 scanned_element=scanned_element,
-                status=pm.UploadStatus.DONE,
-                result=scan_result,
-                state=state,
+                scan_result=scan_result,
+                license_cfg=license_cfg,
             )
 
 
@@ -669,7 +644,6 @@ def _resource_groups(
 
 def upload_grouped_images(
     protecode_api: protecode.client.ProtecodeApi,
-    bdba_cfg_name: str,
     component: cm.Component|cm.ComponentDescriptor,
     protecode_group_id=5,
     parallel_jobs=8,
@@ -687,7 +661,7 @@ def upload_grouped_images(
     auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
     yield_findings: bool=True,
     delete_inactive_products_after_seconds: int=None,
-) -> typing.Generator[pm.BDBAScanResult, None, None] | None:
+) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None] | None:
     # clear cache to make sure current scan execution retrieves latest bdba
     # products to copy existing assessments from
     _wait_for_scan_result.cache_clear()
@@ -734,7 +708,7 @@ def upload_grouped_images(
     def task_function(
         resource_group: tuple[cnudie.iter.ResourceNode],
         processing_mode: pm.ProcessingMode,
-    ) -> tuple[pm.BDBAScanResult]:
+    ) -> tuple[dso.model.ArtefactMetadata]:
         # only cache products if there is more than one resource group using them
         use_product_cache = len(tuple(find_related_groups(
             group=resource_group,
@@ -760,16 +734,12 @@ def upload_grouped_images(
             for g in groups
         }
         for completed_future in concurrent.futures.as_completed(futures):
-            scan_results = completed_future.result()
+            results = completed_future.result()
             if delivery_client:
-                protecode.util.sync_results_with_delivery_db(
-                    delivery_client=delivery_client,
-                    results=scan_results,
-                    bdba_cfg_name=bdba_cfg_name,
-                )
+                delivery_client.update_metadata(data=results)
             else:
                 logger.warning('Not uploading results to deliverydb, client not available')
             if yield_findings:
-                yield from scan_results
+                yield from results
 
     _wait_for_scan_result.cache_clear()

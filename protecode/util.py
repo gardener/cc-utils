@@ -3,17 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
 import datetime
 import hashlib
 import logging
-import time
 import typing
 
 import ci.log
-import delivery.client
+import cnudie.iter
+import concourse.model.traits.image_scan as image_scan
 import dso.model
 import gci.componentmodel as cm
-import github.compliance.model
+import github.compliance.model as gcm
+import github.compliance.report as gcr
 import oci.client
 import oci.model
 import protecode.model as pm
@@ -23,190 +25,117 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging(print_thread_id=True)
 
 
-def sync_results_with_delivery_db(
-    delivery_client: delivery.client.DeliveryServiceClient,
-    results: typing.Iterable[pm.BDBAScanResult],
-    bdba_cfg_name: str,
-    max_retries: int=3,
-    retry_count: int=0,
-):
-    try:
-        # Delete vulnerabilites with new triages from delivery-db for now
-        # XXX in the future, implement own triage object in delivery-db
-        delivery_client.update_metadata(
-            data=iter_artefact_metadata(
-                results=results,
-                bdba_cfg_name=bdba_cfg_name,
-            ),
-        )
-    except:
-        import traceback
-        traceback.print_exc()
-        if retry_count < max_retries:
-            retry_interval = (retry_count + 1) * 10
-            logger.warning(
-                f'caught error while updating delivery-db, will retry in {retry_interval} s'
-            )
-            time.sleep(retry_interval)
-            sync_results_with_delivery_db(
-                delivery_client=delivery_client,
-                results=results,
-                bdba_cfg_name=bdba_cfg_name,
-                max_retries=max_retries,
-                retry_count=retry_count + 1,
-            )
-
-
 def iter_artefact_metadata(
-    results: typing.Collection[pm.BDBAScanResult],
-    bdba_cfg_name: str,
-) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
-    seen_product_ids = set()
-    for result in results:
-        artefact = github.compliance.model.artifact_from_node(result.scanned_element)
-        artefact_ref = dso.model.component_artefact_id_from_ocm(
-            component=result.scanned_element.component,
-            artefact=artefact,
+    scanned_element: cnudie.iter.ResourceNode,
+    scan_result: pm.AnalysisResult,
+    license_cfg: image_scan.LicenseCfg,
+) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
+    discovery_date = datetime.date.today()
+
+    artefact = gcm.artifact_from_node(node=scanned_element)
+    artefact_ref = dso.model.component_artefact_id_from_ocm(
+        component=scanned_element.component,
+        artefact=artefact,
+    )
+
+    for package in scan_result.components():
+        package_id = dso.model.BDBAPackageId(
+            package_name=package.name(),
+            package_version=package.version(),
         )
 
-        if result.result.product_id() not in seen_product_ids:
-            seen_product_ids.add(result.result.product_id())
-            # yield dummy vulnerability finding to delete all remaining findings
-            # in case all findings have been triaged
-            meta = dso.model.Metadata(
-                datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.VULNERABILITIES_CVE,
-                creation_date=datetime.datetime.now()
-            )
+        scan_id = dso.model.BDBAScanId(
+            base_url=scan_result.base_url(),
+            report_url=scan_result.report_url(),
+            product_id=scan_result.product_id(),
+            group_id=scan_result.group_id(),
+        )
 
-            cve = dso.model.CVE(
-                cve=None,
-                cvss3Score=-1, # hardcoded assumption, -1 means finding was triaged
-                cvss=None,
-                affected_package_name=None,
-                affected_package_version=None,
-                reportUrl=result.result.report_url(),
-                product_id=result.result.product_id(),
-                group_id=result.result.group_id(),
-                base_url=result.result.base_url(),
-                bdba_cfg_name=bdba_cfg_name,
-            )
+        filesystem_paths = list({
+            dso.model.FilesystemPath(
+                path=path,
+                digest=digest,
+            ) for path, digest in iter_filesystem_paths(component=package)
+        })
 
-            yield dso.model.ArtefactMetadata(
-                artefact=artefact_ref,
-                meta=meta,
-                data=cve,
-            )
+        licenses = list({
+            dso.model.License(
+                name=license.name,
+            ) for license in package.licenses
+        })
 
-        if isinstance(result, pm.VulnerabilityScanResult):
-            result: pm.VulnerabilityScanResult
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.STRUCTURE_INFO,
+        )
 
-            meta = dso.model.Metadata(
-                datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.VULNERABILITIES_CVE,
-                creation_date=datetime.datetime.now()
-            )
+        structure_info = dso.model.StructureInfo(
+            id=package_id,
+            scan_id=scan_id,
+            licenses=licenses,
+            filesystem_paths=filesystem_paths,
+        )
 
-            if not result.vulnerability.cvss:
-                # no cvss3_vector specified -> ignore cvss2_vector
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=structure_info,
+            discovery_date=discovery_date,
+        )
+
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.LICENSE,
+        )
+
+        for license in licenses:
+            if license_cfg.is_allowed(license=license.name):
                 continue
 
-            cve = dso.model.CVE(
-                cve=result.vulnerability.cve(),
-                cvss3Score=result.vulnerability.cve_severity(),
-                cvss=result.vulnerability.cvss,
-                affected_package_name=result.affected_package.name(),
-                affected_package_version=result.affected_package.version(),
-                reportUrl=result.result.report_url(),
-                product_id=result.result.product_id(),
-                group_id=result.result.group_id(),
-                base_url=result.result.base_url(),
-                bdba_cfg_name=bdba_cfg_name,
+            license_finding = dso.model.LicenseFinding(
+                id=package_id,
+                scan_id=scan_id,
+                severity=gcm.Severity.BLOCKER.name,
+                license=license,
             )
 
             yield dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
-                discovery_date=result.discovery_date,
                 meta=meta,
-                data=cve,
-            )
-        elif isinstance(result, pm.LicenseScanResult):
-            result: pm.LicenseScanResult
-
-            meta = dso.model.Metadata(
-                datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.LICENSE,
-                creation_date=datetime.datetime.now()
+                data=license_finding,
+                discovery_date=discovery_date,
             )
 
-            license = dso.model.License(
-                name=result.license.name,
-                reportUrl=result.result.report_url(),
-                productId=result.result.product_id(),
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.VULNERABILITY,
+        )
+
+        for vulnerability in package.vulnerabilities():
+            if (
+                vulnerability.historical() or
+                vulnerability.has_triage() or
+                not vulnerability.cvss
+            ):
+                continue
+
+            vulnerability_finding = dso.model.VulnerabilityFinding(
+                id=package_id,
+                scan_id=scan_id,
+                severity=gcr._criticality_classification(
+                    cve_score=vulnerability.cve_severity(),
+                ).name,
+                cve=vulnerability.cve(),
+                cvss_v3_score=vulnerability.cve_severity(),
+                cvss=vulnerability.cvss,
             )
 
             yield dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
-                discovery_date=result.discovery_date,
                 meta=meta,
-                data=license,
+                data=vulnerability_finding,
+                discovery_date=discovery_date,
             )
-        elif isinstance(result, pm.ComponentsScanResult):
-            result: pm.ComponentsScanResult
-
-            meta = dso.model.Metadata(
-                datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.COMPONENTS,
-                creation_date=datetime.datetime.now()
-            )
-
-            components = list(dict.fromkeys(
-                [
-                    dso.model.ComponentVersion(
-                        name=component.name(),
-                        version=component.version(),
-                    )
-                    for component in result.result.components()
-                ]
-            ))
-            components = dso.model.ComponentSummary(
-                components=components
-            )
-
-            yield dso.model.ArtefactMetadata(
-                artefact=artefact_ref,
-                discovery_date=result.discovery_date,
-                meta=meta,
-                data=components,
-            )
-
-            meta = dso.model.Metadata(
-                datasource=dso.model.Datasource.BDBA,
-                type=dso.model.Datatype.FILESYSTEM_PATHS,
-                creation_date=datetime.datetime.now()
-            )
-
-            # avoid duplicates
-            filesystem_paths = set(
-                dso.model.FilesystemPath(
-                    path=path,
-                    digest=digest,
-                )
-                for component in result.result.components()
-                for path, digest in iter_filesystem_paths(component=component)
-            )
-            filesystem_paths = dso.model.FilesystemPaths(
-                paths=list(filesystem_paths),
-            )
-
-            yield dso.model.ArtefactMetadata(
-                artefact=artefact_ref,
-                discovery_date=result.discovery_date,
-                meta=meta,
-                data=filesystem_paths,
-            )
-        else:
-            raise NotImplementedError(f'processing of result with type {type(result)} not supported')
 
 
 def iter_filesystem_paths(
