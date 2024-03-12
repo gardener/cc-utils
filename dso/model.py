@@ -19,7 +19,7 @@ class ScanArtifact:
 
 class Datasource:
     ARTEFACT_ENUMERATOR = 'artefact-enumerator'
-    BDBA = 'bdba' # formerly protecode
+    BDBA = 'bdba'
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
@@ -80,12 +80,11 @@ def component_artefact_id_from_ocm(
 
 
 class Datatype:
+    STRUCTURE_INFO = 'structure_info'
+    LICENSE = 'finding/license'
+    VULNERABILITY = 'finding/vulnerability'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
-    VULNERABILITIES_CVE = 'vulnerabilities/cve'
     MALWARE = 'malware'
-    LICENSE = 'license'
-    COMPONENTS = 'components'
-    FILESYSTEM_PATHS = 'filesystem/paths'
     OS_IDS = 'os_ids'
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
@@ -100,7 +99,7 @@ class Relation:
     '''
     Describes relation between artefact_metadata.
     This is necessary as "rescorings" are stored as artefact_metadata, but relate to
-    artefact_metadata (of type "vulnerabilities/cve") as they rescore vulnerability findings.
+    artefact_metadata (of type "finding/vulnerability") as they rescore vulnerability findings.
     '''
     refers_to: str # see `Datatype` for supported values
     relation_kind: str # see `RelationKind` for supported values
@@ -123,51 +122,8 @@ class Metadata:
 
 
 @dataclasses.dataclass(frozen=True)
-class CVE:
-    cve: str | None
-    cvss3Score: float
-    cvss: dso.cvss.CVSSV3 | dict | None
-    affected_package_name: str | None
-    affected_package_version: str | None
-    reportUrl: str
-    product_id: int
-    group_id: int
-    base_url: str
-    bdba_cfg_name: str
-
-
-@dataclasses.dataclass(frozen=True)
 class OsID:
     os_info: unixutil.model.OperatingSystemId
-
-
-@dataclasses.dataclass(frozen=True)
-class License:
-    name: str
-    reportUrl: str
-    productId: int
-
-
-@dataclasses.dataclass(frozen=True)
-class ComponentVersion:
-    name: str
-    version: str
-
-
-@dataclasses.dataclass(frozen=True)
-class ComponentSummary:
-    components: list[ComponentVersion]
-
-
-@dataclasses.dataclass(frozen=True)
-class FilesystemPath:
-    path: str
-    digest: str
-
-
-@dataclasses.dataclass(frozen=True)
-class FilesystemPaths:
-    paths: list[FilesystemPath]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -221,14 +177,72 @@ class CodecheckSummary:
 
 
 @dataclasses.dataclass(frozen=True)
-class RescoringVulnerabilityFinding:
-    cve: str
-    affected_package_name: str
+class BDBAPackageId:
+    package_name: str
+    package_version: str | None # bdba might be unable to determine a package version
+    source: str = Datasource.BDBA
 
 
 @dataclasses.dataclass(frozen=True)
-class RescoringLicenseFinding:
+class BDBAScanId:
+    base_url: str
+    report_url: str
+    product_id: int
+    group_id: int
+    source: str = Datasource.BDBA
+
+
+@dataclasses.dataclass(frozen=True)
+class License:
     name: str
+
+
+@dataclasses.dataclass(frozen=True)
+class FilesystemPath:
+    path: str
+    digest: str
+
+
+@dataclasses.dataclass(frozen=True)
+class StructureInfo:
+    id: BDBAPackageId
+    scan_id: BDBAScanId
+    licenses: list[License]
+    filesystem_paths: list[FilesystemPath]
+
+
+@dataclasses.dataclass(frozen=True)
+class Finding:
+    id: BDBAPackageId
+    scan_id: BDBAScanId
+    severity: str
+
+
+@dataclasses.dataclass(frozen=True)
+class LicenseFinding(Finding):
+    license: License
+
+
+@dataclasses.dataclass(frozen=True)
+class VulnerabilityFinding(Finding):
+    cve: str
+    cvss_v3_score: float
+    cvss: dso.cvss.CVSSV3
+
+
+@dataclasses.dataclass(frozen=True)
+class RescoringFinding:
+    id: BDBAPackageId
+
+
+@dataclasses.dataclass(frozen=True)
+class RescoringVulnerabilityFinding(RescoringFinding):
+    cve: str
+
+
+@dataclasses.dataclass(frozen=True)
+class RescoringLicenseFinding(RescoringFinding):
+    license: License
 
 
 @dataclasses.dataclass(frozen=True)
@@ -238,8 +252,8 @@ class CustomRescoring:
         | RescoringLicenseFinding
     )
     severity: str
-    matching_rules: list[str]
     user: dict
+    matching_rules: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
 
 
@@ -292,11 +306,10 @@ class ArtefactMetadata:
     artefact: ComponentArtefactId
     meta: Metadata
     data: (
-        CodecheckSummary
-        | ComponentSummary
-        | FilesystemPaths
-        | CVE
-        | License
+        StructureInfo
+        | LicenseFinding
+        | VulnerabilityFinding
+        | CodecheckSummary
         | MalwareSummary
         | OsID
         | CustomRescoring

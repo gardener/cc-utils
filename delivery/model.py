@@ -125,12 +125,11 @@ class ArtefactMetadata:
     type: str
     meta: dso.model.Metadata
     data: (
-        dso.model.CVE
-        | dso.model.License
-        | dso.model.ComponentSummary
+        dso.model.StructureInfo
+        | dso.model.LicenseFinding
+        | dso.model.VulnerabilityFinding
         | dso.model.OsID
         | dso.model.MalwareSummary
-        | dso.model.FilesystemPaths
         | dso.model.CodecheckSummary
         | dso.model.ComplianceSnapshot
         | dso.model.CustomRescoring
