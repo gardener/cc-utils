@@ -29,6 +29,7 @@ def iter_artefact_metadata(
     scan_result: pm.AnalysisResult,
     license_cfg: image_scan.LicenseCfg,
 ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
+    now = datetime.datetime.now()
     discovery_date = datetime.date.today()
 
     artefact = gcm.artifact_from_node(node=scanned_element)
@@ -66,6 +67,8 @@ def iter_artefact_metadata(
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,
             type=dso.model.Datatype.STRUCTURE_INFO,
+            creation_date=now,
+            last_update=now,
         )
 
         structure_info = dso.model.StructureInfo(
@@ -85,6 +88,8 @@ def iter_artefact_metadata(
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,
             type=dso.model.Datatype.LICENSE,
+            creation_date=now,
+            last_update=now,
         )
 
         for license in licenses:
@@ -108,6 +113,8 @@ def iter_artefact_metadata(
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,
             type=dso.model.Datatype.VULNERABILITY,
+            creation_date=now,
+            last_update=now,
         )
 
         for vulnerability in package.vulnerabilities():

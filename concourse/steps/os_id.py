@@ -213,10 +213,13 @@ def upload_to_delivery_db(
         component=component,
         artefact=resource,
     )
+
+    now = datetime.datetime.now()
     meta = dm.Metadata(
         datasource=dm.Datasource.CC_UTILS,
         type=dm.Datatype.OS_IDS,
-        creation_date=datetime.datetime.now()
+        creation_date=now,
+        last_update=now,
     )
 
     os_id = dm.OsID(

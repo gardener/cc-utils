@@ -539,6 +539,8 @@ def create_checkmarx_client(checkmarx_cfg: cmmmodel.CheckmarxConfig):
 def iter_artefact_metadata(
     results: typing.Iterable[model.ScanResult],
 ) -> typing.Generator[dso.model.ArtefactMetadata, None, None]:
+    now = datetime.datetime.now()
+
     for result in results:
         artefact = github.compliance.model.artifact_from_node(result.scanned_element)
         artefact_ref = dso.model.component_artefact_id_from_ocm(
@@ -548,7 +550,8 @@ def iter_artefact_metadata(
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.CHECKMARX,
             type=dso.model.Datatype.CODECHECKS_AGGREGATED,
-            creation_date=datetime.datetime.now(),
+            creation_date=now,
+            last_update=now,
         )
         codecheck = dso.model.CodecheckSummary(
             findings=dso.model.CodecheckFindings(

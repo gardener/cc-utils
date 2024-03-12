@@ -217,10 +217,12 @@ def resource_scan_result_to_artefact_metadata(
         artefact=artefact,
     )
 
+    now = datetime.datetime.now()
     meta = dso.model.Metadata(
         datasource=datasource,
         type=datatype,
-        creation_date=creation_date,
+        creation_date=now,
+        last_update=now,
     )
 
     aggregated_scan_result = resource_scan_result.scan_result
