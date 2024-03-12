@@ -18,9 +18,9 @@ import cnudie.retrieve as cr
 import ctx
 import dso.cvss
 import dso.labels
+import dso.model
 import oci.model as om
 import protecode.assessments as pa
-import protecode.model as pm
 
 
 __cmd_name__ = 'bdba'
@@ -309,7 +309,6 @@ def scan(
 
     results = tuple(_upload_grouped_images(
         protecode_api=client,
-        bdba_cfg_name=protecode_cfg_name,
         component=component_descriptor,
         protecode_group_id=protecode_group_id,
         reference_group_ids=reference_protecode_group_ids,
@@ -317,41 +316,48 @@ def scan(
         s3_client=s3_client,
     ))
 
-    results_above_threshold: list[pm.VulnerabilityScanResult] = [
+    results_above_threshold = [
         r for r in results
-        if isinstance(r, pm.VulnerabilityScanResult)
-            and r.vulnerability.cve_severity() >= cve_threshold
+        if (
+            isinstance(r.data, dso.model.VulnerabilityFinding) and
+            r.data.cvss_v3_score >= cve_threshold
+        )
     ]
-    results_below_threshold: list[pm.VulnerabilityScanResult] = [
+    results_below_threshold = [
         r for r in results
-        if isinstance(r, pm.VulnerabilityScanResult)
-            and r.vulnerability.cve_severity() < cve_threshold
+        if (
+            isinstance(r.data, dso.model.VulnerabilityFinding) and
+            r.data.cvss_v3_score < cve_threshold
+        )
     ]
 
     logger.info('Summary of found vulnerabilities:')
     logger.info(f'{len(results_above_threshold)=}')
     logger.info(f'{len(results_below_threshold)=}')
 
-    def _grouped_results(results: list[pm.VulnerabilityScanResult]) -> dict:
+    def _grouped_results(results: list[dso.model.ArtefactMetadata]) -> dict:
         grouped_results = dict()
+
         for r in results:
-            c_id = f'{r.scanned_element.component.name}:{r.scanned_element.component.version}'
-            a_id = f'{r.scanned_element.resource.name}:{r.scanned_element.resource.version}'
-            p_id = f'{r.affected_package.name()}:{r.affected_package.version()}'
+            c_id = f'{r.artefact.component_name}:{r.artefact.component_version}'
+            a_id = f'{r.artefact.artefact.artefact_version}:{r.artefact.artefact.artefact_version}'
+            p_id = f'{r.data.id.package_name}:{r.data.id.package_version}'
 
             key = f'{c_id}:{a_id}:{p_id}'
-            cve = r.vulnerability.cve()
-            cve_severity = r.vulnerability.cve_severity()
+
+            cve = r.data.cve
+            cvss_v3_score = r.data.cvss_v3_score
 
             if key in grouped_results:
-                grouped_results[key]['vulnerabilities'] += f'\n{cve} ({cve_severity})'
+                grouped_results[key]['vulnerabilities'] += f'\n{cve} ({cvss_v3_score})'
             else:
                 grouped_results[key] = {
                     'c_id': c_id,
                     'a_id': a_id,
                     'p_id': p_id,
-                    'vulnerabilities': f'{cve} ({cve_severity})',
+                    'vulnerabilities': f'{cve} ({cvss_v3_score})',
                 }
+
         return grouped_results
 
     grouped_results_above_threshold = _grouped_results(
