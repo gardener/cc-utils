@@ -22,7 +22,6 @@ import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import dso.cvss
 import dso.labels
-import github.compliance.model as gcm
 import dso.model
 import oci.client
 import protecode.assessments
@@ -440,7 +439,6 @@ class ResourceGroupProcessor:
                 scan_failed = True
                 logger.warning(bse.print_stacktrace())
 
-            state = gcm.ScanState.FAILED if scan_failed else gcm.ScanState.SUCCEEDED
             c = scan_request.component
             r = scan_request.artefact
             scanned_element = cnudie.iter.ResourceNode(
@@ -449,13 +447,7 @@ class ResourceGroupProcessor:
             )
 
             if scan_failed:
-                # pylint: disable=E1123
-                yield pm.BDBAScanResult(
-                    scanned_element=scanned_element,
-                    status=pm.UploadStatus.DONE,
-                    result=scan_result,
-                    state=state,
-                )
+                logger.error(f'scan of {scanned_element=} failed; {scan_result=}')
                 return
 
             # scan succeeded

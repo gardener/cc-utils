@@ -19,7 +19,6 @@ import gci.componentmodel as cm
 import ci.util
 import dso.cvss
 import gci.componentmodel
-import github.compliance.model as gcm
 
 from concourse.model.base import (
     AttribSpecMixin,
@@ -293,55 +292,6 @@ class UploadStatus(enum.Enum):
     SKIPPED = 1
     PENDING = 2
     DONE = 4
-
-
-@dataclasses.dataclass
-class BDBAScanResult(gcm.ScanResult):
-    status: UploadStatus
-    result: AnalysisResult
-
-
-@dataclasses.dataclass
-class VulnerabilityScanResult(BDBAScanResult):
-    affected_package: Component
-    vulnerability: Vulnerability
-
-    @property
-    def severity(self) -> gcm.Severity:
-        import github.compliance.report as gcr
-        return gcr._criticality_classification(self.vulnerability.cve_severity())
-
-
-@dataclasses.dataclass
-class LicenseScanResult(BDBAScanResult):
-    affected_package: Component
-    license: License
-    license_cfg: typing.Any = None
-
-    @property
-    def severity(self) -> gcm.Severity:
-        if self.license_cfg and not self.license_cfg.is_allowed(self.license.name):
-            return gcm.Severity.BLOCKER
-        return None
-
-    def _severity(self, license_cfg=None) -> gcm.Severity:
-        if license_cfg:
-            self.license_cfg = license_cfg
-        if not self.license_cfg:
-            logger.warning('no license-cfg - will not report license-issues')
-            return None
-        return self.severity
-
-
-@dataclasses.dataclass
-class ComponentsScanResult(BDBAScanResult):
-    '''
-    class is only used to explicitly create a scan result object containing "all" affected
-    packages of the scanned element
-
-    could be replaced by `BDBAScanResult` but keep this class to increase understandability
-    '''
-    pass
 
 
 @dataclasses.dataclass
