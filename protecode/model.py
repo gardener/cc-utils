@@ -3,22 +3,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
 import dataclasses
 import datetime
-import dso.labels
 import enum
 import logging
 import traceback
-import typing
 
 import dacite
 import dateutil.parser
 
-import gci.componentmodel as cm
-
 import ci.util
 import dso.cvss
-import gci.componentmodel
+import dso.labels
+import gci.componentmodel as cm
 
 from concourse.model.base import (
     AttribSpecMixin,
@@ -51,7 +49,7 @@ class Product(ModelBase):
     def product_id(self) -> int:
         return self.raw['product_id']
 
-    def custom_data(self) -> typing.Dict[str, str]:
+    def custom_data(self) -> dict[str, str]:
         return self.raw.get('custom_data', dict())
 
     def name(self) -> str:
@@ -82,7 +80,7 @@ class AnalysisResult(ModelBase):
     def status(self) -> ProcessingStatus:
         return ProcessingStatus(self.raw.get('status'))
 
-    def components(self) -> 'typing.Generator[Component, None, None]':
+    def components(self) -> 'collections.abc.Generator[Component, None, None]':
         return (Component(raw_dict=raw) for raw in self.raw.get('components', []))
 
     def custom_data(self) -> dict[str, str]:
@@ -128,14 +126,14 @@ class Component(ModelBase):
     def version(self) -> str:
         return self.raw.get('version')
 
-    def vulnerabilities(self) -> 'typing.Generator[Vulnerability, None, None]':
+    def vulnerabilities(self) -> 'collections.abc.Generator[Vulnerability, None, None]':
         for raw in self.raw.get('vulns'):
             if raw['vuln']['cve']:
                 yield Vulnerability(raw_dict=raw)
                 continue
 
     @property
-    def licenses(self) -> typing.Generator[License, None, None]:
+    def licenses(self) -> collections.abc.Generator[License, None, None]:
         if not (licenses := self.raw.get('licenses')):
             license_raw = self.raw.get('license')
             if not license_raw:
@@ -153,7 +151,7 @@ class Component(ModelBase):
             ) for license_raw in licenses.get('licenses')
         )
 
-    def extended_objects(self) -> 'typing.Generator[ExtendedObject, None, None]':
+    def extended_objects(self) -> 'collections.abc.Generator[ExtendedObject, None, None]':
         return (ExtendedObject(raw_dict=raw) for raw in self.raw.get('extended-objects'))
 
     @property
@@ -205,7 +203,7 @@ class Vulnerability(ModelBase):
     def has_triage(self) -> bool:
         return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
 
-    def triages(self) -> 'typing.Generator[Triage, None, None]':
+    def triages(self) -> 'collections.abc.Generator[Triage, None, None]':
         if not self.has_triage():
             return ()
         trs = self.raw.get('triage')
@@ -304,7 +302,7 @@ class ScanRequest:
     component: cm.Component
     artefact: cm.Artifact
     # The actual content to be scanned.
-    scan_content: typing.Generator[bytes, None, None]
+    scan_content: collections.abc.Generator[bytes, None, None]
     display_name: str
     target_product_id: int | None
     custom_metadata: dict
@@ -336,8 +334,8 @@ class BdbaScanError(Exception):
     def __init__(
         self,
         scan_request: ScanRequest,
-        component: gci.componentmodel.Component,
-        artefact: gci.componentmodel.Artifact,
+        component: cm.Component,
+        artefact: cm.Artifact,
         exception=None,
         *args,
         **kwargs,

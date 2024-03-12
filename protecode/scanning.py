@@ -2,27 +2,24 @@ import collections
 import collections.abc
 import concurrent.futures
 import datetime
-import dateutil.parser
 import functools
 import logging
-import pytz
-import typing
 
 import botocore.exceptions
+import dateutil.parser
+import pytz
 import requests
-
-import gci.componentmodel as cm
 
 import ci.log
 import cnudie.access
 import cnudie.iter
 import cnudie.retrieve
-import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import dso.cvss
 import dso.labels
 import dso.model
+import gci.componentmodel as cm
 import oci.client
 import protecode.assessments
 import protecode.client
@@ -57,7 +54,7 @@ def find_related_groups(
     group: tuple[cnudie.iter.ResourceNode],
     groups: tuple[tuple[cnudie.iter.ResourceNode]],
     omit_resource_version: bool=False,
-) -> typing.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
+) -> collections.abc.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
     group_representative = group[0]
 
     for g in groups:
@@ -88,7 +85,7 @@ class ResourceGroupProcessor:
         protecode_client: protecode.client.ProtecodeApi,
         oci_client: oci.client.Client,
         group_id: int=None,
-        reference_group_ids: typing.Sequence[int]=(),
+        reference_group_ids: collections.abc.Sequence[int]=(),
         cvss_threshold: float=7.0,
     ):
         self.protecode_client = protecode_client
@@ -100,7 +97,7 @@ class ResourceGroupProcessor:
     def _products_with_relevant_triages(
         self,
         resource_group: tuple[cnudie.iter.ResourceNode],
-    ) -> typing.Generator[pm.Product, None, None]:
+    ) -> collections.abc.Generator[pm.Product, None, None]:
         relevant_group_ids = set(self.reference_group_ids)
         relevant_group_ids.add(self.group_id)
 
@@ -128,7 +125,11 @@ class ResourceGroupProcessor:
         products_to_import_from: list[pm.Product],
         use_product_cache: bool=True,
         delete_inactive_products_after_seconds: int=None,
-    ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]], None, None]:
+    ) -> collections.abc.Generator[
+        tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]],
+        None,
+        None,
+    ]:
         '''
         Used to retrieve the triages of the supplied products grouped by components and
         their vulnerabilities. Also, if `delete_inactive_products_after` is set, old
@@ -140,7 +141,7 @@ class ResourceGroupProcessor:
         '''
         def _iter_vulnerabilities(
             result: pm.AnalysisResult,
-        ) -> typing.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
+        ) -> collections.abc.Generator[tuple[pm.Component, pm.Vulnerability], None, None]:
             for component in result.components():
                 for vulnerability in component.vulnerabilities():
                     yield component, vulnerability
@@ -194,7 +195,7 @@ class ResourceGroupProcessor:
             tuple[pm.Product],
         ],
         s3_client: 'botocore.client.S3',
-    ) -> typing.Generator[pm.ScanRequest, None, None]:
+    ) -> collections.abc.Generator[pm.ScanRequest, None, None]:
         c = resource_group[0].component
         r = resource_group[0].resource
 
@@ -560,7 +561,7 @@ def _package_version_hints(
 def _retrieve_existing_scan_results(
     protecode_client: protecode.client.ProtecodeApi,
     group_id: int,
-    resource_groups: typing.Iterable[tuple[cnudie.iter.ResourceNode]],
+    resource_groups: collections.abc.Iterable[tuple[cnudie.iter.ResourceNode]],
     oci_client: oci.client.Client,
 ) -> dict[
     tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
@@ -600,13 +601,13 @@ def _retrieve_existing_scan_results(
 
 
 def _resource_groups(
-    resource_nodes: typing.Generator[cnudie.iter.ResourceNode, None, None],
-    filter_function: typing.Callable[[cnudie.iter.ResourceNode], bool],
+    resource_nodes: collections.abc.Iterable[cnudie.iter.ResourceNode, None, None],
+    filter_function: collections.abc.Callable[[cnudie.iter.ResourceNode], bool],
     artefact_types=(
         cm.ResourceType.OCI_IMAGE,
         'application/tar+vm-image-rootfs',
     ),
-) -> typing.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
+) -> collections.abc.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
     '''
     group resources of same component name and resource version name
 
@@ -617,8 +618,10 @@ def _resource_groups(
     # artefact-groups are grouped by:
     # component-name, resource-name, resource-version, resource-type
     # (thus implicitly deduplicating same resource-versions on different components)
-    resource_groups: dict[tuple(str, cm.ResourceIdentity, str), list[cnudie.iter.ResourceNode]] \
-        = collections.defaultdict(list)
+    resource_groups: dict[
+        tuple[str, cm.ResourceIdentity, str],
+        list[cnudie.iter.ResourceNode],
+    ] = collections.defaultdict(list)
 
     for resource_node in resource_nodes:
         if not resource_node.resource.type in artefact_types:
@@ -641,7 +644,7 @@ def upload_grouped_images(
     parallel_jobs=8,
     cve_threshold=7,
     processing_mode=pm.ProcessingMode.RESCAN,
-    filter_function: typing.Callable[[cnudie.iter.ResourceNode], bool]=(
+    filter_function: collections.abc.Callable[[cnudie.iter.ResourceNode], bool]=(
         lambda node: True
     ),
     reference_group_ids=(),

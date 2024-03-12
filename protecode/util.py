@@ -7,7 +7,6 @@ import collections.abc
 import datetime
 import hashlib
 import logging
-import typing
 
 import ci.log
 import cnudie.iter
@@ -141,7 +140,7 @@ def iter_artefact_metadata(
 def iter_filesystem_paths(
     component: pm.Component,
     file_type: str | None = 'elf'
-) -> typing.Generator[tuple[str, str], None, None]:
+) -> collections.abc.Generator[tuple[str, str], None, None]:
     for ext_obj in component.extended_objects():
         for path_infos in ext_obj.raw.get('extended-fullpath', []):
 
@@ -160,7 +159,7 @@ def iter_filesystem_paths(
 
 def enum_triages(
     result: pm.AnalysisResult,
-) -> typing.Iterator[typing.Tuple[pm.Component, pm.Triage]]:
+) -> collections.abc.Generator[tuple[pm.Component, pm.Triage], None, None]:
     for component in result.components():
         for vulnerability in component.vulnerabilities():
             for triage in vulnerability.triages():
@@ -204,12 +203,12 @@ def component_artifact_metadata(
 
 def _matching_analysis_result_id(
     component_artifact_metadata: dict[str, str],
-    analysis_results: typing.Iterable[pm.Product],
+    analysis_results: collections.abc.Iterable[pm.Product],
 ) -> int | None:
     # This is a helper function that is used when we create new ScanRequests for a given artifact
     # group. Since a given artifact group can trigger multiple scans in protecode, we want to be
     # able to find the correct one from a set of possible choices (if there is one).
-    def filter_func(other_dict: typing.Dict[str, str]):
+    def filter_func(other_dict: dict[str, str]):
         # filter-function to find the correct match. We consider a given dict a match if
         # it contains all keys we have and the values associated with these keys are identical.
         # Note: That means that (manually) added protecode-metadata will not interfere.

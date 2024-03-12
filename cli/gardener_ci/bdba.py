@@ -5,8 +5,6 @@ import pprint
 
 import tabulate
 
-import gci.componentmodel as cm
-
 from protecode.model import CVSSVersion, TriageScope
 from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import ccc.aws
@@ -19,6 +17,7 @@ import ctx
 import dso.cvss
 import dso.labels
 import dso.model
+import gci.componentmodel as cm
 import oci.model as om
 import protecode.assessments as pa
 
@@ -389,7 +388,7 @@ def transport_triages(
     protecode_cfg_name: str,
     from_product_id: int,
     to_group_id: int,
-    to_product_ids: [int],
+    to_product_ids: list[int],
 ):
     cfg_factory = ci.util.ctx().cfg_factory()
     protecode_cfg = cfg_factory.protecode(protecode_cfg_name)

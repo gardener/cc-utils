@@ -2,10 +2,9 @@ import dataclasses
 import datetime
 import enum
 
-import gci.componentmodel as cm
-
 import dso.cvss
 import dso.labels
+import gci.componentmodel as cm
 import unixutil.model
 
 
@@ -54,7 +53,7 @@ class ComponentArtefactId:
 
 def component_artefact_id_from_ocm(
     component: cm.Component,
-    artefact: cm.Resource | cm.ComponentSource
+    artefact: cm.Resource | cm.Source,
 ) -> ComponentArtefactId:
     local_artefact = LocalArtefactId(
         artefact_name=artefact.name,
@@ -65,7 +64,7 @@ def component_artefact_id_from_ocm(
 
     if isinstance(artefact, cm.Resource):
         artefact_kind = 'resource'
-    elif isinstance(artefact, cm.ComponentSource):
+    elif isinstance(artefact, cm.Source):
         artefact_kind = 'source'
     else:
         # should not occur

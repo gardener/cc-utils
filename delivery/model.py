@@ -2,12 +2,11 @@ import dataclasses
 import datetime
 import enum
 
-import dso.cvss
-import dso.model
-
 import awesomeversion
 import dacite
 import dateutil.parser
+
+import dso.model
 
 
 def _parse_datetime_if_present(date: str):
