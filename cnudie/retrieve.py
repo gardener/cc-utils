@@ -15,17 +15,13 @@ import dacite
 import gci.componentmodel as cm
 import gci.oci
 
-import ccc.oci
 import ci.util
 import cnudie.util
-import ctx
 import oci.client as oc
 import oci.model as om
 
 
 logger = logging.getLogger(__name__)
-_cfg = ctx.cfg
-_cache_dir = _cfg.ctx.component_descriptor_cache_dir
 
 ComponentName = str | tuple[str, str] | cm.Component | cm.ComponentIdentity
 
@@ -197,7 +193,7 @@ def in_memory_cache_component_descriptor_lookup(
 def file_system_cache_component_descriptor_lookup(
     default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
-    cache_dir: str=_cache_dir,
+    cache_dir: str=None,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the file-system cache.
@@ -381,6 +377,7 @@ def oci_component_descriptor_lookup(
                                 descriptors for the returned lookup function
     '''
     if not oci_client:
+        import ccc.oci
         oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
@@ -495,6 +492,7 @@ def version_lookup(
     default_absent_ok=True,
 ) -> VersionLookupByComponent:
     if not oci_client:
+        import ccc.oci
         oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
@@ -626,7 +624,7 @@ def composite_component_descriptor_lookup(
 def create_default_component_descriptor_lookup(
     default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
-    cache_dir: str=_cache_dir,
+    cache_dir: str | None=None,
     oci_client: oc.Client=None,
     delivery_client=None,
     default_absent_ok=False,
@@ -645,6 +643,7 @@ def create_default_component_descriptor_lookup(
                              included in the returned lookup
     '''
     if not ocm_repository_lookup:
+        import ctx
         ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
 
     if ocm_repository_lookup and default_ctx_repo:
@@ -662,7 +661,8 @@ def create_default_component_descriptor_lookup(
         )
     ]
     if not cache_dir:
-        if ctx and ctx.cfg:
+        import ctx
+        if ctx.cfg:
             cache_dir = ctx.cfg.ctx.cache_dir
 
     if cache_dir:
@@ -793,6 +793,7 @@ def component_versions(
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
+        import ccc.oci
         oci_client = ccc.oci.oci_client()
 
     ctx_repo: cm.OciOcmRepository
