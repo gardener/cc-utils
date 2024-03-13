@@ -7,7 +7,6 @@ import shutil
 import tempfile
 import typing
 
-import deprecated
 import requests
 import yaml
 
@@ -22,7 +21,6 @@ import cnudie.util
 import ctx
 import oci.client as oc
 import oci.model as om
-import version
 
 
 logger = logging.getLogger(__name__)
@@ -801,66 +799,3 @@ def component_versions(
     oci_ref = ctx_repo.component_oci_ref(component_name)
 
     return oci_client.tags(image_reference=oci_ref)
-
-
-# moved to delivery-service
-# TODO remove once all usages of this functions are updated
-@deprecated.deprecated
-def greatest_component_versions(
-    component_name: str,
-    ctx_repo: cm.OcmRepository=None,
-    max_versions: int = 5,
-    greatest_version: str = None,
-    oci_client: oc.Client = None,
-    ignore_prerelease_versions: bool = False,
-    version_lookup: VersionLookupByComponent=None,
-    invalid_semver_ok: bool=False,
-) -> list[str]:
-    if not ctx_repo and not version_lookup:
-        raise ValueError('At least one of `ctx_repo` and `version_lookup` has to be specified')
-
-    if ctx_repo:
-        if not isinstance(ctx_repo, cm.OciOcmRepository):
-            raise NotImplementedError(ctx_repo)
-
-        if not oci_client:
-            oci_client = ccc.oci.oci_client()
-
-        versions = component_versions(
-            component_name=component_name,
-            ctx_repo=ctx_repo,
-            oci_client=oci_client,
-        )
-    else:
-        versions = version_lookup(
-            cm.ComponentIdentity(
-                name=component_name,
-                version=None
-            ),
-        )
-
-    if not versions:
-        return []
-
-    versions = [
-        v
-        for v in versions
-        if version.parse_to_semver(
-            version=v,
-            invalid_semver_ok=invalid_semver_ok,
-        )
-    ]
-
-    if ignore_prerelease_versions:
-        versions = [
-            v
-            for v in versions
-            if not (pv := version.parse_to_semver(v, invalid_semver_ok)).prerelease and not pv.build
-        ]
-
-    versions = sorted(versions, key=lambda v: version.parse_to_semver(v, invalid_semver_ok))
-
-    if greatest_version:
-        versions = versions[:versions.index(greatest_version)+1]
-
-    return versions[-max_versions:]
