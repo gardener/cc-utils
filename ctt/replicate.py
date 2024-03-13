@@ -24,6 +24,9 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     patched_component_descriptor: gci.componentmodel.ComponentDescriptor,
     src_ctx_repo: cm.OciOcmRepository,
 ):
+    if isinstance(src_ctx_repo, str):
+        src_ctx_repo = cm.OciRepositoryContext(baseUrl=src_ctx_repo)
+
     if not isinstance(src_ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(src_ctx_repo)
 
