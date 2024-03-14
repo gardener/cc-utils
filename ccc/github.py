@@ -18,7 +18,6 @@ import github3
 import github3.github
 import github3.session
 
-import ccc.elasticsearch
 import ci.util
 import github.util
 import http_requests
@@ -89,6 +88,7 @@ def github_api_ctor(
         return req
 
     try:
+        import ccc.elasticsearch
         es_client = ccc.elasticsearch.default_client_if_available(cfg_factory)
         if es_client:
             logger.debug('logging github api requests to elasticsearch')
@@ -300,6 +300,7 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
     if not ci.util._running_on_ci():
         return # early exit if not running in ci job
 
+    import ccc.elasticsearch
     config_set_name = ci.util.check_env('CONCOURSE_CURRENT_CFG')
     try:
         els_index = 'github_access_stacktrace'
