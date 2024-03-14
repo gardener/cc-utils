@@ -91,6 +91,7 @@ import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import concourse.model.traits.version
 import concourse.model.traits.release
+import concourse.util
 import gci.componentmodel as cm
 import github.util
 import gitutil
