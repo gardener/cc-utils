@@ -219,7 +219,7 @@ class LicenseFinding(Finding):
 class VulnerabilityFinding(Finding):
     cve: str
     cvss_v3_score: float
-    cvss: dso.cvss.CVSSV3
+    cvss: dso.cvss.CVSSV3 | dict
 
 
 @dataclasses.dataclass(frozen=True)
