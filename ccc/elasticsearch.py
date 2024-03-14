@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-
 import dataclasses
 import datetime
 import functools
@@ -13,10 +12,8 @@ import os
 import elasticsearch
 
 import ci.util
-import concourse.util
 import model
 import model.elasticsearch
-
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +61,7 @@ def _metadata_dict():
     if not ci.util._running_on_ci():
         return {}
 
+    import concourse.util
     build = concourse.util.find_own_running_build()
     pipeline_metadata = concourse.util.get_pipeline_metadata()
     config_set = ci.util.ctx().cfg_factory().cfg_set(pipeline_metadata.current_config_set_name)
