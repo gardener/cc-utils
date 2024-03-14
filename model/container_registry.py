@@ -256,5 +256,6 @@ def find_config(
 
     # return first match (because they are sorted, this will be the one with least privileges)
     registry_cfg = matching_cfgs[0]
+    logger.info(f'found {registry_cfg.name()=} for {image_reference=}')
 
     return registry_cfg
