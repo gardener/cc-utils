@@ -33,7 +33,7 @@ def client(
             group_id=group_id,
             base_url=base_url,
         ) == -1:
-            raise ValueError(protecode_cfg)
+            raise ValueError(f'{protecode_cfg.name()=} does not match {group_id=} and {base_url=}')
 
     else:
         if not (protecode_cfg := model.protecode.find_config(
