@@ -582,7 +582,7 @@ def process_images(
         else:
             raise TypeError(ctx_base_url)
 
-        if component.current_repository_ctx().baseUrl != ctx_base_url:
+        if component.current_repository_ctx().baseUrl != ocm_repo.baseUrl:
             component.repositoryContexts.append(
                 ocm_repo,
             )
