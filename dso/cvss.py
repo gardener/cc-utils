@@ -17,6 +17,7 @@ class CVESeverity(enum.IntEnum):
     MEDIUM = 2
     HIGH = 3
     CRITICAL = 4
+    BLOCKER = 5
 
     def reduce(
         self,
