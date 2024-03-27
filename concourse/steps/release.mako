@@ -352,6 +352,13 @@ try:
     component_descriptor_lookup=component_descriptor_lookup,
     version_lookup=version_lookup,
   )
+except:
+  logger.warning('an error occurred whilst trying to collect release-notes')
+  logger.warning('release will continue')
+  traceback.print_exc()
+  release_notes_md = None
+
+try:
   github_helper.update_release_notes(
     tag_name=version_str,
     body=release_notes_md,
@@ -359,10 +366,9 @@ try:
   )
   git_helper.push('refs/notes/commits', 'refs/notes/commits')
 except:
-  logger.warning('an error occurred whilst trying to collect release-notes')
+  logger.warning('an error occurred whilst trying to update release-notes')
   logger.warning('release will continue')
   traceback.print_exc()
-  release_notes_md = None
 % else:
 release_notes_md = None
 % endif
