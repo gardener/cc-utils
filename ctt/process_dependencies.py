@@ -447,7 +447,7 @@ def process_images(
             target_ref = om.OciImageReference(processing_job.upload_request.target_ref)
             target_repo = target_ref.ref_without_tag
             manifest_bytes = oci_client.manifest_raw(
-                image_reference=f'{target_repo}{oci_manifest_digest}',
+                image_reference=f'{target_repo}@{oci_manifest_digest}',
             ).content
 
         for extra_tag in extra_tags:
