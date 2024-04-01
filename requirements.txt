@@ -34,7 +34,7 @@ openstacksdk
 oss2==2.18.4
 passlib<2.0.0
 pycryptodome
-pydash<8.0.0
+pydash<9.0.0
 pylama
 pylint
 pytest
