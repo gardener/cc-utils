@@ -448,6 +448,7 @@ def process_images(
             target_repo = target_ref.ref_without_tag
             manifest_bytes = oci_client.manifest_raw(
                 image_reference=f'{target_repo}@{oci_manifest_digest}',
+                accept=om.MimeTypes.prefer_multiarch,
             ).content
 
         for extra_tag in extra_tags:
