@@ -1,6 +1,7 @@
 import collections
 import collections.abc
 import logging
+import time
 
 import requests.exceptions
 
@@ -16,7 +17,7 @@ def upload_version_hints(
     hints: collections.abc.Iterable[dso.labels.PackageVersionHint],
     client: protecode.client.ProtecodeApi,
 ):
-    components: tuple[pm.Component] = tuple(scan_result.components)
+    components: tuple[pm.Component] = tuple(scan_result.components())
 
     for component in components:
         name = component.name()
@@ -42,6 +43,13 @@ def upload_version_hints(
             objects=digests,
             app_id=scan_result.product_id(),
         )
+
+        if len(hints) > 1:
+            # the bdba api does not properly react to multiple component versions being set in
+            # a short period of time. This even stays true if all component versions are set
+            # using one single api request. That's why, adding a small delay in case multiple
+            # hints and thus possible version overrides exist
+            time.sleep(2)
 
 
 def add_assessments_if_none_exist(
