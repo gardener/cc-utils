@@ -548,12 +548,12 @@ def _package_version_hints(
     if not package_hints_label:
         return None
 
-    package_hints_label = dso.labels.deserialise_label(label=package_hints_label)
-    package_hints_label: dso.labels.PackageVersionHintLabel
-
-    package_hints = package_hints_label.value
-
-    return package_hints
+    return [
+        dso.labels.PackageVersionHint(
+            name=hint.get('name'),
+            version=hint.get('version'),
+        ) for hint in package_hints_label.value
+    ]
 
 
 def _retrieve_existing_scan_results(
