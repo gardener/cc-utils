@@ -16,9 +16,20 @@ def upload_version_hints(
     hints: typing.Iterable[dso.labels.PackageVersionHint],
     client: protecode.client.ProtecodeApi,
 ):
-    for component in scan_result.components():
+    components: tuple[pm.Component] = tuple(scan_result.components)
+
+    for component in components:
+        name = component.name()
+        version = component.version()
+
+        if version and version != 'unknown':
+            # check if package is unique -> in that case we can overwrite the detected version
+            if len([c for c in components if c.name() == name]) > 1:
+                # not unique, so we cannot overwrite package version
+                continue
+
         for hint in hints:
-            if hint.name == component.name() and hint.version != component.version():
+            if hint.name == name and hint.version != version:
                 break
         else:
             continue
@@ -26,7 +37,7 @@ def upload_version_hints(
         digests = [eo.sha1() for eo in component.extended_objects()]
 
         client.set_component_version(
-            component_name=component.name(),
+            component_name=name,
             component_version=hint.version,
             objects=digests,
             app_id=scan_result.product_id(),
