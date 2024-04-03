@@ -27,7 +27,7 @@ ci.log.configure_default_logging(print_thread_id=True)
 def iter_artefact_metadata(
     scanned_element: cnudie.iter.ResourceNode,
     scan_result: pm.AnalysisResult,
-    license_cfg: image_scan.LicenseCfg,
+    license_cfg: image_scan.LicenseCfg=None,
 ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
     now = datetime.datetime.now()
     discovery_date = datetime.date.today()
@@ -93,7 +93,7 @@ def iter_artefact_metadata(
         )
 
         for license in licenses:
-            if license_cfg.is_allowed(license=license.name):
+            if not license_cfg or license_cfg.is_allowed(license=license.name):
                 continue
 
             license_finding = dso.model.LicenseFinding(
