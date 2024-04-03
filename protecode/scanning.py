@@ -524,11 +524,9 @@ def _package_version_hints(
     def result_matches(resource: cm.Resource, result: pm.AnalysisResult):
         '''
         find matching result for package-version-hint
-        note: we require strict matching of both component-version and resource-version
+        note: we require strict matching of resource-version
         '''
         cd = result.custom_data()
-        if not cd.get('COMPONENT_VERSION') == component.version:
-            return False
         if not cd.get('COMPONENT_NAME') == component.name:
             return False
         if not cd.get('IMAGE_REFERENCE_NAME') == artefact.name:
