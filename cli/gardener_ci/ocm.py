@@ -44,7 +44,11 @@ def edit(
 ):
     if not ocm_repo:
         ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
-        ocm_repo = next(ocm_repo_lookup(name)).baseUrl
+        ocm_repo = next(ocm_repo_lookup(name))
+        if isinstance(ocm_repo, str):
+            ocm_repo = cm.OciOcmRepository(
+                baseUrl=ocm_repo,
+            )
 
     oci_client = ccc.oci.oci_client()
 
