@@ -1,19 +1,19 @@
 import collections
+import collections.abc
 import logging
-import typing
 
 import requests.exceptions
 
 import dso.labels
-import protecode.model as pm
 import protecode.client
+import protecode.model as pm
 
 logger = logging.getLogger(__name__)
 
 
 def upload_version_hints(
     scan_result: pm.AnalysisResult,
-    hints: typing.Iterable[dso.labels.PackageVersionHint],
+    hints: collections.abc.Iterable[dso.labels.PackageVersionHint],
     client: protecode.client.ProtecodeApi,
 ):
     components: tuple[pm.Component] = tuple(scan_result.components)
@@ -47,7 +47,7 @@ def upload_version_hints(
 def add_assessments_if_none_exist(
     tgt: pm.AnalysisResult,
     tgt_group_id: int,
-    assessments: typing.Iterable[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]]],
+    assessments: collections.abc.Iterable[tuple[pm.Component, pm.Vulnerability, tuple[pm.Triage]]],
     protecode_client: protecode.client.ProtecodeApi,
     assessed_vulns_by_component: dict[str, list[str]]=collections.defaultdict(list),
 ) -> dict[str, list[str]]:

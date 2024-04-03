@@ -5,8 +5,6 @@ import pprint
 
 import tabulate
 
-from protecode.model import CVSSVersion, TriageScope
-from protecode.scanning import upload_grouped_images as _upload_grouped_images
 import ccc.aws
 import ccc.oci
 import ccc.protecode
@@ -20,6 +18,8 @@ import dso.model
 import gci.componentmodel as cm
 import oci.model as om
 import protecode.assessments as pa
+import protecode.model as pm
+import protecode.scanning as ps
 
 
 __cmd_name__ = 'bdba'
@@ -52,7 +52,7 @@ def ls_products(
         ocm_lookup = ctx.cfg.ctx.ocm_lookup
     else:
         ocm_lookup = cr.create_default_component_descriptor_lookup(
-            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+            ocm_repository_lookup=cr.ocm_repository_lookup(
                 ocm_repo,
             )
         )
@@ -110,7 +110,7 @@ def rescore(
             ocm_lookup = ctx.cfg.ctx.ocm_lookup
         else:
             ocm_lookup = cr.create_default_component_descriptor_lookup(
-                ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+                ocm_repository_lookup=cr.ocm_repository_lookup(
                     ocm_repo,
                 )
             )
@@ -228,7 +228,7 @@ def rescore(
                 'component': c.name(),
                 'version': c.version() or 'does-not-matter',
                 'vulns': [v.cve() for v in vulns_to_assess],
-                'scope': TriageScope.RESULT.value,
+                'scope': pm.TriageScope.RESULT.value,
                 'reason': 'OT',
                 'description': 'assessed as irrelevant based on cve-categorisation',
                 'product_id': product_id,
@@ -283,10 +283,10 @@ def scan(
     protecode_group_url = ci.util.urljoin(protecode_api_url, 'group', str(protecode_group_id))
     logger.info(f'Using Protecode at: {protecode_api_url} with group {protecode_group_id}')
 
-    lookup = cnudie.retrieve.create_default_component_descriptor_lookup()
+    lookup = cr.create_default_component_descriptor_lookup()
     component_descriptor = lookup(component)
 
-    cvss_version = CVSSVersion.V3
+    cvss_version = pm.CVSSVersion.V3
 
     headers = ('Protecode Scan Configuration', '')
     entries = (
@@ -306,7 +306,7 @@ def scan(
         cfg_factory=cfg_factory,
     )
 
-    results = tuple(_upload_grouped_images(
+    results = tuple(ps.upload_grouped_images(
         protecode_api=client,
         component=component_descriptor,
         protecode_group_id=protecode_group_id,

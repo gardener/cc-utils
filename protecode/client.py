@@ -3,31 +3,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
+import functools
 import logging
 import time
 import traceback
-import typing
+import urllib.parse
 
-from functools import partial
-from urllib.parse import urlencode, quote_plus
+import requests
 
 import ci.log
-import requests
-from ci.util import not_empty, not_none, urljoin
-from http_requests import check_http_code, mount_default_adapter
-from protecode.model import (
-    AnalysisResult,
-    CVSSVersion,
-    ProcessingStatus,
-    Product,
-    Triage,
-    TriageScope,
-    VersionOverrideScope,
-)
-from model.protecode import (
-    ProtecodeAuthScheme,
-    ProtecodeConfig,
-)
+import ci.util
+import http_requests
+import model.protecode
+import protecode.model as pm
 
 logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
@@ -42,21 +31,21 @@ class ProtecodeApiRoutes:
     '''
 
     def __init__(self, base_url):
-        self._base_url = not_empty(base_url)
-        self._api_url = partial(self._url, 'api')
-        self._rest_url = partial(self._url, 'rest')
+        self._base_url = ci.util.not_empty(base_url)
+        self._api_url = functools.partial(self._url, 'api')
+        self._rest_url = functools.partial(self._url, 'rest')
 
     def _url(self, *parts):
-        return urljoin(self._base_url, *parts)
+        return ci.util.urljoin(self._base_url, *parts)
 
     def apps(self, group_id=None, custom_attribs={}):
         url = self._api_url('apps')
         if group_id is not None:
-            url = urljoin(url, str(group_id))
+            url = ci.util.urljoin(url, str(group_id))
 
         search_query = ' '.join(['meta:' + str(k) + '=' + str(v) for k,v in custom_attribs.items()])
         if search_query:
-            url += '?' + urlencode({'q': search_query})
+            url += '?' + urllib.parse.urlencode({'q': search_query})
 
         return url
 
@@ -70,7 +59,7 @@ class ProtecodeApiRoutes:
         return self._api_url('groups')
 
     def upload(self, file_name):
-        return self._api_url('upload', quote_plus(file_name))
+        return self._api_url('upload', urllib.parse.quote_plus(file_name))
 
     def product(self, product_id: int):
         return self._api_url('product', str(product_id))
@@ -97,20 +86,20 @@ class ProtecodeApi:
     def __init__(
         self,
         api_routes,
-        protecode_cfg: ProtecodeConfig,
+        protecode_cfg: model.protecode.ProtecodeConfig,
     ):
-        self._routes = not_none(api_routes)
-        not_none(protecode_cfg)
+        self._routes = ci.util.not_none(api_routes)
+        ci.util.not_none(protecode_cfg)
         self._credentials = protecode_cfg.credentials()
         self._auth_scheme = protecode_cfg.auth_scheme()
 
-        if self._auth_scheme is ProtecodeAuthScheme.BASIC_AUTH:
+        if self._auth_scheme is model.protecode.ProtecodeAuthScheme.BASIC_AUTH:
             logger.warning('Using basic auth to authenticate against Protecode.')
 
         self._tls_verify = protecode_cfg.tls_verify()
         self._session_id = None
         self._session = requests.Session()
-        mount_default_adapter(
+        http_requests.mount_default_adapter(
             session=self._session,
         )
 
@@ -118,12 +107,12 @@ class ProtecodeApi:
 
     def set_maximum_concurrent_connections(self, maximum_concurrent_connections: int):
         # mount new adapter with new parameters
-        mount_default_adapter(
+        http_requests.mount_default_adapter(
             session=self._session,
             max_pool_size=maximum_concurrent_connections,
         )
 
-    @check_http_code
+    @http_requests.check_http_code
     def _request(self, method, *args, **kwargs):
         if 'headers' in kwargs:
             headers = kwargs['headers']
@@ -146,10 +135,10 @@ class ProtecodeApi:
         else:
             cookies = None
 
-        if (auth_scheme := self._auth_scheme) is ProtecodeAuthScheme.BEARER_TOKEN:
+        if (auth_scheme := self._auth_scheme) is model.protecode.ProtecodeAuthScheme.BEARER_TOKEN:
             headers['Authorization'] = f"Bearer {self._credentials.token()}"
-        elif auth_scheme is ProtecodeAuthScheme.BASIC_AUTH:
-            method = partial(
+        elif auth_scheme is model.protecode.ProtecodeAuthScheme.BASIC_AUTH:
+            method = functools.partial(
                 method,
                 auth=self._credentials.as_tuple(),
             )
@@ -161,7 +150,7 @@ class ProtecodeApi:
         except KeyError:
             timeout = (4, 121)
 
-        return partial(
+        return functools.partial(
             method,
             verify=self._tls_verify,
             cookies=cookies,
@@ -169,23 +158,23 @@ class ProtecodeApi:
             timeout=timeout,
         )(*args, **kwargs)
 
-    @check_http_code
+    @http_requests.check_http_code
     def _get(self, *args, **kwargs):
         return self._request(self._session.get, *args, **kwargs)
 
-    @check_http_code
+    @http_requests.check_http_code
     def _post(self, *args, **kwargs):
         return self._request(self._session.post, *args, **kwargs)
 
-    @check_http_code
+    @http_requests.check_http_code
     def _put(self, *args, **kwargs):
         return self._request(self._session.put, *args, **kwargs)
 
-    @check_http_code
+    @http_requests.check_http_code
     def _delete(self, *args, **kwargs):
         return self._request(self._session.delete, *args, **kwargs)
 
-    @check_http_code
+    @http_requests.check_http_code
     def _patch(self, *args, **kwargs):
         return self._request(self._session.patch, *args, **kwargs)
 
@@ -205,10 +194,10 @@ class ProtecodeApi:
     def upload(self,
         application_name: str,
         group_id: str,
-        data: typing.Generator[bytes, None, None],
-        replace_id: int = None,
+        data: collections.abc.Generator[bytes, None, None],
+        replace_id: int=None,
         custom_attribs={},
-    ) -> AnalysisResult:
+    ) -> pm.AnalysisResult:
         url = self._routes.upload(file_name=application_name)
 
         headers = {'Group': str(group_id)}
@@ -222,7 +211,7 @@ class ProtecodeApi:
             data=data,
         )
 
-        return AnalysisResult(raw_dict=result.json().get('results'))
+        return pm.AnalysisResult(raw_dict=result.json().get('results'))
 
     def delete_product(self, product_id: int):
         url = self._routes.product(product_id=product_id)
@@ -231,19 +220,23 @@ class ProtecodeApi:
             url=url,
         )
 
-    def scan_result(self, product_id: int) -> AnalysisResult:
+    def scan_result(self, product_id: int) -> pm.AnalysisResult:
         url = self._routes.product(product_id=product_id)
 
         result = self._get(
             url=url,
         ).json()['results']
 
-        return AnalysisResult(raw_dict=result)
+        return pm.AnalysisResult(raw_dict=result)
 
-    def wait_for_scan_result(self, product_id: int, polling_interval_seconds=60) -> AnalysisResult:
+    def wait_for_scan_result(
+        self,
+        product_id: int,
+        polling_interval_seconds: int=60,
+    ) -> pm.AnalysisResult:
         def scan_finished():
             result = self.scan_result(product_id=product_id)
-            if result.status() in (ProcessingStatus.READY, ProcessingStatus.FAILED):
+            if result.status() in (pm.ProcessingStatus.READY, pm.ProcessingStatus.FAILED):
                 return result
             return False
 
@@ -254,7 +247,7 @@ class ProtecodeApi:
             result = scan_finished()
         return result
 
-    def list_apps(self, group_id=None, custom_attribs={}) -> typing.List[Product]:
+    def list_apps(self, group_id=None, custom_attribs={}) -> list[pm.Product]:
         # Protecode checks for substring match only.
         def full_match(analysis_result_attribs):
             if not custom_attribs:
@@ -274,7 +267,7 @@ class ProtecodeApi:
             for product in products:
                 if not full_match(product.get('custom_data')):
                     continue
-                yield Product(product)
+                yield pm.Product(product)
 
             if next_page_url := res.get('next'):
                 yield from _iter_matching_products(url=next_page_url)
@@ -321,12 +314,12 @@ class ProtecodeApi:
             }
         ).json()['triages']
 
-        return [Triage(raw_dict=triage_dict) for triage_dict in result]
+        return [pm.Triage(raw_dict=triage_dict) for triage_dict in result]
 
     def add_triage(
         self,
-        triage: Triage,
-        scope: TriageScope=None,
+        triage: pm.Triage,
+        scope: pm.TriageScope=None,
         product_id=None,
         group_id=None,
         component_version=None,
@@ -354,12 +347,12 @@ class ProtecodeApi:
         scope = scope if scope else triage.scope()
 
         # depending on the scope, different arguments are required
-        if scope == TriageScope.ACCOUNT_WIDE:
+        if scope == pm.TriageScope.ACCOUNT_WIDE:
             pass
-        elif scope in (TriageScope.FILE_NAME, TriageScope.FILE_HASH, TriageScope.RESULT):
-            not_none(product_id)
-        elif scope == TriageScope.GROUP:
-            not_none(group_id)
+        elif scope in (pm.TriageScope.FILE_NAME, pm.TriageScope.FILE_HASH, pm.TriageScope.RESULT):
+            ci.util.not_none(product_id)
+        elif scope == pm.TriageScope.GROUP:
+            ci.util.not_none(group_id)
         else:
             raise NotImplementedError()
 
@@ -403,10 +396,9 @@ class ProtecodeApi:
     # --- "rest" routes (undocumented API)
 
     def login(self):
-
-        if (auth_scheme := self._auth_scheme) is ProtecodeAuthScheme.BASIC_AUTH:
+        if (auth_scheme := self._auth_scheme) is model.protecode.ProtecodeAuthScheme.BASIC_AUTH:
             pass
-        elif auth_scheme is ProtecodeAuthScheme.BEARER_TOKEN:
+        elif auth_scheme is model.protecode.ProtecodeAuthScheme.BEARER_TOKEN:
             return
         else:
             raise NotImplementedError(auth_scheme)
@@ -461,12 +453,12 @@ class ProtecodeApi:
 
     def set_component_version(
         self,
-        component_name:str,
-        component_version:str,
-        objects: typing.List[str],
-        scope:VersionOverrideScope=VersionOverrideScope.APP,
-        app_id:int = None,
-        group_id:int = None,
+        component_name: str,
+        component_version: str,
+        objects: list[str],
+        scope: pm.VersionOverrideScope=pm.VersionOverrideScope.APP,
+        app_id: int=None,
+        group_id: int=None,
     ):
         '''
         @param component_name: component name as reported by bdba
@@ -483,13 +475,13 @@ class ProtecodeApi:
             'scope': scope.value,
         }
 
-        if scope is VersionOverrideScope.APP:
+        if scope is pm.VersionOverrideScope.APP:
             if not app_id:
                 raise RuntimeError(
                     'An App ID is required when overriding versions with App scope.'
                 )
             override_dict['app_scope'] = app_id
-        elif scope is VersionOverrideScope.GROUP:
+        elif scope is pm.VersionOverrideScope.GROUP:
             if not group_id:
                 raise RuntimeError(
                     'A Group ID is required when overriding versions with Group scope.'
@@ -503,15 +495,15 @@ class ProtecodeApi:
             json=[override_dict],
         ).json()
 
-    def pdf_report(self, product_id: int, cvss_version: CVSSVersion=CVSSVersion.V3):
+    def pdf_report(self, product_id: int, cvss_version: pm.CVSSVersion=pm.CVSSVersion.V3):
         if not self._csrf_token:
             self.login()
 
         url = self._routes.pdf_report(product_id)
 
-        if cvss_version is CVSSVersion.V2:
+        if cvss_version is pm.CVSSVersion.V2:
             cvss_version_number = 2
-        elif cvss_version is CVSSVersion.V3:
+        elif cvss_version is pm.CVSSVersion.V3:
             cvss_version_number = 3
         else:
             raise NotImplementedError(cvss_version)
