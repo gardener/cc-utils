@@ -17,12 +17,8 @@ def upload_version_hints(
     client: protecode.client.ProtecodeApi,
 ):
     for component in scan_result.components():
-        version = component.version()
-        if version and version != 'unknown':
-            continue
-
         for hint in hints:
-            if hint.name == component.name():
+            if hint.name == component.name() and hint.version != component.version():
                 break
         else:
             continue
