@@ -725,7 +725,16 @@ def process_images(
                         on_exist=cnudie.upload.UploadMode.SKIP,
                     )
             else:
-                orig_ocm_repo = component.repositoryContexts[-2]
+                if len(ocm_repos := component.repositoryContexts) >= 2:
+                    orig_ocm_repo = component.repositoryContexts[-2]
+                elif len(ocm_repos) == 1:
+                    logger.warn(f'{component.name}:{component.version} has only one ocm-repository')
+                    logger.warn('(expected: two or more)')
+                    logger.warn(f'{ocm_repos=}')
+                    orig_ocm_repo = component.repositoryContexts[-1]
+                else:
+                    raise RuntimeError(f'{component.name}:{component.version} has no ocm-repository')
+
                 ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
                     src_name=component_descriptor.component.name,
                     src_version=component_descriptor.component.version,
