@@ -451,14 +451,17 @@ class ResourceGroupProcessor:
                 logger.error(f'scan of {scanned_element=} failed; {scan_result=}')
                 return
 
-            # scan succeeded
-            logger.info(f'uploading package-version-hints for {scan_result.display_name()}')
+            logger.info(
+                f'scan of {scan_result.display_name()} succeeded, going to post-process results'
+            )
+
             if version_hints := _package_version_hints(
                 component=c,
                 artefact=r,
                 result=scan_result,
             ):
-                protecode.assessments.upload_version_hints(
+                logger.info(f'uploading package-version-hints for {scan_result.display_name()}')
+                scan_result = protecode.assessments.upload_version_hints(
                     scan_result=scan_result,
                     hints=version_hints,
                     client=self.protecode_client,
@@ -508,6 +511,8 @@ class ResourceGroupProcessor:
                         'DELETE_AFTER': None,
                     },
                 )
+
+            logger.info(f'post-processing of {scan_result.display_name()} done')
 
             yield from protecode.util.iter_artefact_metadata(
                 scanned_element=scanned_element,
