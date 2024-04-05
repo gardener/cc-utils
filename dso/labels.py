@@ -2,7 +2,6 @@ import dataclasses
 import enum
 import functools
 import inspect
-import typing
 import sys
 
 import dacite
@@ -13,8 +12,8 @@ import dso.cvss
 
 @dataclasses.dataclass(frozen=True)
 class PathRegexes:
-    include_paths: typing.List[str] = dataclasses.field(default_factory=list)
-    exclude_paths: typing.List[str] = dataclasses.field(default_factory=list)
+    include_paths: list[str] = dataclasses.field(default_factory=list)
+    exclude_paths: list[str] = dataclasses.field(default_factory=list)
 
 
 class ScanPolicy(enum.Enum):
@@ -36,8 +35,8 @@ class Label:
 @dataclasses.dataclass(frozen=True)
 class ScanningHint(LabelValue):
     policy: ScanPolicy
-    path_config: typing.Optional[PathRegexes]
-    comment: typing.Optional[str]
+    path_config: PathRegexes | None
+    comment: str | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -125,6 +124,6 @@ def deserialise_label(
         data_class=t,
         data=label,
         config=dacite.Config(
-            cast=(tuple, enum.Enum)
+            cast=[tuple, enum.Enum],
         ),
     )
