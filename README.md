@@ -34,9 +34,6 @@ Run `.ci/install_git_hooks` to register recommended git hooks.
 
 `pip install gardener-cicd-cli` - install CLI
 
-`pip install gardener-cicd-whd` - install Webhook-Dispatcher
-
-`pip install gardener-cicd-dso` - install DevSecOps libraries
 
 ### Consume from Container Image
 
@@ -49,8 +46,11 @@ CI/CD jobs are run (`europe-docker.pkg.dev/gardener-project/releases/cicd/job-im
 
 ### Python Runtime
 
-`Python 3.10` or greater is required as a runtime (see requirements.txt for additional
-runtime dependencies). Earlier Python versions (3.8, 3.7, 3.6, 2.x) are *not* supported.
+`Python 3.11` or greater is required as a runtime (see requirements.txt for additional
+runtime dependencies). Earlier Python versions.
+
+As a general rule, contained sources are always qualified using the python3-version from
+[alpine](https://endoflife.date/alpine)'s greatest release version.
 
 In addition to the Python API, some functions are exposed via a command line interface
 (`./cli.py`).
