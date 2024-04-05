@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import collections.abc
 import concurrent.futures
 import dataclasses
 import enum
@@ -11,7 +12,6 @@ import json
 import jsonschema
 import logging
 import os
-import typing
 import threading
 
 import ccc.oci
@@ -79,8 +79,7 @@ class ProcessingPipeline:
         self,
         component: cm.Component,
         resource: cm.Resource,
-        processing_mode: ProcessingMode,
-        inject_ocm_coordinates_into_oci_manifests: bool = False,
+        inject_ocm_coordinates_into_oci_manifests: bool=False,
     ) -> processing_model.ProcessingJob:
         if not self.matches(component, resource):
             return None
@@ -102,7 +101,7 @@ class ProcessingPipeline:
             inject_ocm_coordinates_into_oci_manifest=inject_ocm_coordinates_into_oci_manifests,
         )
 
-        job = self._processor.process(processing_job=job)
+        job: processing_model.ProcessingJob = self._processor.process(processing_job=job)
 
         first = True
         for uploader in self._uploaders:
@@ -126,7 +125,7 @@ class ProcessingPipeline:
 
 
 def create_lssd_label(
-    processing_rules: typing.List[str],
+    processing_rules: list[str],
 ) -> cm.Label:
     lssd_label_name = 'cloud.gardener.cnudie/sdo/lssd'
     label = cm.Label(
@@ -139,11 +138,11 @@ def create_lssd_label(
     return label
 
 
-def parse_processing_cfg(path):
+def parse_processing_cfg(path: str):
     raw_cfg = ci.util.parse_yaml_file(path)
 
     processing_cfg_dir = os.path.abspath(os.path.dirname(path))
-    for name, cfg in raw_cfg.get('processors', {}).items():
+    for _, cfg in raw_cfg.get('processors', {}).items():
         cfg['kwargs']['base_dir'] = processing_cfg_dir
 
     return raw_cfg
@@ -176,8 +175,8 @@ def _uploader(uploader_cfg: dict):
 
 def processing_pipeline(
     processing_cfg: dict,
-    shared_processors: dict = {},
-    shared_uploaders: dict = {},
+    shared_processors: dict={},
+    shared_uploaders: dict={},
 ) -> ProcessingPipeline:
     name = processing_cfg.get('name', '<no name>')
 
@@ -231,10 +230,9 @@ def enum_processing_cfgs(
 
 
 def create_jobs(
-    processing_cfg_path,
+    processing_cfg_path: str,
     component_descriptor_v2: cm.ComponentDescriptor,
-    processing_mode,
-    inject_ocm_coordinates_into_oci_manifests,
+    inject_ocm_coordinates_into_oci_manifests: bool,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
 ):
     processing_cfg = parse_processing_cfg(processing_cfg_path)
@@ -264,7 +262,6 @@ def create_jobs(
             job = pipeline.process(
                 component=component,
                 resource=oci_resource,
-                processing_mode=processing_mode,
                 inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
             )
 
@@ -287,9 +284,9 @@ upload_image_lock = threading.Lock()
 # uploads a single OCI artifact and returns the content digest
 def process_upload_request(
     processing_job: processing_model.ProcessingJob,
-    replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
-    platform_filter: typing.Callable[[om.OciPlatform], bool] = None,
-    oci_client: oci.client.Client = None,
+    replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
+    platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
+    oci_client: oci.client.Client=None,
 ) -> str:
     global uploaded_image_refs_to_digests
     global uploaded_image_refs_to_ready_events
@@ -319,7 +316,7 @@ def process_upload_request(
         return uploaded_image_refs_to_digests[tgt_ref]
 
     # most common case: tgt has not yet been processed - process and afterwards signal
-    # other threads waiting for upload result that result is ready be setting the event
+    # other threads waiting for upload result that result is ready by setting the event
 
     accept = replication_mode.accept_header()
     manifest_blob_ref = oci_client.head_manifest(
@@ -381,25 +378,25 @@ def set_digest(image_reference: str, docker_content_digest: str) -> str:
 
 
 def process_images(
-    processing_cfg_path,
-    component_descriptor_v2,
+    processing_cfg_path: str,
+    component_descriptor_v2: cm.ComponentDescriptor,
     tgt_ctx_base_url: str,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    processing_mode=ProcessingMode.REGULAR,
+    processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     upload_mode=None,
     upload_mode_cd=None,
     upload_mode_images=None,
-    replication_mode=oci.ReplicationMode.PREFER_MULTIARCH,
-    inject_ocm_coordinates_into_oci_manifests=False,
-    skip_cd_validation=False,
-    generate_cosign_signatures=False,
+    replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
+    inject_ocm_coordinates_into_oci_manifests: bool=False,
+    skip_cd_validation: bool=False,
+    generate_cosign_signatures: bool=False,
     cosign_repository=None,
-    signing_server_url=None,
-    root_ca_cert_path=None,
-    platform_filter: typing.Callable[[om.OciPlatform], bool] = None,
-    bom_resources: typing.Sequence[BOMEntry] = [],
-    skip_component_upload: typing.Callable[[cm.Component], bool] = None,
-    oci_client: oci.client.Client = None,
+    signing_server_url: str=None,
+    root_ca_cert_path: str=None,
+    platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
+    bom_resources: collections.abc.Sequence[BOMEntry]=[],
+    skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
+    oci_client: oci.client.Client=None,
 ):
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -421,9 +418,8 @@ def process_images(
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
 
     jobs = create_jobs(
-        processing_cfg_path,
+        processing_cfg_path=processing_cfg_path,
         component_descriptor_v2=component_descriptor_v2,
-        processing_mode=processing_mode,
         inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
         component_descriptor_lookup=component_descriptor_lookup,
     )
@@ -555,13 +551,11 @@ def process_images(
         else:
             target_ref = processing_job.upload_request.target_ref
 
-        bom_resources.append(
-            BOMEntry(
-                target_ref,
-                BOMEntryType.Docker,
-                f'{processing_job.component.name}/{processing_job.resource.name}',
-            )
-        )
+        bom_resources.append(BOMEntry(
+            url=target_ref,
+            type=BOMEntryType.Docker,
+            comp=f'{processing_job.component.name}/{processing_job.resource.name}',
+        ))
 
         return processing_job
 
@@ -569,13 +563,13 @@ def process_images(
 
     # group jobs by component-version (TODO: either make Component immutable, or implement
     # __eq__ / __hash__
-    def cname_version(component):
+    def cname_version(component: cm.Component):
         return (component.name, component.version)
 
     def job_cname_version(job: processing_model.ProcessingJob):
         return cname_version(job.component)
 
-    def append_ctx_repo(ctx_base_url, component):
+    def append_ctx_repo(ctx_base_url: str | cm.OciOcmRepository, component: cm.Component):
         if isinstance(ctx_base_url, str):
             ocm_repo = cm.OciOcmRepository(baseUrl=ctx_base_url)
         elif isinstance(ctx_base_url, cm.OciOcmRepository):
@@ -584,16 +578,13 @@ def process_images(
             raise TypeError(ctx_base_url)
 
         if component.current_repository_ctx().baseUrl != ocm_repo.baseUrl:
-            component.repositoryContexts.append(
-                ocm_repo,
-            )
+            component.repositoryContexts.append(ocm_repo)
 
-    components = []
+    components: list[cm.Component] = []
     for _, job_group in itertools.groupby(
         sorted(jobs, key=job_cname_version),
         job_cname_version,
     ):
-
         patched_resources = {}
 
         # patch-in overwrites (caveat: must be done sequentially, as lists are not threadsafe)
@@ -644,13 +635,11 @@ def process_images(
         ocm_repository = component.current_repository_ctx()
         oci_ref = ocm_repository.component_version_oci_ref(component)
 
-        bom_resources.append(
-            BOMEntry(
-                oci_ref,
-                BOMEntryType.Docker,
-                component.name,
-            )
-        )
+        bom_resources.append(BOMEntry(
+            url=oci_ref,
+            type=BOMEntryType.Docker,
+            comp=component.name,
+        ))
 
     source_comp = component_descriptor_v2.component
 

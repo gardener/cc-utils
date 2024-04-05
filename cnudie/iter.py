@@ -1,8 +1,8 @@
+import collections.abc
 import dataclasses
-import typing
 
-import gci.componentmodel as cm
 import cnudie.retrieve
+import gci.componentmodel as cm
 
 
 @dataclasses.dataclass
@@ -31,14 +31,16 @@ class ArtefactNode:
     - iterable (useful for pattern-matching, e.g. c,a = node)
     '''
     @property
-    def artefact(self) -> cm.Resource | cm.ComponentSource:
+    def artefact(self) -> cm.Resource | cm.Source:
         if isinstance(self, ResourceNode):
             return self.resource
         if isinstance(self, SourceNode):
             return self.source
         raise TypeError('must be of type ResourceNode or SourceNode')
 
-    def __iter__(self) -> typing.Generator[cm.Component|cm.Resource|cm.ComponentSource, None, None]:
+    def __iter__(
+        self,
+    ) -> collections.abc.Generator[cm.Component | cm.Resource | cm.Source, None, None]:
         # pylint: disable=E1101
         yield self.component
         yield self.artefact
@@ -51,7 +53,7 @@ class ResourceNode(Node, ArtefactNode):
 
 @dataclasses.dataclass
 class SourceNode(Node, ArtefactNode):
-    source: cm.ComponentSource
+    source: cm.Source
 
 
 class Filter:
@@ -73,10 +75,10 @@ def iter(
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
-    node_filter: typing.Callable[[Node], bool]=None,
+    node_filter: collections.abc.Callable[[Node], bool]=None,
     ocm_repo: cm.OcmRepository | str=None,
     ctx_repo: cm.OcmRepository | str=None, # deprecated, use `ocm_repo` instead
-) -> typing.Generator[Node, None, None]:
+) -> collections.abc.Generator[Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
 
@@ -140,14 +142,14 @@ def iter(
                 name=cref.componentName,
                 version=cref.version,
             )
+
             if ocm_repo:
                 referenced_component_descriptor = lookup(cref_id, ocm_repo)
             else:
                 referenced_component_descriptor = lookup(cref_id)
-            referenced_component = referenced_component_descriptor.component
 
             yield from inner_iter(
-                component=referenced_component,
+                component=referenced_component_descriptor.component,
                 lookup=lookup,
                 recursion_depth=recursion_depth,
                 path=path,
@@ -176,7 +178,7 @@ def iter_resources(
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
-) -> typing.Generator[ResourceNode, None, None]:
+) -> collections.abc.Generator[ResourceNode, None, None]:
     '''
     curried version of `iter` w/ node-filter preset to yield only resource-nodes
     '''
