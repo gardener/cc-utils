@@ -138,8 +138,12 @@ class TagSuffixUploader:
         self._suffix = suffix
         self._separator = separator
 
-    def process(self, processing_job, target_as_source=False):
-        if processing_job.resource.type is not cm.ResourceType.OCI_IMAGE:
+    def process(
+        self,
+        processing_job: pm.ProcessingJob,
+        target_as_source: bool=False,
+    ):
+        if processing_job.resource.type is not cm.ArtefactType.OCI_IMAGE:
             raise NotImplementedError
 
         if not target_as_source:
@@ -147,14 +151,13 @@ class TagSuffixUploader:
         else:
             src_ref = processing_job.upload_request.target_ref
 
-        src_prefix, src_name, src_tag = oci.client._split_image_reference(src_ref)
+        src_ref = om.OciImageReference.to_image_ref(src_ref)
 
-        if ':' in src_tag:
+        if src_ref.has_digest_tag:
             raise RuntimeError('Cannot append tag suffix to resource that is accessed via digest')
 
-        src_name = ci.util.urljoin(src_prefix, src_name)
-        tgt_tag = self._separator.join((src_tag, self._suffix))
-        tgt_ref = ':'.join((src_name, tgt_tag))
+        tgt_tag = self._separator.join((src_ref.tag, self._suffix))
+        tgt_ref = ':'.join((src_ref.ref_without_tag, tgt_tag))
 
         upload_request = dataclasses.replace(
             processing_job.upload_request,
