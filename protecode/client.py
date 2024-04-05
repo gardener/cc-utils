@@ -216,9 +216,16 @@ class ProtecodeApi:
     def delete_product(self, product_id: int):
         url = self._routes.product(product_id=product_id)
 
-        self._delete(
-            url=url,
-        )
+        try:
+            self._delete(
+                url=url,
+            )
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                # if the http status is 404 it is fine because the product should be deleted anyway
+                logger.info(f'deletion of product {product_id} failed because it does not exist')
+                return
+            raise e
 
     def scan_result(self, product_id: int) -> pm.AnalysisResult:
         url = self._routes.product(product_id=product_id)
