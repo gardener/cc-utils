@@ -443,7 +443,7 @@ class ResourceGroupProcessor:
             c = scan_request.component
             r = scan_request.artefact
             scanned_element = cnudie.iter.ResourceNode(
-                path=(c,),
+                path=(cnudie.iter.NodePathEntry(c),),
                 resource=r,
             )
 

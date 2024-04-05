@@ -91,6 +91,18 @@ class CveCategorisationLabel(Label):
     value: dso.cvss.CveCategorisation
 
 
+@dataclasses.dataclass(frozen=True)
+class ExtraComponentReference:
+    component_reference: cm.ComponentIdentity
+    purpose: tuple[str] | None
+
+
+@dataclasses.dataclass(frozen=True)
+class ExtraComponentReferencesLabel(Label):
+    name = 'ocm.software/ocm-gear/extra-component-references'
+    value: tuple[ExtraComponentReference, ...]
+
+
 @functools.cache
 def _label_to_type() -> dict[str, Label]:
     own_module = sys.modules[__name__]

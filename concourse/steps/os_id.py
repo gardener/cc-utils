@@ -81,7 +81,7 @@ def base_image_os_id(
 
                 return gcm.OsIdScanResult(
                     scanned_element=cnudie.iter.ResourceNode(
-                        path=(component,),
+                        path=(cnudie.iter.NodePathEntry(component),),
                         resource=resource,
                     ),
                     os_id=scan_result.data.os_info,
@@ -125,7 +125,7 @@ def base_image_os_id(
     # pylint: disable=E1123
     return gcm.OsIdScanResult(
         scanned_element=cnudie.iter.ResourceNode(
-            path=(component,),
+            path=(cnudie.iter.NodePathEntry(component),),
             resource=resource,
         ),
         os_id=last_os_info,
