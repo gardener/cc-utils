@@ -1,17 +1,30 @@
 import collections.abc
 import dataclasses
+import enum
 
 import cnudie.retrieve
+import dso.labels
 import gci.componentmodel as cm
+
+
+class NodeReferenceType(enum.StrEnum):
+    COMPONENT_REFERENCE = 'componentReference'
+    EXTRA_COMPONENT_REFS_LABEL = f'label:{dso.labels.ExtraComponentReferencesLabel.name}'
+
+
+@dataclasses.dataclass(frozen=True)
+class NodePathEntry:
+    component: cm.Component
+    reftype: NodeReferenceType = NodeReferenceType.COMPONENT_REFERENCE
 
 
 @dataclasses.dataclass
 class Node:
-    path: tuple[cm.Component]
+    path: tuple[NodePathEntry]
 
     @property
     def component(self):
-        return self.path[-1]
+        return self.path[-1].component
 
     @property
     def component_id(self):
@@ -112,9 +125,10 @@ def iter(
         component: cm.Component,
         lookup: cnudie.retrieve.ComponentDescriptorLookupById,
         recursion_depth,
-        path: tuple[cm.ComponentIdentity]=(),
+        path: tuple[NodePathEntry]=(),
+        reftype: NodeReferenceType=NodeReferenceType.COMPONENT_REFERENCE,
     ):
-        path = (*path, component)
+        path = (*path, NodePathEntry(component, reftype))
 
         yield ComponentNode(
             path=path,
@@ -153,6 +167,31 @@ def iter(
                 lookup=lookup,
                 recursion_depth=recursion_depth,
                 path=path,
+            )
+
+        if not (extra_crefs_label := component.find_label(
+            name=dso.labels.ExtraComponentReferencesLabel.name,
+        )):
+            return
+
+        extra_crefs_label: dso.labels.ExtraComponentReferencesLabel = dso.labels.deserialise_label(
+            label=extra_crefs_label,
+        )
+
+        for extra_cref in extra_crefs_label.value:
+            extra_cref_id = extra_cref.component_reference
+
+            if ocm_repo:
+                referenced_component_descriptor = lookup(extra_cref_id, ocm_repo)
+            else:
+                referenced_component_descriptor = lookup(extra_cref_id)
+
+            yield from inner_iter(
+                component=referenced_component_descriptor.component,
+                lookup=lookup,
+                recursion_depth=recursion_depth,
+                path=path,
+                reftype=NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL,
             )
 
     for node in inner_iter(

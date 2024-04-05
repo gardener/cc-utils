@@ -6,15 +6,17 @@ import concourse.model.traits.filter as examinee
 import cnudie.iter
 
 
-def component(name='TestComponent', version='1.2.3', resources=()):
-    return cm.Component(
-        name=name,
-        version=version,
-        repositoryContexts=(),
-        provider=None,
-        sources=resources,
-        resources=(),
-        componentReferences=(),
+def node_path_entry(name='TestComponent', version='1.2.3', resources=()):
+    return cnudie.iter.NodePathEntry(
+        component=cm.Component(
+            name=name,
+            version=version,
+            repositoryContexts=(),
+            provider=None,
+            sources=resources,
+            resources=(),
+            componentReferences=(),
+        ),
     )
 
 
@@ -60,13 +62,13 @@ def test_component_attr_included():
 
     assert test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(),
+            node_path_entry(),
         ))
     )
 
     assert not test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(name='unknown-component'),
+            node_path_entry(name='unknown-component'),
         )
     ))
 
@@ -86,13 +88,13 @@ def test_component_attr_excluded():
 
     assert test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(name='excluded-component'),
+            node_path_entry(name='excluded-component'),
         )
     ))
 
     assert not test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(name='TestComponent'),
+            node_path_entry(name='TestComponent'),
         )
     ))
 
@@ -170,19 +172,19 @@ def test_multiple_component_rules():
 
     assert not test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(name='AName'),
+            node_path_entry(name='AName'),
         )
     ))
 
     assert not test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(name='AnotherName'),
+            node_path_entry(name='AnotherName'),
         )
     ))
 
     assert not test_filter(
         cnudie.iter.ComponentNode(path=(
-            component(name='YetAnotherName'),
+            node_path_entry(name='YetAnotherName'),
         )
     ))
 
@@ -253,7 +255,7 @@ def test_multiple_configs():
     assert test_filter(
         cnudie.iter.ResourceNode(
             path=(
-                component(name='ComponentName'),
+                node_path_entry(name='ComponentName'),
             ),
             resource=resource(name='YetAnotherName'),
     ))
@@ -261,7 +263,7 @@ def test_multiple_configs():
     assert test_filter(
         cnudie.iter.ResourceNode(
             path=(
-                component(name='ComponentName'),
+                node_path_entry(name='ComponentName'),
             ),
             resource=resource(name='AnotherResource'),
     ))
@@ -269,7 +271,7 @@ def test_multiple_configs():
     assert test_filter(
         cnudie.iter.ResourceNode(
             path=(
-                component(name='another-component'),
+                node_path_entry(name='another-component'),
             ),
             resource=resource(name='ResourceName'),
     ))

@@ -88,7 +88,7 @@ class CheckmarxProject:
         return model.ScanResult(
             state=scan_state,
             scanned_element=cnudie.iter.SourceNode(
-                path=(component,),
+                path=(cnudie.iter.NodePathEntry(component),),
                 source=source,
             ),
             project_id=self.project_details.id,
