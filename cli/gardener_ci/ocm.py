@@ -21,6 +21,7 @@ import gci.componentmodel as cm
 import gci.oci as goci
 
 import ccc.oci
+import ci.util
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.upload
@@ -409,3 +410,32 @@ def validate(component_descriptor: str):
     )
 
     print('schema validation succeeded')
+
+
+def add_labels(
+    component_descriptor_src_file: str,
+    component_descriptor_out_file: str=None,
+    labels: list[str]=[],
+):
+    component_descriptor = cm.ComponentDescriptor.from_dict(
+        ci.util.parse_yaml_file(component_descriptor_src_file)
+    )
+
+    for raw_label in labels:
+        parsed_label = yaml.safe_load(raw_label)
+        label = cm.Label(
+            name=parsed_label.get('name'),
+            value=parsed_label.get('value'),
+        )
+        component_descriptor.component.labels.append(label)
+
+    if component_descriptor_out_file:
+        outfh = open(component_descriptor_out_file, 'w')
+    else:
+        outfh = sys.stdout
+
+    yaml.dump(
+        data=dataclasses.asdict(component_descriptor),
+        Dumper=cm.EnumValueYamlDumper,
+        stream=outfh,
+    )
