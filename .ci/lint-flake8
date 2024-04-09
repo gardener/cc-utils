@@ -21,7 +21,7 @@ if flake8 \
     --count \
     --format=pylint \
     --ignore=F722,F821 \
-    --exclude ${exclude_args} \
+    $([ "$exclude_args" == "" ] && echo "" || echo "--exclude ${exclude_args}") \
     ${src_dir}; then
     echo 'flake8 succeeded'
 else
