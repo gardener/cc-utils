@@ -13,6 +13,7 @@ import itertools
 import os
 import pkgutil
 import sys
+import types
 
 try:
     import ci.util
@@ -187,6 +188,16 @@ def add_module(module_name, parser):
                         argtype = None # type must not be set for store_true/store_false actions
                 elif type(typehint) == list:
                     action = 'append'
+                elif isinstance(typehint, types.GenericAlias):
+                    # assume it is a list/sequence
+                    type_args = typehint.__args__
+                    if len(type_args) == 1:
+                        argtype = type_args[0]
+                        action = 'append'
+                    else:
+                        print('Error: GenericAlias must have exactly one type-parameter')
+                        exit(1)
+
                 elif callable(typehint):
                     argtype = typehint
                     if inspect.isclass(typehint) and issubclass(typehint, enum.Enum):
