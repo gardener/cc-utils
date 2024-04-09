@@ -91,6 +91,8 @@ def iter(
     node_filter: collections.abc.Callable[[Node], bool]=None,
     ocm_repo: cm.OcmRepository | str=None,
     ctx_repo: cm.OcmRepository | str=None, # deprecated, use `ocm_repo` instead
+    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    reftype_filter: collections.abc.Callable[[NodeReferenceType], bool]=None,
 ) -> collections.abc.Generator[Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
@@ -105,9 +107,14 @@ def iter(
                             dependencies; -1 will resolve w/o recursion limit, 0 will not resolve
                             component dependencies
     @param prune_unique: if true, redundant component-versions will only be traversed once
-    @node_filter:        use to filter emitted nodes (see Filter for predefined filters)
+    @param node_filter:  use to filter emitted nodes (see Filter for predefined filters)
     @param ocm_repo:     optional OCM Repository to be used to override in the lookup
     @param ctx_repo:     deprecated, use `ocm_repo` instead
+    @param component_filter: use to exclude components (and their references) from the iterator;
+                             thereby `True` means the component should be filtered out
+    @param reftype_filter: use to exclude components (and their references) from the iterator if
+                           they are of a certain reference type; thereby `True` means the component
+                           should be filtered out
     '''
     if not ocm_repo and ctx_repo:
         ocm_repo = ctx_repo
@@ -128,6 +135,12 @@ def iter(
         path: tuple[NodePathEntry]=(),
         reftype: NodeReferenceType=NodeReferenceType.COMPONENT_REFERENCE,
     ):
+        if component_filter and component_filter(component):
+            return
+
+        if reftype_filter and reftype_filter(reftype):
+            return
+
         path = (*path, NodePathEntry(component, reftype))
 
         yield ComponentNode(
@@ -217,6 +230,8 @@ def iter_resources(
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
+    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    reftype_filter: collections.abc.Callable[[NodeReferenceType], bool]=None,
 ) -> collections.abc.Generator[ResourceNode, None, None]:
     '''
     curried version of `iter` w/ node-filter preset to yield only resource-nodes
@@ -227,4 +242,6 @@ def iter_resources(
         recursion_depth=recursion_depth,
         prune_unique=prune_unique,
         node_filter=Filter.resources,
+        component_filter=component_filter,
+        reftype_filter=reftype_filter,
     )
