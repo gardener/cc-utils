@@ -234,6 +234,7 @@ def create_jobs(
     component_descriptor_v2: cm.ComponentDescriptor,
     inject_ocm_coordinates_into_oci_manifests: bool,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
 ):
     processing_cfg = parse_processing_cfg(processing_cfg_path)
 
@@ -247,6 +248,7 @@ def create_jobs(
     for component, resource in cnudie.iter.iter_resources(
         component=component_descriptor_v2,
         lookup=component_descriptor_lookup,
+        component_filter=component_filter,
     ):
         resource: cm.Resource
         # XXX only support OCI-resources for now
@@ -397,7 +399,16 @@ def process_images(
     bom_resources: collections.abc.Sequence[BOMEntry]=[],
     skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
     oci_client: oci.client.Client=None,
+    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
 ):
+    '''
+    note: Passing a filter to prevent component descriptors from being replicated using the
+    `skip_component_upload` parameter will still replicate all its resources (i.e. oci images)
+    as well as referenced components. In contrast to that, passing a filter using the
+    `component_filter` parameter will also exclude its resources as well as all transitive component
+    references from the replication. In both cases, `True` means the respective component is
+    _excluded_.
+    '''
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
@@ -422,6 +433,7 @@ def process_images(
         component_descriptor_v2=component_descriptor_v2,
         inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
         component_descriptor_lookup=component_descriptor_lookup,
+        component_filter=component_filter,
     )
 
     def process_job(processing_job: processing_model.ProcessingJob):
@@ -613,6 +625,7 @@ def process_images(
         component=component_descriptor_v2,
         lookup=component_descriptor_lookup,
         node_filter=cnudie.iter.Filter.components,
+        component_filter=component_filter,
     ):
         component = component_node.component
         if not cname_version(component) in processed_component_versions:
@@ -746,11 +759,15 @@ def process_images(
     ]
     if not (leng := len(original_comp)) == 1:
         if leng < 1:
-            raise RuntimeError(f'did not find {source_comp.name=} - this is a bug!')
+            logger.warning(
+                f'did not find {source_comp.name=} - probably the component filter filtered it out '
+                'or this is a bug. Will continue with the unchanged root component descriptor'
+            )
+            return component_descriptor_v2
         if leng > 1:
             raise RuntimeError(f'found more than one version of {source_comp.name=} - pbly a bug!')
 
     return dataclasses.replace(
         component_descriptor_v2,
-        component=original_comp[0],  # safe, because we check for leng above
+        component=original_comp[0], # safe, because we check for leng above
     )
