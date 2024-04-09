@@ -22,6 +22,7 @@ import cnudie.retrieve
 import cnudie.upload
 import container.util
 import cosign.payload as cp
+import dso.labels
 import gci.componentmodel as cm
 import oci
 import oci.client
@@ -235,6 +236,7 @@ def create_jobs(
     inject_ocm_coordinates_into_oci_manifests: bool,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
 ):
     processing_cfg = parse_processing_cfg(processing_cfg_path)
 
@@ -249,6 +251,7 @@ def create_jobs(
         component=component_descriptor_v2,
         lookup=component_descriptor_lookup,
         component_filter=component_filter,
+        reftype_filter=reftype_filter,
     ):
         resource: cm.Resource
         # XXX only support OCI-resources for now
@@ -400,6 +403,7 @@ def process_images(
     skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
     oci_client: oci.client.Client=None,
     component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    skip_labels: collections.abc.Callable[[str], bool]=None,
 ):
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -428,12 +432,20 @@ def process_images(
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
 
+    reftype_filter = None
+    if skip_labels and skip_labels(dso.labels.ExtraComponentReferencesLabel.name):
+        def filter_extra_component_refs(reftype: cnudie.iter.NodeReferenceType) -> bool:
+            return reftype is cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL
+
+        reftype_filter = filter_extra_component_refs
+
     jobs = create_jobs(
         processing_cfg_path=processing_cfg_path,
         component_descriptor_v2=component_descriptor_v2,
         inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
         component_descriptor_lookup=component_descriptor_lookup,
         component_filter=component_filter,
+        reftype_filter=reftype_filter,
     )
 
     def process_job(processing_job: processing_model.ProcessingJob):
@@ -626,6 +638,7 @@ def process_images(
         lookup=component_descriptor_lookup,
         node_filter=cnudie.iter.Filter.components,
         component_filter=component_filter,
+        reftype_filter=reftype_filter,
     ):
         component = component_node.component
         if not cname_version(component) in processed_component_versions:
@@ -647,6 +660,9 @@ def process_images(
 
         ocm_repository = component.current_repository_ctx()
         oci_ref = ocm_repository.component_version_oci_ref(component)
+
+        if skip_labels:
+            component.labels = [label for label in component.labels if not skip_labels(label.name)]
 
         bom_resources.append(BOMEntry(
             url=oci_ref,
