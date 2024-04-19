@@ -220,6 +220,7 @@ class VulnerabilityFinding(Finding):
     cve: str
     cvss_v3_score: float
     cvss: dso.cvss.CVSSV3 | dict
+    summary: str | None
 
 
 @dataclasses.dataclass(frozen=True)

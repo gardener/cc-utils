@@ -200,6 +200,9 @@ class Vulnerability(ModelBase):
 
         return dso.cvss.CVSSV3.parse(cvss_vector)
 
+    def summary(self) -> str:
+        return self.raw.get('vuln').get('summary')
+
     def has_triage(self) -> bool:
         return bool(self.raw.get('triage')) or bool(self.raw.get('triages'))
 

@@ -134,6 +134,7 @@ def iter_artefact_metadata(
                 cve=vulnerability.cve(),
                 cvss_v3_score=vulnerability.cve_severity(),
                 cvss=vulnerability.cvss,
+                summary=vulnerability.summary(),
             )
 
             yield dso.model.ArtefactMetadata(
