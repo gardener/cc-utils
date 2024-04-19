@@ -1,5 +1,6 @@
 import base64
 import logging
+import random
 
 import kubernetes.client
 import kubernetes.config
@@ -41,9 +42,10 @@ def process_config_queue(
         cfg_factory=cfg_factory,
     )
 
-    for cfg_queue_entry in cmu.iter_cfg_queue_entries_to_be_deleted(
-        cfg_metadata=cfg_metadata,
-    ):
+    cfg_queue_entries = list(cmu.iter_cfg_queue_entries_to_be_deleted(cfg_metadata=cfg_metadata))
+    random.shuffle(cfg_queue_entries) # do not block cfg-queue if entry cannot be processed
+
+    for cfg_queue_entry in cfg_queue_entries:
         cfg_element = cfg_factory._cfg_element(
             cfg_type_name=cfg_queue_entry.target.type,
             cfg_name=cfg_queue_entry.target.name,
@@ -79,11 +81,16 @@ def rotate_secrets(
         cfg_factory=cfg_factory,
     )
 
-    for cfg_element in cmr.iter_cfg_elements_requiring_rotation(
+    cfg_elements_requiring_rotation = list(cmr.iter_cfg_elements_requiring_rotation(
         cmu.iter_cfg_elements(cfg_factory=cfg_factory),
         cfg_metadata=cfg_metadata,
         rotation_method=cmm.RotationMethod.AUTOMATED,
-    ):
+    ))
+
+    # do not block queue if element cannot be processed
+    random.shuffle(cfg_elements_requiring_rotation)
+
+    for cfg_element in cfg_elements_requiring_rotation:
         logger.info(
             f"Rotating config-element '{cfg_element.name()}' of type '{cfg_element._type_name}'"
         )
