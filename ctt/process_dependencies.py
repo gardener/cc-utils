@@ -403,7 +403,7 @@ def process_images(
     skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
     oci_client: oci.client.Client=None,
     component_filter: collections.abc.Callable[[cm.Component], bool]=None,
-    skip_labels: collections.abc.Callable[[str], bool]=None,
+    remove_label: collections.abc.Callable[[str], bool]=None,
 ):
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -433,7 +433,7 @@ def process_images(
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
 
     reftype_filter = None
-    if skip_labels and skip_labels(dso.labels.ExtraComponentReferencesLabel.name):
+    if remove_label and remove_label(dso.labels.ExtraComponentReferencesLabel.name):
         def filter_extra_component_refs(reftype: cnudie.iter.NodeReferenceType) -> bool:
             return reftype is cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL
 
@@ -661,8 +661,8 @@ def process_images(
         ocm_repository = component.current_repository_ctx()
         oci_ref = ocm_repository.component_version_oci_ref(component)
 
-        if skip_labels:
-            component.labels = [label for label in component.labels if not skip_labels(label.name)]
+        if remove_label:
+            component.labels = [label for label in component.labels if not remove_label(label.name)]
 
         bom_resources.append(BOMEntry(
             url=oci_ref,
