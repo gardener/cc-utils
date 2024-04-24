@@ -680,6 +680,10 @@ class EnumValueYamlDumper(yaml.SafeDumper):
     a yaml.SafeDumper that will dump enum objects using their values
     '''
     def represent_data(self, data):
+        if isinstance(data, AccessDict):
+            # yaml dumper won't know how to parse objects of type `AccessDict`
+            # (altough it is just a wrapped dict) -> so convert it to a "real" dict
+            data = dict(data)
         if isinstance(data, enum.Enum):
             return self.represent_data(data.value)
         return super().represent_data(data)
