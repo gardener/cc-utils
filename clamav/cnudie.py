@@ -210,6 +210,7 @@ def resource_scan_result_to_artefact_metadata(
     datatype: str = dso.model.Datatype.MALWARE,
     creation_date: datetime.datetime = datetime.datetime.now(),
 ) -> dso.model.ArtefactMetadata:
+    discovery_date = datetime.date.today()
 
     artefact = github.compliance.model.artifact_from_node(resource_scan_result.scanned_element)
     artefact_ref = dso.model.component_artefact_id_from_ocm(
@@ -244,4 +245,5 @@ def resource_scan_result_to_artefact_metadata(
         artefact=artefact_ref,
         meta=meta,
         data=finding,
+        discovery_date=discovery_date,
     )
