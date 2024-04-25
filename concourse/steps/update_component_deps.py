@@ -92,12 +92,7 @@ def greatest_component_version(
     version_lookup,
     ignore_prerelease_versions,
 ) -> str | None:
-    versions = version_lookup(
-        gci.componentmodel.ComponentIdentity(
-            name=component_name,
-            version='dont_care',
-        )
-    )
+    versions = version_lookup(component_name)
     if not versions:
         return None
 
@@ -118,12 +113,7 @@ def greatest_component_version_with_matching_minor(
     reference_version,
     ignore_prerelease_versions,
 ) -> str | None:
-    versions = version_lookup(
-        gci.componentmodel.ComponentIdentity(
-            name=component_name,
-            version='dont_care',
-        )
-    )
+    versions = version_lookup(component_name)
     if not versions:
         return None
 

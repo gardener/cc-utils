@@ -485,11 +485,29 @@ def oci_component_descriptor_lookup(
     return lookup
 
 
+def error_code_indicating_not_found(image_reference: str | om.OciImageReference) -> int:
+    '''
+    Since some oci registries don't comply with the open containers spec
+    (https://github.com/opencontainers/distribution-spec/blob/main/spec.md#endpoints)
+    regarding the error codes for failure upon listing tags, this function tries to
+    guess the oci registry type based on the supplied `image_reference` and returns
+    the expected error code.
+    '''
+    oci_registry_type = om.OciRegistryType.from_image_ref(image_reference=image_reference)
+
+    if oci_registry_type == om.OciRegistryType.DOCKERHUB:
+        return 401
+    if oci_registry_type == om.OciRegistryType.GHCR:
+        return 403
+
+    return 404
+
+
 def version_lookup(
     default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client=None,
-    default_absent_ok=True,
+    default_absent_ok: bool=True,
 ) -> VersionLookupByComponent:
     if not oci_client:
         import ccc.oci
@@ -530,8 +548,15 @@ def version_lookup(
                     oci_client=oci_client,
                 ):
                     versions.add(version_tag)
-            except requests.exceptions.HTTPError:
-                continue
+            except requests.exceptions.HTTPError as e:
+                if (error_code := e.response.status_code) == 404:
+                    continue
+
+                image_reference = ocm_repo.component_oci_ref(component_name)
+                if error_code == error_code_indicating_not_found(image_reference=image_reference):
+                    continue
+
+                raise
 
         if not versions and not absent_ok:
             raise om.OciImageNotFoundException()
