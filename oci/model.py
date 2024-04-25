@@ -43,7 +43,28 @@ class OciRegistryType(enum.Enum):
     GCR = 'gcr'
     DOCKERHUB = 'dockerhub'
     ARTIFACTORY = 'artifactory'
+    GHCR = 'ghcr'
+    ALIYUN = 'aliyun'
     UNKNOWN = 'unknown'
+
+    @staticmethod
+    def from_image_ref(
+        image_reference: typing.Union[str, 'OciImageReference'],
+    ) -> 'OciRegistryType':
+        netloc = OciImageReference.to_image_ref(image_reference=image_reference).netloc
+
+        if 'pkg.dev' in netloc:
+            return OciRegistryType.GAR
+        if 'gcr.io' in netloc:
+            return OciRegistryType.GCR
+        if 'docker.io' in netloc:
+            return OciRegistryType.DOCKERHUB
+        if 'ghcr.io' in netloc:
+            return OciRegistryType.GHCR
+        if 'cr.aliyuncs.com' in netloc:
+            return OciRegistryType.ALIYUN
+
+        return OciRegistryType.UNKNOWN
 
 
 class OciImageReference:
