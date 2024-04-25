@@ -7,6 +7,7 @@ import json
 import logging
 import tempfile
 import threading
+import time
 import typing
 
 import dacite
@@ -268,6 +269,7 @@ class Client:
         self,
         image_reference: typing.Union[str, om.OciImageReference],
         scope: str,
+        remaining_retries: int=3,
     ):
         if isinstance(image_reference, om.OciImageReference):
             image_reference = str(image_reference)
@@ -347,6 +349,15 @@ class Client:
             logger.warning(
                 f'rq against {realm=} failed: {res.status_code=} {res.reason=} {res.content=}'
             )
+
+            if res.status_code == 429 and remaining_retries > 0:
+                logger.warning('quota was exceeded, will wait a minute and then retry again')
+                time.sleep(60)
+                self._authenticate(
+                    image_reference=image_reference,
+                    scope=scope,
+                    remaining_retries=remaining_retries - 1,
+                )
 
         res.raise_for_status()
 
