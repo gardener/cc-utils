@@ -110,7 +110,7 @@ class Metadata:
     type: str
     relation: Relation | None = None
     creation_date: datetime.datetime | str = None
-    last_update: datetime.datetime | str = None
+    last_update: datetime.datetime | str | None = None
 
 
 @dataclasses.dataclass(frozen=True)
