@@ -54,6 +54,6 @@ sphinx_rtd_theme
 sseclient-py<2.0.0
 tabulate
 termcolor
-urllib3<3.0.0
+urllib3
 websockets
 yamllint
