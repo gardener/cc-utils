@@ -147,7 +147,7 @@ def iter_artefact_metadata(
 
 def iter_filesystem_paths(
     component: pm.Component,
-    file_type: str | None = 'elf'
+    file_type: str | None=None,
 ) -> collections.abc.Generator[tuple[str, str], None, None]:
     for ext_obj in component.extended_objects():
         for path_infos in ext_obj.raw.get('extended-fullpath', []):
