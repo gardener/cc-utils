@@ -289,7 +289,12 @@ def delivery_service_component_descriptor_lookup(
     default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     delivery_client=None,
-    default_absent_ok=True,
+    default_absent_ok: bool=True,
+    default_ignore_errors: tuple[Exception]=(
+        requests.exceptions.HTTPError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.ReadTimeout,
+    ),
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the delivery-service.
@@ -310,7 +315,8 @@ def delivery_service_component_descriptor_lookup(
         component_id: cm.ComponentIdentity,
         ctx_repo: cm.OcmRepository=default_ctx_repo,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
-        absent_ok=default_absent_ok,
+        absent_ok: bool=default_absent_ok,
+        ignore_errors: tuple[Exception]=default_ignore_errors,
     ):
         component_id = cnudie.util.to_component_id(component_id)
         if ctx_repo:
@@ -336,7 +342,7 @@ def delivery_service_component_descriptor_lookup(
                 name=component_id.name,
                 version=component_id.version,
                 ocm_repo_url=ocm_repo.oci_ref,
-                ignore_errors=(requests.exceptions.HTTPError, requests.exceptions.ConnectionError),
+                ignore_errors=ignore_errors,
             )
 
             if component_descriptor:
@@ -347,7 +353,7 @@ def delivery_service_component_descriptor_lookup(
         component_descriptor = delivery_client.component_descriptor(
             name=component_id.name,
             version=component_id.version,
-            ignore_errors=(requests.exceptions.HTTPError, requests.exceptions.ConnectionError),
+            ignore_errors=ignore_errors,
         )
 
         if component_descriptor:
