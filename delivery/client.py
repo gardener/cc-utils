@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import itertools
 import logging
 import requests
 import time
@@ -200,18 +201,41 @@ class DeliveryServiceClient:
         self,
         data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        res = self.session.put(
-            url=self._routes.update_metadata(),
-            json={'entries': [
-                dataclasses.asdict(
-                    artefact_metadata,
-                    dict_factory=ci.util.dict_to_json_factory,
-                ) for artefact_metadata in data
-            ]},
-            timeout=(4, 121),
+        # update metadata by type to reduce the per-request-size to lower risks of running into
+        # http 413 errors. However, don't split data of the same type into different requests
+        # because the delivery services requires all data of the same type to be in the same
+        # request (the request is being used as a kind of context, so that not containing elements
+        # are being removed from the delivery database)
+        data_by_types = itertools.groupby(
+            sorted(data, key=lambda datum: datum.meta.type),
+            key=lambda datum: datum.meta.type,
         )
 
-        res.raise_for_status()
+        processed_types = set()
+        erroneous_res = None
+        for type, data_for_type in data_by_types:
+            res = self.session.put(
+                url=self._routes.update_metadata(),
+                json={'entries': [
+                    dataclasses.asdict(
+                        artefact_metadata,
+                        dict_factory=ci.util.dict_to_json_factory,
+                    ) for artefact_metadata in data_for_type
+                ]},
+                timeout=(4, 121),
+            )
+
+            if not res.ok:
+                logger.warning(
+                    f'error occured during metadata update of {type=}; {processed_types=}'
+                )
+                erroneous_res = res
+                continue
+
+            processed_types.add(type)
+
+        if erroneous_res:
+            erroneous_res.raise_for_status()
 
     def delete_metadata(
         self,
