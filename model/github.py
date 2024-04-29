@@ -198,5 +198,6 @@ class GithubCredentials(BasicCredentials):
     def _optional_attributes(self):
         return (
             'privateKey',
-            'secondary_authToken'
+            'secondary_authToken',
+            'recovery-codes',
         )
