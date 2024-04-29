@@ -149,6 +149,7 @@ class MalwareSummary:
     '''
     findings: list[MalwareFinding]
     metadata: ClamAVMetadata
+    severity: str | None = None # TODO: rm once finding-specific tracking implemented
 
 
 @dataclasses.dataclass(frozen=True)

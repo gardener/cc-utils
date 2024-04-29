@@ -238,7 +238,8 @@ def resource_scan_result_to_artefact_metadata(
             clamav_version_str=clamav_version_info.clamav_version_str,
             signature_version=clamav_version_info.signature_version,
             virus_definition_timestamp=clamav_version_info.signature_date,
-        )
+        ),
+        severity=gcm.Severity.BLOCKER.name,
     )
 
     return dso.model.ArtefactMetadata(
