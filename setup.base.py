@@ -31,7 +31,7 @@ setuptools.setup(
     name='gardener-cicd-base',
     version=version(),
     description='Gardener CI/CD Base Libraries',
-    python_requires='>=3.10',
+    python_requires='>=3.11',
     py_modules=modules(),
     packages=['ccc', 'ci', 'model'],
     package_data={

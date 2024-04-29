@@ -21,7 +21,7 @@ setuptools.setup(
     name='gardener-cicd-dso',
     version=version(),
     description='Gardener CI/CD DevSecOps',
-    python_requires='>=3.10',
+    python_requires='>=3.11',
     py_modules=modules(),
     packages=[
         'checkmarx',
