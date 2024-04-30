@@ -348,15 +348,15 @@ def delivery_service_component_descriptor_lookup(
                     version=component_id.version,
                     ocm_repo_url=ocm_repo.oci_ref if ocm_repo else None,
                 )
+
+                if component_descriptor:
+                    return component_descriptor
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code != 404:
                     raise
             except ignore_errors:
                 # already return here to not use unintended "fallback" ocm repositories
                 return None
-
-            if component_descriptor:
-                return component_descriptor
 
         # component descriptor not found in lookup
         if absent_ok:
