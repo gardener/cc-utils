@@ -120,7 +120,6 @@ class DeliveryServiceClient:
         ocm_repo_url: str=None,
         version_filter: str | None=None,
         validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
-        ignore_errors: tuple[Exception]=tuple(),
     ):
         params = {
             'component_name': name,
@@ -132,16 +131,13 @@ class DeliveryServiceClient:
         if version_filter is not None:
             params['version_filter'] = version_filter
 
-        try:
-            res = self.session.get(
-                url=self._routes.component_descriptor(),
-                params=params,
-                timeout=(4, 31),
-            )
+        res = self.session.get(
+            url=self._routes.component_descriptor(),
+            params=params,
+            timeout=(4, 31),
+        )
 
-            res.raise_for_status()
-        except ignore_errors:
-            return
+        res.raise_for_status()
 
         return cm.ComponentDescriptor.from_dict(
             res.json(),

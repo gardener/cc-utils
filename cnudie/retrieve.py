@@ -1,5 +1,6 @@
 import dataclasses
 import io
+import itertools
 import json
 import logging
 import os
@@ -291,7 +292,6 @@ def delivery_service_component_descriptor_lookup(
     delivery_client=None,
     default_absent_ok: bool=True,
     default_ignore_errors: tuple[Exception]=(
-        requests.exceptions.HTTPError,
         requests.exceptions.ConnectionError,
         requests.exceptions.ReadTimeout,
     ),
@@ -328,6 +328,10 @@ def delivery_service_component_descriptor_lookup(
                 default_ctx_repo,
             )
 
+        # if component descriptor is not found in `ocm_repos`, fallback to default ocm repo mapping
+        # defined in delivery service (i.e. specify no ocm repository)
+        ocm_repos = itertools.chain(ocm_repos, (None,))
+
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
                 ocm_repo = cm.OciOcmRepository(
@@ -335,26 +339,24 @@ def delivery_service_component_descriptor_lookup(
                     baseUrl=ocm_repo,
                 )
 
-            if not isinstance(ocm_repo, cm.OciOcmRepository):
+            if ocm_repo and not isinstance(ocm_repo, cm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
-            component_descriptor = delivery_client.component_descriptor(
-                name=component_id.name,
-                version=component_id.version,
-                ocm_repo_url=ocm_repo.oci_ref,
-                ignore_errors=ignore_errors,
-            )
+            try:
+                component_descriptor = delivery_client.component_descriptor(
+                    name=component_id.name,
+                    version=component_id.version,
+                    ocm_repo_url=ocm_repo.oci_ref if ocm_repo else None,
+                )
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code != 404:
+                    raise
+            except ignore_errors:
+                # already return here to not use unintended "fallback" ocm repositories
+                return None
 
             if component_descriptor:
                 return component_descriptor
-
-        # try to find component descriptor without specifying ocm repo
-        # -> fallback to default ocm repo mapping of delivery service
-        component_descriptor = delivery_client.component_descriptor(
-            name=component_id.name,
-            version=component_id.version,
-            ignore_errors=ignore_errors,
-        )
 
         if component_descriptor:
             return component_descriptor
