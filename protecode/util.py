@@ -38,17 +38,19 @@ def iter_artefact_metadata(
         artefact=artefact,
     )
 
+    scan_id = dso.model.BDBAScanId(
+        base_url=scan_result.base_url(),
+        report_url=scan_result.report_url(),
+        product_id=scan_result.product_id(),
+        group_id=scan_result.group_id(),
+    )
+
+    has_license_findings = False
+    has_vulnerability_findings = False
     for package in scan_result.components():
         package_id = dso.model.BDBAPackageId(
             package_name=package.name(),
             package_version=package.version(),
-        )
-
-        scan_id = dso.model.BDBAScanId(
-            base_url=scan_result.base_url(),
-            report_url=scan_result.report_url(),
-            product_id=scan_result.product_id(),
-            group_id=scan_result.group_id(),
         )
 
         filesystem_paths = list({
@@ -109,6 +111,7 @@ def iter_artefact_metadata(
                 data=license_finding,
                 discovery_date=discovery_date,
             )
+            has_license_findings = True
 
         meta = dso.model.Metadata(
             datasource=dso.model.Datasource.BDBA,
@@ -143,6 +146,59 @@ def iter_artefact_metadata(
                 data=vulnerability_finding,
                 discovery_date=discovery_date,
             )
+            has_vulnerability_findings = True
+
+    if not has_license_findings:
+        # yield dummy finding so that delivery-service can handle "no license findings"-finding
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.LICENSE,
+            creation_date=now,
+            last_update=now,
+        )
+
+        dummy_finding = dso.model.LicenseFinding(
+            id=package_id,
+            scan_id=scan_id,
+            severity=gcm.Severity.NONE.name,
+            license=license,
+        )
+
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=dummy_finding,
+            discovery_date=discovery_date,
+        )
+
+    if not has_vulnerability_findings:
+        # yield dummy finding so that delivery-service can handle "no license findings"-finding
+        meta = dso.model.Metadata(
+            datasource=dso.model.Datasource.BDBA,
+            type=dso.model.Datatype.VULNERABILITY,
+            creation_date=now,
+            last_update=now,
+        )
+
+        dummy_finding = dso.model.VulnerabilityFinding(
+            id=dso.model.BDBAPackageId(
+                package_name=None,
+                package_version=None,
+            ),
+            scan_id=scan_id,
+            severity=gcm.Severity.NONE.name,
+            cve=None,
+            cvss_v3_score=-1,
+            cvss=None,
+            summary=None,
+        )
+
+        yield dso.model.ArtefactMetadata(
+            artefact=artefact_ref,
+            meta=meta,
+            data=dummy_finding,
+            discovery_date=discovery_date,
+        )
 
 
 def iter_filesystem_paths(
