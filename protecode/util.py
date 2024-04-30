@@ -53,12 +53,7 @@ def iter_artefact_metadata(
             package_version=package.version(),
         )
 
-        filesystem_paths = list({
-            dso.model.FilesystemPath(
-                path=path,
-                digest=digest,
-            ) for path, digest in iter_filesystem_paths(component=package)
-        })
+        filesystem_paths = list(iter_filesystem_paths(component=package))
 
         licenses = list({
             dso.model.License(
@@ -204,21 +199,23 @@ def iter_artefact_metadata(
 def iter_filesystem_paths(
     component: pm.Component,
     file_type: str | None=None,
-) -> collections.abc.Generator[tuple[str, str], None, None]:
+) -> collections.abc.Generator[dso.model.FilesystemPath, None, None]:
     for ext_obj in component.extended_objects():
-        for path_infos in ext_obj.raw.get('extended-fullpath', []):
+        path = [
+            dso.model.FilesystemPathEntry(
+                path=path,
+                type=type,
+            ) for path_infos in ext_obj.raw.get('extended-fullpath', [])
+            if (
+                (path := path_infos.get('path')) and (type := path_infos.get('type'))
+                and (not file_type or file_type == type)
+            )
+        ]
 
-            # be defensive, dont break
-            if not (fullpath := path_infos.get('path')):
-                continue
-            if not (path_info_type := path_infos.get('type')):
-                continue
-
-            if not file_type:
-                yield fullpath, ext_obj.sha1()
-
-            if path_info_type == file_type:
-                yield fullpath, ext_obj.sha1()
+        yield dso.model.FilesystemPath(
+            path=path,
+            digest=ext_obj.sha1(),
+        )
 
 
 def enum_triages(

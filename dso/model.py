@@ -191,8 +191,14 @@ class License:
 
 
 @dataclasses.dataclass(frozen=True)
-class FilesystemPath:
+class FilesystemPathEntry:
     path: str
+    type: str
+
+
+@dataclasses.dataclass(frozen=True)
+class FilesystemPath:
+    path: list[FilesystemPathEntry]
     digest: str
 
 
