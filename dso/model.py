@@ -270,6 +270,12 @@ class GitHubUser(User):
     type: str = 'github-user'
 
 
+class MetaRescoringRules(enum.StrEnum):
+    BDBA_TRIAGE = 'bdba-triage'
+    CUSTOM_RESCORING = 'custom-rescoring'
+    ORIGINAL_SEVERITY = 'original-severity'
+
+
 @dataclasses.dataclass(frozen=True)
 class CustomRescoring:
     finding: (

@@ -11,6 +11,8 @@ import logging
 import ci.log
 import cnudie.iter
 import concourse.model.traits.image_scan as image_scan
+import delivery.client
+import delivery.model
 import dso.model
 import gci.componentmodel as cm
 import github.compliance.model as gcm
@@ -24,10 +26,45 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging(print_thread_id=True)
 
 
+def iter_existing_findings(
+    delivery_client: delivery.client.DeliveryServiceClient,
+    resource_node: cnudie.iter.ResourceNode,
+    finding_type: str | tuple[str],
+    datasource: str=dso.model.Datasource.BDBA,
+) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
+    artefact_kind = 'resource'
+
+    findings_raw = delivery_client.query_metadata_raw(
+        components=[resource_node.component_id],
+        type=finding_type,
+    )
+
+    return (
+        delivery.model.ArtefactMetadata.from_dict(raw).to_dso_model_artefact_metadata()
+        for raw in findings_raw
+        if (
+            raw.get('meta').get('datasource') == datasource
+            and raw.get('artefactId').get('artefactName') == resource_node.artefact.name
+            and raw.get('artefactId').get('artefactVersion') == resource_node.artefact.version
+            and raw.get('artefactId').get('artefactKind') == artefact_kind
+            and raw.get('artefactId').get('artefactType') == resource_node.artefact.type
+            # TODO include extra identity once it is properly implemented by bdba scanner
+            # and delivery.model.ComponentArtefactId.normalise_artefact_extra_id(
+            #     artefact_extra_id=raw.get('artefactId').get('artefactExtraId'),
+            #     artefact_version=raw.get('artefactId').get('artefactVersion'),
+            # ) == delivery.model.ComponentArtefactId.normalise_artefact_extra_id(
+            #     artefact_extra_id=resource_node.artefact.extraIdentity,
+            #     artefact_version=resource_node.artefact.version,
+            # )
+        )
+    )
+
+
 def iter_artefact_metadata(
     scanned_element: cnudie.iter.ResourceNode,
     scan_result: pm.AnalysisResult,
     license_cfg: image_scan.LicenseCfg=None,
+    delivery_client: delivery.client.DeliveryServiceClient=None,
 ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
     now = datetime.datetime.now()
     discovery_date = datetime.date.today()
@@ -45,8 +82,7 @@ def iter_artefact_metadata(
         group_id=scan_result.group_id(),
     )
 
-    has_license_findings = False
-    has_vulnerability_findings = False
+    findings: list[dso.model.ArtefactMetadata] = []
     for package in scan_result.components():
         package_id = dso.model.BDBAPackageId(
             package_name=package.name(),
@@ -65,7 +101,6 @@ def iter_artefact_metadata(
             datasource=dso.model.Datasource.BDBA,
             type=dso.model.Datatype.STRUCTURE_INFO,
             creation_date=now,
-            last_update=now,
         )
 
         structure_info = dso.model.StructureInfo(
@@ -86,7 +121,6 @@ def iter_artefact_metadata(
             datasource=dso.model.Datasource.BDBA,
             type=dso.model.Datatype.LICENSE,
             creation_date=now,
-            last_update=now,
         )
 
         for license in licenses:
@@ -100,28 +134,72 @@ def iter_artefact_metadata(
                 license=license,
             )
 
-            yield dso.model.ArtefactMetadata(
+            artefact_metadata = dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
                 meta=meta,
                 data=license_finding,
                 discovery_date=discovery_date,
             )
-            has_license_findings = True
 
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.VULNERABILITY,
-            creation_date=now,
-            last_update=now,
-        )
+            findings.append(artefact_metadata)
+            yield artefact_metadata
 
         for vulnerability in package.vulnerabilities():
-            if (
-                vulnerability.historical() or
-                vulnerability.has_triage() or
-                not vulnerability.cvss
-            ):
+            if not vulnerability.cvss:
+                # we only support vulnerabilities with a valid cvss v3 vector
                 continue
+
+            if vulnerability.historical():
+                continue
+
+            for triage in vulnerability.triages():
+                meta = dso.model.Metadata(
+                    datasource=dso.model.Datasource.BDBA,
+                    type=dso.model.Datatype.RESCORING,
+                    relation=dso.model.Relation(
+                        refers_to=dso.model.Datatype.VULNERABILITY,
+                        relation_kind=dso.model.RelationKind.RESCORE,
+                    ),
+                    creation_date=triage.modified.astimezone(datetime.UTC),
+                )
+
+                # We don't try to interpret the scope from BDBA here because we cannot completly
+                # convert it in our scoping, so there would always be some edge cases where it does
+                # not fit properly. However, by translating all triages for each scan result, we
+                # implicitly use the BDBA scopes since they are already applied by BDBA to each scan
+                # result. So, we can correctly mimic the BDBA scopes with the acceptable price of
+                # redundant (rescoring) data.
+                vulnerability_rescoring = dso.model.CustomRescoring(
+                    finding=dso.model.RescoringVulnerabilityFinding(
+                        id=dso.model.BDBAPackageId(
+                            package_name=package_id.package_name,
+                            # don't specify version to store only one rescoring per package name
+                            package_version=None,
+                        ),
+                        cve=vulnerability.cve(),
+                    ),
+                    severity=gcm.Severity.NONE.name, # bdba only allows triaging to NONE
+                    user=dso.model.BDBAUser(
+                        username=triage.user().get('username'),
+                        email=triage.user().get('email'),
+                        firstname=triage.user().get('firstname'),
+                        lastname=triage.user().get('lastname'),
+                    ),
+                    matching_rules=[dso.model.MetaRescoringRules.BDBA_TRIAGE],
+                    comment=triage.description(),
+                )
+
+                yield dso.model.ArtefactMetadata(
+                    artefact=artefact_ref,
+                    meta=meta,
+                    data=vulnerability_rescoring,
+                )
+
+            meta = dso.model.Metadata(
+                datasource=dso.model.Datasource.BDBA,
+                type=dso.model.Datatype.VULNERABILITY,
+                creation_date=now,
+            )
 
             vulnerability_finding = dso.model.VulnerabilityFinding(
                 id=package_id,
@@ -135,65 +213,52 @@ def iter_artefact_metadata(
                 summary=vulnerability.summary(),
             )
 
-            yield dso.model.ArtefactMetadata(
+            artefact_metadata = dso.model.ArtefactMetadata(
                 artefact=artefact_ref,
                 meta=meta,
                 data=vulnerability_finding,
                 discovery_date=discovery_date,
             )
-            has_vulnerability_findings = True
 
-    if not has_license_findings:
-        # yield dummy finding so that delivery-service can handle "no license findings"-finding
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.LICENSE,
-            creation_date=now,
-            last_update=now,
-        )
+            findings.append(artefact_metadata)
+            yield artefact_metadata
 
-        dummy_finding = dso.model.LicenseFinding(
-            id=package_id,
-            scan_id=scan_id,
-            severity=gcm.Severity.NONE.name,
-            license=license,
-        )
-
-        yield dso.model.ArtefactMetadata(
-            artefact=artefact_ref,
-            meta=meta,
-            data=dummy_finding,
-            discovery_date=discovery_date,
-        )
-
-    if not has_vulnerability_findings:
-        # yield dummy finding so that delivery-service can handle "no license findings"-finding
-        meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
-            type=dso.model.Datatype.VULNERABILITY,
-            creation_date=now,
-            last_update=now,
-        )
-
-        dummy_finding = dso.model.VulnerabilityFinding(
-            id=dso.model.BDBAPackageId(
-                package_name=None,
-                package_version=None,
+    if delivery_client:
+        # delete those BDBA findings which were found before for this scan but which are not part
+        # of the current scan anymore -> those are either solved license findings or (now)
+        # historical vulnerability findings (e.g. because a custom version was entered)
+        existing_findings = iter_existing_findings(
+            delivery_client=delivery_client,
+            resource_node=scanned_element,
+            finding_type=(
+                dso.model.Datatype.VULNERABILITY,
+                dso.model.Datatype.LICENSE,
             ),
-            scan_id=scan_id,
-            severity=gcm.Severity.NONE.name,
-            cve=None,
-            cvss_v3_score=-1,
-            cvss=None,
-            summary=None,
         )
 
-        yield dso.model.ArtefactMetadata(
-            artefact=artefact_ref,
-            meta=meta,
-            data=dummy_finding,
-            discovery_date=discovery_date,
-        )
+        stale_findings = []
+        for existing_finding in existing_findings:
+            for finding in findings:
+                if (
+                    existing_finding.meta.type == finding.meta.type
+                    and existing_finding.data.id.package_name == finding.data.id.package_name
+                    and existing_finding.data.id.package_version == finding.data.id.package_version
+                    and ((
+                        finding.meta.type == dso.model.Datatype.LICENSE
+                        and existing_finding.data.license.name == finding.data.license.name
+                    ) or (
+                        finding.meta.type == dso.model.Datatype.VULNERABILITY
+                        and existing_finding.data.cve == finding.data.cve
+                    ))
+                ):
+                    # finding still appeared in current scan result -> keep it
+                    break
+            else:
+                # finding did not appear in current scan result -> delete it
+                stale_findings.append(existing_finding)
+
+        if stale_findings:
+            delivery_client.delete_metadata(data=stale_findings)
 
 
 def iter_filesystem_paths(

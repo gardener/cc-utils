@@ -402,6 +402,7 @@ class ResourceGroupProcessor:
             tuple[pm.Product],
         ],
         s3_client: 'botocore.client.S3',
+        delivery_client: delivery.client.DeliveryServiceClient=None,
         license_cfg: image_scan.LicenseCfg=None,
         cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
         auto_assess_max_severity: dso.cvss.CVESeverity=dso.cvss.CVESeverity.MEDIUM,
@@ -518,6 +519,7 @@ class ResourceGroupProcessor:
                 scanned_element=scanned_element,
                 scan_result=scan_result,
                 license_cfg=license_cfg,
+                delivery_client=delivery_client,
             )
 
 
@@ -718,6 +720,7 @@ def upload_grouped_images(
             processing_mode=processing_mode,
             known_scan_results=known_scan_results,
             s3_client=s3_client,
+            delivery_client=delivery_client,
             license_cfg=license_cfg,
             cve_rescoring_rules=cve_rescoring_rules,
             auto_assess_max_severity=auto_assess_max_severity,
