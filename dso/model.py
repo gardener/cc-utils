@@ -252,13 +252,36 @@ class RescoringLicenseFinding(RescoringFinding):
 
 
 @dataclasses.dataclass(frozen=True)
+class User:
+    username: str
+
+
+@dataclasses.dataclass(frozen=True)
+class BDBAUser(User):
+    email: str
+    firstname: str
+    lastname: str
+    type: str = 'bdba-user'
+
+
+@dataclasses.dataclass(frozen=True)
+class GitHubUser(User):
+    github_hostname: str
+    type: str = 'github-user'
+
+
+@dataclasses.dataclass(frozen=True)
 class CustomRescoring:
     finding: (
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
     )
     severity: str
-    user: dict
+    user: (
+        BDBAUser
+        | GitHubUser
+        | User
+    )
     matching_rules: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
 

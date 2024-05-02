@@ -255,6 +255,9 @@ class Triage(ModelBase):
     def description(self):
         return self.raw.get('description')
 
+    def user(self) -> dict:
+        return self.raw.get('user')
+
     @property
     def modified(self) -> datetime.datetime:
         return dateutil.parser.isoparse(self.raw.get('modified'))
