@@ -229,17 +229,23 @@ def resource_scan_result_to_artefact_metadata(
     aggregated_scan_result = resource_scan_result.scan_result
     clamav_version_info = aggregated_scan_result.clamav_version_info
 
+    findings = tuple(
+        _scan_result_to_malware_finding(r)
+        for r in aggregated_scan_result.findings
+    )
+
+    severity = gcm.Severity.BLOCKER
+    if len(findings) == 0:
+        severity = gcm.Severity.NONE
+
     finding = dso.model.MalwareSummary(
-        findings=tuple(
-            _scan_result_to_malware_finding(r)
-            for r in aggregated_scan_result.findings
-        ),
+        findings=findings,
         metadata=dso.model.ClamAVMetadata(
             clamav_version_str=clamav_version_info.clamav_version_str,
             signature_version=clamav_version_info.signature_version,
             virus_definition_timestamp=clamav_version_info.signature_date,
         ),
-        severity=gcm.Severity.BLOCKER.name,
+        severity=severity.name,
     )
 
     return dso.model.ArtefactMetadata(
