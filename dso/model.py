@@ -50,6 +50,12 @@ class ComponentArtefactId:
             frozenset(self.artefact.artefact_extra_id.items()),
         ))
 
+    def __hash__(self):
+        return hash(self.as_frozenset())
+
+    def __eq__(self, other: 'ComponentArtefactId'):
+        return self.as_frozenset() == other.as_frozenset()
+
 
 def component_artefact_id_from_ocm(
     component: cm.Component,
