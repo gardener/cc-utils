@@ -15,6 +15,7 @@ import cnudie.retrieve
 import cnudie.util
 import delivery.model as dm
 import dso.model
+import http_requests
 
 
 logger = logging.getLogger(__name__)
@@ -179,14 +180,24 @@ class DeliveryServiceClient:
         self,
         data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        res = self.session.post(
-            url=self._routes.upload_metadata(),
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        data, headers = http_requests.encode_request(
             json={'entries': [
                 dataclasses.asdict(
                     artefact_metadata,
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
+            headers=headers,
+        )
+
+        res = self.session.post(
+            url=self._routes.upload_metadata(),
+            data=data,
+            headers=headers,
             timeout=(4, 121),
         )
 
@@ -196,14 +207,24 @@ class DeliveryServiceClient:
         self,
         data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        res = self.session.put(
-            url=self._routes.update_metadata(),
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        data, headers = http_requests.encode_request(
             json={'entries': [
                 dataclasses.asdict(
                     artefact_metadata,
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
+            headers=headers,
+        )
+
+        res = self.session.put(
+            url=self._routes.update_metadata(),
+            data=data,
+            headers=headers,
             timeout=(4, 121),
         )
 
@@ -213,14 +234,24 @@ class DeliveryServiceClient:
         self,
         data: typing.Iterable[dso.model.ArtefactMetadata],
     ):
-        res = self.session.delete(
-            url=self._routes.delete_metadata(),
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        data, headers = http_requests.encode_request(
             json={'entries': [
                 dataclasses.asdict(
                     artefact_metadata,
                     dict_factory=ci.util.dict_to_json_factory,
                 ) for artefact_metadata in data
             ]},
+            headers=headers,
+        )
+
+        res = self.session.delete(
+            url=self._routes.delete_metadata(),
+            data=data,
+            headers=headers,
             timeout=(4, 121),
         )
 
@@ -361,18 +392,24 @@ class DeliveryServiceClient:
         else:
             params = dict()
 
-        query = {
-            'components': [
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        data, headers = http_requests.encode_request(
+            json={'components': [
                 {
                     'componentName': c.name,
                     'componentVersion': c.version,
                 } for c in components
-            ]
-        }
+            ]},
+            headers=headers,
+        )
 
         res = self.session.post(
             url=self._routes.query_metadata(),
-            json=query,
+            data=data,
+            headers=headers,
             params=params,
             timeout=(4, 121),
         )
