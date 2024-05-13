@@ -97,24 +97,6 @@ class ComponentArtefactId:
     artefactType: str
     artefactExtraId: dict
 
-    @staticmethod
-    def normalise_artefact_extra_id(
-        artefact_extra_id: dict[str, str],
-        artefact_version: str=None,
-    ) -> str:
-        '''
-        generate stable representation of `artefact_extra_id` and remove `version` key if
-        the specified version is identical to the given artefact version
-
-        sorted by key in alphabetical order and concatinated following pattern:
-        key1:value1_key2:value2_ ...
-        '''
-        if (version := artefact_extra_id.get('version')) and version == artefact_version:
-            del artefact_extra_id['version']
-
-        s = sorted(artefact_extra_id.items(), key=lambda items: items[0])
-        return '_'.join([':'.join(values) for values in s])
-
 
 @dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
