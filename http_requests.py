@@ -8,6 +8,7 @@ import functools
 import io
 import json as js
 import logging
+import sys
 import typing
 import zlib
 
@@ -289,10 +290,12 @@ def encode_request(
                 compressor = zlib.compressobj(wbits=31)
                 yield compressor.compress(data) + compressor.flush()
 
-    compressed_data = _compress(data, encoding_method)
+    compressed_data = b''.join(_compress(data, encoding_method))
+    content_length = sys.getsizeof(compressed_data)
 
     if headers is not None:
         headers['Content-Encoding'] = encoding_method
+        headers['Content-Length'] = str(content_length)
         return compressed_data, headers
 
     return compressed_data
