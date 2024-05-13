@@ -385,6 +385,14 @@ class DeliveryServiceClient:
         components: collections.abc.Iterable[cm.Component]=(),
         type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
     ):
+        '''
+        Query artefact metadata from the delivery-db and return the raw json response.
+
+        @param components: component identities used for filtering; if no identities are specified,
+                           no component filtering is done
+        @param type:       datatype(s) used for filtering; if no datatype(s) is (are) specified, no
+                           datatype filtering is done
+        '''
         if type:
             params = {
                 'type': type,
@@ -415,6 +423,29 @@ class DeliveryServiceClient:
         )
 
         return res.json()
+
+    def query_metadata(
+        self,
+        components: collections.abc.Iterable[cm.Component]=(),
+        type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
+    ) -> tuple[dso.model.ArtefactMetadata]:
+        '''
+        Query artefact metadata from the delivery-db and parse it as `dso.model.ArtefactMetadata`.
+
+        @param components: component identities used for filtering; if no identities are specified,
+                           no component filtering is done
+        @param type:       datatype(s) used for filtering; if no datatype(s) is (are) specified, no
+                           datatype filtering is done
+        '''
+        artefact_metadata_raw = self.query_metadata_raw(
+            components=components,
+            type=type,
+        )
+
+        return tuple(
+            dso.model.ArtefactMetadata.from_dict(raw)
+            for raw in artefact_metadata_raw
+        )
 
     def os_release_infos(self, os_id: str, absent_ok=False) -> list[dm.OsReleaseInfo]:
         url = self._routes.os_branches(os_id=os_id)

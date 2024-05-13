@@ -12,7 +12,6 @@ import ci.log
 import cnudie.iter
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
-import delivery.model
 import dso.model
 import gci.componentmodel as cm
 import github.compliance.model as gcm
@@ -32,31 +31,19 @@ def iter_existing_findings(
     finding_type: str | tuple[str],
     datasource: str=dso.model.Datasource.BDBA,
 ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
-    artefact_kind = 'resource'
+    artefact = dso.model.component_artefact_id_from_ocm(
+        component=resource_node.component_id,
+        artefact=resource_node.resource,
+    )
 
-    findings_raw = delivery_client.query_metadata_raw(
+    findings = delivery_client.query_metadata(
         components=[resource_node.component_id],
         type=finding_type,
     )
 
     return (
-        delivery.model.ArtefactMetadata.from_dict(raw).to_dso_model_artefact_metadata()
-        for raw in findings_raw
-        if (
-            raw.get('meta').get('datasource') == datasource
-            and raw.get('artefactId').get('artefactName') == resource_node.artefact.name
-            and raw.get('artefactId').get('artefactVersion') == resource_node.artefact.version
-            and raw.get('artefactId').get('artefactKind') == artefact_kind
-            and raw.get('artefactId').get('artefactType') == resource_node.artefact.type
-            # TODO include extra identity once it is properly implemented by bdba scanner
-            # and delivery.model.ComponentArtefactId.normalise_artefact_extra_id(
-            #     artefact_extra_id=raw.get('artefactId').get('artefactExtraId'),
-            #     artefact_version=raw.get('artefactId').get('artefactVersion'),
-            # ) == delivery.model.ComponentArtefactId.normalise_artefact_extra_id(
-            #     artefact_extra_id=resource_node.artefact.extraIdentity,
-            #     artefact_version=resource_node.artefact.version,
-            # )
-        )
+        finding for finding in findings
+        if finding.meta.datasource == datasource and finding.artefact == artefact
     )
 
 
