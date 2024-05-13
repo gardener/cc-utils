@@ -47,7 +47,7 @@ pytimeparse
 pytz
 pyyaml
 requests
-ruamel.yaml
+ruamel.yaml==0.17.21
 semver
 slackclient<3.0.0
 sphinx_rtd_theme
