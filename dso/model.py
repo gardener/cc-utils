@@ -47,7 +47,7 @@ class ComponentArtefactId:
             self.artefact.artefact_name,
             self.artefact.artefact_version,
             self.artefact.artefact_type,
-            frozenset(self.artefact.artefact_extra_id.items()),
+            # frozenset(self.artefact.artefact_extra_id.items()),
         ))
 
     def __hash__(self):
