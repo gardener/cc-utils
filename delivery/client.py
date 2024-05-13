@@ -1,9 +1,9 @@
+import collections.abc
 import dataclasses
 import datetime
 import logging
 import requests
 import time
-import typing
 
 import dacite
 
@@ -48,7 +48,7 @@ class DeliveryServiceRoutes:
             'responsibles',
         )
 
-    def _delivery(self, *suffix: typing.Iterable[str]):
+    def _delivery(self, *suffix: collections.abc.Iterable[str]):
         return ci.util.urljoin(
             self._base_url,
             'delivery',
@@ -178,7 +178,7 @@ class DeliveryServiceClient:
 
     def upload_metadata(
         self,
-        data: typing.Iterable[dso.model.ArtefactMetadata],
+        data: collections.abc.Iterable[dso.model.ArtefactMetadata],
     ):
         headers = {
             'Content-Type': 'application/json',
@@ -205,7 +205,7 @@ class DeliveryServiceClient:
 
     def update_metadata(
         self,
-        data: typing.Iterable[dso.model.ArtefactMetadata],
+        data: collections.abc.Iterable[dso.model.ArtefactMetadata],
     ):
         headers = {
             'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ class DeliveryServiceClient:
 
     def delete_metadata(
         self,
-        data: typing.Iterable[dso.model.ArtefactMetadata],
+        data: collections.abc.Iterable[dso.model.ArtefactMetadata],
     ):
         headers = {
             'Content-Type': 'application/json',
@@ -264,8 +264,8 @@ class DeliveryServiceClient:
         ctx_repo_url: str=None,
         ocm_repo_url: str=None,
         version_filter: str | None=None,
-        component: typing.Union[cm.Component, cm.ComponentDescriptor]=None,
-        artifact: typing.Union[cm.Artifact, str]=None,
+        component: cm.Component | cm.ComponentDescriptor=None,
+        artifact: cm.Artifact | str=None,
     ) -> tuple[dict, list[dm.Status]]:
         '''
         retrieves component-responsibles and optional status info.
@@ -382,7 +382,7 @@ class DeliveryServiceClient:
 
     def query_metadata_raw(
         self,
-        components: typing.Iterable[cm.Component]=(),
+        components: collections.abc.Iterable[cm.Component]=(),
         type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
     ):
         if type:
@@ -470,7 +470,7 @@ class DeliveryServiceClient:
         self,
         resource_node: 'cnudie.iter.ResourceNode',
         types: list[str],
-    ) -> typing.Iterable[dm.ArtefactMetadata]:
+    ) -> collections.abc.Generator[dm.ArtefactMetadata, None, None]:
         '''Return an iterable that contains all stored `ArtefactMetadata` of the given type for the
         given resource node.
 
@@ -499,8 +499,8 @@ class DeliveryServiceClient:
         component: cnudie.retrieve.ComponentName=None,
         artefact: str=None,
         node: cnudie.iter.Node=None,
-        types: typing.Iterable[str]=None,
-    ) -> typing.Generator[dm.ArtefactMetadata, None, None]:
+        types: collections.abc.Iterable[str]=None,
+    ) -> collections.abc.Generator[dm.ArtefactMetadata, None, None]:
         if component:
             component = cnudie.util.to_component_id(component)
 
@@ -552,9 +552,9 @@ def _normalise_github_hostname(github_url: str):
 
 
 def github_users_from_responsibles(
-    responsibles: typing.Iterable[dict],
+    responsibles: collections.abc.Iterable[dict],
     github_url: str=None,
-) -> typing.Generator[dm.GithubUser, None, None]:
+) -> collections.abc.Generator[dm.GithubUser, None, None]:
     '''
     returns a generator yielding all github-users from the given `responsibles`.
     use `DeliveryServiceClient.component_responsibles` to retrieve responsibles
