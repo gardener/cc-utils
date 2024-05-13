@@ -6,8 +6,6 @@ import awesomeversion
 import dacite
 import dateutil.parser
 
-import dso.model
-
 
 def _parse_datetime_if_present(date: str):
     if not date:
@@ -84,72 +82,6 @@ class OsReleaseInfo:
             config=dacite.Config(
                 type_hooks={datetime.date | None: _parse_date_if_present},
             ),
-        )
-
-
-@dataclasses.dataclass(frozen=True)
-class ComponentArtefactId:
-    componentName: str | None
-    componentVersion: str | None
-    artefactName: str | None
-    artefactKind: str
-    artefactVersion: str | None
-    artefactType: str
-    artefactExtraId: dict
-
-
-@dataclasses.dataclass(frozen=True)
-class ArtefactMetadata:
-    # this is _almost_ (but not quite) dso.model.ArtefactMetadata :(. Namely, the structure
-    # of the ArtefactId differs and there is an additional `type` str.
-    artefactId: ComponentArtefactId
-    type: str
-    meta: dso.model.Metadata
-    data: (
-        dso.model.StructureInfo
-        | dso.model.LicenseFinding
-        | dso.model.VulnerabilityFinding
-        | dso.model.OsID
-        | dso.model.MalwareSummary
-        | dso.model.CodecheckSummary
-        | dso.model.ComplianceSnapshot
-        | dso.model.CustomRescoring
-        | dict
-    )
-    id: int | None = None
-    discovery_date: datetime.date | None = None
-
-    @staticmethod
-    def from_dict(raw: dict):
-        return dacite.from_dict(
-            data_class=ArtefactMetadata,
-            data=raw,
-            config=dacite.Config(
-                type_hooks={
-                    datetime.datetime: datetime.datetime.fromisoformat,
-                    datetime.date: lambda date: datetime.datetime.strptime(date, '%Y-%m-%d').date()
-                        if date else None,
-                },
-            ),
-        )
-
-    def to_dso_model_artefact_metadata(self) -> dso.model.ArtefactMetadata:
-        return dso.model.ArtefactMetadata(
-            artefact=dso.model.ComponentArtefactId(
-                component_name=self.artefactId.componentName,
-                component_version=self.artefactId.componentVersion,
-                artefact=dso.model.LocalArtefactId(
-                    artefact_name=self.artefactId.artefactName,
-                    artefact_version=self.artefactId.artefactVersion,
-                    artefact_type=self.artefactId.artefactType,
-                    artefact_extra_id=self.artefactId.artefactExtraId,
-                ),
-                artefact_kind=self.artefactId.artefactKind,
-            ),
-            meta=self.meta,
-            data=self.data,
-            id=self.id,
-            discovery_date=self.discovery_date,
         )
 
 
