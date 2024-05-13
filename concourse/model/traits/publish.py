@@ -12,7 +12,6 @@ import dacite
 
 from ci.util import not_none
 from model import NamedModelElement
-import concourse.paths
 import gci.componentmodel as cm
 import oci.model as om
 
@@ -341,7 +340,6 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
 
 
 class OciBuilder(enum.Enum):
-    KANIKO = 'kaniko'
     DOCKER = 'docker'
     DOCKER_BUILDX = 'docker-buildx'
 
@@ -527,17 +525,11 @@ class PublishTraitTransformer(TraitTransformer):
         publish_step._add_dependency(prepare_step)
 
         if (oci_builder := self.trait.oci_builder()) in (
-            OciBuilder.KANIKO,
             OciBuilder.DOCKER,
             OciBuilder.DOCKER_BUILDX,
         ):
-            if oci_builder is OciBuilder.KANIKO:
-                with open(concourse.paths.last_released_tag_file) as f:
-                    last_tag = f.read().strip()
-                prefix = 'europe-docker.pkg.dev/gardener-project/releases'
-                kaniko_image_ref = f'{prefix}/cicd/kaniko-image:{last_tag}'
-            elif oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
-                kaniko_image_ref = None
+            if oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
+                pass
             else:
                 raise NotImplementedError(oci_builder)
 
@@ -556,7 +548,6 @@ class PublishTraitTransformer(TraitTransformer):
                 build_step = PipelineStep(
                     name=f'build_oci_image_{img.name()}',
                     raw_dict={
-                        'image': kaniko_image_ref,
                         'privilege_mode': PrivilegeMode.PRIVILEGED
                             if oci_builder in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX)
                             else PrivilegeMode.UNPRIVILEGED,

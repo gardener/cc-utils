@@ -81,14 +81,6 @@ cc-utils:
               inputs:
                 steps:
                   build_python_packages: ~
-            kaniko-image:
-              registry: 'gcr-readwrite'
-              image: 'europe-docker.pkg.dev/gardener-project/snapshots/cicd/kaniko-image'
-              dockerfile: 'Dockerfile.kaniko'
-              tag_as_latest: False
-              inputs:
-                steps:
-                  build_python_packages: ~
 
     pull-request:
       steps:
@@ -155,22 +147,6 @@ cc-utils:
                     confidentiality_requirement: 'high'
                     integrity_requirement: 'high'
                     availability_requirement: 'low'
-            kaniko-image:
-              image: 'europe-docker.pkg.dev/gardener-project/releases/cicd/kaniko-image'
-              dockerfile: 'Dockerfile.kaniko'
-              tag_as_latest: True
-              resource_labels:
-                - name: 'gardener.cloud/cve-categorisation'
-                  value:
-                    network_exposure: 'protected'
-                    authentication_enforced: true
-                    user_interaction: 'gardener-operator'
-                    confidentiality_requirement: 'high'
-                    integrity_requirement: 'high'
-                    availability_requirement: 'low'
-              inputs:
-                steps:
-                  build_python_packages: ~
         release:
           nextversion: 'bump_minor'
           release_callback: '.ci/bump_job_image_version.py'
