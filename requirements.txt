@@ -2,9 +2,9 @@
 GitPython
 Mako<2.0.0
 Sphinx
-aliyun-python-sdk-core==2.15.1
-aliyun-python-sdk-ecs==4.24.72
-aliyun-python-sdk-ram==3.3.0
+aliyun-python-sdk-core
+aliyun-python-sdk-ecs
+aliyun-python-sdk-ram
 awesomeversion
 bcrypt<5.0.0
 boto3
@@ -46,9 +46,9 @@ python-swiftclient
 pytimeparse
 pytz
 pyyaml
-requests<3.0.0
+requests
 ruamel.yaml
-semver<4.0.0
+semver
 slackclient<3.0.0
 sphinx_rtd_theme
 sseclient-py<2.0.0
