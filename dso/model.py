@@ -2,6 +2,9 @@ import dataclasses
 import datetime
 import enum
 
+import dacite
+import dateutil.parser
+
 import dso.cvss
 import dso.labels
 import gci.componentmodel as cm
@@ -381,3 +384,20 @@ class ArtefactMetadata:
     )
     id: int | None = None
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
+
+    @staticmethod
+    def from_dict(raw: dict):
+        return dacite.from_dict(
+            data_class=ArtefactMetadata,
+            data=raw,
+            config=dacite.Config(
+                type_hooks={
+                    datetime.datetime: dateutil.parser.isoparse,
+                    datetime.date: lambda date: datetime.datetime.fromisoformat(date).date(),
+                },
+                cast=[
+                    ComplianceSnapshotStatuses,
+                    MetaRescoringRules,
+                ],
+            ),
+        )
