@@ -70,7 +70,6 @@ def base_image_os_id(
             logger.warning(
                 f'found more than one scanresult for {component.name}:{resource.name}'
             )
-            scan_result = scan_result[0]
         if scan_result:
             scan_result = scan_result[0]
 
