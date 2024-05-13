@@ -470,7 +470,7 @@ class DeliveryServiceClient:
         component_version: str=None,
         metadata_types: list[str]=[], # empty list returns _all_ metadata-types
         select: str=None, # either `greatestVersion` or `latestDate`
-    ) -> list[dm.ArtefactMetadata]:
+    ) -> list[dso.model.ArtefactMetadata]:
         '''
         returns a list of artifact-metadata for the given component
 
@@ -493,7 +493,7 @@ class DeliveryServiceClient:
         resp.raise_for_status()
 
         return [
-            dm.ArtefactMetadata.from_dict(raw)
+            dso.model.ArtefactMetadata.from_dict(raw)
             for raw in resp.json()
         ]
 
@@ -501,7 +501,7 @@ class DeliveryServiceClient:
         self,
         resource_node: 'cnudie.iter.ResourceNode',
         types: list[str],
-    ) -> collections.abc.Generator[dm.ArtefactMetadata, None, None]:
+    ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
         '''Return an iterable that contains all stored `ArtefactMetadata` of the given type for the
         given resource node.
 
@@ -516,11 +516,11 @@ class DeliveryServiceClient:
             metadata_types=types,
             component_version=component.version,
         ):
-            if not component_metadata.artefactId.componentName == component.name:
+            if not component_metadata.artefact.component_name == component.name:
                 continue
-            if not component_metadata.artefactId.artefactName == resource.name:
+            if not component_metadata.artefact.artefact.artefact_name == resource.name:
                 continue
-            if not component_metadata.artefactId.artefactVersion == resource.version:
+            if not component_metadata.artefact.artefact.artefact_version == resource.version:
                 continue
 
             yield component_metadata
@@ -531,7 +531,7 @@ class DeliveryServiceClient:
         artefact: str=None,
         node: cnudie.iter.Node=None,
         types: collections.abc.Iterable[str]=None,
-    ) -> collections.abc.Generator[dm.ArtefactMetadata, None, None]:
+    ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
         if component:
             component = cnudie.util.to_component_id(component)
 
@@ -563,10 +563,10 @@ class DeliveryServiceClient:
 
             # todo: also check for artefact-type + consider version is an optional attr
             #       + consider extra-id (keep it simple for now)
-            artefact_id = metadata.artefactId
-            if artefact_name and artefact_id.artefactName != artefact_name:
+            artefact_id = metadata.artefact.artefact
+            if artefact_name and artefact_id.artefact_name != artefact_name:
                 continue
-            if artefact_version and artefact_id.artefactVersion != artefact_version:
+            if artefact_version and artefact_id.artefact_version != artefact_version:
                 continue
             yield metadata
 
