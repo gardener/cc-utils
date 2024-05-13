@@ -16,7 +16,6 @@ import clamav.util
 import github.compliance.model as gcm
 import cnudie.iter
 import delivery.client
-import delivery.model
 import dso.model
 import github.compliance.model
 import oci.client

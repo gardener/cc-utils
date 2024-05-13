@@ -10,7 +10,6 @@ import ci.util
 import cnudie.iter
 import cnudie.retrieve
 import delivery.client
-import delivery.model
 import delivery.util
 import dso.model as dm
 import github.compliance.issue as gciss
