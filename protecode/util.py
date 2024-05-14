@@ -143,10 +143,6 @@ def iter_artefact_metadata(
                 meta = dso.model.Metadata(
                     datasource=dso.model.Datasource.BDBA,
                     type=dso.model.Datatype.RESCORING,
-                    relation=dso.model.Relation(
-                        refers_to=dso.model.Datatype.VULNERABILITY,
-                        relation_kind=dso.model.RelationKind.RESCORE,
-                    ),
                     creation_date=triage.modified.astimezone(datetime.UTC),
                 )
 
@@ -165,6 +161,7 @@ def iter_artefact_metadata(
                         ),
                         cve=vulnerability.cve(),
                     ),
+                    referenced_type=dso.model.Datatype.VULNERABILITY,
                     severity=gcm.Severity.NONE.name, # bdba only allows triaging to NONE
                     user=dso.model.BDBAUser(
                         username=triage.user().get('username'),

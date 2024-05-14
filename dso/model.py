@@ -126,26 +126,10 @@ class Datatype:
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
 
 
-class RelationKind:
-    RESCORE = 'rescore'
-
-
-@dataclasses.dataclass(frozen=True)
-class Relation:
-    '''
-    Describes relation between artefact_metadata.
-    This is necessary as "rescorings" are stored as artefact_metadata, but relate to
-    artefact_metadata (of type "finding/vulnerability") as they rescore vulnerability findings.
-    '''
-    refers_to: str # see `Datatype` for supported values
-    relation_kind: str # see `RelationKind` for supported values
-
-
 @dataclasses.dataclass(frozen=True)
 class Metadata:
     datasource: str
     type: str
-    relation: Relation | None = None
     creation_date: datetime.datetime | str = None
     last_update: datetime.datetime | str | None = None
 
@@ -360,6 +344,7 @@ class CustomRescoring:
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
     )
+    referenced_type: str
     severity: str
     user: (
         BDBAUser
@@ -371,7 +356,10 @@ class CustomRescoring:
 
     @property
     def key(self) -> str:
-        return f'{self.severity}:{self.user.key}:{self.comment}:{self.finding.key}'
+        return (
+            f'{self.referenced_type}:{self.severity}:{self.user.key}:'
+            f'{self.comment}:{self.finding.key}'
+        )
 
 
 class ComplianceSnapshotStatuses(enum.StrEnum):
