@@ -228,15 +228,7 @@ def iter_artefact_metadata(
             for finding in findings:
                 if (
                     existing_finding.meta.type == finding.meta.type
-                    and existing_finding.data.id.package_name == finding.data.id.package_name
-                    and existing_finding.data.id.package_version == finding.data.id.package_version
-                    and ((
-                        finding.meta.type == dso.model.Datatype.LICENSE
-                        and existing_finding.data.license.name == finding.data.license.name
-                    ) or (
-                        finding.meta.type == dso.model.Datatype.VULNERABILITY
-                        and existing_finding.data.cve == finding.data.cve
-                    ))
+                    and existing_finding.data.key == finding.data.key
                 ):
                     # finding still appeared in current scan result -> keep it
                     break
