@@ -212,6 +212,16 @@ class BDBAPackageId:
     package_version: str | None # bdba might be unable to determine a package version
     source: str = Datasource.BDBA
 
+    @property
+    def key(self) -> str:
+        return f'{self.package_name}:{self.package_version}:{self.source}'
+
+    @property
+    def rescoring_key(self) -> str:
+        # don't use the package version as key for rescorings
+        # to reuse assessments between different package versions
+        return f'{self.package_name}:{self.source}'
+
 
 @dataclasses.dataclass(frozen=True)
 class BDBAScanId:
@@ -220,6 +230,10 @@ class BDBAScanId:
     product_id: int
     group_id: int
     source: str = Datasource.BDBA
+
+    @property
+    def key(self) -> str:
+        return f'{self.report_url}:{self.group_id}:{self.source}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -246,6 +260,10 @@ class StructureInfo:
     licenses: list[License]
     filesystem_paths: list[FilesystemPath]
 
+    @property
+    def key(self) -> str:
+        return f'{self.id.key}:{self.scan_id.key}'
+
 
 @dataclasses.dataclass(frozen=True)
 class Finding:
@@ -253,10 +271,18 @@ class Finding:
     scan_id: BDBAScanId
     severity: str
 
+    @property
+    def key(self) -> str:
+        return f'{self.id.key}:{self.scan_id.key}:{self.severity}'
+
 
 @dataclasses.dataclass(frozen=True)
 class LicenseFinding(Finding):
     license: License
+
+    @property
+    def key(self) -> str:
+        return f'{super().key}:{self.license.name}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -266,28 +292,49 @@ class VulnerabilityFinding(Finding):
     cvss: dso.cvss.CVSSV3 | dict
     summary: str | None
 
+    @property
+    def key(self) -> str:
+        return f'{super().key}:{self.cve}:{self.cvss_v3_score}'
+
 
 @dataclasses.dataclass(frozen=True)
 class RescoringFinding:
     id: BDBAPackageId
+
+    @property
+    def key(self) -> str:
+        return f'{self.id.rescoring_key}'
 
 
 @dataclasses.dataclass(frozen=True)
 class RescoringVulnerabilityFinding(RescoringFinding):
     cve: str
 
+    @property
+    def key(self) -> str:
+        return f'{super().key}:{self.cve}'
+
 
 @dataclasses.dataclass(frozen=True)
 class RescoringLicenseFinding(RescoringFinding):
     license: License
 
+    @property
+    def key(self) -> str:
+        return f'{super().key}:{self.license.name}'
+
 
 @dataclasses.dataclass(frozen=True)
 class User:
     username: str
+    type: str = 'user'
+
+    @property
+    def key(self) -> str:
+        return f'{self.username}:{self.type}'
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class BDBAUser(User):
     email: str
     firstname: str
@@ -295,7 +342,7 @@ class BDBAUser(User):
     type: str = 'bdba-user'
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class GitHubUser(User):
     github_hostname: str
     type: str = 'github-user'
@@ -322,6 +369,10 @@ class CustomRescoring:
     matching_rules: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
 
+    @property
+    def key(self) -> str:
+        return f'{self.severity}:{self.user.key}:{self.comment}:{self.finding.key}'
+
 
 class ComplianceSnapshotStatuses(enum.StrEnum):
     ACTIVE = 'active'
@@ -341,6 +392,10 @@ class ComplianceSnapshot:
     latest_processing_date: datetime.date
     correlation_id: str
     state: list[ComplianceSnapshotState]
+
+    @property
+    def key(self) -> str:
+        return f'{self.cfg_name}:{self.correlation_id}'
 
     def current_state(
         self,
