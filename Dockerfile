@@ -20,7 +20,7 @@ FROM $BASE_IMAGE
 ARG TARGETARCH
 
 COPY --from=builder /pkgs/usr /usr
-COPY --from=ocm-cli /usr/bin/ocm /bin/ocm
+COPY --from=ocm-cli /bin/ocm /bin/ocm
 COPY --from=builder /cc/utils/bin/component-cli /bin/component-cli
 
 # path is hardcoded in our trait
