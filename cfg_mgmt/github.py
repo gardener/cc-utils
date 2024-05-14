@@ -115,8 +115,9 @@ def _rotate_oauth_token(
         # No way for the user to see the oAuth token that belongs to the app, but at least checking
         # whether the given token is currently associated with the app can be done.
         logger.warning(
-            f"Given oAuth token '{token_to_rotate}' did not pass GitHub verification. Does the "
-            'oAuth token belong to the git-credentials-manager application and is valid?'
+            f"Given oAuth token '{token_to_rotate[0:len(token_to_rotate)//2]}...' did not pass "
+            'GitHub verification. Does the oAuth token belong to the git-credentials-manager '
+            'application and is valid?'
         )
         return None
 
