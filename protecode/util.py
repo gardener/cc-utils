@@ -62,19 +62,15 @@ def iter_artefact_metadata(
         artefact=artefact,
     )
 
-    scan_id = dso.model.BDBAScanId(
-        base_url=scan_result.base_url(),
-        report_url=scan_result.report_url(),
-        product_id=scan_result.product_id(),
-        group_id=scan_result.group_id(),
-    )
+    base_url = scan_result.base_url()
+    report_url = scan_result.report_url()
+    product_id = scan_result.product_id()
+    group_id = scan_result.group_id()
 
     findings: list[dso.model.ArtefactMetadata] = []
     for package in scan_result.components():
-        package_id = dso.model.BDBAPackageId(
-            package_name=package.name(),
-            package_version=package.version(),
-        )
+        package_name = package.name()
+        package_version = package.version()
 
         filesystem_paths = list(iter_filesystem_paths(component=package))
 
@@ -91,8 +87,12 @@ def iter_artefact_metadata(
         )
 
         structure_info = dso.model.StructureInfo(
-            id=package_id,
-            scan_id=scan_id,
+            package_name=package_name,
+            package_version=package_version,
+            base_url=base_url,
+            report_url=report_url,
+            product_id=product_id,
+            group_id=group_id,
             licenses=licenses,
             filesystem_paths=filesystem_paths,
         )
@@ -115,8 +115,12 @@ def iter_artefact_metadata(
                 continue
 
             license_finding = dso.model.LicenseFinding(
-                id=package_id,
-                scan_id=scan_id,
+                package_name=package_name,
+                package_version=package_version,
+                base_url=base_url,
+                report_url=report_url,
+                product_id=product_id,
+                group_id=group_id,
                 severity=gcm.Severity.BLOCKER.name,
                 license=license,
             )
@@ -154,11 +158,7 @@ def iter_artefact_metadata(
                 # redundant (rescoring) data.
                 vulnerability_rescoring = dso.model.CustomRescoring(
                     finding=dso.model.RescoringVulnerabilityFinding(
-                        id=dso.model.BDBAPackageId(
-                            package_name=package_id.package_name,
-                            # don't specify version to store only one rescoring per package name
-                            package_version=None,
-                        ),
+                        package_name=package_name,
                         cve=vulnerability.cve(),
                     ),
                     referenced_type=dso.model.Datatype.VULNERABILITY,
@@ -186,8 +186,12 @@ def iter_artefact_metadata(
             )
 
             vulnerability_finding = dso.model.VulnerabilityFinding(
-                id=package_id,
-                scan_id=scan_id,
+                package_name=package_name,
+                package_version=package_version,
+                base_url=base_url,
+                report_url=report_url,
+                product_id=product_id,
+                group_id=group_id,
                 severity=gcr._criticality_classification(
                     cve_score=vulnerability.cve_severity(),
                 ).name,

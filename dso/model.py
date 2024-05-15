@@ -191,33 +191,13 @@ class CodecheckSummary:
 
 
 @dataclasses.dataclass(frozen=True)
-class BDBAPackageId:
+class BDBAMixin:
     package_name: str
-    package_version: str | None # bdba might be unable to determine a package version
-    source: str = Datasource.BDBA
-
-    @property
-    def key(self) -> str:
-        return f'{self.package_name}|{self.package_version}|{self.source}'
-
-    @property
-    def rescoring_key(self) -> str:
-        # don't use the package version as key for rescorings
-        # to reuse assessments between different package versions
-        return f'{self.package_name}|{self.source}'
-
-
-@dataclasses.dataclass(frozen=True)
-class BDBAScanId:
+    package_version: str | None # bdba might be unable to determine a version
     base_url: str
     report_url: str
     product_id: int
     group_id: int
-    source: str = Datasource.BDBA
-
-    @property
-    def key(self) -> str:
-        return f'{self.report_url}|{self.group_id}|{self.source}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -238,39 +218,35 @@ class FilesystemPath:
 
 
 @dataclasses.dataclass(frozen=True)
-class StructureInfo:
-    id: BDBAPackageId
-    scan_id: BDBAScanId
+class StructureInfo(BDBAMixin):
     licenses: list[License]
     filesystem_paths: list[FilesystemPath]
 
     @property
     def key(self) -> str:
-        return f'{self.id.key}|{self.scan_id.key}'
+        return f'{self.package_name}|{self.package_version}'
 
 
 @dataclasses.dataclass(frozen=True)
 class Finding:
-    id: BDBAPackageId
-    scan_id: BDBAScanId
+    '''
+    Base class for artefact metadata which is interpreted as a finding. "Finding" as in it has a
+    severity and might become object of being rescored.
+    '''
     severity: str
-
-    @property
-    def key(self) -> str:
-        return f'{self.id.key}|{self.scan_id.key}|{self.severity}'
 
 
 @dataclasses.dataclass(frozen=True)
-class LicenseFinding(Finding):
+class LicenseFinding(Finding, BDBAMixin):
     license: License
 
     @property
     def key(self) -> str:
-        return f'{super().key}|{self.license.name}'
+        return f'{self.package_name}|{self.package_version}|{self.license.name}'
 
 
 @dataclasses.dataclass(frozen=True)
-class VulnerabilityFinding(Finding):
+class VulnerabilityFinding(Finding, BDBAMixin):
     cve: str
     cvss_v3_score: float
     cvss: dso.cvss.CVSSV3 | dict
@@ -278,34 +254,27 @@ class VulnerabilityFinding(Finding):
 
     @property
     def key(self) -> str:
-        return f'{super().key}|{self.cve}|{self.cvss_v3_score}'
+        return f'{self.package_name}|{self.package_version}|{self.cve}'
 
 
 @dataclasses.dataclass(frozen=True)
-class RescoringFinding:
-    id: BDBAPackageId
-
-    @property
-    def key(self) -> str:
-        return f'{self.id.rescoring_key}'
-
-
-@dataclasses.dataclass(frozen=True)
-class RescoringVulnerabilityFinding(RescoringFinding):
+class RescoringVulnerabilityFinding:
+    package_name: str
     cve: str
 
     @property
     def key(self) -> str:
-        return f'{super().key}|{self.cve}'
+        return f'{self.package_name}|{self.cve}'
 
 
 @dataclasses.dataclass(frozen=True)
-class RescoringLicenseFinding(RescoringFinding):
+class RescoringLicenseFinding:
+    package_name: str
     license: License
 
     @property
     def key(self) -> str:
-        return f'{super().key}|{self.license.name}'
+        return f'{self.package_name}|{self.license.name}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -357,7 +326,7 @@ class CustomRescoring:
     @property
     def key(self) -> str:
         return (
-            f'{self.referenced_type}|{self.severity}|{self.user.key}:'
+            f'{self.referenced_type}|{self.severity}|{self.user.key}|'
             f'{self.comment}|{self.finding.key}'
         )
 
@@ -412,6 +381,18 @@ class ComplianceSnapshot:
 
 @dataclasses.dataclass(frozen=True)
 class ArtefactMetadata:
+    '''
+    Model class to interact with entries of the delivery-db. In the first place, these entries are
+    being identified via `ComponentArtefactId` (`artefact` property) as well as their `Datatype`
+    (`meta.type` property). If there might be multiple entries for this tuple, the `data` object
+    must define an extra `key` property, which allows a unique identification together with the
+    tuple of `artefact` and `meta.type`.
+
+    If an instance of a datatype should become object of being rescored, the `data` property must
+    derive from the `Finding` class and implement the `severity` property. Also, a corresponding
+    rescoring finding type must be implemented. Apart from the `key` and `severity` property, the
+    `data` object may have an arbitrary structure.
+    '''
     artefact: ComponentArtefactId
     meta: Metadata
     data: (

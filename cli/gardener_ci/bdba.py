@@ -340,7 +340,7 @@ def scan(
         for r in results:
             c_id = f'{r.artefact.component_name}:{r.artefact.component_version}'
             a_id = f'{r.artefact.artefact.artefact_name}:{r.artefact.artefact.artefact_version}'
-            p_id = f'{r.data.id.package_name}:{r.data.id.package_version}'
+            p_id = f'{r.data.package_name}:{r.data.package_version}'
 
             key = f'{c_id}:{a_id}:{p_id}'
 
