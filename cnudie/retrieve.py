@@ -609,6 +609,10 @@ def composite_component_descriptor_lookup(
             except dacite.DaciteError as ce:
                 ce.add_note(f'{component_id=}')
                 raise ce
+            except requests.exceptions.HTTPError as he:
+                if he.response.status_code != 500:
+                    raise
+                logger.warning(f'caught error {he} in {lookup=}, will try next lookup if any')
 
             if isinstance(res, cm.ComponentDescriptor):
                 for wb in writebacks: wb(component_id, res)
