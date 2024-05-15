@@ -305,7 +305,7 @@ def replicate_artifact(
             # if we need(ed) to synthesise cfg-blob (because source-image contained a v1-manifest)
             # then there will never be a cfg-blob in src.
             # -> silently skip to avoid emitting a confusing, but unhelpful warning
-            logger.debug(f'{src_image_reference=} - synthesised cfg-blob - skipping replicatation')
+            logger.debug(f'{src_image_reference=} - synthesised cfg-blob - skipping replication')
             continue
 
         head_res = client.head_blob(
