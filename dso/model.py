@@ -198,13 +198,13 @@ class BDBAPackageId:
 
     @property
     def key(self) -> str:
-        return f'{self.package_name}:{self.package_version}:{self.source}'
+        return f'{self.package_name}|{self.package_version}|{self.source}'
 
     @property
     def rescoring_key(self) -> str:
         # don't use the package version as key for rescorings
         # to reuse assessments between different package versions
-        return f'{self.package_name}:{self.source}'
+        return f'{self.package_name}|{self.source}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -217,7 +217,7 @@ class BDBAScanId:
 
     @property
     def key(self) -> str:
-        return f'{self.report_url}:{self.group_id}:{self.source}'
+        return f'{self.report_url}|{self.group_id}|{self.source}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -246,7 +246,7 @@ class StructureInfo:
 
     @property
     def key(self) -> str:
-        return f'{self.id.key}:{self.scan_id.key}'
+        return f'{self.id.key}|{self.scan_id.key}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -257,7 +257,7 @@ class Finding:
 
     @property
     def key(self) -> str:
-        return f'{self.id.key}:{self.scan_id.key}:{self.severity}'
+        return f'{self.id.key}|{self.scan_id.key}|{self.severity}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -266,7 +266,7 @@ class LicenseFinding(Finding):
 
     @property
     def key(self) -> str:
-        return f'{super().key}:{self.license.name}'
+        return f'{super().key}|{self.license.name}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -278,7 +278,7 @@ class VulnerabilityFinding(Finding):
 
     @property
     def key(self) -> str:
-        return f'{super().key}:{self.cve}:{self.cvss_v3_score}'
+        return f'{super().key}|{self.cve}|{self.cvss_v3_score}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -296,7 +296,7 @@ class RescoringVulnerabilityFinding(RescoringFinding):
 
     @property
     def key(self) -> str:
-        return f'{super().key}:{self.cve}'
+        return f'{super().key}|{self.cve}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -305,7 +305,7 @@ class RescoringLicenseFinding(RescoringFinding):
 
     @property
     def key(self) -> str:
-        return f'{super().key}:{self.license.name}'
+        return f'{super().key}|{self.license.name}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -315,7 +315,7 @@ class User:
 
     @property
     def key(self) -> str:
-        return f'{self.username}:{self.type}'
+        return f'{self.username}|{self.type}'
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -357,8 +357,8 @@ class CustomRescoring:
     @property
     def key(self) -> str:
         return (
-            f'{self.referenced_type}:{self.severity}:{self.user.key}:'
-            f'{self.comment}:{self.finding.key}'
+            f'{self.referenced_type}|{self.severity}|{self.user.key}:'
+            f'{self.comment}|{self.finding.key}'
         )
 
 
@@ -383,7 +383,7 @@ class ComplianceSnapshot:
 
     @property
     def key(self) -> str:
-        return f'{self.cfg_name}:{self.correlation_id}'
+        return f'{self.cfg_name}|{self.correlation_id}'
 
     def current_state(
         self,
