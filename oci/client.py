@@ -461,6 +461,7 @@ class Client:
         image_reference: typing.Union[str, om.OciImageReference],
         absent_ok: bool=False,
         accept: str=None,
+        remaining_retries: int=3,
     ):
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
@@ -486,6 +487,17 @@ class Client:
                     return None
                 raise om.OciImageNotFoundException(he) from he
             raise he
+        except requests.exceptions.ConnectionError:
+            if remaining_retries == 0:
+                raise
+
+            logger.warning(f'caught ConnectionError while retrieving manifest {remaining_retries=}')
+            res = self.manifest_raw(
+                image_reference=image_reference,
+                absent_ok=absent_ok,
+                accept=accept,
+                remaining_retries=remaining_retries - 1,
+            )
 
         return res
 
