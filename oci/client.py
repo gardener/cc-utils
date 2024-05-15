@@ -877,7 +877,7 @@ class Client:
         data_is_filelike = hasattr(data, 'read')
         data_is_bytes = isinstance(data, bytes)
 
-        if octets_count < max_chunk or data_is_filelike or data_is_requests_resp or data_is_bytes:
+        if octets_count < max_chunk or data_is_filelike or data_is_bytes:
             if data_is_requests_resp:
                 data = data.content
             elif data_is_generator:
@@ -896,13 +896,20 @@ class Client:
                 octets_count=octets_count,
                 data=data,
             )
-        elif octets_count >= max_chunk and data_is_generator:
+        elif octets_count >= max_chunk and (data_is_generator or data_is_requests_resp):
             # workaround: write into temporary file, as at least GCR does not implement
             # chunked-upload, and requests will not properly work w/ all generators
             # (in particular, it will not work w/ our "fake" on)
             with tempfile.TemporaryFile() as tf:
-                for chunk in data:
-                    tf.write(chunk)
+                if data_is_generator:
+                    for chunk in data:
+                        tf.write(chunk)
+                elif data_is_requests_resp:
+                    while (chunk := data.raw.read(4096)):
+                        tf.write(chunk)
+                else:
+                    # must only enter this codepath, if either generator or requests-response
+                    raise RuntimeError('this line must not be reached')
                 tf.seek(0)
 
                 return self._put_blob_single_post(
