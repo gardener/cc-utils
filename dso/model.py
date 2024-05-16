@@ -119,6 +119,7 @@ class Datatype:
     STRUCTURE_INFO = 'structure_info'
     LICENSE = 'finding/license'
     VULNERABILITY = 'finding/vulnerability'
+    MALWARE_FINDING = 'finding/malware'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     MALWARE = 'malware'
     OS_IDS = 'os_ids'
@@ -278,6 +279,20 @@ class RescoringLicenseFinding:
 
 
 @dataclasses.dataclass(frozen=True)
+class ClamAVMalwareFinding(Finding):
+    content_digest: str
+    filename: str
+    layer_digest: str
+    virus_name: str
+    octets_count: int
+    scan_duration_seconds: float
+
+    @property
+    def key(self) -> str:
+        return f'{self.content_digest}|{self.filename}|{self.layer_digest}|{self.virus_name}'
+
+
+@dataclasses.dataclass(frozen=True)
 class User:
     username: str
     type: str = 'user'
@@ -399,6 +414,7 @@ class ArtefactMetadata:
         StructureInfo
         | LicenseFinding
         | VulnerabilityFinding
+        | ClamAVMalwareFinding
         | CodecheckSummary
         | MalwareSummary
         | OsID
