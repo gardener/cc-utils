@@ -125,6 +125,7 @@ class Datatype:
     OS_IDS = 'os_ids'
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
+    ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
 
 
 @dataclasses.dataclass(frozen=True)
