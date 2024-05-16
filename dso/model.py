@@ -5,6 +5,7 @@ import enum
 import dacite
 import dateutil.parser
 
+import cnudie.iter
 import dso.cvss
 import dso.labels
 import gci.componentmodel as cm
@@ -442,3 +443,28 @@ class ArtefactMetadata:
                 ],
             ),
         )
+
+
+def artefact_scan_info(
+    artefact_node: cnudie.iter.ArtefactNode,
+    datasource: str,
+) -> ArtefactMetadata:
+    now = datetime.datetime.now()
+
+    artefact_ref = component_artefact_id_from_ocm(
+        component=artefact_node.component,
+        artefact=artefact_node.artefact,
+    )
+
+    meta = Metadata(
+        datasource=datasource,
+        type=Datatype.ARTEFACT_SCAN_INFO,
+        creation_date=now,
+        last_update=now,
+    )
+
+    return ArtefactMetadata(
+        artefact=artefact_ref,
+        meta=meta,
+        data={},
+    )
