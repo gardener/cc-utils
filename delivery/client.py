@@ -380,25 +380,30 @@ class DeliveryServiceClient:
 
         return dm.Sprint.from_dict(resp.json())
 
-    def query_metadata_raw(
+    def query_metadata(
         self,
         components: collections.abc.Iterable[cm.Component]=(),
         type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
-    ):
+        referenced_type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
+    ) -> tuple[dso.model.ArtefactMetadata]:
         '''
-        Query artefact metadata from the delivery-db and return the raw json response.
+        Query artefact metadata from the delivery-db and parse it as `dso.model.ArtefactMetadata`.
 
-        @param components: component identities used for filtering; if no identities are specified,
-                           no component filtering is done
-        @param type:       datatype(s) used for filtering; if no datatype(s) is (are) specified, no
-                           datatype filtering is done
+        @param components:      component identities used for filtering; if no identities are
+                                specified, no component filtering is done
+        @param type:            datatype(s) used for filtering; if no datatype(s) is (are)
+                                specified, no datatype filtering is done
+        @param referenced_type: referenced datatype(s) used for filtering (only applies to artefact
+                                metadata of type `rescorings`); if no datatype(s) is (are)
+                                specified, no referenced datatype filtering is done
         '''
+        params = dict()
+
         if type:
-            params = {
-                'type': type,
-            }
-        else:
-            params = dict()
+            params['type'] = type
+
+        if referenced_type:
+            params['referenced_type'] = referenced_type
 
         headers = {
             'Content-Type': 'application/json',
@@ -422,25 +427,7 @@ class DeliveryServiceClient:
             timeout=(4, 121),
         )
 
-        return res.json()
-
-    def query_metadata(
-        self,
-        components: collections.abc.Iterable[cm.Component]=(),
-        type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
-    ) -> tuple[dso.model.ArtefactMetadata]:
-        '''
-        Query artefact metadata from the delivery-db and parse it as `dso.model.ArtefactMetadata`.
-
-        @param components: component identities used for filtering; if no identities are specified,
-                           no component filtering is done
-        @param type:       datatype(s) used for filtering; if no datatype(s) is (are) specified, no
-                           datatype filtering is done
-        '''
-        artefact_metadata_raw = self.query_metadata_raw(
-            components=components,
-            type=type,
-        )
+        artefact_metadata_raw = res.json()
 
         return tuple(
             dso.model.ArtefactMetadata.from_dict(raw)
