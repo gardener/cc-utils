@@ -257,6 +257,15 @@ def create_and_push_bump_commit(
             working_tree=True,
         )
 
+    # reset to release-commit so potential changes from release-commit-callback are not
+    # unintentionally reverted
+    if publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
+        git_helper.repo.head.reset(
+            commit=release_commit,
+            index=True,
+            working_tree=True,
+        )
+
     # prepare next dev cycle commit
     next_version = _calculate_next_cycle_dev_version(
         release_version=release_version,
