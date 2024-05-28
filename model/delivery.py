@@ -92,6 +92,9 @@ class SigningCfg(ModelBase):
     def secret(self):
         return self.raw.get('secret')
 
+    def public_key(self):
+        return self.raw.get('public_key')
+
     def purpose_labels(self) -> list[str]:
         return self.raw['purpose_labels']
 
