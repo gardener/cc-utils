@@ -8,7 +8,6 @@ import enum
 import functools
 import logging
 import traceback
-import typing
 import urllib.parse
 
 import cachecontrol
@@ -176,7 +175,7 @@ def github_api(
     repo_url: str=None,
     session_adapter: SessionAdapter=SessionAdapter.RETRY,
     cfg_factory=None,
-    username: typing.Optional[str]=None,
+    username: str | None=None,
 ):
     if not (bool(github_cfg) ^ bool(repo_url)):
         raise ValueError('exactly one of github_cfg, repo_url must be passed')
@@ -229,35 +228,46 @@ def github_api(
 
 @functools.lru_cache()
 def github_cfg_for_repo_url(
-    repo_url: typing.Union[str, urllib.parse.ParseResult],
+    repo_url: str | urllib.parse.ParseResult=None,
+    api_url: str=None,
     cfg_factory=None,
-    require_labels=('ci',), # XXX unhardcode label
-) -> typing.Optional[model.github.GithubConfig]:
-    ci.util.not_none(repo_url)
+    require_labels: tuple[str]=('ci',), # XXX unhardcode label
+    github_cfgs: tuple[model.github.GithubConfig]=(),
+) -> model.github.GithubConfig | None:
+    if not (bool(repo_url) ^ bool(api_url)):
+        raise ValueError('exactly one of `repo_url` or `api_url` must be passed')
 
     if isinstance(repo_url, urllib.parse.ParseResult):
         repo_url = repo_url.geturl()
 
-    if not cfg_factory:
-        cfg_factory = ci.util.ctx().cfg_factory()
+    if not github_cfgs:
+        if not cfg_factory:
+            cfg_factory = ci.util.ctx().cfg_factory()
+
+        github_cfgs = cfg_factory._cfg_elements(cfg_type_name='github')
 
     matching_cfgs = []
-    for github_cfg in cfg_factory._cfg_elements(cfg_type_name='github'):
+    for github_cfg in github_cfgs:
         if require_labels:
             missing_labels = set(require_labels) - set(github_cfg.purpose_labels())
             if missing_labels:
                 # if not all required labels are present skip this element
                 continue
-        if github_cfg.matches_repo_url(repo_url=repo_url):
+
+        if (
+            (repo_url and github_cfg.matches_repo_url(repo_url=repo_url))
+            or (api_url and github_cfg.matches_api_url(api_url=api_url))
+        ):
             matching_cfgs.append(github_cfg)
 
     # prefer config with most configured repo urls
     matching_cfgs = sorted(matching_cfgs, key=lambda config: len(config.repo_urls()))
+    url = repo_url or api_url
     if len(matching_cfgs) == 0:
-        raise model.base.ConfigElementNotFoundError(f'No github cfg found for {repo_url=}')
+        raise model.base.ConfigElementNotFoundError(f'No github cfg found for {url=}')
 
     gh_cfg = matching_cfgs[-1]
-    logger.debug(f'using {gh_cfg.name()=} for {repo_url=}')
+    logger.debug(f'using {gh_cfg.name()=} for {url=}')
     return gh_cfg
 
 
@@ -331,7 +341,7 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
 
 def github_api_from_gh_access(
     access: cm.GithubAccess,
-) -> typing.Union[github3.github.GitHub, github3.github.GitHubEnterprise]:
+) -> github3.github.GitHub | github3.github.GitHubEnterprise:
     if access.type is not cm.AccessType.GITHUB:
         raise ValueError(f'{access=}')
 
