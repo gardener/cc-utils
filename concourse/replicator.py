@@ -540,7 +540,10 @@ class ReplicationResultProcessor:
         main_repo = definition_descriptor.main_repo
         repo_owner, repo_name = main_repo['path'].split('/')
         repo_url = urljoin(main_repo['hostname'], repo_owner, repo_name)
-        github_cfg = ccc.github.github_cfg_for_repo_url(repo_url, self._cfg_set)
+        github_cfg = ccc.github.github_cfg_for_repo_url(
+            repo_url=repo_url,
+            cfg_factory=self._cfg_set,
+        )
         github_api = ccc.github.github_api(github_cfg)
 
         repo_helper = ccc.github.github_repo_helper(

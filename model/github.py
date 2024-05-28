@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
 import enum
 import random
 import re
-import typing
 
 from urllib.parse import urlparse
 
@@ -46,6 +46,9 @@ class GithubConfig(NamedModelElement):
 
     def api_url(self):
         return self.raw.get('apiUrl')
+
+    def matches_api_url(self, api_url):
+        return api_url == self.api_url()
 
     def tls_validation(self):
         return not self.raw.get('disable_tls_validation')
@@ -97,7 +100,7 @@ class GithubConfig(NamedModelElement):
 
         return best_credentials
 
-    def _technical_user_credentials(self) -> typing.Iterable["GithubCredentials"]:
+    def _technical_user_credentials(self) -> collections.abc.Iterable["GithubCredentials"]:
         return [
             GithubCredentials(user) for user in self.raw.get('technical_users')
         ]
@@ -113,7 +116,7 @@ class GithubConfig(NamedModelElement):
     '''
         repos which the user is for
     '''
-    def repo_urls(self) -> typing.List[str]:
+    def repo_urls(self) -> list[str]:
         return self.raw.get('repo_urls', ())
 
     def matches_repo_url(self, repo_url):
