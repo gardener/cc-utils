@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
 import enum
-import typing
 
 from model.base import (
     ModelBase,
@@ -96,7 +96,7 @@ class SigningCfg(ModelBase):
         return self.raw.get('public_key')
 
     def purpose_labels(self) -> list[str]:
-        return self.raw['purpose_labels']
+        return self.raw.get('purpose_labels', [])
 
 
 class DeliveryDashboardCfg(ModelBase):
@@ -111,18 +111,20 @@ class DeliverySvcCfg(ModelBase):
     def signing_cfgs(
         self,
         purpose_label: str = None,
-    ) -> typing.Union[SigningCfg, list[SigningCfg], None]:
+    ) -> collections.abc.Generator[SigningCfg, None, None]:
         cfgs = self.raw.get('signing')
-        if purpose_label:
-            for raw_singing_Cfg in cfgs:
-                signing_cfg = SigningCfg(raw_singing_Cfg)
-                if not (labels := signing_cfg.purpose_labels()):
-                    return None
 
-                if purpose_label in labels:
-                    return signing_cfg
+        if not purpose_label:
+            yield from [
+                SigningCfg(raw) for raw in cfgs
+            ]
+            return
 
-        return [SigningCfg(raw) for raw in cfgs]
+        for raw_signing_cfg in cfgs:
+            signing_cfg = SigningCfg(raw_signing_cfg)
+
+            if purpose_label in signing_cfg.purpose_labels():
+                yield signing_cfg
 
 
 class DeliveryEndpointsCfg(NamedModelElement):
