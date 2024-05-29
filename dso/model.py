@@ -26,6 +26,7 @@ class Datasource:
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
+    DIKI = 'diki'
 
 
 def normalise_artefact_extra_id(
@@ -121,6 +122,7 @@ class Datatype:
     LICENSE = 'finding/license'
     VULNERABILITY = 'finding/vulnerability'
     MALWARE_FINDING = 'finding/malware'
+    DIKI_FINDING = 'finding/diki'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     MALWARE = 'malware'
     OS_IDS = 'os_ids'
@@ -293,6 +295,22 @@ class ClamAVMalwareFinding(Finding):
     def key(self) -> str:
         return f'{self.content_digest}|{self.filename}|{self.layer_digest}|{self.virus_name}'
 
+@dataclasses.dataclass(frozen=True)
+class DikiCheck:
+    message: str
+    targets: list[dict]
+
+@dataclasses.dataclass(frozen=True)
+class DikiFinding(Finding):
+    provider_id: str
+    ruleset_id: str
+    ruleset_version: str
+    rule_id: str
+    checks: list[DikiCheck]
+
+    @property
+    def key(self) -> str:
+        return f'{self.provider_id}|{self.ruleset_id}:{self.ruleset_version}|{self.rule_id}'
 
 @dataclasses.dataclass(frozen=True)
 class User:
@@ -417,6 +435,7 @@ class ArtefactMetadata:
         | LicenseFinding
         | VulnerabilityFinding
         | ClamAVMalwareFinding
+        | DikiFinding
         | CodecheckSummary
         | MalwareSummary
         | OsID
