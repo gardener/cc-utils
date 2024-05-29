@@ -9,13 +9,18 @@ import dacite
 
 import gci.componentmodel as cm
 
+import ccc.github
 import ci.util
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
+import delivery.jwt
 import delivery.model as dm
 import dso.model
 import http_requests
+import model
+import model.base
+import model.github
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +29,30 @@ logger = logging.getLogger(__name__)
 class DeliveryServiceRoutes:
     def __init__(self, base_url: str):
         self._base_url = base_url
+
+    def auth(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'auth',
+        )
+
+    def auth_configs(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'auth',
+            'configs',
+        )
+
+    def openid_configuration(self):
+        '''
+        endpoint according to OpenID provider configuration request
+        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationRequest
+        '''
+        return ci.util.urljoin(
+            self._base_url,
+            '.well-known',
+            'openid-configuration',
+        )
 
     def component_descriptor(self):
         return ci.util.urljoin(
@@ -109,9 +138,151 @@ class DeliveryServiceClient:
     def __init__(
         self,
         routes: DeliveryServiceRoutes,
+        github_cfgs: tuple[model.github.GithubConfig]=(),
+        cfg_factory: model.ConfigFactory | None=None,
     ):
+        '''
+        Initialises a client which can be used to interact with the delivery-service.
+
+        :param DeliveryServiceRoutes routes
+            object which contains information of the base url of the desired instance of the
+            delivery-service as well as the available routes
+        :param tuple[GithubConfig] github_cfgs (optional):
+            tuple of the available GitHub configurations which are used to authenticate against the
+            delivery-service
+        :param ConfigFactory cfg_factory (optional):
+            the config factory is used to retrieve available GitHub configurations in case they are
+            not provided anyways (i.e. can be safely omitted in case `github_cfgs` is specified)
+        '''
         self._routes = routes
-        self.session = requests.sessions.Session()
+        self.github_cfgs = github_cfgs
+        self.cfg_factory = cfg_factory
+
+        self._bearer_token = None
+        self._json_web_keys = None
+        self._session = requests.sessions.Session()
+
+    def _openid_configuration(self):
+        '''
+        response according to OpenID provider configuration response
+        https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse
+        '''
+        res = self._session.get(
+            url=self._routes.openid_configuration(),
+            timeout=(4, 31),
+        )
+
+        res.raise_for_status()
+
+        return res.json()
+
+    def _openid_jwks(self):
+        openid_configuration = self._openid_configuration()
+
+        res = self._session.get(
+            url=openid_configuration.get('jwks_uri'),
+            timeout=(4, 31),
+        )
+
+        res.raise_for_status()
+
+        return res.json()
+
+    def _authenticate(self):
+        if self._bearer_token and not delivery.jwt.is_jwt_token_expired(
+            token=self._bearer_token,
+            json_web_keys=self._json_web_keys,
+        ):
+            return
+
+        res = self._session.get(
+            url=self._routes.auth_configs(),
+            timeout=(4, 31),
+        )
+
+        res.raise_for_status()
+
+        auth_configs = res.json()
+
+        for auth_config in auth_configs:
+            api_url = auth_config.get('api_url')
+
+            try:
+                github_cfg = ccc.github.github_cfg_for_repo_url(
+                    api_url=api_url,
+                    cfg_factory=self.cfg_factory,
+                    require_labels=(),
+                    github_cfgs=self.github_cfgs,
+                )
+                break
+            except model.base.ConfigElementNotFoundError:
+                continue
+        else:
+            logger.info('no valid credentials found - attempting anonymous-auth')
+            return
+
+        params = {
+            'access_token': github_cfg.credentials().auth_token(),
+            'api_url': github_cfg.api_url(),
+        }
+
+        res = self._session.get(
+            url=self._routes.auth(),
+            params=params,
+            timeout=(4, 31),
+        )
+
+        if not res.ok:
+            logger.warning(
+                'authentication against delivery-service failed: '
+                f'{res.status_code=} {res.reason=} {res.content=}'
+            )
+
+        res.raise_for_status()
+
+        self._bearer_token = res.cookies.get(delivery.jwt.JWT_KEY)
+
+        if not self._bearer_token:
+            raise ValueError('delivery-service returned no bearer token upon authentication')
+
+        # current json web keys are required to verify the signature of the bearer token
+        openid_jwks = self._openid_jwks()
+        self._json_web_keys = [
+            delivery.jwt.JSONWebKey.from_dict(raw_key)
+            for raw_key in openid_jwks.get('keys')
+        ]
+
+    def request(
+        self,
+        url: str,
+        method: str='GET',
+        headers: dict=None,
+        **kwargs,
+    ):
+        self._authenticate()
+
+        headers = headers or {}
+
+        if self._bearer_token:
+            headers = {
+                'Authorization': f'Bearer {self._bearer_token}',
+                **headers,
+            }
+
+        try:
+            timeout = kwargs.pop('timeout')
+        except KeyError:
+            timeout = (4, 31)
+
+        res = self._session.request(
+            method=method,
+            url=url,
+            headers=headers,
+            timeout=timeout,
+            **kwargs,
+        )
+
+        return res
 
     def component_descriptor(
         self,
@@ -132,10 +303,9 @@ class DeliveryServiceClient:
         if version_filter is not None:
             params['version_filter'] = version_filter
 
-        res = self.session.get(
+        res = self.request(
             url=self._routes.component_descriptor(),
             params=params,
-            timeout=(4, 31),
         )
 
         res.raise_for_status()
@@ -166,10 +336,9 @@ class DeliveryServiceClient:
         if version_filter is not None:
             params['version_filter'] = version_filter
 
-        res = self.session.get(
+        res = self.request(
             url=self._routes.greatest_component_versions(),
             params=params,
-            timeout=(4, 31),
         )
 
         res.raise_for_status()
@@ -194,10 +363,11 @@ class DeliveryServiceClient:
             headers=headers,
         )
 
-        res = self.session.post(
+        res = self.request(
             url=self._routes.upload_metadata(),
-            data=data,
+            method='POST',
             headers=headers,
+            data=data,
             timeout=(4, 121),
         )
 
@@ -221,10 +391,11 @@ class DeliveryServiceClient:
             headers=headers,
         )
 
-        res = self.session.put(
+        res = self.request(
             url=self._routes.update_metadata(),
-            data=data,
+            method='PUT',
             headers=headers,
+            data=data,
             timeout=(4, 121),
         )
 
@@ -248,10 +419,11 @@ class DeliveryServiceClient:
             headers=headers,
         )
 
-        res = self.session.delete(
+        res = self.request(
             url=self._routes.delete_metadata(),
-            data=data,
+            method='DELETE',
             headers=headers,
+            data=data,
             timeout=(4, 121),
         )
 
@@ -322,7 +494,7 @@ class DeliveryServiceClient:
         # wait for responsibles result
         # -> delivery service is waiting up to ~2 min for contributor statistics
         for _ in range(24):
-            resp = self.session.get(
+            resp = self.request(
                 url=url,
                 params=params,
                 timeout=(4, 121),
@@ -352,14 +524,17 @@ class DeliveryServiceClient:
         return responsibles, statuses
 
     def sprints(self) -> list[dm.Sprint]:
-        raw = self.session.get(
-            self._routes.sprint_infos(),
-            timeout=(4, 31),
-        ).json()['sprints']
+        resp = self.request(
+            url=self._routes.sprint_infos(),
+        )
+
+        resp.raise_for_status()
+
+        sprints_raw = resp.json()['sprints']
 
         return [
             dm.Sprint.from_dict(sprint_info)
-            for sprint_info in raw
+            for sprint_info in sprints_raw
         ]
 
     def sprint_current(self, offset: int=0, before: datetime.date=None) -> dm.Sprint:
@@ -370,10 +545,9 @@ class DeliveryServiceClient:
             else:
                 extra_args['before'] = before
 
-        resp = self.session.get(
+        resp = self.request(
             url=self._routes.sprint_current(),
             params={'offset': offset, **extra_args},
-            timeout=(4, 31),
         )
 
         resp.raise_for_status()
@@ -419,10 +593,11 @@ class DeliveryServiceClient:
             headers=headers,
         )
 
-        res = self.session.post(
+        res = self.request(
             url=self._routes.query_metadata(),
-            data=data,
+            method='POST',
             headers=headers,
+            data=data,
             params=params,
             timeout=(4, 121),
         )
@@ -437,9 +612,8 @@ class DeliveryServiceClient:
     def os_release_infos(self, os_id: str, absent_ok=False) -> list[dm.OsReleaseInfo]:
         url = self._routes.os_branches(os_id=os_id)
 
-        res = self.session.get(
-            url,
-            timeout=(4, 31),
+        res = self.request(
+            url=url,
         )
 
         if not absent_ok:
@@ -466,7 +640,7 @@ class DeliveryServiceClient:
         '''
         url = self._routes.components_metadata()
 
-        resp = self.session.get(
+        resp = self.request(
             url=url,
             params={
                 'name': component_name,
