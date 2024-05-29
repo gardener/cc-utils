@@ -295,10 +295,12 @@ class ClamAVMalwareFinding(Finding):
     def key(self) -> str:
         return f'{self.content_digest}|{self.filename}|{self.layer_digest}|{self.virus_name}'
 
+
 @dataclasses.dataclass(frozen=True)
 class DikiCheck:
     message: str
     targets: list[dict]
+
 
 @dataclasses.dataclass(frozen=True)
 class DikiFinding(Finding):
@@ -311,6 +313,7 @@ class DikiFinding(Finding):
     @property
     def key(self) -> str:
         return f'{self.provider_id}|{self.ruleset_id}:{self.ruleset_version}|{self.rule_id}'
+
 
 @dataclasses.dataclass(frozen=True)
 class User:
