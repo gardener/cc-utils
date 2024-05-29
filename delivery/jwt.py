@@ -9,6 +9,7 @@ import dataclasses
 import datetime
 import enum
 import functools
+import logging
 import typing
 
 import Crypto.PublicKey.RSA
@@ -18,6 +19,7 @@ import jwt
 
 import model.delivery
 
+logger = logging.getLogger(__name__)
 JWT_KEY = 'bearer_token'
 
 
@@ -161,3 +163,40 @@ def decode_jwt(
         },
         **kwargs,
     )
+
+
+def is_jwt_token_expired(
+    token: str,
+    json_web_keys: collections.abc.Iterable[JSONWebKey],
+) -> bool:
+    decoded_jwt = decode_jwt(
+        token=token,
+        verify_signature=False,
+    )
+    kid = decoded_jwt.get('key_id')
+
+    for json_web_key in json_web_keys:
+        if json_web_key.kid == kid:
+            break
+    else:
+        logger.debug(
+            f'did not find a signature key with {kid=} (maybe a symmetric signing algorithm is '
+            'used?) - skipping signature validation'
+        )
+        json_web_key = None
+
+    if json_web_key:
+        decoded_jwt = decode_jwt(
+            token=token,
+            verify_signature=True,
+            json_web_key=json_web_key,
+        )
+
+    expiration_date = datetime.datetime.fromtimestamp(
+        timestamp=decoded_jwt.get('exp'),
+        tz=datetime.timezone.utc,
+    )
+
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
+
+    return now > expiration_date
