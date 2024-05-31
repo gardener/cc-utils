@@ -15,4 +15,4 @@ set -x
 pip3 install --upgrade twine
 
 # upload to pypi
-twine upload --user "${username}" --password "${passwd}" "${out_dir}"/*
+twine upload --verbose --user "${username}" --password "${passwd}" "${out_dir}"/*
