@@ -3,7 +3,6 @@ import logging
 import awesomeversion
 
 import delivery.model
-import delivery.util
 import unixutil.model as um
 
 
@@ -73,8 +72,8 @@ def update_available(
     if not branch_info.greatest_version:
         return False
 
-    version = awesomeversion.AwesomeVersion(os_id.VERSION_ID)
-    greatest_version = awesomeversion.AwesomeVersion(branch_info.greatest_version)
+    version = awesomeversion.AwesomeVersion(os_id.VERSION_ID.replace('_', '-'))
+    greatest_version = awesomeversion.AwesomeVersion(branch_info.greatest_version.replace('_', '-'))
 
     greater_version_available = greatest_version > version
 
