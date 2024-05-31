@@ -14,5 +14,6 @@ passwd="$(${model_element_cmd} --key credentials.passwd)"
 set -x
 pip3 install --upgrade twine
 
-# upload to pypi
-for i in {1..5}; do twine upload --verbose --user "${username}" --password "${passwd}" "${out_dir}"/* && break || sleep 15; done
+# upload to pypi; retries are required to deal with the sporadic issue
+# 400: The digest supplied does not match a digest calculated from the uploaded file.
+for i in {1..5}; do twine upload --user "${username}" --password "${passwd}" "${out_dir}"/* && break || sleep 15; done
