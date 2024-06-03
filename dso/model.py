@@ -283,17 +283,38 @@ class RescoringLicenseFinding:
 
 
 @dataclasses.dataclass(frozen=True)
-class ClamAVMalwareFinding(Finding):
-    content_digest: str
+class MalwareFindingBase():
     filename: str
-    layer_digest: str
+    content_digest: str
     virus_name: str
+
+
+@dataclasses.dataclass(frozen=True)
+class OCIMalwareFinding(MalwareFindingBase):
+    layer_digest: str
+
+    @property
+    def key(self) -> str:
+        return f'{self.content_digest}|{self.filename}|{self.layer_digest}|{self.virus_name}'
+
+
+@dataclasses.dataclass(frozen=True)
+class S3MalwareFinding(MalwareFindingBase):
+
+    @property
+    def key(self) -> str:
+        return f'{self.content_digest}|{self.filename}|{self.virus_name}'
+
+
+@dataclasses.dataclass(frozen=True)
+class ClamAVMalwareFinding(Finding):
+    finding: OCIMalwareFinding | S3MalwareFinding
     octets_count: int
     scan_duration_seconds: float
 
     @property
     def key(self) -> str:
-        return f'{self.content_digest}|{self.filename}|{self.layer_digest}|{self.virus_name}'
+        return self.finding.key
 
 
 @dataclasses.dataclass(frozen=True)
