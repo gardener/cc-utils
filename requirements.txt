@@ -31,7 +31,7 @@ jsonschema
 kubernetes>=26.0.0
 msal<2
 openstacksdk
-oss2==2.18.5
+oss2
 passlib<2.0.0
 pycryptodome
 pydash<8.0.0
