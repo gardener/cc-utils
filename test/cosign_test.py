@@ -14,20 +14,18 @@ def test_json_marshaling_with_annotations():
         '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
         '"type":"gardener.vnd/oci/cosign-signature"},"optional":{"key":"val"}}'
 
-    img_ref = 'eu.gcr.io/test/img@' \
+    image_ref = 'eu.gcr.io/test/img@' \
         'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
     annotations = {
         "key": "val",
     }
 
-    payload = cosign.Payload(
-        image_ref=img_ref,
+    payload = cosign.payload_bytes(
+        image_reference=image_ref,
         annotations=annotations,
-    )
+    ).decode('utf-8')
 
-    actual_json = payload.normalised_json()
-
-    assert actual_json == expected_json
+    assert payload == expected_json
 
 
 def test_json_marshaling_without_annotations():
@@ -39,16 +37,14 @@ def test_json_marshaling_without_annotations():
     img_ref = 'eu.gcr.io/test/img@' \
         'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
 
-    payload = cosign.Payload(
-        image_ref=img_ref,
-    )
+    payload = cosign.payload_bytes(
+        image_reference=img_ref,
+    ).decode('utf-8')
 
-    actual_json = payload.normalised_json()
-
-    assert actual_json == expected_json
+    assert payload == expected_json
 
 
 def test_raise_error_for_img_ref_without_digest():
     img_ref = 'eu.gcr.io/test/img:1.0.0'
     with pytest.raises(ValueError):
-        cosign.Payload(image_ref=img_ref)
+        cosign.payload_bytes(image_reference=img_ref)

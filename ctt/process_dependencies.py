@@ -488,10 +488,10 @@ def process_images(
             )
             cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
 
-            unsigned_payload = cosign.Payload(
+            unsigned_payload = cosign.payload_bytes(
                 image_ref=digest_ref,
-            ).normalised_json()
-            hash = hashlib.sha256(unsigned_payload.encode())
+            )
+            hash = hashlib.sha256(unsigned_payload)
             digest = hash.digest()
             signature = ctt_util.sign_with_signing_server(
                 server_url=signing_server_url,
@@ -528,7 +528,7 @@ def process_images(
             if not signature_exists:
                 cosign.attach_signature(
                     image_ref=digest_ref,
-                    unsigned_payload=unsigned_payload.encode(),
+                    unsigned_payload=unsigned_payload,
                     signature=signature.encode(),
                     cosign_repository=cosign_repository,
                 )
