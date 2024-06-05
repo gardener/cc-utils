@@ -50,6 +50,23 @@ def payload_bytes(
     ).encode('utf-8')
 
 
+def calc_cosign_sig_ref(
+    image_ref: str,
+) -> str:
+    '''
+    calculate the image reference of the cosign signature for a specific image.
+    '''
+    parsed_image_ref = om.OciImageReference.to_image_ref(image_ref)
+    if not parsed_image_ref.has_digest_tag:
+        ValueError('only images that are referenced via digest are allowed')
+
+    parsed_digest = parsed_image_ref.parsed_digest_tag
+    alg, val = parsed_digest
+    cosign_sig_ref = f'{parsed_image_ref.ref_without_tag}:{alg}-{val}.sig'
+
+    return cosign_sig_ref
+
+
 def attach_signature(
     image_ref: str,
     unsigned_payload: bytes,
@@ -87,20 +104,3 @@ def attach_signature(
 
         logger.info(f'run cmd \'{cmd}\'')
         subprocess.run(cmd, env=env, check=True)
-
-
-def calc_cosign_sig_ref(
-    image_ref: str,
-) -> str:
-    '''
-    calculate the image reference of the cosign signature for a specific image.
-    '''
-    parsed_image_ref = om.OciImageReference.to_image_ref(image_ref)
-    if not parsed_image_ref.has_digest_tag:
-        ValueError('only images that are referenced via digest are allowed')
-
-    parsed_digest = parsed_image_ref.parsed_digest_tag
-    alg, val = parsed_digest
-    cosign_sig_ref = f'{parsed_image_ref.ref_without_tag}:{alg}-{val}.sig'
-
-    return cosign_sig_ref
