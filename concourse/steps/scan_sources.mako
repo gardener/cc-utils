@@ -133,7 +133,7 @@ github.compliance.report.create_or_update_github_issues(
 delivery_service_client = ccc.delivery.default_client_if_available()
 if delivery_service_client:
     logger.info('Uploading result to delivery-service')
-    delivery_service_client.upload_metadata(
+    delivery_service_client.update_metadata(
       data=checkmarx.util.iter_artefact_metadata(scan_results.scans),
     )
 else:

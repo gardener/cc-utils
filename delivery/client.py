@@ -90,32 +90,19 @@ class DeliveryServiceRoutes:
     def sprint_current(self):
         return self._delivery('sprint-infos', 'current')
 
-    def upload_metadata(self):
+    def artefact_metadata(self):
         return ci.util.urljoin(
             self._base_url,
             'artefacts',
-            'upload-metadata',
+            'metadata',
         )
 
-    def update_metadata(self):
+    def artefact_metadata_query(self):
         return ci.util.urljoin(
             self._base_url,
             'artefacts',
-            'update-metadata',
-        )
-
-    def query_metadata(self):
-        return ci.util.urljoin(
-            self._base_url,
-            'artefacts',
-            'query-metadata',
-        )
-
-    def delete_metadata(self):
-        return ci.util.urljoin(
-            self._base_url,
-            'artefacts',
-            'delete-metadata',
+            'metadata',
+            'query',
         )
 
     def os_branches(self, os_id: str):
@@ -345,34 +332,6 @@ class DeliveryServiceClient:
 
         return res.json()
 
-    def upload_metadata(
-        self,
-        data: collections.abc.Iterable[dso.model.ArtefactMetadata],
-    ):
-        headers = {
-            'Content-Type': 'application/json',
-        }
-
-        data, headers = http_requests.encode_request(
-            json={'entries': [
-                dataclasses.asdict(
-                    artefact_metadata,
-                    dict_factory=ci.util.dict_to_json_factory,
-                ) for artefact_metadata in data
-            ]},
-            headers=headers,
-        )
-
-        res = self.request(
-            url=self._routes.upload_metadata(),
-            method='POST',
-            headers=headers,
-            data=data,
-            timeout=(4, 121),
-        )
-
-        res.raise_for_status()
-
     def update_metadata(
         self,
         data: collections.abc.Iterable[dso.model.ArtefactMetadata],
@@ -392,7 +351,7 @@ class DeliveryServiceClient:
         )
 
         res = self.request(
-            url=self._routes.update_metadata(),
+            url=self._routes.artefact_metadata(),
             method='PUT',
             headers=headers,
             data=data,
@@ -420,7 +379,7 @@ class DeliveryServiceClient:
         )
 
         res = self.request(
-            url=self._routes.delete_metadata(),
+            url=self._routes.artefact_metadata(),
             method='DELETE',
             headers=headers,
             data=data,
@@ -594,7 +553,7 @@ class DeliveryServiceClient:
         )
 
         res = self.request(
-            url=self._routes.query_metadata(),
+            url=self._routes.artefact_metadata_query(),
             method='POST',
             headers=headers,
             data=data,
