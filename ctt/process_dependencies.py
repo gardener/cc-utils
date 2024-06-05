@@ -28,7 +28,6 @@ import oci
 import oci.client
 import oci.model as om
 
-import ctt.cosign_util as cosign_util
 import ctt.filters as filters
 import ctt.processing_model as processing_model
 import ctt.processors as processors
@@ -487,7 +486,7 @@ def process_images(
                 processing_job.upload_request.target_ref,
                 oci_manifest_digest,
             )
-            cosign_sig_ref = cosign_util.calc_cosign_sig_ref(image_ref=digest_ref)
+            cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
 
             unsigned_payload = cosign.Payload(
                 image_ref=digest_ref,
@@ -527,7 +526,7 @@ def process_images(
                         break
 
             if not signature_exists:
-                cosign_util.attach_signature(
+                cosign.attach_signature(
                     image_ref=digest_ref,
                     unsigned_payload=unsigned_payload.encode(),
                     signature=signature.encode(),
