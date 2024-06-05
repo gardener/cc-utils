@@ -486,7 +486,7 @@ def process_images(
                 processing_job.upload_request.target_ref,
                 oci_manifest_digest,
             )
-            cosign_sig_ref = cosign.calc_cosign_sig_ref(image_ref=digest_ref)
+            cosign_sig_ref = cosign.default_signature_image_reference(image_ref=digest_ref)
 
             unsigned_payload = cosign.payload_bytes(
                 image_ref=digest_ref,
