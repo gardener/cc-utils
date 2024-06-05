@@ -5,7 +5,7 @@
 
 import pytest
 
-import cosign.payload as cp
+import cosign
 
 
 def test_json_marshaling_with_annotations():
@@ -20,7 +20,7 @@ def test_json_marshaling_with_annotations():
         "key": "val",
     }
 
-    payload = cp.Payload(
+    payload = cosign.Payload(
         image_ref=img_ref,
         annotations=annotations,
     )
@@ -39,7 +39,7 @@ def test_json_marshaling_without_annotations():
     img_ref = 'eu.gcr.io/test/img@' \
         'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
 
-    payload = cp.Payload(
+    payload = cosign.Payload(
         image_ref=img_ref,
     )
 
@@ -51,4 +51,4 @@ def test_json_marshaling_without_annotations():
 def test_raise_error_for_img_ref_without_digest():
     img_ref = 'eu.gcr.io/test/img:1.0.0'
     with pytest.raises(ValueError):
-        cp.Payload(image_ref=img_ref)
+        cosign.Payload(image_ref=img_ref)
