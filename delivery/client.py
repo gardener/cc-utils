@@ -127,6 +127,7 @@ class DeliveryServiceClient:
         routes: DeliveryServiceRoutes,
         github_cfgs: tuple[model.github.GithubConfig]=(),
         cfg_factory: model.ConfigFactory | None=None,
+        auth_credentials: dm.GitHubAuthCredentials=None,
     ):
         '''
         Initialises a client which can be used to interact with the delivery-service.
@@ -140,10 +141,14 @@ class DeliveryServiceClient:
         :param ConfigFactory cfg_factory (optional):
             the config factory is used to retrieve available GitHub configurations in case they are
             not provided anyways (i.e. can be safely omitted in case `github_cfgs` is specified)
+        :param GitHubAuthCredentials auth_credentials (optional):
+            object which contains credentials required for authentication against the
+            delivery-service api
         '''
         self._routes = routes
         self.github_cfgs = github_cfgs
         self.cfg_factory = cfg_factory
+        self.auth_credentials = auth_credentials
 
         self._bearer_token = None
         self._json_web_keys = None
@@ -182,35 +187,41 @@ class DeliveryServiceClient:
         ):
             return
 
-        res = self._session.get(
-            url=self._routes.auth_configs(),
-            timeout=(4, 31),
-        )
+        if not self.auth_credentials:
+            res = self._session.get(
+                url=self._routes.auth_configs(),
+                timeout=(4, 31),
+            )
 
-        res.raise_for_status()
+            res.raise_for_status()
 
-        auth_configs = res.json()
+            auth_configs = res.json()
 
-        for auth_config in auth_configs:
-            api_url = auth_config.get('api_url')
+            for auth_config in auth_configs:
+                api_url = auth_config.get('api_url')
 
-            try:
-                github_cfg = ccc.github.github_cfg_for_repo_url(
-                    api_url=api_url,
-                    cfg_factory=self.cfg_factory,
-                    require_labels=(),
-                    github_cfgs=self.github_cfgs,
-                )
-                break
-            except model.base.ConfigElementNotFoundError:
-                continue
-        else:
-            logger.info('no valid credentials found - attempting anonymous-auth')
-            return
+                try:
+                    github_cfg = ccc.github.github_cfg_for_repo_url(
+                        api_url=api_url,
+                        cfg_factory=self.cfg_factory,
+                        require_labels=(),
+                        github_cfgs=self.github_cfgs,
+                    )
+                    break
+                except model.base.ConfigElementNotFoundError:
+                    continue
+            else:
+                logger.info('no valid credentials found - attempting anonymous-auth')
+                return
+
+            self.auth_credentials = dm.GitHubAuthCredentials(
+                api_url=api_url,
+                auth_token=github_cfg.credentials().auth_token(),
+            )
 
         params = {
-            'access_token': github_cfg.credentials().auth_token(),
-            'api_url': github_cfg.api_url(),
+            'access_token': self.auth_credentials.auth_token,
+            'api_url': self.auth_credentials.api_url,
         }
 
         res = self._session.get(

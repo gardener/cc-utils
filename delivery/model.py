@@ -94,3 +94,9 @@ class StatusType(enum.StrEnum):
 class Status:
     type: StatusType
     msg: str
+
+
+@dataclasses.dataclass(frozen=True)
+class GitHubAuthCredentials:
+    api_url: str
+    auth_token: str
