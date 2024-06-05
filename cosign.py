@@ -50,11 +50,14 @@ def payload_bytes(
     ).encode('utf-8')
 
 
-def calc_cosign_sig_ref(
+def default_signature_image_reference(
     image_ref: str,
-) -> str:
+) -> om.OciImageReference:
     '''
-    calculate the image reference of the cosign signature for a specific image.
+    calculate the (default) image reference of the cosign signature for a specific image.
+
+    This image-reference is by default used/expected by cosign if no alternative signature
+    repository is specified.
     '''
     parsed_image_ref = om.OciImageReference.to_image_ref(image_ref)
     if not parsed_image_ref.has_digest_tag:
@@ -64,7 +67,7 @@ def calc_cosign_sig_ref(
     alg, val = parsed_digest
     cosign_sig_ref = f'{parsed_image_ref.ref_without_tag}:{alg}-{val}.sig'
 
-    return cosign_sig_ref
+    return om.OciImageReference(cosign_sig_ref)
 
 
 def attach_signature(
