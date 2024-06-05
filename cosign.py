@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import dataclasses
 import json
 import logging
 import os
@@ -16,48 +15,39 @@ import oci.model as om
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
-COSIGN_SIGNATURE_TYPE = "gardener.vnd/oci/cosign-signature"
 
-
-@dataclasses.dataclass
-class Payload:
+def payload_bytes(
+    image_reference: om.OciImageReference | str,
+    annotations: dict | None=None,
+) -> bytes:
     '''
-    Class which can be used for generating the unsigned payload of a
-    cosign signature for a specific container image.
+    returns payload for given OCI Image Reference + optional annotations as output by
+    `cosign generate`
+
+    Passed image-reference must have digest-tag.
     '''
-    image_ref: om.OciImageReference
-    annotations: dict
+    image_reference = om.OciImageReference.to_image_ref(image_reference)
+    if not image_reference.has_digest_tag:
+        raise ValueError('image-reference must have digest tag', image_reference)
 
-    def __init__(self, image_ref: str, annotations: dict = None):
-        self.image_ref = om.OciImageReference.to_image_ref(image_ref)
-        if not self.image_ref.has_digest_tag:
-            raise ValueError('only images that are referenced via a digest are allowed')
-
-        self.annotations = annotations
-
-    def normalised_json(self):
-        '''
-        return the normalised (ordered keys, no whitespace) json representation.
-        the returned payload can then be hashed, signed, and used as a cosign signature.
-        '''
-        data = {
-            "critical": {
-                "identity": {
-                    "docker-reference": self.image_ref.ref_without_tag,
-                },
-                "image": {
-                    "docker-manifest-digest": self.image_ref.tag,
-                },
-                "type": COSIGN_SIGNATURE_TYPE,
+    payload = {
+        'critical': {
+            'identity': {
+                'docker-reference': image_reference.ref_without_tag,
             },
-            "optional": self.annotations,
-        }
+            'image': {
+                'docker-manifest-digest': image_reference.tag,
+            },
+            'type': 'gardener.vnd/oci/cosign-signature',
+        },
+        'optional': annotations,
+    }
 
-        return json.dumps(
-            obj=data,
-            separators=(',', ':'),
-            sort_keys=True,
-        )
+    return json.dumps(
+        obj=payload,
+        separators=(',', ':'),
+        sort_keys=True,
+    ).encode('utf-8')
 
 
 def attach_signature(
