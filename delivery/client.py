@@ -57,14 +57,14 @@ class DeliveryServiceRoutes:
     def component_descriptor(self):
         return ci.util.urljoin(
             self._base_url,
-            'cnudie',
+            'ocm',
             'component',
         )
 
     def greatest_component_versions(self):
         return ci.util.urljoin(
             self._base_url,
-            'cnudie',
+            'ocm',
             'component',
             'versions',
         )
@@ -72,7 +72,7 @@ class DeliveryServiceRoutes:
     def component_responsibles(self):
         return ci.util.urljoin(
             self._base_url,
-            'cnudie',
+            'ocm',
             'component',
             'responsibles',
         )
