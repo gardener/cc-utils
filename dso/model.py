@@ -491,7 +491,16 @@ class ArtefactMetadata:
 def artefact_scan_info(
     artefact_node: cnudie.iter.ArtefactNode,
     datasource: str,
+    data: dict={},
 ) -> ArtefactMetadata:
+    '''
+    The `data` property may contain extra information about the scan, e.g. a reference to the scan.
+
+    Predefined `data` property for BDBA scan infos:
+
+    data:
+        report_url <str>
+    '''
     now = datetime.datetime.now()
 
     artefact_ref = component_artefact_id_from_ocm(
@@ -509,5 +518,5 @@ def artefact_scan_info(
     return ArtefactMetadata(
         artefact=artefact_ref,
         meta=meta,
-        data={},
+        data=data,
     )

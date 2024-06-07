@@ -55,6 +55,7 @@ def iter_artefact_metadata(
 ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
     now = datetime.datetime.now()
     discovery_date = datetime.date.today()
+    datasource = dso.model.Datasource.BDBA
 
     artefact = gcm.artifact_from_node(node=scanned_element)
     artefact_ref = dso.model.component_artefact_id_from_ocm(
@@ -66,6 +67,14 @@ def iter_artefact_metadata(
     report_url = scan_result.report_url()
     product_id = scan_result.product_id()
     group_id = scan_result.group_id()
+
+    yield dso.model.artefact_scan_info(
+        artefact_node=scanned_element,
+        datasource=datasource,
+        data={
+            'report_url': report_url,
+        },
+    )
 
     findings: list[dso.model.ArtefactMetadata] = []
     for package in scan_result.components():
@@ -81,7 +90,7 @@ def iter_artefact_metadata(
         })
 
         meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
+            datasource=datasource,
             type=dso.model.Datatype.STRUCTURE_INFO,
             creation_date=now,
         )
@@ -105,7 +114,7 @@ def iter_artefact_metadata(
         )
 
         meta = dso.model.Metadata(
-            datasource=dso.model.Datasource.BDBA,
+            datasource=datasource,
             type=dso.model.Datatype.LICENSE,
             creation_date=now,
         )
@@ -145,7 +154,7 @@ def iter_artefact_metadata(
 
             for triage in vulnerability.triages():
                 meta = dso.model.Metadata(
-                    datasource=dso.model.Datasource.BDBA,
+                    datasource=datasource,
                     type=dso.model.Datatype.RESCORING,
                     creation_date=triage.modified.astimezone(datetime.UTC),
                 )
@@ -180,7 +189,7 @@ def iter_artefact_metadata(
                 )
 
             meta = dso.model.Metadata(
-                datasource=dso.model.Datasource.BDBA,
+                datasource=datasource,
                 type=dso.model.Datatype.VULNERABILITY,
                 creation_date=now,
             )
