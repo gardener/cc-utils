@@ -6,9 +6,6 @@ import enum
 import hashlib
 import json
 import logging
-import os
-import subprocess
-import tempfile
 
 import ci.log
 import ci.util
@@ -179,42 +176,3 @@ def sign_image(
         image_reference=signature_image_reference,
         manifest=manifest_bytes,
     )
-
-
-def attach_signature(
-    image_ref: str,
-    unsigned_payload: bytes,
-    signature: bytes,
-    cosign_repository=None,
-):
-    '''
-    attach a cosign signature to an image in a remote oci registry.
-    '''
-    with (
-        tempfile.NamedTemporaryFile('wb') as payloadfile,
-        tempfile.NamedTemporaryFile('wb') as signaturefile
-    ):
-        payloadfile.write(unsigned_payload)
-        payloadfile.flush()
-
-        signaturefile.write(signature)
-        signaturefile.flush()
-
-        env = None
-        if cosign_repository:
-            env = os.environ.copy()
-            env['COSIGN_REPOSITORY'] = cosign_repository
-
-        cmd = [
-            'cosign',
-            'attach',
-            'signature',
-            '--payload',
-            payloadfile.name,
-            '--signature',
-            signaturefile.name,
-            image_ref
-        ]
-
-        logger.info(f'run cmd \'{cmd}\'')
-        subprocess.run(cmd, env=env, check=True)

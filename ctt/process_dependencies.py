@@ -487,8 +487,6 @@ def process_images(
                 processing_job.upload_request.target_ref,
                 oci_manifest_digest,
             )
-            cosign_sig_ref = cosign.default_signature_image_reference(image_ref=digest_ref)
-
             unsigned_payload = cosign.payload_bytes(
                 image_reference=digest_ref,
             )
@@ -510,44 +508,13 @@ def process_images(
                 signing_algorithm=signingserver.SignatureAlgorithm.RSASSA_PKCS1_V1_5,
             ).signature
 
-            # cosign every time appends the signature in the signature oci artifact, even if
-            # the exact same signature already exists there. therefore, check if the exact same
-            # signature already exists
-            signature_exists = False
-
-            # accept header should not be needed here as we are referencing the manifest
-            # via digest.
-            # but set just for safety reasons.
-            accept = replication_mode.accept_header()
-            manifest_blob_ref = oci_client.head_manifest(
-                image_reference=cosign_sig_ref,
-                absent_ok=True,
-                accept=accept,
+            cosign.sign_image(
+                image_reference=digest_ref,
+                signature=signature,
+                on_exist=cosign.OnExist.SKIP,
+                oci_client=oci_client,
             )
 
-            if bool(manifest_blob_ref):
-                cosign_sig_manifest = oci_client.manifest(cosign_sig_ref)
-                for layer in cosign_sig_manifest.layers:
-                    existing_signature = layer.annotations.get(
-                        "dev.cosignproject.cosign/signature",
-                        "",
-                    )
-                    if existing_signature == signature:
-                        signature_exists = True
-                        break
-
-            if not signature_exists:
-                cosign.attach_signature(
-                    image_ref=digest_ref,
-                    unsigned_payload=unsigned_payload,
-                    signature=signature.encode(),
-                    cosign_repository=cosign_repository,
-                )
-            else:
-                logger.info(
-                    f'{digest_ref=} - signature for manifest already exists '
-                    '- skipping signature upload'
-                )
         processed_resource = processing_job.processed_resource
 
         if processed_resource and (digest := processed_resource.digest):
