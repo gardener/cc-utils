@@ -27,6 +27,7 @@ import gci.componentmodel as cm
 import oci
 import oci.client
 import oci.model as om
+import signingserver
 
 import ctt.filters as filters
 import ctt.processing_model as processing_model
@@ -493,11 +494,21 @@ def process_images(
             )
             hash = hashlib.sha256(unsigned_payload)
             digest = hash.digest()
-            signature = ctt_util.sign_with_signing_server(
-                server_url=signing_server_url,
-                content=digest,
-                root_ca_cert_path=root_ca_cert_path,
+
+            signingserver_client = signingserver.SigningserverClient(
+                cfg=signingserver.SigningserverClientCfg(
+                    base_url=signing_server_url,
+                    client_certificate=None,
+                    client_certificate_key=None,
+                    server_certificate_ca=root_ca_cert_path,
+                ),
             )
+
+            signature = signingserver_client.sign(
+                content=digest,
+                hash_algorithm='sha256',
+                signing_algorithm=signingserver.SignatureAlgorithm.RSASSA_PKCS1_V1_5,
+            ).signature
 
             # cosign every time appends the signature in the signature oci artifact, even if
             # the exact same signature already exists there. therefore, check if the exact same
