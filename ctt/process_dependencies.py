@@ -490,7 +490,7 @@ def process_images(
             cosign_sig_ref = cosign.default_signature_image_reference(image_ref=digest_ref)
 
             unsigned_payload = cosign.payload_bytes(
-                image_ref=digest_ref,
+                image_reference=digest_ref,
             )
             hash = hashlib.sha256(unsigned_payload)
             digest = hash.digest()
