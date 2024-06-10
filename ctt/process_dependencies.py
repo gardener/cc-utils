@@ -487,11 +487,9 @@ def process_images(
                 processing_job.upload_request.target_ref,
                 oci_manifest_digest,
             )
-            unsigned_payload = cosign.payload_bytes(
+            payload_bytes = cosign.payload_bytes(
                 image_reference=digest_ref,
             )
-            hash = hashlib.sha256(unsigned_payload)
-            digest = hash.digest()
 
             signingserver_client = signingserver.SigningserverClient(
                 cfg=signingserver.SigningserverClientCfg(
@@ -503,7 +501,7 @@ def process_images(
             )
 
             signature = signingserver_client.sign(
-                content=digest,
+                content=payload_bytes,
                 hash_algorithm='sha256',
                 signing_algorithm=signingserver.SignatureAlgorithm.RSASSA_PKCS1_V1_5,
             ).signature
