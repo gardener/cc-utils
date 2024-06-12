@@ -57,9 +57,6 @@ def test_jwt(signing_cfg, token):
     # token was just created and thus is not expired yet
     assert not delivery.jwt.is_jwt_token_expired(
         token=token,
-        json_web_keys=[
-            json_web_key,
-        ],
     )
 
     # this is a correct token validation

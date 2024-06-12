@@ -151,7 +151,6 @@ class DeliveryServiceClient:
         self.auth_credentials = auth_credentials
 
         self._bearer_token = None
-        self._json_web_keys = None
         self._session = requests.sessions.Session()
 
     def _openid_configuration(self):
@@ -183,7 +182,6 @@ class DeliveryServiceClient:
     def _authenticate(self):
         if self._bearer_token and not delivery.jwt.is_jwt_token_expired(
             token=self._bearer_token,
-            json_web_keys=self._json_web_keys or (),
         ):
             return
 
@@ -242,13 +240,6 @@ class DeliveryServiceClient:
 
         if not self._bearer_token:
             raise ValueError('delivery-service returned no bearer token upon authentication')
-
-        # current json web keys are required to verify the signature of the bearer token
-        openid_jwks = self._openid_jwks()
-        self._json_web_keys = [
-            delivery.jwt.JSONWebKey.from_dict(raw_key)
-            for raw_key in openid_jwks.get('keys')
-        ]
 
     def request(
         self,

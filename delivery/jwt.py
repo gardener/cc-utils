@@ -4,7 +4,6 @@ to https://datatracker.ietf.org/doc/html/rfc7518 as well as convenience
 functions to it.
 '''
 import base64
-import collections.abc
 import dataclasses
 import datetime
 import enum
@@ -167,30 +166,11 @@ def decode_jwt(
 
 def is_jwt_token_expired(
     token: str,
-    json_web_keys: collections.abc.Iterable[JSONWebKey],
 ) -> bool:
     decoded_jwt = decode_jwt(
         token=token,
         verify_signature=False,
     )
-    kid = decoded_jwt.get('key_id')
-
-    for json_web_key in json_web_keys:
-        if json_web_key.kid == kid:
-            break
-    else:
-        logger.debug(
-            f'did not find a signature key with {kid=} (maybe a symmetric signing algorithm is '
-            'used?) - skipping signature validation'
-        )
-        json_web_key = None
-
-    if json_web_key:
-        decoded_jwt = decode_jwt(
-            token=token,
-            verify_signature=True,
-            json_web_key=json_web_key,
-        )
 
     expiration_date = datetime.datetime.fromtimestamp(
         timestamp=decoded_jwt.get('exp'),
