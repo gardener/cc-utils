@@ -100,6 +100,7 @@ import concourse.steps
 version_step = concourse.steps.step_def('version')
 prepare_step = concourse.steps.step_def('prepare')
 publish_step = concourse.steps.step_def('publish')
+helmcharts_step = concourse.steps.step_def('helmcharts')
 release_step = concourse.steps.step_def('release')
 build_oci_image_step = concourse.steps.step_def('build_oci_image')
 meta_step = concourse.steps.step_def('meta')
@@ -507,6 +508,8 @@ else:
         ${prepare_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'publish':
         ${publish_step(job_step=job_step, job_variant=job_variant, indent=8)}
+% elif job_step.name == 'helmcharts':
+        ${helmcharts_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'version':
         ${version_step(job_step=job_step, job_variant=job_variant, indent=8)}
 % elif job_step.name == 'release':

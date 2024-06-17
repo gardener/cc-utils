@@ -9,9 +9,11 @@ import textwrap
 import typing
 
 import dacite
+import jsonpath_ng
 
 from ci.util import not_none
 from model import NamedModelElement
+import concourse.model.traits.component_descriptor
 import gci.componentmodel as cm
 import oci.model as om
 
@@ -344,6 +346,82 @@ class OciBuilder(enum.Enum):
     DOCKER_BUILDX = 'docker-buildx'
 
 
+@dataclasses.dataclass
+class HelmchartValueMapping:
+    '''
+    a mapping between OCM-Resources and values to be passed to a helmchart.
+
+    Typically, this will be a reference to an OCI Image mapped to attributes within a
+    "values.yaml" for helm.
+
+    Mappings are evaluated as preprocessing step before creating
+    helmchart-archive (i.e. values.yaml is patched). They are also incorporated into resulting
+    OCM Component-Descriptors.
+
+    ref: reference to (virtual) attribute of an OCM-Resource
+    attribute: JSONPath-spec
+
+    Syntax for ref:
+
+        oci-resource:<name>.<attribute>
+        ^^^^^
+        prefix
+
+        name: resource-name (match names used in `dockerimages` attribute)
+        attribute: choose either of:
+            repository: image-reference without tag
+            tag:        tag (either symbolic tag, or digest)
+            digest:     image-digest (including algorithm-prefix, e.g. sha256:...)
+            image:      image-reference including tag
+
+    Example:
+
+    Assuming there is a component-descriptor with an OciImage-Resource named `my-image` that
+    should be mapped to attributes `image.repository` and `image.tag` in values.yaml.
+
+    - ref: ocm-resource:my-image.repository
+      attribute: image.repository
+    - ref: ocm-resource:my-image.tag
+      attribute: image.tag
+    '''
+    ref: str
+    attribute: str
+
+    @property
+    def referenced_resource_and_attribute(self):
+        '''
+        returns a two-tuple of reference resource-name and resource's attribute, parsed from
+        `ref`. If ref is not a valid ref (see class-docstr), raises ValueError.
+        '''
+        if not self.ref.startswith(prefix := 'ocm-resource:'):
+            raise ValueError(self.ref, f'must start with {prefix=}')
+
+        ref = self.ref.removeprefix(prefix)
+        parts = ref.split('.')
+        if not len(parts) == 2:
+            raise ValueError(ref, 'must consist of exactly two period-separated parts')
+
+        resource_name, attribute_name = parts
+        return resource_name, attribute_name
+
+
+@dataclasses.dataclass
+class HelmchartCfg:
+    '''
+    A configuration for a helmchart that should be published. Data is also injected into
+    component-descriptor (if trait is present).
+
+    name:     Chart's name (also used as resource-name for component-descriptor); must be unique
+    registry: OCI Registry prefix to publish helmchart to (<name>:<version> will be appended)
+    dir:      relative path to directory containing helmchart
+    mappings: attributes to patch in values.yaml
+    '''
+    name: str
+    registry: str
+    dir: str
+    mappings: list[HelmchartValueMapping] = dataclasses.field(default_factory=list)
+
+
 ATTRIBUTES = (
     AttributeSpec.required(
         name='dockerimages',
@@ -395,6 +473,13 @@ ATTRIBUTES = (
         ),
         type=list[str],
         default=None,
+    ),
+    AttributeSpec.optional(
+        name='helmcharts',
+        doc='''\
+        ''',
+        type=tuple[HelmchartCfg],
+        default=(),
     ),
 )
 
@@ -457,6 +542,16 @@ class PublishTrait(Trait):
     def use_buildkit(self) -> bool:
         return not self.raw['no-buildkit']
 
+    @property
+    def helmcharts(self) -> tuple[HelmchartCfg]:
+        return tuple(
+            dacite.from_dict(
+                HelmchartCfg,
+                data=raw,
+            )
+            for raw in self.raw['helmcharts']
+        )
+
     def transformer(self):
         return PublishTraitTransformer(trait=self)
 
@@ -471,11 +566,46 @@ class PublishTrait(Trait):
             raise ModelValidationError(
                 'must not specify empty list of platforms (omit attr instead)'
             )
+        resource_names = set()
         if not self.oci_builder() in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
             for image in self.dockerimages():
+                resource_names.add(image.name)
                 if image.extra_push_targets:
                     raise ModelValidationError(
                         f'must not specify extra_push_targets if using {self.oci_builder()}'
+                    )
+
+        for helmchart in self.helmcharts:
+            if helmchart.name in resource_names:
+                raise ModelValidationError(
+                    f'duplicate resource: {helmchart.name=}',
+                )
+            resource_names.add(helmchart.name)
+
+            for mapping in helmchart.mappings:
+                if not mapping.ref.startswith('ocm-resource:'):
+                    raise ModelValidationError(
+                        mapping,
+                        'mapping.ref must start with ocm-resource:',
+                    )
+
+                try:
+                    jsonpath_ng.parse(mapping.attribute)
+                except jsonpath_ng.exceptions.JSONPathError as jpe:
+                    raise ModelValidationError(
+                        jpe,
+                        mapping.attribute,
+                    )
+
+                _, attr = mapping.referenced_resource_and_attribute
+                if not attr in (
+                    'repository',
+                    'tag',
+                    'image',
+                ):
+                    raise ModelValidationError(
+                        mapping.ref,
+                        'mapping.ref\'s attribute must be one of repository, tag, image',
                     )
 
 
@@ -523,6 +653,24 @@ class PublishTraitTransformer(TraitTransformer):
         prepare_step.set_timeout(duration_string='30m')
 
         publish_step._add_dependency(prepare_step)
+
+        if self.trait.helmcharts:
+            helmcharts_step = PipelineStep(
+                name='helmcharts',
+                raw_dict={},
+                is_synthetic=True,
+                injecting_trait_name=self.name,
+                script_type=ScriptType.PYTHON3,
+                extra_args={
+                    'publish_trait': self.trait,
+                },
+            )
+            helmcharts_step._add_dependency(prepare_step)
+            helmcharts_step.add_input(
+                name=concourse.model.traits.component_descriptor.DIR_NAME,
+                variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
+            )
+            yield helmcharts_step
 
         if (oci_builder := self.trait.oci_builder()) in (
             OciBuilder.DOCKER,
@@ -600,7 +748,7 @@ class PublishTraitTransformer(TraitTransformer):
         # prepare-step depdends on every other step, except publish and release
         # TODO: do not hard-code knowledge about 'release' step
         for step in pipeline_args.steps():
-            if step.name in ['publish', 'release', 'build_oci_image']:
+            if step.name in ['publish', 'release', 'build_oci_image', 'helmcharts']:
                 continue
             if step.name.startswith('build_oci_image'):
                 continue
