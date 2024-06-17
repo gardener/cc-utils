@@ -2,6 +2,7 @@
 <%
 from makoutil import indent_func
 import concourse.model.traits.publish
+import collections
 import os
 
 publish_trait = job_variant.trait('publish')
@@ -15,6 +16,7 @@ import hashlib
 import json
 import logging
 import os
+import pprint
 import subprocess
 import tempfile
 
@@ -186,5 +188,34 @@ oci_client.put_manifest(
 )
 logger.info(f'published helmchart to {target_ref=}')
 print()
+
+## dump mapping as suggested by OCM-CLI:
+## https://github.com/open-component-model/ocm/blob/2b9ed814dee16e351636cb0d4ea0203f72224c0d/components/helmdemo/README.md
+mapping_outpath = 'helmcharts/${helmchart_cfg.name}.mapping.json'
+print(f'writing  mapping to {mapping_outpath}')
+<%
+# <resource-name>: {tag: attr, repository: attr, image: attr}
+attrs_by_resource = collections.defaultdict(dict)
+for mapping in helmchart_cfg.mappings:
+  resource_name, ref_name = mapping.referenced_resource_and_attribute
+  attrs_by_resource[resource_name][ref_name] = mapping.attribute
+%>
+%  for resource_name, attribute_mappings in attrs_by_resource.items():
+mappings = {
+  'resource': {'name': '${resource_name}'},
+%   for ref, attr in attribute_mappings.items():
+  '${ref}': '${attr}',
+%   endfor
+}
+%  endfor
+mapping_root = {
+  'imageMapping': mappings,
+  'helmchartResource': {
+    'name': '${helmchart_cfg.name}',
+  },
+}
+pprint.pprint(mapping_root)
+with open(mapping_outpath, 'w') as f:
+  json.dump(mapping_root, f)
 % endfor
 </%def>

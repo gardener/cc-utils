@@ -416,6 +416,9 @@ class ReleaseTraitTransformer(TraitTransformer):
         for step in pipeline_args.steps():
             self.release_step._add_dependency(step)
 
+            if step.name == 'helmcharts':
+                self.release_step.add_input('helmcharts', 'helmcharts')
+
         # a 'release job' should only be triggered automatically if explicitly configured
         main_repo = pipeline_args.main_repository()
         if main_repo:

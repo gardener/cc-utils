@@ -670,6 +670,10 @@ class PublishTraitTransformer(TraitTransformer):
                 name=concourse.model.traits.component_descriptor.DIR_NAME,
                 variable_name=concourse.model.traits.component_descriptor.ENV_VAR_NAME,
             )
+            helmcharts_step.add_output(
+                name='helmcharts',
+                variable_name='helmcharts',
+            )
             yield helmcharts_step
 
         if (oci_builder := self.trait.oci_builder()) in (
