@@ -28,6 +28,12 @@ version_operation = release_trait.nextversion()
 release_commit_message_prefix = release_trait.release_commit_message_prefix()
 next_cycle_commit_message_prefix = release_trait.next_cycle_commit_message_prefix()
 
+if job_variant.has_trait('publish'):
+  publish_trait = job_variant.trait('publish')
+  helmcharts = publish_trait.helmcharts
+else:
+  helmcharts = ()
+
 has_slack_trait = job_variant.has_trait('slack')
 if has_slack_trait:
   slack_trait = job_variant.trait('slack')
@@ -142,6 +148,43 @@ component_descriptor = cdu.component_descriptor_from_dir(
   '${job_step.input('component_descriptor_dir')}'
 )
 component = component_descriptor.component
+
+% if helmcharts:
+oci_client = ccc.oci.oci_client()
+component_descriptor_target_ref = cnudie.util.target_oci_ref(component=component)
+## if there are helmcharts, we need to preprocess component-descriptor in order to include
+## mappings emitted from helmcharts-step
+% for helmchart in helmcharts:
+mappingfile_path = 'helmcharts/${helmchart.name}.mapping.json'
+logger.info(f'adding helmchart-mapping from {mappingfile_path=}')
+## mappingfiles are typically small, so don't bother streaming
+with open(mappingfile_path, 'rb') as f:
+  mapping_bytes = f.read()
+
+mapping_leng = len(mapping_bytes)
+mapping_digest = f'sha256:{hashlib.sha256(mapping_bytes).hexdigest()}'
+
+oci_client.put_blob(
+  image_reference=component_descriptor_target_ref,
+  digest=mapping_digest,
+  octets_count=mapping_leng,
+  data=mapping_bytes,
+)
+
+component.resources.append(
+  cm.Resource(
+    name='${helmchart.name}-imagemap',
+    version=version_str,
+    type='helmchart-imagemap',
+    access=cm.LocalBlobAccess(
+      mediaType='application/data',
+      localReference=mapping_digest,
+      size=mapping_leng,
+    ),
+  )
+)
+% endfor
+% endif
 
 % if assets:
 oci_client = ccc.oci.oci_client()
