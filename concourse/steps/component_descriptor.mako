@@ -10,6 +10,11 @@ from concourse.steps import step_lib
 import gci.componentmodel as cm
 import concourse.model.traits.component_descriptor as comp_descr_trait
 
+if job_variant.has_trait('publish'):
+  publish_trait = job_variant.trait('publish')
+  helmcharts = publish_trait.helmcharts
+else:
+  helmcharts = ()
 descriptor_trait = job_variant.trait('component_descriptor')
 main_repo = job_variant.main_repository()
 main_repo_labels = main_repo.source_labels()
@@ -138,7 +143,7 @@ component_v2.sources.append(
 )
 % endfor
 
-# add own container image references
+# add container image references (from publish-trait)
 % for name, image_descriptor in images_by_base_name.items():
 <%
   target_names = set()
@@ -163,6 +168,26 @@ component_v2.resources.append(
   ),
 )
 %   endfor
+% endfor
+
+# add helmcharts (from publish-trait)
+% for helmchart in helmcharts:
+<%
+name = helmchart.name
+target_ref_prefix = f'{helmchart.registry}/{name}'
+%>
+component_v2.resources.append(
+  cm.Resource(
+    name='${helmchart.name}',
+    version=effective_version, # always inherited from component
+    type='helmChart',
+    relation=cm.ResourceRelation.LOCAL,
+    access=cm.OciAccess(
+      type=cm.AccessType.OCI_REGISTRY,
+      imageReference=f'${target_ref_prefix}:{effective_version}',
+    ),
+  )
+)
 % endfor
 
 logger.info('default component descriptor:\n')

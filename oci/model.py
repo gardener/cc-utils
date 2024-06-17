@@ -263,9 +263,15 @@ class OciImageManifest:
     annotations: dict = dataclasses.field(default_factory=dict)
 
     def as_dict(self) -> dict:
+        def layer_to_dict(layer):
+            if isinstance(layer, dict):
+                return layer
+            else:
+                return layer.as_dict()
+
         return {
             'config': self.config.as_dict(),
-            'layers': [layer.as_dict() for layer in self.layers],
+            'layers': [layer_to_dict(layer) for layer in self.layers],
             'mediaType': self.mediaType,
             'schemaVersion': self.schemaVersion,
             'annotations': self.annotations,
