@@ -51,9 +51,9 @@ def normalise_artefact_extra_id(
 @dataclasses.dataclass(frozen=True)
 class LocalArtefactId:
     artefact_name: str | None
-    artefact_version: str | None
     artefact_type: str
-    artefact_extra_id: dict
+    artefact_version: str | None = None
+    artefact_extra_id: dict = dataclasses.field(default_factory=dict)
 
     def normalised_artefact_extra_id(
         self,
@@ -68,7 +68,12 @@ class LocalArtefactId:
 class ArtefactKind(enum.StrEnum):
     ARTEFACT = 'artefact'
     RESOURCE = 'resource'
+    RUNTIME = 'runtime'
     SOURCE = 'source'
+
+
+def is_ocm_artefact(artefact_kind: ArtefactKind) -> bool:
+    return artefact_kind in (ArtefactKind.RESOURCE, ArtefactKind.SOURCE)
 
 
 @dataclasses.dataclass(frozen=True)
