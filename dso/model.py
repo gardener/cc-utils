@@ -65,12 +65,18 @@ class LocalArtefactId:
         )
 
 
+class ArtefactKind(enum.StrEnum):
+    ARTEFACT = 'artefact'
+    RESOURCE = 'resource'
+    SOURCE = 'source'
+
+
 @dataclasses.dataclass(frozen=True)
 class ComponentArtefactId:
     component_name: str | None
     component_version: str | None
     artefact: LocalArtefactId
-    artefact_kind: str = 'artefact' # artefact | resource | source
+    artefact_kind: ArtefactKind = ArtefactKind.ARTEFACT
 
     def as_frozenset(self) -> frozenset[str]:
         return frozenset((
@@ -102,9 +108,9 @@ def component_artefact_id_from_ocm(
     )
 
     if isinstance(artefact, cm.Resource):
-        artefact_kind = 'resource'
+        artefact_kind = ArtefactKind.RESOURCE
     elif isinstance(artefact, cm.Source):
-        artefact_kind = 'source'
+        artefact_kind = ArtefactKind.SOURCE
     else:
         # should not occur
         raise TypeError(artefact)
@@ -481,6 +487,7 @@ class ArtefactMetadata:
                     datetime.date: lambda date: datetime.datetime.fromisoformat(date).date(),
                 },
                 cast=[
+                    ArtefactKind,
                     ComplianceSnapshotStatuses,
                     MetaRescoringRules,
                 ],
