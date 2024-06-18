@@ -283,6 +283,7 @@ def manifest(
     image_reference: str,
     pretty:bool=True,
     accept:OciManifestChoice=OciManifestChoice.PREFER_MULTIARCH,
+    print_expr=None,
 ):
     oci_client = ccc.oci.oci_client()
 
@@ -295,14 +296,14 @@ def manifest(
     else:
         raise NotImplementedError(accept)
 
-    if pretty:
-        manifest = oci_client.manifest(
-            image_reference=image_reference,
-            accept=accept,
-        )
-        manifest_raw = oci_client.manifest_raw(
-            image_reference=image_reference,
-            accept=accept,
+    manifest_raw = oci_client.manifest_raw(
+        image_reference=image_reference,
+        accept=accept,
+    )
+
+    if pretty and not print_expr:
+        manifest = oci.model.as_manifest(
+            manifest=manifest_raw.text,
         )
 
         if isinstance(manifest, om.OciImageManifest):
@@ -323,12 +324,21 @@ def manifest(
             print()
             print(f'{manifest_digest=}')
 
+    elif not pretty and not print_expr:
+        print(manifest_raw.text)
     else:
-        manifest = oci_client.manifest_raw(
-            image_reference=image_reference,
-            accept=accept,
+        manifest_bytes = manifest_raw.content
+        manifest = oci.model.as_manifest(
+            manifest=manifest_bytes,
         )
-        print(manifest.text)
+
+        # expose to eval
+        size = len(manifest_bytes) # noqa
+        digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}' # noqa
+        image_reference = oci.model.OciImageReference(image_reference) # noqa
+        repository = image_reference.ref_without_tag # noqa
+
+        print(eval(print_expr))
 
 
 def cfg(image_reference: str):

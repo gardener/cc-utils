@@ -1,9 +1,11 @@
 import dataclasses
 import enum
 import functools
+import json
 import typing
 import urllib.parse
 
+import dacite
 import requests
 
 import oci.util
@@ -379,3 +381,38 @@ class OciImageManifestList:
             raw['annotations'] = self.annotations
 
         return raw
+
+
+def as_manifest(
+    manifest: str | bytes | dict | OciImageManifest | OciImageManifestList,
+) -> OciImageManifest | OciImageManifestList:
+    '''
+    returns a deserialised equivalent of the passed-in manifest. For convenience, if passed-in
+    manifest is already an instance of either OciImageManifest or OciImageManifestList, the
+    passed value is returned unchanged.
+    '''
+    if isinstance(manifest, (OciImageManifest, OciImageManifestList)):
+        return manifest
+
+    if isinstance(manifest, (str, bytes)):
+        manifest = json.loads(manifest)
+
+    if (media_type := manifest.get('mediaType')) in (
+        DOCKER_MANIFEST_LIST_MIME,
+        OCI_IMAGE_INDEX_MIME,
+    ):
+        return dacite.from_dict(
+            data_class=OciImageManifestList,
+            data=manifest,
+        )
+
+    if media_type in (
+        DOCKER_MANIFEST_SCHEMA_V2_MIME,
+        OCI_MANIFEST_SCHEMA_V2_MIME,
+    ):
+        return dacite.from_dict(
+            data_class=OciImageManifest,
+            data=manifest,
+        )
+
+    raise ValueError(manifest, 'unknown schema-version')
