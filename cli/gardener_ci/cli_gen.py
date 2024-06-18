@@ -52,6 +52,23 @@ else:
     FORMATTER_CLASS = argparse.RawDescriptionHelpFormatter
 
 
+def _subcommand_modules() -> dict[str, str]:
+    '''
+    returns a dict where keys are subcommand-names, and values are module-names
+    (module-names are sometimes prefixed with an underscore in this directory to avoid
+    name conflicts)
+    '''
+    fnames = [
+        n for n in os.listdir(os.path.dirname(os.path.realpath(__file__)))
+        if n.endswith('.py') and not n == os.path.basename(__file__) and not n == '__init__.py'
+    ]
+
+    return {
+        n.removeprefix('_').removesuffix('.py'): n.removesuffix('.py')
+        for n in fnames
+    }
+
+
 def main():
     '''
     Creates a command line parser (using argparse) for each python module found in this
@@ -61,6 +78,19 @@ def main():
     This parser is then used to parse the given ARGV. Provided that parsing succeeds,
     the thus specified function is executed.
     '''
+    subcommand_modules = _subcommand_modules()
+    # as an optimisation, try to parse chosen subcommand (if any). If there is one, we can skip
+    # loading any other modules (which saves a lot of startup time).
+    parser = argparse.ArgumentParser()
+    parser.add_argument('subcommand', nargs=1, choices=subcommand_modules.keys())
+    add_global_args(parser)
+    parsed, _ = parser.parse_known_args()
+    if parsed.subcommand:
+        subcommand = parsed.subcommand[0]
+        chosen_module_name = subcommand_modules[subcommand]
+    else:
+        subcommand = None
+        chosen_module_name = None
 
     parser = argparse.ArgumentParser(formatter_class=FORMATTER_CLASS)
     add_global_args(parser)
@@ -68,7 +98,10 @@ def main():
     cli_module_dir = os.path.dirname(os.path.abspath(os.path.realpath(__file__)))
     sys.path.insert(0, cli_module_dir)
     for _, module_name, _ in pkgutil.iter_modules([cli_module_dir]):
-    # skip own module name
+        # if subcommand was given, only load module for chosen subcommand
+        if chosen_module_name and module_name != chosen_module_name:
+            continue
+        # skip own module name
         if module_name == os.path.splitext(os.path.basename(__file__))[0]:
             continue
         if module_name == 'setup': # skip setup.py
