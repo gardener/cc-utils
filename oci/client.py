@@ -299,11 +299,25 @@ class Client:
         url = base_api_url(
             image_reference=str(image_reference),
         )
-        res = self.session.get(
-            url=url,
-            verify=not self.disable_tls_validation,
-            timeout=(31, 121),
-        )
+
+        try:
+            res = self.session.get(
+                url=url,
+                verify=not self.disable_tls_validation,
+                timeout=(31, 121),
+            )
+        except ConnectionError as e:
+            if remaining_retries == 0:
+                raise
+
+            logger.warning(
+                f'caught ConnectionError while trying to authenticate ({remaining_retries=}); {e}'
+            )
+            self._authenticate(
+                image_reference=image_reference,
+                scope=scope,
+                remaining_retries=remaining_retries - 1,
+            )
 
         auth_challenge = www_authenticate.parse(res.headers.get('www-authenticate'))
 
