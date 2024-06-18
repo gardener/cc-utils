@@ -35,13 +35,6 @@ ci.log.configure_default_logging(force=True)
 
 import ctx  # noqa: E402
 
-import_errs = []
-
-
-def print_import_errs():
-    for ie in import_errs:
-        ci.util.verbose(ie)
-
 
 cfg = ctx.cfg
 terminal_cfg = cfg.terminal
@@ -83,7 +76,6 @@ def main():
         add_module(module_name, sub_command_parsers)
     if len(sys.argv) == 1:
         parser.print_usage()
-        print_import_errs()
         sys.exit(1)
     parsed = parser.parse_args()
     # write parsed args to global ctx module so called module functions may
@@ -97,7 +89,6 @@ def main():
     if hasattr(parsed, 'module'):
         parsed.module.args = parsed
         parsed.func(parsed)
-    print_import_errs()
 
 
 def add_global_args(parser):
