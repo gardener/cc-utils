@@ -313,7 +313,7 @@ class Client:
             logger.warning(
                 f'caught ConnectionError while trying to authenticate ({remaining_retries=}); {e}'
             )
-            self._authenticate(
+            return self._authenticate(
                 image_reference=image_reference,
                 scope=scope,
                 remaining_retries=remaining_retries - 1,
@@ -367,7 +367,7 @@ class Client:
             if res.status_code == 429 and remaining_retries > 0:
                 logger.warning('quota was exceeded, will wait a minute and then retry again')
                 time.sleep(60)
-                self._authenticate(
+                return self._authenticate(
                     image_reference=image_reference,
                     scope=scope,
                     remaining_retries=remaining_retries - 1,
