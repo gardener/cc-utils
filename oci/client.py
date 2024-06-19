@@ -895,7 +895,7 @@ class Client:
             digest=digest,
         )
         if head_res.ok:
-            logger.info(f'skipping blob upload {digest=} - already exists')
+            logger.debug(f'skipping blob upload {digest=} - already exists')
             return
 
         data_is_requests_resp = isinstance(data, requests.models.Response)
