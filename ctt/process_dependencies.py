@@ -395,7 +395,6 @@ def process_images(
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     skip_cd_validation: bool=False,
     generate_cosign_signatures: bool=False,
-    cosign_repository=None,
     signing_server_url: str=None,
     root_ca_cert_path: str=None,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
