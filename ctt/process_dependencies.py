@@ -494,11 +494,13 @@ def process_images(
                 content=payload_bytes,
                 hash_algorithm='sha256',
                 signing_algorithm=signingserver.SignatureAlgorithm.RSASSA_PKCS1_V1_5,
-            ).signature
+            )
 
             cosign.sign_image(
                 image_reference=digest_ref,
-                signature=signature,
+                signature=signature.signature,
+                signing_algorithm=signature.signing_algorithm,
+                public_key=signature.public_key,
                 on_exist=cosign.OnExist.SKIP,
                 oci_client=oci_client,
             )

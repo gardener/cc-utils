@@ -38,6 +38,7 @@ class SigningResponse:
     Instances are typically created from SigningserverClient.
     '''
     raw: str
+    signing_algorithm: SignatureAlgorithm
 
     @property
     def certificate(self) -> str:
@@ -133,4 +134,7 @@ class SigningserverClient:
 
         resp.raise_for_status()
 
-        return SigningResponse(raw=resp.text)
+        return SigningResponse(
+            raw=resp.text,
+            signing_algorithm=signing_algorithm,
+        )
