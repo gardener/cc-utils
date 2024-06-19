@@ -493,7 +493,7 @@ def process_images(
             signature = signingserver_client.sign(
                 content=payload_bytes,
                 hash_algorithm='sha256',
-                signing_algorithm=signingserver.SignatureAlgorithm.RSASSA_PKCS1_V1_5,
+                signing_algorithm=signingserver.SigningAlgorithm.RSASSA_PKCS1_V1_5,
             )
 
             cosign.sign_image(
