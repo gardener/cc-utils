@@ -35,3 +35,8 @@ def sign(
         print(signature.raw)
     elif output == 'certificate':
         print(signature.certificate)
+    elif output == 'public-key':
+        print(signature.public_key)
+    else:
+        print(f'invalid choice: {output=}')
+        exit(1)

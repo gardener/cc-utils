@@ -8,6 +8,8 @@ import hashlib
 import io
 import urllib.parse
 
+import cryptography.x509
+import cryptography.hazmat.primitives.serialization as crypto_serialiation
 import requests
 import urllib3
 
@@ -65,6 +67,23 @@ class SigningResponse:
         signature = signature[start_idx + 1:]
 
         return signature.strip()
+
+    @property
+    def public_key(self) -> str:
+        '''
+        returns the PEM-encoded public-key corresponding to the private key used for creating
+        thus response's signature.
+        '''
+        certificate = cryptography.x509.load_pem_x509_certificate(
+            self.raw.encode('utf-8')
+        )
+        public_key = certificate.public_key()
+        public_key_str = public_key.public_bytes(
+            encoding=crypto_serialiation.Encoding.PEM,
+            format=crypto_serialiation.PublicFormat.SubjectPublicKeyInfo,
+        ).decode('utf-8')
+
+        return public_key_str
 
 
 class SigningserverClient:
