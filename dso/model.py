@@ -283,16 +283,25 @@ class RescoringLicenseFinding:
 
 
 @dataclasses.dataclass(frozen=True)
-class ClamAVMalwareFinding(Finding):
+class MalwareFindingDetails:
     filename: str
     content_digest: str
     virus_name: str
+
+    @property
+    def key(self) -> str:
+        return f'{self.content_digest}|{self.filename}|{self.virus_name}'
+
+
+@dataclasses.dataclass(frozen=True)
+class ClamAVMalwareFinding(Finding):
+    finding: MalwareFindingDetails
     octets_count: int
     scan_duration_seconds: float
 
     @property
     def key(self) -> str:
-        return f'{self.content_digest}|{self.filename}|{self.virus_name}'
+        return self.finding.key
 
 
 @dataclasses.dataclass(frozen=True)
@@ -349,6 +358,7 @@ class CustomRescoring:
     finding: (
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
+        | MalwareFindingDetails
     )
     referenced_type: str
     severity: str
