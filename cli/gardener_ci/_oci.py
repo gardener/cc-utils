@@ -3,9 +3,11 @@ import enum
 import hashlib
 import json
 import pprint
+import subprocess
 import sys
 import tabulate
 import tarfile
+import tempfile
 
 import requests
 
@@ -347,6 +349,56 @@ def manifest(
         repository = image_reference.ref_without_tag # noqa
 
         print(eval(print_expr)) # nosec B307
+
+
+def edit(
+    image_reference: str,
+    accept:OciManifestChoice=OciManifestChoice.PREFER_MULTIARCH,
+    editor: str='vim',
+):
+    image_reference = om.OciImageReference(image_reference)
+    oci_client = ccc.oci.oci_client()
+
+    manifest_dict = oci_client.manifest_raw(
+        image_reference=image_reference,
+        accept=_to_accept_mimetype(accept),
+    ).json()
+
+    manifest_pretty = json.dumps(
+        manifest_dict,
+        indent=2,
+    ).encode('utf-8')
+
+    tmp = tempfile.NamedTemporaryFile()
+    tmp.write(manifest_pretty)
+    tmp.flush()
+
+    # keep digest to find modifications
+    digest = hashlib.sha256(manifest_pretty).hexdigest()
+
+    res = subprocess.run((editor, tmp.name))
+    if res.returncode != 0:
+        print(f'editor returned {res.returncode=} - discarding changes!')
+        exit(1)
+
+    tmp.seek(0)
+    file_digest = hashlib.sha256(tmp.read()).hexdigest()
+    tmp.seek(0)
+
+    if digest == file_digest:
+        print('there were no changes - OCI Image Manifest will be left unchanged')
+        exit(0)
+
+    # upload altered manifest
+    if image_reference.has_digest_tag:
+        # if passed-in image-ref contained digest, target-ref must be patched
+        image_reference = f'{image_reference.ref_without_tag}@sha256:{file_digest}'
+
+    print(f'patching {image_reference}')
+    oci_client.put_manifest(
+        image_reference=image_reference,
+        manifest=tmp.read(),
+    )
 
 
 def cfg(image_reference: str):
