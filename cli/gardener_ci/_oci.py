@@ -279,14 +279,9 @@ def purge_old(
         pass
 
 
-def manifest(
-    image_reference: str,
-    pretty:bool=True,
+def _to_accept_mimetype(
     accept:OciManifestChoice=OciManifestChoice.PREFER_MULTIARCH,
-    print_expr=None,
 ):
-    oci_client = ccc.oci.oci_client()
-
     if accept is OciManifestChoice.SINGLE:
         accept = om.MimeTypes.single_image
     elif accept is OciManifestChoice.MULTIARCH:
@@ -295,6 +290,19 @@ def manifest(
         accept = om.MimeTypes.prefer_multiarch
     else:
         raise NotImplementedError(accept)
+
+    return accept
+
+
+def manifest(
+    image_reference: str,
+    pretty:bool=True,
+    accept:OciManifestChoice=OciManifestChoice.PREFER_MULTIARCH,
+    print_expr=None,
+):
+    oci_client = ccc.oci.oci_client()
+
+    accept = _to_accept_mimetype(accept)
 
     manifest_raw = oci_client.manifest_raw(
         image_reference=image_reference,
@@ -360,8 +368,32 @@ def cfg(image_reference: str):
     print(f'digest: {cfg_dig}')
 
 
-def blob(image_reference: str, digest: str, outfile: str='-'):
+def blob(
+    image_reference: str,
+    accept:OciManifestChoice=OciManifestChoice.SINGLE,
+    digest: str=None,
+    index:int=None,
+    outfile: str='-',
+):
+    if not ((digest is not None) ^ (index is not None)):
+        print('usage: exactly one of --digest, --index must be passed')
+        exit(1)
     oci_client = ccc.oci.oci_client()
+
+    if index is not None:
+        manifest = oci_client.manifest(
+            image_reference=image_reference,
+            accept=_to_accept_mimetype(accept),
+        )
+        if not manifest.layers:
+            print(f'{manifest.mediaType=}')
+            print('image-manifest has no layers (hint: did you refer to a manifest-list?)')
+            exit(1)
+        try:
+            digest = manifest.layers[index].digest
+        except IndexError:
+            print(f'no layer with {index=} present')
+            exit(1)
 
     if outfile == '-':
         if sys.stdout.isatty():
