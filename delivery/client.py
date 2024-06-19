@@ -357,7 +357,7 @@ class DeliveryServiceClient:
             method='PUT',
             headers=headers,
             data=data,
-            timeout=(4, 121),
+            timeout=(4, 241),
         )
 
         res.raise_for_status()
