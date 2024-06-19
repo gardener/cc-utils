@@ -44,8 +44,9 @@ def sign(
     signing_server_url: str,
     signing_server_client_cert: str,
     signing_server_client_cert_key: str,
+    on_exist: cosign.OnExist=cosign.OnExist.APPEND,
     signing_server_certificate_ca: str=None,
-    signing_algorithm: str='rsassa-pss',
+    signing_algorithm: str='rsassa-pkcs1-v1_5',
     tls_validation: bool=True,
 ):
     image_reference = om.OciImageReference(image_reference)
@@ -89,7 +90,9 @@ def sign(
     cosign.sign_image(
         image_reference=image_reference,
         signature_image_reference=signature_image_ref,
-        signature=signature.signature,
-        on_exist=cosign.OnExist.OVERWRITE,
+        signature=signature.signature.replace('\n', ''),
+        signing_algorithm=signing_algorithm,
+        public_key=signature.public_key.replace('\n', ''),
+        on_exist=on_exist,
         oci_client=oci_client,
     )
