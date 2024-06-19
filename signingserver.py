@@ -16,7 +16,7 @@ import urllib3
 import ci.util
 
 
-class SignatureAlgorithm(enum.StrEnum):
+class SigningAlgorithm(enum.StrEnum):
     RSASSA_PSS = 'rsassa-pss'
     RSASSA_PKCS1_V1_5 = 'rsassa-pkcs1-v1_5'
 
@@ -38,7 +38,7 @@ class SigningResponse:
     Instances are typically created from SigningserverClient.
     '''
     raw: str
-    signing_algorithm: SignatureAlgorithm
+    signing_algorithm: SigningAlgorithm
 
     @property
     def certificate(self) -> str:
@@ -98,9 +98,9 @@ class SigningserverClient:
         self,
         content: str | bytes | io.IOBase,
         hash_algorithm='sha256',
-        signing_algorithm: SignatureAlgorithm | str = SignatureAlgorithm.RSASSA_PSS,
+        signing_algorithm: SigningAlgorithm | str = SigningAlgorithm.RSASSA_PSS,
     ):
-        signing_algorithm = SignatureAlgorithm(signing_algorithm)
+        signing_algorithm = SigningAlgorithm(signing_algorithm)
         url = ci.util.urljoin(
             self.cfg.base_url,
             'sign',
