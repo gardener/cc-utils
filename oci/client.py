@@ -300,24 +300,11 @@ class Client:
             image_reference=str(image_reference),
         )
 
-        try:
-            res = self.session.get(
-                url=url,
-                verify=not self.disable_tls_validation,
-                timeout=(31, 121),
-            )
-        except ConnectionError as e:
-            if remaining_retries == 0:
-                raise
-
-            logger.warning(
-                f'caught ConnectionError while trying to authenticate ({remaining_retries=}); {e}'
-            )
-            return self._authenticate(
-                image_reference=image_reference,
-                scope=scope,
-                remaining_retries=remaining_retries - 1,
-            )
+        res = self.session.get(
+            url=url,
+            verify=not self.disable_tls_validation,
+            timeout=(31, 121),
+        )
 
         auth_challenge = www_authenticate.parse(res.headers.get('www-authenticate'))
 
@@ -394,6 +381,7 @@ class Client:
         headers: dict=None,
         raise_for_status=True,
         warn_if_not_ok=True,
+        remaining_retries: int=3,
         **kwargs,
     ):
         if not 'timeout' in kwargs and self.timeout_seconds:
@@ -401,10 +389,28 @@ class Client:
 
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
-        self._authenticate(
-            image_reference=image_reference,
-            scope=scope,
-        )
+        try:
+            self._authenticate(
+                image_reference=image_reference,
+                scope=scope,
+            )
+        except requests.exceptions.ConnectionError as e:
+            if remaining_retries == 0:
+                raise
+
+            logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                **kwargs,
+            )
+
         headers = headers or {}
         headers['User-Agent'] = 'gardener-oci (python3; github.com/gardener/cc-utils)'
         auth_method = self.token_cache.auth_method(image_reference=image_reference)
@@ -450,14 +456,32 @@ class Client:
         except KeyError:
             timeout = (31, 121)
 
-        res = self.session.request(
-            method=method,
-            url=url,
-            auth=auth,
-            headers=headers,
-            timeout=timeout,
-            **kwargs,
-        )
+        try:
+            res = self.session.request(
+                method=method,
+                url=url,
+                auth=auth,
+                headers=headers,
+                timeout=timeout,
+                **kwargs,
+            )
+        except requests.exceptions.ConnectionError as e:
+            if remaining_retries == 0:
+                raise
+
+            logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                **kwargs,
+            )
+
         if not res.ok and warn_if_not_ok:
             logger.warning(
                 f'rq against {url=} failed {res.status_code=} {res.reason=} {method=} {res.content}'
@@ -475,7 +499,6 @@ class Client:
         image_reference: typing.Union[str, om.OciImageReference],
         absent_ok: bool=False,
         accept: str=None,
-        remaining_retries: int=3,
     ):
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
@@ -501,17 +524,6 @@ class Client:
                     return None
                 raise om.OciImageNotFoundException(he) from he
             raise he
-        except requests.exceptions.ConnectionError:
-            if remaining_retries == 0:
-                raise
-
-            logger.warning(f'caught ConnectionError while retrieving manifest {remaining_retries=}')
-            res = self.manifest_raw(
-                image_reference=image_reference,
-                absent_ok=absent_ok,
-                accept=accept,
-                remaining_retries=remaining_retries - 1,
-            )
 
         return res
 
