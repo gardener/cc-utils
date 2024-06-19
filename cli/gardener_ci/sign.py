@@ -6,8 +6,9 @@ def sign(
     signing_server_url: str,
     signing_server_client_cert: str,
     signing_server_client_cert_key: str,
+    output: str='signature',
     signing_server_certificate_ca: str=None,
-    signing_algorithm: str='rsassa-pss',
+    signing_algorithm: str='rsassa-pkcs1-v1_5',
     tls_validation: bool=True,
 ):
     with open(filepath, 'rb') as f:
@@ -28,4 +29,9 @@ def sign(
         signing_algorithm=signing_algorithm,
     )
 
-    print(signature.signature)
+    if output == 'signature':
+        print(signature.signature.replace('\n', ''), end='')
+    elif output == 'raw':
+        print(signature.raw)
+    elif output == 'certificate':
+        print(signature.certificate)
