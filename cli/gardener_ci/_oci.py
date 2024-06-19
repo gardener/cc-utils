@@ -338,7 +338,7 @@ def manifest(
         image_reference = oci.model.OciImageReference(image_reference) # noqa
         repository = image_reference.ref_without_tag # noqa
 
-        print(eval(print_expr))
+        print(eval(print_expr)) # nosec B307
 
 
 def cfg(image_reference: str):
