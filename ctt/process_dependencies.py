@@ -388,9 +388,6 @@ def process_images(
     tgt_ctx_base_url: str,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
-    upload_mode=None,
-    upload_mode_cd=None,
-    upload_mode_images=None,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     skip_cd_validation: bool=False,
@@ -417,12 +414,6 @@ def process_images(
 
     if processing_mode is ProcessingMode.DRY_RUN:
         ci.util.warning('dry-run: not downloading or uploading any images')
-
-    if upload_mode_images:
-        logger.warn('passing upload_mode_images is deprecated - will ignore setting')
-
-    if upload_mode:
-        logger.warn('passing upload_mode is deprected - will ignore setting')
 
     src_ctx_base_url = component_descriptor_v2.component.current_repository_ctx().baseUrl
 
