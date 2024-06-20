@@ -286,11 +286,11 @@ class RescoringLicenseFinding:
 class MalwareFindingDetails:
     filename: str
     content_digest: str
-    virus_name: str
+    malware: str
 
     @property
     def key(self) -> str:
-        return f'{self.content_digest}|{self.filename}|{self.virus_name}'
+        return f'{self.content_digest}|{self.filename}|{self.malware}'
 
 
 @dataclasses.dataclass(frozen=True)
