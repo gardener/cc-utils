@@ -309,6 +309,9 @@ class ClamAVMalwareFinding(Finding):
     finding: MalwareFindingDetails
     octets_count: int
     scan_duration_seconds: float
+    clamav_version_str: str
+    signature_version: int
+    virus_definition_timestamp: datetime.datetime
 
     @property
     def key(self) -> str:
