@@ -108,12 +108,16 @@ else:
     logger.warning('not writing cfg status to elasticsearch, no client available')
 
 % if do_rotate_secrets:
-process_config_queue(
-    cfg_dir=cfg_dir,
-    target_ref=f'refs/heads/{config_repo_default_branch}',
-    repo_url=config_repo_url,
-    github_repo_path=f'{config_repo_org}/{config_repo_repo}',
-)
+try:
+    process_config_queue(
+        cfg_dir=cfg_dir,
+        target_ref=f'refs/heads/{config_repo_default_branch}',
+        repo_url=config_repo_url,
+        github_repo_path=f'{config_repo_org}/{config_repo_repo}',
+    )
+except:
+    import traceback
+    traceback.print_exc()
 % endif
 
 </%def>
