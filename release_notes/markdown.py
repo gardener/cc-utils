@@ -182,10 +182,11 @@ def render(notes: set[rnm.ReleaseNote]):
 
 
 def release_notes_for_ocm_resource(resource: cm.Resource) -> str | None:
+    if not resource.access:
+        return None
 
-    if resource.type == cm.ArtefactType.OCI_IMAGE:
-        if resource.access.type == cm.AccessType.OCI_REGISTRY:
-            return f'- {resource.name}: `{resource.access.imageReference}`'
+    if resource.access.type is cm.AccessType.OCI_REGISTRY:
+        return f'- {resource.name}: `{resource.access.imageReference}`'
 
     return None
 
@@ -210,8 +211,10 @@ def release_note_for_ocm_component(component: cm.Component) -> str | None:
             ) if l is not None
         }
 
-        if resource_type == cm.ResourceType.OCI_IMAGE:
+        if resource_type is cm.ArtefactType.OCI_IMAGE:
             category_title = 'Docker Images'
+        elif resource_type is cm.ArtefactType.HELM_CHART:
+            category_title = 'Helm Charts'
         else:
             category_title = str(resource_type)
 
