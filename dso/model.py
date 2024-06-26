@@ -298,6 +298,7 @@ class MalwareFindingDetails:
     filename: str
     content_digest: str
     malware: str
+    context: str | None # optional context information, e.g. layer-digest or bucket-id
 
     @property
     def key(self) -> str:
