@@ -309,9 +309,9 @@ class ClamAVMalwareFinding(Finding):
     finding: MalwareFindingDetails
     octets_count: int
     scan_duration_seconds: float
-    clamav_version: str
-    signature_version: int
-    freshclam_timestamp: datetime.datetime
+    clamav_version: str | None
+    signature_version: int | None
+    freshclam_timestamp: datetime.datetime | None
 
     @property
     def key(self) -> str:
