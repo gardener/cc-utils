@@ -56,7 +56,8 @@ if not os.path.isdir(helmchart_dir):
   logger.error(f'not an existing directory: {helmchart_dir=}')
   exit(1)
 helmchart_outdir = 'helmchart-archives.d'
-os.mkdir(helmchart_outdir)
+if not os.path.exists(helmchart_outdir):
+  os.mkdir(helmchart_outdir)
 
 # preprocess helmchart
 # - overwrite helmchart-name according to pipeline-cfg (to ensure consistency between content
