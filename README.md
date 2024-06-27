@@ -47,7 +47,7 @@ CI/CD jobs are run (`europe-docker.pkg.dev/gardener-project/releases/cicd/job-im
 ### Python Runtime
 
 `Python 3.11` or greater is required as a runtime (see requirements.txt for additional
-runtime dependencies). Earlier Python versions.
+runtime dependencies).
 
 As a general rule, contained sources are always qualified using the python3-version from
 [alpine](https://endoflife.date/alpine)'s greatest release version.
