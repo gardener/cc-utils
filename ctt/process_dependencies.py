@@ -255,7 +255,7 @@ def create_jobs(
     ):
         resource: cm.Resource
         # XXX only support OCI-resources for now
-        if not resource.type is cm.ArtefactType.OCI_IMAGE:
+        if not resource.access.type is cm.AccessType.OCI_REGISTRY:
             continue
 
         oci_resource = resource

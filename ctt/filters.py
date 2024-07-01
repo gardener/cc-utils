@@ -54,7 +54,7 @@ class ImageFilter(FilterBase):
         component: cm.Component,
         resource: cm.Resource,
     ):
-        if resource.type is not cm.ResourceType.OCI_IMAGE:
+        if resource.access.type is not cm.AccessType.OCI_REGISTRY:
             return False
 
         return self._image_ref_filter(resource) and \
