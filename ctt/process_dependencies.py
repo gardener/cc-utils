@@ -550,7 +550,14 @@ def process_images(
 
         return processing_job
 
-    jobs = executor.map(process_job, jobs)
+    def wrap_process_job(processing_job: processing_model.ProcessingJob):
+        try:
+            return process_job(processing_job=processing_job)
+        except Exception as e:
+            logger.warn(f'exception while processing {processing_job=}')
+            raise e
+
+    jobs = executor.map(wrap_process_job, jobs)
 
     # group jobs by component-version (TODO: either make Component immutable, or implement
     # __eq__ / __hash__
