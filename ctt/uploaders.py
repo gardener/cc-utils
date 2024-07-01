@@ -143,7 +143,7 @@ class TagSuffixUploader:
         processing_job: pm.ProcessingJob,
         target_as_source: bool=False,
     ):
-        if processing_job.resource.type is not cm.ArtefactType.OCI_IMAGE:
+        if processing_job.resource.access.type is not cm.AccessType.OCI_REGISTRY:
             raise NotImplementedError
 
         if not target_as_source:
