@@ -566,21 +566,22 @@ class PublishTrait(Trait):
             raise ModelValidationError(
                 'must not specify empty list of platforms (omit attr instead)'
             )
-        resource_names = set()
-        if not self.oci_builder() in (OciBuilder.DOCKER, OciBuilder.DOCKER_BUILDX):
-            for image in self.dockerimages():
-                resource_names.add(image.name)
-                if image.extra_push_targets:
-                    raise ModelValidationError(
-                        f'must not specify extra_push_targets if using {self.oci_builder()}'
-                    )
 
+        image_names = set()
+        for image in self.dockerimages():
+            if image._base_name in image_names:
+                raise ModelValidationError(
+                    f'duplicate image: {image._base_name=}',
+                )
+            image_names.add(image._base_name)
+
+        helmchart_names = set()
         for helmchart in self.helmcharts:
-            if helmchart.name in resource_names:
+            if helmchart.name in helmchart_names:
                 raise ModelValidationError(
                     f'duplicate resource: {helmchart.name=}',
                 )
-            resource_names.add(helmchart.name)
+            helmchart_names.add(helmchart.name)
 
             for mapping in helmchart.mappings:
                 if not mapping.ref.startswith('ocm-resource:'):
