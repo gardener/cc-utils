@@ -10,12 +10,17 @@ import ctt.filters as filters
 
 
 @pytest.fixture
-def img(name='image_name', version='1.2.3', ref='image_ref:1.2.3'):
-    def _img(name=name, version=version, ref=ref):
+def img(
+    name='image_name',
+    version='1.2.3',
+    ref='image_ref:1.2.3',
+    type=cm.ResourceType.OCI_IMAGE,
+):
+    def _img(name=name, version=version, ref=ref, type=type):
         return cm.Resource(
             name=name,
             version=version,
-            type=cm.ResourceType.OCI_IMAGE,
+            type=type,
             access=cm.OciAccess(
                 imageReference=ref,
             )
@@ -40,6 +45,8 @@ def test_image_filter(img):
         exclude_image_refs=('image:2', 'image3'),
         include_image_names=('in1', 'in2'),
         exclude_image_names=('in3',),
+        include_artefact_types=(cm.ArtefactType.OCI_IMAGE, 'unknown-type'),
+        exclude_artefact_types=(cm.ArtefactType.GIT, 'another-unknown-type')
     )
 
     image1 = img(ref='image:1', name='in1')
@@ -49,6 +56,12 @@ def test_image_filter(img):
     image2 = img(ref='image:1', name='another_name')
 
     assert not examinee.matches(component=None, resource=image2)
+
+    artefact3 = img(ref='image:1', name='in1', type='unknown-type')
+    assert examinee.matches(component=None, resource=artefact3)
+
+    artefact4 = img(ref='image:1', name='in1', type=cm.ArtefactType.GIT)
+    assert not examinee.matches(component=None, resource=artefact4)
 
 
 def test_component_filter(comp):
