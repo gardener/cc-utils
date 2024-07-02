@@ -701,7 +701,19 @@ class Client:
             method='GET'
         )
 
-        return res.json()['tags']
+        res.raise_for_status()
+
+        # Google-Artifact-Registry (maybe also others) will return http-200 + HTML in certain
+        # error cases (e.g. if image_reference contains a pipe (|) character)
+        try:
+            return res.json()['tags']
+        except json.decoder.JSONDecodeError as jde:
+            if not (content_type := res.headers['Content-Type']) == 'application/json':
+                jde.add_note(f'unexpected Content-Type: {content_type=}')
+
+            jde.add_note(f'{image_reference=}')
+
+            raise jde
 
     def has_multiarch(self, image_reference: str) -> bool:
         res = self.head_manifest(
