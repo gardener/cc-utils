@@ -200,8 +200,21 @@ def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, No
     :param content: the content to look for release notes in
     :return: a list of valid note blocks
     '''
+    while '<!--' in content:
+        comment_start_idx = content.find('<!--')
+        comment_stop_idx = content.find('-->')
+        content = content[:comment_start_idx] + content[comment_stop_idx + len('-->'):]
+
     for res in _source_block_pattern.finditer(content.replace('\r\n', '\n')):
         try:
+            # component-name might be erroneously parsed if multiple values are specified
+            # for target-group using pipe (|) character w/o spaces
+            # as those are never valid OCM component-names, ignore those to avoid subsequent
+            # processing errors (failure to retrieve component-descriptors/enumerate versions)
+            component_name = res.group('source_component_name')
+            if component_name and '|' in component_name:
+                component_name = None
+
             block = SourceBlock(
                 source=source,
                 category=res.group('category'),
@@ -209,7 +222,7 @@ def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, No
                 note_message=res.group('note'),
                 author=res.group('author'),
                 reference_identifier=res.group('reference_str'),
-                component_name=res.group('source_component_name')
+                component_name=component_name,
             )
             if not block.target_group.lower() in ['user', 'operator', 'developer', 'dependency']:
                 continue
