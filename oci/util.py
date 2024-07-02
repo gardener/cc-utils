@@ -4,6 +4,8 @@ import queue
 import threading
 import typing
 
+META_SEPARATOR = '.build-'
+
 
 def normalise_image_reference(image_reference: str):
   if not isinstance(image_reference, str):
@@ -40,6 +42,27 @@ def urljoin(*parts):
     last = last.lstrip('/')
 
     return '/'.join([first] + middle + [last])
+
+
+def sanitise_tag(tag: str) -> str:
+    '''
+    Additional build metadata as defined in SemVer can be added via `+` to the version. However,
+    OCI registries don't support `+` as tag character, which is why it has to be sanitised, for
+    example using `META_SEPARATOR`.
+    '''
+    sanitised_tag = tag.replace('+', META_SEPARATOR)
+
+    return sanitised_tag
+
+
+def desanitise_tag(tag: str) -> str:
+    '''
+    This function reverts the sanitisation of the `sanitise_tag` function, which allows processing
+    the tag the same way as prior to uploading to the OCI registry using `sanitise_tag`.
+    '''
+    desanitised_tag = tag.replace(META_SEPARATOR, '+')
+
+    return desanitised_tag
 
 
 class _TeeFilelikeProxy:

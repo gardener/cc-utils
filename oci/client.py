@@ -220,11 +220,18 @@ class OciRoutes:
             digest
         )
 
-    def manifest_url(self, image_reference: typing.Union[str, om.OciImageReference]) -> str:
+    def manifest_url(
+        self,
+        image_reference: typing.Union[str, om.OciImageReference],
+        sanitise_tags: bool=False,
+    ) -> str:
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
         if not (tag := image_reference.tag):
             raise ValueError(f'{image_reference=} does not seem to contain a tag')
+
+        if sanitise_tags:
+            tag = oci.util.sanitise_tag(tag=tag)
 
         return urljoin(
             self.artifact_base_url(image_reference=image_reference),
@@ -248,10 +255,21 @@ class Client:
         self,
         credentials_lookup: typing.Callable,
         routes: OciRoutes=OciRoutes(),
-        disable_tls_validation=False,
+        disable_tls_validation: bool=False,
         timeout_seconds: int=None,
         session: requests.Session=None,
+        sanitise_tags: bool=False,
     ):
+        '''
+        @param credentials_lookup <Callable>
+        @param routes <OciRoutes>
+        @param disable_tls_validation <bool>
+        @param timeout_seconds <int>
+        @param session <Session>
+        @param sanitise_tags <bool>:
+            whether or not to sanitise tags so that they are accepted by OCI registries, see
+            `oci.util.sanitise_tag` for more details
+        '''
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
         if not session:
@@ -260,6 +278,7 @@ class Client:
             self.session = session
         self.routes = routes
         self.disable_tls_validation = disable_tls_validation
+        self.sanitise_tags = sanitise_tags
 
         if timeout_seconds:
             timeout_seconds = int(timeout_seconds)
@@ -510,7 +529,10 @@ class Client:
 
         try:
             res = self._request(
-                url=self.routes.manifest_url(image_reference=image_reference),
+                url=self.routes.manifest_url(
+                    image_reference=image_reference,
+                    sanitise_tags=self.sanitise_tags,
+                ),
                 image_reference=image_reference,
                 scope=scope,
                 warn_if_not_ok=not absent_ok,
@@ -647,7 +669,10 @@ class Client:
             accept = om.MimeTypes.single_image
 
         res = self._request(
-            url=self.routes.manifest_url(image_reference=image_reference),
+            url=self.routes.manifest_url(
+                image_reference=image_reference,
+                sanitise_tags=self.sanitise_tags,
+            ),
             image_reference=image_reference,
             method='HEAD',
             headers={
@@ -701,7 +726,15 @@ class Client:
             method='GET'
         )
 
-        return res.json()['tags']
+        tags = res.json()['tags']
+
+        if self.sanitise_tags:
+            tags = [
+                oci.util.desanitise_tag(tag=tag)
+                for tag in tags
+            ]
+
+        return tags
 
     def has_multiarch(self, image_reference: str) -> bool:
         res = self.head_manifest(
@@ -734,7 +767,10 @@ class Client:
         logger.debug(f'manifest-mimetype: {content_type=}')
 
         res = self._request(
-            url=self.routes.manifest_url(image_reference=image_reference),
+            url=self.routes.manifest_url(
+                image_reference=image_reference,
+                sanitise_tags=self.sanitise_tags,
+            ),
             image_reference=image_reference,
             scope=scope,
             method='PUT',
@@ -782,7 +818,10 @@ class Client:
                 headers = {}
 
             return self._request(
-                url=self.routes.manifest_url(image_reference=image_reference),
+                url=self.routes.manifest_url(
+                    image_reference=image_reference,
+                    sanitise_tags=self.sanitise_tags,
+                ),
                 image_reference=image_reference,
                 scope=scope,
                 headers=headers,
