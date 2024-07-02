@@ -24,7 +24,7 @@ def print_release_notes(
             ocm_repo_base_url,
         )
         ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-            ocm_repository_lookup,
+            ocm_repository_lookup=ocm_repository_lookup,
         )
 
     if not ocm_lookup:
