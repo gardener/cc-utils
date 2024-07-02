@@ -181,6 +181,9 @@ component_v2.resources.append(
     name='${helmchart.name}',
     version=effective_version, # always inherited from component
     type='helmChart',
+    extraIdentity={
+      'type': 'helmChart', # allow images w/ same name
+    },
     relation=cm.ResourceRelation.LOCAL,
     access=cm.OciAccess(
       type=cm.AccessType.OCI_REGISTRY,
