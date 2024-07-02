@@ -569,11 +569,11 @@ class PublishTrait(Trait):
 
         image_names = set()
         for image in self.dockerimages():
-            if image._base_name in image_names:
+            if image.name() in image_names:
                 raise ModelValidationError(
-                    f'duplicate image: {image._base_name=}',
+                    f'duplicate image: {image.name()=}',
                 )
-            image_names.add(image._base_name)
+            image_names.add(image.name())
 
         helmchart_names = set()
         for helmchart in self.helmcharts:
