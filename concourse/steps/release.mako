@@ -173,9 +173,12 @@ oci_client.put_blob(
 
 component.resources.append(
   cm.Resource(
-    name='${helmchart.name}-imagemap',
+    name='${helmchart.name}',
     version=version_str,
     type='helmchart-imagemap',
+    extraIdentity={
+      'type': 'helmchart-imagemap',
+    },
     access=cm.LocalBlobAccess(
       mediaType='application/data',
       localReference=mapping_digest,
