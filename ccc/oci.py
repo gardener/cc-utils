@@ -1,3 +1,4 @@
+import collections.abc
 import functools
 import logging
 import traceback
@@ -67,6 +68,8 @@ def oci_client(
     install_logging_handler: bool=True,
     cfg_factory=None,
     http_connection_pool_size:int=16,
+    tag_preprocessing_callback: collections.abc.Callable[[str], str]=None,
+    tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
 ) -> oc.Client:
     def base_api_lookup(image_reference):
         registry_cfg = model.container_registry.find_config(
@@ -107,6 +110,8 @@ def oci_client(
         credentials_lookup=credentials_lookup,
         routes=routes,
         session=session,
+        tag_preprocessing_callback=tag_preprocessing_callback,
+        tag_postprocessing_callback=tag_postprocessing_callback,
     )
 
 
