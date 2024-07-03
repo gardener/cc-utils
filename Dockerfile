@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=europe-docker.pkg.dev/gardener-project/releases/cicd/job-image-base:0.98.0
+ARG BASE_IMAGE=europe-docker.pkg.dev/gardener-project/releases/cicd/job-image-base:0.99.0
 FROM $BASE_IMAGE as builder
 COPY VERSION /metadata/VERSION
 COPY . /cc/utils/
