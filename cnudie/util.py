@@ -22,6 +22,8 @@ ComponentName = (
     | str
 )
 
+META_SEPARATOR = '.build-'
+
 
 def to_component_id(
     component: ComponentId, /
@@ -566,3 +568,24 @@ def diff_resources(
             _add_if_not_duplicate(resource_diff.resource_refs_only_right, i)
 
     return resource_diff
+
+
+def sanitise_version(version: str) -> str:
+    '''
+    Additional build metadata as defined in SemVer can be added via `+` to the version. However,
+    OCI registries don't support `+` as tag character, which is why it has to be sanitised, for
+    example using `META_SEPARATOR`.
+    '''
+    sanitised_version = version.replace('+', META_SEPARATOR)
+
+    return sanitised_version
+
+
+def desanitise_version(version: str) -> str:
+    '''
+    This function reverts the sanitisation of the `sanitise_version` function, which allows
+    processing the version the same way as prior to using `sanitise_version`.
+    '''
+    desanitised_version = version.replace(META_SEPARATOR, '+')
+
+    return desanitised_version
