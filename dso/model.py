@@ -51,7 +51,7 @@ def normalise_artefact_extra_id(
 @dataclasses.dataclass(frozen=True)
 class LocalArtefactId:
     artefact_name: str | None
-    artefact_type: str
+    artefact_type: str | None
     artefact_version: str | None = None
     artefact_extra_id: dict = dataclasses.field(default_factory=dict)
 
@@ -80,19 +80,27 @@ def is_ocm_artefact(artefact_kind: ArtefactKind) -> bool:
 class ComponentArtefactId:
     component_name: str | None
     component_version: str | None
-    artefact: LocalArtefactId
+    artefact: LocalArtefactId | None
     artefact_kind: ArtefactKind = ArtefactKind.ARTEFACT
+    references: list['ComponentArtefactId'] = dataclasses.field(default_factory=list)
 
     def as_frozenset(self) -> frozenset[str]:
-        return frozenset((
+        props = (
             self.component_name,
             self.component_version,
             self.artefact_kind,
-            self.artefact.artefact_name,
-            self.artefact.artefact_version,
-            self.artefact.artefact_type,
-            # frozenset(self.artefact.artefact_extra_id.items()),
-        ))
+            frozenset(self.references),
+        )
+
+        if self.artefact:
+            props += (
+                self.artefact.artefact_name,
+                self.artefact.artefact_version,
+                self.artefact.artefact_type,
+                # frozenset(self.artefact.artefact_extra_id.items()),
+            )
+
+        return frozenset(props)
 
     def __hash__(self):
         return hash(self.as_frozenset())
