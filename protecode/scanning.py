@@ -1,6 +1,7 @@
 import collections
 import collections.abc
 import concurrent.futures
+import dataclasses
 import datetime
 import functools
 import logging
@@ -38,7 +39,7 @@ def _resource_group_id(
 ) -> tuple[str, cm.ResourceIdentity, cm.ArtefactType|str]:
     '''
     return resource-id, identifying resource by
-    - component-name ("component id)
+    - component-name
     - resource-name, resource-version ("resource id")
     - resource-type
     '''
@@ -108,7 +109,6 @@ class ResourceGroupProcessor:
             component=c,
             artefact=r,
             # we want to find all possibly relevant scans, so omit all version data
-            omit_component_version=True,
             omit_resource_version=True,
             oci_client=self.oci_client,
         )
@@ -213,7 +213,6 @@ class ResourceGroupProcessor:
                 component_artifact_metadata = protecode.util.component_artifact_metadata(
                     component=c,
                     artefact=r,
-                    omit_component_version=True,
                     omit_resource_version=False,
                     oci_client=self.oci_client
                 )
@@ -253,7 +252,6 @@ class ResourceGroupProcessor:
             component_artifact_metadata = protecode.util.component_artifact_metadata(
                 component=c,
                 artefact=r,
-                omit_component_version=True,
                 omit_resource_version=False,
                 oci_client=self.oci_client
             )
@@ -441,7 +439,10 @@ class ResourceGroupProcessor:
                 scan_failed = True
                 logger.warning(bse.print_stacktrace())
 
-            c = scan_request.component
+            # don't include component version here since it is also not considered in the BDBA scan
+            # -> this will deduplicate findings of the same artefact version across different
+            # component versions
+            c = dataclasses.replace(scan_request.component, version=None)
             r = scan_request.artefact
             scanned_element = cnudie.iter.ResourceNode(
                 path=(cnudie.iter.NodePathEntry(c),),
@@ -586,7 +587,6 @@ def _retrieve_existing_scan_results(
         query_data = protecode.util.component_artifact_metadata(
             component=c,
             artefact=r,
-            omit_component_version=True,
             omit_resource_version=True,
             oci_client=oci_client,
         )

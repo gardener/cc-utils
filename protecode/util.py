@@ -53,14 +53,13 @@ def iter_artefact_metadata(
     license_cfg: image_scan.LicenseCfg=None,
     delivery_client: delivery.client.DeliveryServiceClient=None,
 ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
     discovery_date = datetime.date.today()
     datasource = dso.model.Datasource.BDBA
 
-    artefact = gcm.artifact_from_node(node=scanned_element)
     artefact_ref = dso.model.component_artefact_id_from_ocm(
         component=scanned_element.component,
-        artefact=artefact,
+        artefact=scanned_element.resource,
     )
 
     base_url = scan_result.base_url()
@@ -284,16 +283,12 @@ def enum_triages(
 def component_artifact_metadata(
     component: cm.Component,
     artefact: cm.Artifact,
-    omit_component_version: bool,
     omit_resource_version: bool,
     oci_client: oci.client.Client,
 ):
     ''' returns a dict for querying bdba scan results (use for custom-data query)
     '''
     metadata = {'COMPONENT_NAME': component.name}
-
-    if not omit_component_version:
-        metadata |= {'COMPONENT_VERSION': component.version}
 
     if isinstance(artefact.access, cm.OciAccess):
         metadata['IMAGE_REFERENCE_NAME'] = artefact.name

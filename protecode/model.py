@@ -356,7 +356,7 @@ class BdbaScanError(Exception):
     def print_stacktrace(self):
         c = self.component
         a = self.artefact
-        name = f'{c.name}:{c.version}/{a.name}:{a.version}'
+        name = f'{c.name}/{a.name}:{a.version}'
 
         if not self.exception:
             return name + ' - no exception available'
