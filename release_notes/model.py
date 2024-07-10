@@ -202,7 +202,7 @@ def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, No
     '''
     while '<!--' in content:
         comment_start_idx = content.find('<!--')
-        comment_stop_idx = content.find('-->')
+        comment_stop_idx = content.find('-->', comment_start_idx + len('<!--'))
         content = content[:comment_start_idx] + content[comment_stop_idx + len('-->'):]
 
     for res in _source_block_pattern.finditer(content.replace('\r\n', '\n')):
