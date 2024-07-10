@@ -75,6 +75,10 @@ class Filter:
         return isinstance(node, ComponentNode)
 
     @staticmethod
+    def artefacts(node: Node):
+        return isinstance(node, ArtefactNode)
+
+    @staticmethod
     def resources(node: Node):
         return isinstance(node, ResourceNode)
 
