@@ -518,6 +518,7 @@ class DeliveryServiceClient:
     def query_metadata(
         self,
         components: collections.abc.Iterable[cm.Component]=(),
+        artefacts: collections.abc.Iterable[dso.model.ComponentArtefactId]=(),
         type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
         referenced_type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
     ) -> tuple[dso.model.ArtefactMetadata]:
@@ -532,6 +533,9 @@ class DeliveryServiceClient:
                                 metadata of type `rescorings`); if no datatype(s) is (are)
                                 specified, no referenced datatype filtering is done
         '''
+        if components and artefacts:
+            raise ValueError('at most one of `artefacts` or `components` must be specified')
+
         params = dict()
 
         if type:
@@ -544,13 +548,21 @@ class DeliveryServiceClient:
             'Content-Type': 'application/json',
         }
 
-        data, headers = http_requests.encode_request(
-            json={'components': [
+        if components:
+            entries = [
                 {
-                    'componentName': c.name,
-                    'componentVersion': c.version,
+                    'component_name': c.name,
+                    'component_version': c.version,
                 } for c in components
-            ]},
+            ]
+        else:
+            entries = [
+                dataclasses.asdict(artefact)
+                for artefact in artefacts
+            ]
+
+        data, headers = http_requests.encode_request(
+            json={'entries': entries},
             headers=headers,
         )
 
