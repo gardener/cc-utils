@@ -37,7 +37,6 @@ def packages():
     # remove packages (distributed via separate distribution-packages)
     package_names.remove('whd')
     package_names.remove('oci')
-
     return package_names
 
 

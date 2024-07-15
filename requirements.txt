@@ -35,7 +35,6 @@ openstacksdk
 oss2
 passlib<2.0.0
 pycryptodome
-pydash<8.0.0
 pyjwt
 pylama
 pylint

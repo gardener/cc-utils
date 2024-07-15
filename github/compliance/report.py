@@ -20,7 +20,6 @@ import ccc.github
 import checkmarx.model
 import cfg_mgmt.model as cmm
 import ci.util
-import clamav.model
 import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
@@ -38,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
 _compliance_label_checkmarx = github.compliance.issue._label_checkmarx
-_compliance_label_malware = github.compliance.issue._label_malware
 _compliance_label_credentials_outdated = github.compliance.issue._label_outdated_credentials
 _compliance_label_no_responsible = github.compliance.issue._label_no_responsible
 _compliance_label_no_rule = github.compliance.issue._label_no_rule
@@ -235,28 +233,6 @@ def _checkmarx_template_vars(
     }
 
 
-def _malware_template_vars(
-    result_group: gcm.ScanResultGroup,
-) -> dict:
-    results: tuple[clamav.model.ClamAVResourceScanResult] = result_group.results_with_findings
-    summary_str = ''.join((
-        result.scan_result.summary() for result in results
-    )).replace('\n', '')
-    component = result_group.component
-    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
-
-    return {
-        'summary': _compliance_status_summary(
-            component=component,
-            artifacts=artifacts,
-            issue_value=summary_str,
-            issue_description='ClamAV Scan Result',
-            report_urls=(),
-        ),
-        'criticality_classification': str(gcm.Severity.HIGH),
-    }
-
-
 def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> dict:
     results: tuple[gcm.CfgScanResult] = result_group.results_with_findings
     result = results[0]
@@ -319,9 +295,6 @@ def _template_vars(
 
     elif issue_type == _compliance_label_checkmarx:
         template_variables |= _checkmarx_template_vars(result_group)
-
-    elif issue_type == _compliance_label_malware:
-        template_variables |= _malware_template_vars(result_group)
 
     elif issue_type in (
         _compliance_label_credentials_outdated,

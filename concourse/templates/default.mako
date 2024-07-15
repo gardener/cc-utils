@@ -109,7 +109,6 @@ replicate_pipelines_step = concourse.steps.step_def('replicate_pipelines')
 component_descriptor_step = concourse.steps.step_def('component_descriptor')
 update_component_deps_step = concourse.steps.step_def('update_component_deps')
 draft_release_step = concourse.steps.step_def('draft_release')
-malware_scan_step = concourse.steps.step_def('malware_scan')
 os_id_step = concourse.steps.step_def('os_id')
 scan_sources_step = concourse.steps.step_def('scan_sources')
 replicate_secrets_step = concourse.steps.step_def('replicate_secrets')
@@ -536,8 +535,6 @@ else:
         ${build_oci_image_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'create_draft_release_notes':
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
-% elif job_step.name == 'malware-scan':
-        ${malware_scan_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'os-id-scan':
         ${os_id_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'scan_sources':

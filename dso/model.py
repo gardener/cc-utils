@@ -143,7 +143,6 @@ class Datatype:
     MALWARE_FINDING = 'finding/malware'
     DIKI_FINDING = 'finding/diki'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
-    MALWARE = 'malware'
     OS_IDS = 'os_ids'
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
@@ -161,40 +160,6 @@ class Metadata:
 @dataclasses.dataclass(frozen=True)
 class OsID:
     os_info: unixutil.model.OperatingSystemId
-
-
-@dataclasses.dataclass(frozen=True)
-class ClamAVMetadata:
-    clamav_version_str: str
-    signature_version: int
-    virus_definition_timestamp: datetime.datetime
-
-
-@dataclasses.dataclass
-class MalwareFindingMeta:
-    scanned_octets: int
-    receive_duration_seconds: float
-    scan_duration_seconds: float
-    scanned_content_digest: str | None = None
-
-
-@dataclasses.dataclass
-class MalwareFinding:
-    status: str
-    details: str
-    malware_status: str
-    meta: MalwareFindingMeta | None
-    name: str
-
-
-@dataclasses.dataclass(frozen=True)
-class MalwareSummary:
-    '''
-    empty list of findings states "no malware found"
-    '''
-    findings: list[MalwareFinding]
-    metadata: ClamAVMetadata
-    severity: str | None = None # TODO: rm once finding-specific tracking implemented
 
 
 @dataclasses.dataclass(frozen=True)
@@ -472,7 +437,6 @@ class ArtefactMetadata:
         | ClamAVMalwareFinding
         | DikiFinding
         | CodecheckSummary
-        | MalwareSummary
         | OsID
         | CustomRescoring
         | ComplianceSnapshot

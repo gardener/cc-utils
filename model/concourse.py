@@ -176,9 +176,6 @@ class ConcourseConfig(NamedModelElement):
     def kubernetes_cluster_config(self):
         return self.raw.get('kubernetes_cluster_config')
 
-    def clamav_config(self):
-        return self.raw.get('clamav_config')
-
     def ingress_host(self, config_factory):
         cluster_domain = cluster_domain_from_kubernetes_config(
             config_factory,
@@ -247,7 +244,6 @@ class ConcourseConfig(NamedModelElement):
 
     def _optional_attributes(self):
         return {
-            'clamav_config',
             'concourse_version', # TODO: Remove
             'deploy_storage_class',
             'domain_rules',
