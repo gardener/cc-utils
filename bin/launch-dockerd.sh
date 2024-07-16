@@ -147,7 +147,7 @@ await_docker() {
       exit 1
     fi
     if [[ -f "${DOCKERD_PID_FILE}" ]] && ! kill -0 $(cat "${DOCKERD_PID_FILE}"); then
-      echo >&2 'Docker daemon failed to start.'
+      echo >&2 'Docker daemon failed to start, is the container running in privileged mode?'
       if [[ -f "${DOCKERD_LOG_FILE}" ]]; then
         echo >&2 '---DOCKERD LOGS---'
         cat >&2 "${DOCKERD_LOG_FILE}"
