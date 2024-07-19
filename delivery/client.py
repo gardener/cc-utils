@@ -575,6 +575,8 @@ class DeliveryServiceClient:
             timeout=(4, 121),
         )
 
+        res.raise_for_status()
+
         artefact_metadata_raw = res.json()
 
         return tuple(
