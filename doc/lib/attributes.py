@@ -28,6 +28,10 @@ class SafeEnumDumper(yaml.SafeDumper):
         return super().represent_data(data)
 
 
+def _is_generic_alias(value, /):
+    return isinstance(value, (typing._GenericAlias, types.GenericAlias))
+
+
 class AttributesDocumentation:
     def __init__(
         self,
@@ -60,11 +64,12 @@ class AttributesDocumentation:
         return self._child_elements
 
     def _type_name(self, type_):
-        if isinstance(type_, typing._GenericAlias):
+        if _is_generic_alias(type_):
             if type_.__origin__ is dict:
                 key_type, val_type = type_.__args__
                 return f'Dict[{self._type_name(key_type)}, {self._type_name(val_type)}]'
-            elif type_.__origin__ in (list, set):
+            elif type_.__origin__ in (list, set, tuple):
+                # yaml only supports list, so it is okay to always use `List` for documentation
                 return f'List[{self._type_name(type_.__args__[0])}]'
             elif type_.__origin__ is typing.Union:
                 type_str = "One of: \n \n"
@@ -119,7 +124,7 @@ class AttributesDocumentation:
 
         type_ = attr_spec.type()
         type_str = self._type_name(type_)
-        if isinstance(type_, typing._GenericAlias):
+        if _is_generic_alias(type_):
             if type_.__origin__ is dict:
                 # assumption: type is typing.Dict[T1, T2]
                 _, val_type = type_.__args__
@@ -128,7 +133,7 @@ class AttributesDocumentation:
                         model_element_type=val_type,
                         element_name=f'{name}.<user-chosen>'
                     )
-            elif type_.__origin__ in (list, set):
+            elif type_.__origin__ in (list, set, tuple):
                 # Also check type to support list of enum values
                 if (
                     issubclass(type_.__args__[0], base_model.AttribSpecMixin)
