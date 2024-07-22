@@ -1,47 +1,57 @@
 #!/usr/bin/env bash
 
-set -e
+set -eu
 
-if [ -z "$SOURCE_PATH" ]; then
-  export SOURCE_PATH="$(readlink -f "$(dirname $0)/..")"
-  echo "setting SOURCE_PATH to: ${SOURCE_PATH}"
+if [ -z "${CC_ROOT_DIR:-}" ]; then
+  echo "CC_ROOT_DIR not set - will assume local run (+ omit creation of git-commit)"
+  export running_on_ci=false
+else
+  export running_on_ci=true
 fi
 
-export repo_dir="${SOURCE_PATH}"
+if [ -z "${SOURCE_PATH:-}" ]; then
+  export repo_dir="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
+else
+  export repo_dir="${SOURCE_PATH}"
+fi
+
 
 if [ ! -d "${repo_dir}" ]; then
   echo "not a directory: ${repo_dir}"
   exit 1
 fi
 
-if [ -z "$GH_PAGES_PATH" ]; then
-  export GH_PAGES_PATH="${repo_dir}/documentation.out"
-  mkdir -p "${GH_PAGES_PATH}"
+if [ -z "${GH_PAGES_PATH:-}" ]; then
+  export out_dir="${repo_dir}/documentation.out"
+  mkdir -p "${out_dir}"
+else
+  out_dir="${GH_PAGES_PATH}"
 fi
 
-out_dir="${GH_PAGES_PATH}"
+echo "repo_dir: ${repo_dir}, outdir: ${out_dir}"
 
 if [ ! -d ${out_dir} ]; then
   echo "not a directory: ${out_dir}"
   exit 1
 fi
 
-echo "cc-utils from: ${repo_dir}"
-echo "out-dir: ${out_dir}"
-
 export SOURCE_DIR="${repo_dir}/doc"
-export OUT_DIR="${out_dir}"
 export PYTHONPATH="${repo_dir}"
-sphinx-build -E -av "${SOURCE_DIR}" "${OUT_DIR}"
+sphinx-build -E -av "${SOURCE_DIR}" "${out_dir}"
 
 # disable github's theme
 touch "${out_dir}/.nojekyll"
 
 # cp custom css
-cp -r "${SOURCE_DIR}/css" "${OUT_DIR}/_static/"
+cp -r "${SOURCE_DIR}/css" "${out_dir}/_static/"
 
-export GIT_DIR="${OUT_DIR}/.git"
-export GIT_WORK_TREE="${OUT_DIR}"
+if ! ${running_on_ci}; then
+  echo "Not running on CICD - will skip creation of commits"
+  exit 0
+fi
+
+export GIT_DIR="${out_dir}/.git"
+export GIT_WORK_TREE="${out_dir}"
 
 if [ -z "$(git status --porcelain=v1)" ]; then
   echo "nothing has changed - won't create a commit"
