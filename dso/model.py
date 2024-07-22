@@ -330,7 +330,7 @@ class ClamAVMalwareFinding(Finding):
 @dataclasses.dataclass(frozen=True)
 class DikiCheck:
     message: str
-    targets: list[dict]
+    targets: list[dict] | dict[str, list[dict]]
 
 
 @dataclasses.dataclass(frozen=True)
