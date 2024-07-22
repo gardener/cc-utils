@@ -585,7 +585,7 @@ class ReplicationResultProcessor:
             ))
         else:
             logger.info(f'Sending notification e-mail to {recipients} ({main_repo["path"]})')
-            email_cfg = self._cfg_set.email("ses_gardener_cloud_sap")
+            email_cfg = self._cfg_set.email()
             _send_mail(
                 email_cfg=email_cfg,
                 recipients=recipients,
