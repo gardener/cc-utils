@@ -95,6 +95,27 @@ class TagConflictAction(enum.StrEnum):
 @dataclasses.dataclass(kw_only=True)
 class Asset:
     '''
+    base class for release assets. Not intended to be instantiated
+    '''
+    ocm_labels: list[dict[str, object]] = dataclasses.field(default_factory=list)
+    type: str = None # must overwrite
+    name: str = None
+    step_name: str
+    artefact_type: str = 'application/data'
+    purposes: list[str] = dataclasses.field(default_factory=list)
+    comment: str | None = None
+
+
+@dataclasses.dataclass(kw_only=True)
+class BuildstepFileAsset(Asset):
+    type: str = 'build-step-file'
+    step_output_dir: str
+    path: str # rel-path; globbing is allowed
+
+
+@dataclasses.dataclass(kw_only=True)
+class BuildstepLogAsset(Asset):
+    '''
     An (additional) release asset to be included as part of a release. Hardcoded for the
     special-case of including build-step-logs as resource in released component-descriptor
     with a srcRef to main repository (all of which might be made more flexible if needed).
@@ -124,13 +145,8 @@ class Asset:
     Purpose-labels will be added as OCM-Label:
         gardener.cloud/purposes
     '''
-    type: str = 'buildstep-log'
-    step_name: str
-    name: str = None
-    target: str = 'component-descriptor/source'
-    ocm_labels: list[dict[str, object]] = dataclasses.field(default_factory=list)
-    purposes: list[str] = dataclasses.field(default_factory=list)
-    comment: str | None = None
+    type: str = 'build-step-log'
+    artefact_type = 'text/plain'
 
     def __post_init__(self):
         if not self.name:
@@ -154,10 +170,9 @@ ATTRIBUTES = (
         name='assets',
         default=[],
         doc='''
-        additional release-assets to publish. For now it is only supported to define
-        build-step-logs as additional sources within component-descriptor.
+        additional release-assets to publish.
         ''',
-        type=list[Asset],
+        type=list[BuildstepLogAsset | BuildstepFileAsset, ...],
     ),
     AttributeSpec.optional(
         name='nextversion',
@@ -293,15 +308,31 @@ class ReleaseTrait(Trait):
         return ATTRIBUTES
 
     @property
-    def assets(self) -> list[Asset]:
+    def assets(self) -> list[BuildstepLogAsset | BuildstepFileAsset, ...]:
         if not (raw_assets := self.raw.get('assets')):
             return []
 
-        return [
-            dacite.from_dict(
-                data_class=Asset,
+        def deserialise(raw_asset: dict):
+            if not 'type' in raw_asset:
+                raise ModelValidationError(
+                    f'`type` must be present for {raw_asset=}',
+                )
+
+            if (typename := raw_asset['type']) == BuildstepFileAsset.type:
+                data_class = BuildstepFileAsset
+            elif typename == BuildstepLogAsset.type:
+                data_class = BuildstepLogAsset
+            else:
+                raise ModelValidationError(typename)
+
+            return dacite.from_dict(
+                data_class=data_class,
                 data=raw_asset,
-            ) for raw_asset in raw_assets
+            )
+
+        return [
+            deserialise(raw_asset)
+            for raw_asset in raw_assets
         ]
 
     def nextversion(self):
@@ -429,6 +460,20 @@ class ReleaseTraitTransformer(TraitTransformer):
         for asset in self.trait.assets:
             if not pipeline_args.has_step(asset.step_name):
                 raise ValueError(f'{asset=}\'s step_name refers to an absent build-step')
+
+            if isinstance(asset, BuildstepFileAsset):
+                asset: BuildstepFileAsset
+                step = pipeline_args.step(asset.step_name)
+
+                if not asset.step_output_dir in step.outputs().values():
+                  raise ModelValidationError(
+                    f'{step.name=} does not declare {asset.step_output_dir=}',
+                  )
+
+                self.release_step.add_input(
+                  name=asset.step_output_dir,
+                  variable_name=asset.step_output_dir,
+                )
 
     @classmethod
     def dependencies(cls):
