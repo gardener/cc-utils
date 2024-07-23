@@ -426,9 +426,8 @@ class ReleaseTraitTransformer(TraitTransformer):
                 main_repo._trigger = False
 
         # validate assets if present
-        step_names = {step.name for step in pipeline_args.steps()}
         for asset in self.trait.assets:
-            if asset.step_name not in step_names:
+            if not pipeline_args.has_step(asset.step_name):
                 raise ValueError(f'{asset=}\'s step_name refers to an absent build-step')
 
     @classmethod
