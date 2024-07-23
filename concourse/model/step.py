@@ -306,9 +306,11 @@ class PipelineStep(ModelBase):
             raise ValueError(f'expected a dict, but received: {type(raw_dict)} ({raw_dict})')
 
         raw_dict['depends'] = set(raw_dict['depends'])
-        if raw_dict.get('output_dir', None):
-            name = raw_dict['output_dir']
-            self.add_output(name=name + '_path', variable_name=name + '_path')
+        if (name := raw_dict.get('output_dir', None)):
+            self.add_output(
+                name=name,
+                variable_name=f'{name}_path',
+            )
 
         # add hard-coded output "on_error" (allows build steps to pass custom
         # notification cfg for build errors)
@@ -394,12 +396,7 @@ class PipelineStep(ModelBase):
         return self.raw.get('registry', None)
 
     def output_dir(self):
-        if not self.raw['output_dir']:
-            return None
-
-        # an optional attribute specifying the "output directory"
-        # due to "historical" reasons, append '-path' suffix
-        return self.raw.get('output_dir') + '_path'
+        return self.raw['output_dir']
 
     def output(self, name):
         outputs = self.outputs()
