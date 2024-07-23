@@ -16,6 +16,8 @@ import version
 ReleaseCommitPublishingPolicy = concourse.model.traits.release.ReleaseCommitPublishingPolicy
 ReleaseNotesPolicy = concourse.model.traits.release.ReleaseNotesPolicy
 VersionInterface = concourse.model.traits.version.VersionInterface
+BuildstepLogAsset = concourse.model.traits.release.BuildstepLogAsset
+BuildstepFileAsset = concourse.model.traits.release.BuildstepFileAsset
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 
@@ -80,7 +82,9 @@ mergeback_commit_msg_prefix = release_trait.merge_release_to_default_branch_comm
 
 assets = release_trait.assets
 %>
+import glob
 import hashlib
+import tarfile
 import tempfile
 import zlib
 
@@ -202,6 +206,7 @@ main_source_ref = {
   'version': main_source.version,
 }
 % for asset in assets:
+% if isinstance(asset, BuildstepLogAsset):
 task_id = build_plan.task_id(task_name='${asset.step_name}')
 build_events = concourse_client.build_events(build_id=current_build.id())
 leng = 0
@@ -232,7 +237,7 @@ component.resources.append(
   cm.Resource(
     name='${asset.name}',
     version=version_str,
-    type='text/plain',
+    type='${asset.artefact_type}',
     access=cm.LocalBlobAccess(
       mediaType='application/gzip',
       localReference=digest,
@@ -244,6 +249,56 @@ component.resources.append(
     },]
   ),
 )
+% elif isinstance(asset, BuildstepFileAsset):
+step_output_dir = '${asset.step_output_dir}'
+if not (matching_files := glob.glob(f'{step_output_dir}/${asset.path}')):
+  print('Error: no files matched ${asset.path}')
+  exit(1)
+
+# no need to use ctx-mgr - process is short-lived + we keep sole handle
+tmpfh = tempfile.TemporaryFile()
+tf = tarfile.open(mode='w:xz', fileobj=tmpfh)
+for f in matching_files:
+  logger.info(f'adding {f} to tarchive')
+  tf.add(
+    name=f,
+    arcname=f.removeprefix(step_output_dir),
+  )
+tf.close()
+tmpfh.flush()
+
+leng = tmpfh.tell()
+tmpfh.seek(0)
+
+hash = hashlib.sha256()
+while (chunk := tmpfh.read(4096)):
+  hash.update(chunk)
+tmpfh.seek(0)
+
+digest = f'sha256:{hash.hexdigest()}'
+oci_client.put_blob(
+  image_reference=component_descriptor_target_ref,
+  digest=digest,
+  octets_count=leng,
+  data=tmpfh,
+)
+
+component.resources.append(
+  cm.Resource(
+    name='${asset.name}',
+    version=version_str,
+    type='${asset.artefact_type}',
+    access=cm.LocalBlobAccess(
+      mediaType='application/x-xz+tar',
+      localReference=digest,
+      size=leng,
+    ),
+    labels=${asset.ocm_labels},
+  ),
+)
+% else:
+  <% raise ValueError(asset) %>
+% endif
 % endfor
 % endif
 
