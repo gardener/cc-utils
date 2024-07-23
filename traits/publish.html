@@ -130,7 +130,7 @@
 <tr class="row-odd"><td><p>platforms</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
-<td><p>list</p></td>
+<td><p>List[str]</p></td>
 <td><p><p>if defined, all image-builds will be done for each of the specified platforms, which
 may result in cross-platform builds. Only supported if using <code class="code docutils literal notranslate"><span class="pre">docker-buildx</span></code> as oci-builder.</p>
 <p>As an implementation detail that may change in the future, multiarch/quemu-user-static
@@ -161,7 +161,7 @@ must be explicitly specified.</p>
 <tr class="row-even"><td><p>helmcharts</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
-<td><p>tuple</p></td>
+<td><p>List[HelmchartCfg]</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -195,7 +195,7 @@ must be explicitly specified.</p>
 </pre></div>
 </div>
 </p></td>
-<td><p>list</p></td>
+<td><p>List[str]</p></td>
 <td><p>additional targets to publish built images to. Entries _may_ contain a tag (which is
 honoured, if present). Entries without a tag will use the same tag as the “main” image
 (defined by <code class="code docutils literal notranslate"><span class="pre">image</span></code> attribute).
@@ -262,7 +262,7 @@ must not be used if <code class="code docutils literal notranslate"><span class=
 <tr class="row-even"><td><p>targets</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
-<td><p>list</p></td>
+<td><p>List[TargetSpec]</p></td>
 <td><p>if set, the given targets are built in the given order in the same build environment.
 This is useful to reduce resource consumption for multiple builds sharing common
 prerequisite build steps.
@@ -289,7 +289,7 @@ Only supported if oci-builder is set to <code class="code docutils literal notra
 <tr class="row-odd"><td><p>platforms</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
-<td><p>list</p></td>
+<td><p>List[str]</p></td>
 <td><p><p>If <code class="code docutils literal notranslate"><span class="pre">platforms</span></code> is defined at toplevel, then defining it again for a single image-build
 can be done in order to only build this image for a subset of platforms.</p>
 <p>see toplevel documentation for <code class="code docutils literal notranslate"><span class="pre">platforms</span></code> for reference.</p>

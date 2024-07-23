@@ -155,7 +155,7 @@ with different contents, all variants are subject to being scanned.</p>
 <tr class="row-even"><td><p>github_issue_templates</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
-<td><p>list</p></td>
+<td><p>List[GithubIssueTemplateCfg]</p></td>
 <td><p><p>use to configure custom github-issue-templates (sub-attr: <code class="code docutils literal notranslate"><span class="pre">body</span></code>)
 use python3’s format-str syntax</p>
 <div class="literal-block-wrapper docutils container" id="id1">
@@ -177,7 +177,7 @@ use python3’s format-str syntax</p>
 <tr class="row-odd"><td><p>github_issue_labels_to_preserve</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
-<td><p>list</p></td>
+<td><p>List[str]</p></td>
 <td><p>optional list of regexes for labels that will never be removed upon ticket-update</p></td>
 </tr>
 <tr class="row-even"><td><p>email_recipients</p></td>
@@ -248,7 +248,7 @@ use python3’s format-str syntax</p>
 <tr class="row-odd"><td><p>rescore</p></td>
 <td><p>no</p></td>
 <td><p>()</p></td>
-<td><p>list</p></td>
+<td><p>List[ClamAVRescoringEntry]</p></td>
 <td><p>rescoring hints (e.g. to mark false-positives / accept certain scan-abortions)</p></td>
 </tr>
 <tr class="row-even"><td><p>timeout</p></td>
