@@ -12,6 +12,7 @@ import gci.componentmodel as cm
 
 main_repo = job_variant.main_repository()
 repo_name = main_repo.repo_name()
+repo_hostname = main_repo.repo_hostname()
 repo_relpath = main_repo.resource_name()
 repo_owner = main_repo.repo_owner()
 repo_branch = main_repo.branch()
@@ -101,16 +102,6 @@ pull_request_util = github.util.PullRequestUtil(
     github_cfg=github_cfg,
 )
 
-## hack / workaround: rebase to workaround concourse sometimes not refreshing git-resource
-git_helper = gitutil.GitHelper(
-    repo=REPO_ROOT,
-    github_cfg=github_cfg,
-    github_repo_path=f'{REPO_OWNER}/{REPO_NAME}',
-)
-git_helper.rebase(
-    commit_ish=REPO_BRANCH,
-)
-
 upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(
     state='all',
 )
@@ -186,6 +177,7 @@ for from_ref, to_version in determine_upgrade_prs(
         version_lookup=version_lookup,
         merge_policy=merge_policy,
         merge_method=merge_method,
+        repo_hostname=repo_hostname,
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
 % endif
