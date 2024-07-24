@@ -21,6 +21,7 @@ import dso.cvss
 import dso.labels
 import dso.model
 import gci.componentmodel as cm
+import gci.oci
 import oci.client
 import protecode.assessments
 import protecode.client
@@ -226,7 +227,7 @@ class ResourceGroupProcessor:
                     logger.info(f'{group_name=}: did not find old scan')
 
                 def iter_content():
-                    image_reference = protecode.util.image_ref_with_digest(
+                    image_reference = gci.oci.image_ref_with_digest(
                         image_reference=r.access.imageReference,
                         digest=r.digest,
                         oci_client=self.oci_client,
