@@ -1,4 +1,5 @@
 import dataclasses
+import hashlib
 import io
 import logging
 import os
@@ -6,7 +7,10 @@ import tarfile
 import typing
 import yaml
 
+import ccc.oci
 import gci.componentmodel
+import oci.client
+import oci.model
 
 logger = logging.getLogger(__name__)
 
@@ -103,3 +107,29 @@ def component_descriptor_from_tarfileobj(
           raise ValueError('Component Descriptor appears to be empty')
 
         return gci.componentmodel.ComponentDescriptor.from_dict(raw_dict)
+
+
+def image_ref_with_digest(
+    image_reference: str | oci.model.OciImageReference,
+    digest: gci.componentmodel.DigestSpec=None,
+    oci_client: oci.client.Client=None,
+) -> str:
+    image_reference = oci.model.OciImageReference.to_image_ref(image_reference=image_reference)
+
+    if image_reference.has_digest_tag:
+        return image_reference.original_image_reference
+
+    if not (digest and digest.value):
+        if not oci_client:
+            oci_client = ccc.oci.oci_client()
+
+        digest = gci.componentmodel.DigestSpec(
+            hashAlgorithm=None,
+            normalisationAlgorithm=None,
+            value=hashlib.sha256(oci_client.manifest_raw(
+                image_reference=image_reference,
+                accept=oci.model.MimeTypes.prefer_multiarch,
+            ).content).hexdigest(),
+        )
+
+    return image_reference.with_tag(tag=digest.oci_tag)

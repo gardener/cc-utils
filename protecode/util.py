@@ -5,7 +5,6 @@
 
 import collections.abc
 import datetime
-import hashlib
 import logging
 
 import ci.log
@@ -14,10 +13,10 @@ import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import dso.model
 import gci.componentmodel as cm
+import gci.oci
 import github.compliance.model as gcm
 import github.compliance.report as gcr
 import oci.client
-import oci.model
 import protecode.model as pm
 
 
@@ -294,7 +293,7 @@ def component_artifact_metadata(
         metadata['IMAGE_REFERENCE_NAME'] = artefact.name
         metadata['RESOURCE_TYPE'] = 'ociImage'
         if not omit_resource_version:
-            image_reference = image_ref_with_digest(
+            image_reference = gci.oci.image_ref_with_digest(
                 image_reference=artefact.access.imageReference,
                 digest=artefact.digest,
                 oci_client=oci_client,
@@ -349,26 +348,3 @@ def _matching_analysis_result_id(
 
     # there is at least one result and they are ordered (latest product id first)
     return filtered_results[0].product_id()
-
-
-def image_ref_with_digest(
-    image_reference: str | oci.model.OciImageReference,
-    digest: cm.DigestSpec,
-    oci_client: oci.client.Client,
-) -> str:
-    image_reference = oci.model.OciImageReference.to_image_ref(image_reference=image_reference)
-
-    if image_reference.has_digest_tag:
-        return image_reference.original_image_reference
-
-    if not (digest and digest.value):
-        digest = cm.DigestSpec(
-            hashAlgorithm=None,
-            normalisationAlgorithm=None,
-            value=hashlib.sha256(oci_client.manifest_raw(
-                image_reference=image_reference,
-                accept=oci.model.MimeTypes.prefer_multiarch,
-            ).content).hexdigest(),
-        )
-
-    return image_reference.with_tag(tag=digest.oci_tag)
