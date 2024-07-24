@@ -134,12 +134,16 @@ class AttributesDocumentation:
                         element_name=f'{name}.<user-chosen>'
                     )
             elif type_.__origin__ in (list, set, tuple):
-                # Also check type to support list of enum values
-                if (
-                    issubclass(type_.__args__[0], base_model.AttribSpecMixin)
-                    or issubclass(type_.__args__[0], enum.Enum)
-                ):
-                    self.add_child(model_element_type=type_.__args__[0], element_name=name)
+                # assumption: args denote element-types (e.g. list[str])
+                if isinstance((element_type := type_.__args__[0]), types.UnionType):
+                    element_types = element_type.__args__
+                else:
+                    element_types = element_type,
+
+                for element_type in element_types:
+                    if issubclass(element_type, base_model.AttributeSpec) \
+                      or issubclass(element_type, enum.Enum):
+                        self.add_child(model_element_type=type_.__args__[0], element_name=name)
         elif isinstance(type_, types.UnionType):
             pass # no special handling for union-types (yet)
         elif (
