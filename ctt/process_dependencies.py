@@ -21,13 +21,11 @@ import cnudie.iter
 import cnudie.retrieve
 import cnudie.upload
 import container.util
-import cosign
 import dso.labels
 import gci.componentmodel as cm
 import oci
 import oci.client
 import oci.model as om
-import signingserver
 
 import ctt.filters as filters
 import ctt.processing_model as processing_model
@@ -371,16 +369,6 @@ def process_upload_request(
     return f'sha256:{manifest_digest}'
 
 
-def set_digest(image_reference: str, docker_content_digest: str) -> str:
-    last_part = image_reference.split('/')[-1]
-    if '@' in last_part:
-        src_name, _ = image_reference.rsplit('@', 1)
-    else:
-        src_name, _ = image_reference.rsplit(':', 1)
-
-    return f'{src_name}@{docker_content_digest}'
-
-
 def process_images(
     processing_cfg_path: str,
     component_descriptor_v2: cm.ComponentDescriptor,
@@ -390,9 +378,6 @@ def process_images(
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     skip_cd_validation: bool=False,
-    generate_cosign_signatures: bool=False,
-    signing_server_url: str=None,
-    root_ca_cert_path: str=None,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
     oci_client: oci.client.Client=None,
@@ -469,39 +454,6 @@ def process_images(
 
         if not oci_manifest_digest:
             raise RuntimeError(f'No oci_manifest_digest returned for {processing_job=}')
-
-        if generate_cosign_signatures:
-            digest_ref = set_digest(
-                processing_job.upload_request.target_ref,
-                oci_manifest_digest,
-            )
-            payload_bytes = cosign.payload_bytes(
-                image_reference=digest_ref,
-            )
-
-            signingserver_client = signingserver.SigningserverClient(
-                cfg=signingserver.SigningserverClientCfg(
-                    base_url=signing_server_url,
-                    client_certificate=None,
-                    client_certificate_key=None,
-                    server_certificate_ca=root_ca_cert_path,
-                ),
-            )
-
-            signature = signingserver_client.sign(
-                content=payload_bytes,
-                hash_algorithm='sha256',
-                signing_algorithm=signingserver.SigningAlgorithm.RSASSA_PKCS1_V1_5,
-            )
-
-            cosign.sign_image(
-                image_reference=digest_ref,
-                signature=signature.signature,
-                signing_algorithm=signature.signing_algorithm,
-                public_key=signature.public_key,
-                on_exist=cosign.OnExist.SKIP,
-                oci_client=oci_client,
-            )
 
         processed_resource = processing_job.processed_resource
 
