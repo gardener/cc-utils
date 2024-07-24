@@ -32,7 +32,6 @@ import signingserver
 import ctt.filters as filters
 import ctt.processing_model as processing_model
 import ctt.processors as processors
-from ctt.rbsc_bom import BOMEntry, BOMEntryType
 import ctt.uploaders as uploaders
 import ctt.util as ctt_util
 
@@ -395,12 +394,11 @@ def process_images(
     signing_server_url: str=None,
     root_ca_cert_path: str=None,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
-    bom_resources: collections.abc.Sequence[BOMEntry]=[],
     skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
     oci_client: oci.client.Client=None,
     component_filter: collections.abc.Callable[[cm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
-):
+) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
     `skip_component_upload` parameter will still replicate all its resources (i.e. oci images)
@@ -539,14 +537,6 @@ def process_images(
                 processing_job.upload_request,
                 target_ref=target_ref,
             )
-        else:
-            target_ref = processing_job.upload_request.target_ref
-
-        bom_resources.append(BOMEntry(
-            url=target_ref,
-            type=BOMEntryType.Docker,
-            comp=f'{processing_job.component.name}/{processing_job.resource.name}',
-        ))
 
         return processing_job
 
@@ -590,6 +580,11 @@ def process_images(
             component = job.component
             patched_resource = job.processed_resource or job.resource
             patched_resources[job.resource.identity(component.resources)] = patched_resource
+
+            yield cnudie.iter.ResourceNode(
+                path=(cnudie.iter.NodePathEntry(component),),
+                resource=patched_resource,
+            )
             continue
 
         res_list = []
@@ -632,17 +627,12 @@ def process_images(
         append_ctx_repo(src_ocm_repo, component)
         append_ctx_repo(tgt_ctx_base_url, component)
 
-        ocm_repository = component.current_repository_ctx()
-        oci_ref = ocm_repository.component_version_oci_ref(component)
-
         if remove_label:
             component.labels = [label for label in component.labels if not remove_label(label.name)]
 
-        bom_resources.append(BOMEntry(
-            url=oci_ref,
-            type=BOMEntryType.Docker,
-            comp=component.name,
-        ))
+        yield cnudie.iter.ComponentNode(
+            path=(cnudie.iter.NodePathEntry(component),),
+        )
 
     source_comp = component_descriptor_v2.component
 
@@ -741,23 +731,3 @@ def process_images(
 
     for _ in executor.map(reupload_component, components):
         pass
-
-    # find the original component (yes, this is hacky / cumbersome)
-    original_comp = [
-        c for c in components
-        if c.name == source_comp.name and c.version == source_comp.version
-    ]
-    if not (leng := len(original_comp)) == 1:
-        if leng < 1:
-            logger.warning(
-                f'did not find {source_comp.name=} - probably the component filter filtered it out '
-                'or this is a bug. Will continue with the unchanged root component descriptor'
-            )
-            return component_descriptor_v2
-        if leng > 1:
-            raise RuntimeError(f'found more than one version of {source_comp.name=} - pbly a bug!')
-
-    return dataclasses.replace(
-        component_descriptor_v2,
-        component=original_comp[0], # safe, because we check for leng above
-    )
