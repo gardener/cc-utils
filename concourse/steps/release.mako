@@ -405,7 +405,7 @@ for validation_error in cnudie.validate.iter_violations(nodes=nodes):
 tgt_ref = cnudie.util.target_oci_ref(component=component)
 logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
 uploaded_oci_manifest_bytes = cnudie.upload.upload_component_descriptor(
-  component_descriptor=component,
+  component_descriptor=component_descriptor,
 )
 try:
   print(f'{uploaded_oci_manifest_bytes=}')
