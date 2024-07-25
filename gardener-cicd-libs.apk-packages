@@ -11,6 +11,7 @@ iptables
 jq
 libc-dev
 libffi-dev
+libmagic
 openssh-client
 openssl-dev
 python3
