@@ -96,6 +96,35 @@ class TagConflictAction(enum.StrEnum):
 class Asset:
     '''
     base class for release assets. Not intended to be instantiated
+
+    Assets are references to data from build (build log, files, or directory trees) that are
+    to be included in Component-Descriptor as resources. Each asset is added as one resource.
+
+    Parameters for OCM Resource:
+
+    - ocm_labels: OCM-Labels to be added to resource
+    - name: resource name
+    - artefact_type: resource type
+    - purposes: value for label `gardener.cloud/purposes`
+
+    Other Parameters:
+
+    - step_name: pipelinestep-name of data-source
+    - comment: unused
+    - type: asset-type - overwritten by subclasses
+
+    Purpose-labels will be added as OCM-Label `gardener.cloud/purposes`.
+    They are used to identify (in a machine-readable manner) the purpose / semantics
+    of the included assets. Values are not (yet) standardised. It is recommended to use the
+    following labels (multiple may be specified):
+
+    build
+    codecoverage
+    integrationtest
+    linter
+    sast          static code analysis results
+    test
+    unittest
     '''
     ocm_labels: list[dict[str, object]] = dataclasses.field(default_factory=list)
     type: str = None # must overwrite
@@ -106,11 +135,32 @@ class Asset:
     comment: str | None = None
 
 
+class FileAssetMode(enum.StrEnum):
+    TAR = 'tar'
+    SINGLE_FILE = 'single-file'
+
+
 @dataclasses.dataclass(kw_only=True)
 class BuildstepFileAsset(Asset):
+    '''
+    A reference to files from a build-step to be added to OCM Component Descriptor as resource.
+
+    `step_output_dir` specifies the name of the output directory from which to read specified files.
+    It must be declared from the build-step (step_name parameter) using the `output_dir`
+    parameter.
+
+    `path` is interpreted relative to `step_output_dir`. Using Unix globbing, any matching files
+    will be included (use `*` to include all, except files starting with period (`.`) character).
+
+    By default, matching files will be wrapped in a compressed TAR archive (controlled by `mode`
+    attribute). If mode is set to `single-file`, `path` must match exactly one regular file.
+
+    In either case, it is considered an error if no matching files are found.
+    '''
     type: str = 'build-step-file'
     step_output_dir: str
     path: str # rel-path; globbing is allowed
+    mode: FileAssetMode = FileAssetMode.TAR
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -119,31 +169,6 @@ class BuildstepLogAsset(Asset):
     An (additional) release asset to be included as part of a release. Hardcoded for the
     special-case of including build-step-logs as resource in released component-descriptor
     with a srcRef to main repository (all of which might be made more flexible if needed).
-
-    In other words: do not overwrite/change values for (behaviour is undefined):
-    - type
-    - target
-
-    step_name:  name of buildstep from whcih to include logs
-    name:       name of resource in component-descriptor
-    ocm_labels: ocm-labels to pass-through (no processing)
-    purposes:   labels specifying the purpose of included buildstep-log (see below)
-    comment:    additional explanations (e.g. for auditing)
-
-    Purpose-labels are used to identify (in a machine-readable manner) the purpose / semantics
-    of the included logs. Values are not (yet) standardised. It is recommended to use the
-    following labels (multiple may be specified):
-
-    build
-    codecoverage
-    integrationtest
-    linter
-    sast          static code analysis results
-    test
-    unittest
-
-    Purpose-labels will be added as OCM-Label:
-        gardener.cloud/purposes
     '''
     type: str = 'build-step-log'
     artefact_type = 'text/plain'
@@ -328,6 +353,9 @@ class ReleaseTrait(Trait):
             return dacite.from_dict(
                 data_class=data_class,
                 data=raw_asset,
+                config=dacite.Config(
+                    cast=(enum.Enum,),
+                ),
             )
 
         return [

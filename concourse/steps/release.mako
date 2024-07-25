@@ -18,6 +18,7 @@ ReleaseNotesPolicy = concourse.model.traits.release.ReleaseNotesPolicy
 VersionInterface = concourse.model.traits.version.VersionInterface
 BuildstepLogAsset = concourse.model.traits.release.BuildstepLogAsset
 BuildstepFileAsset = concourse.model.traits.release.BuildstepFileAsset
+FileAssetMode = concourse.model.traits.release.FileAssetMode
 version_file = job_step.input('version_path') + '/version'
 release_trait = job_variant.trait('release')
 
@@ -84,6 +85,7 @@ assets = release_trait.assets
 %>
 import glob
 import hashlib
+import os
 import tarfile
 import tempfile
 import zlib
@@ -107,6 +109,7 @@ import github.util
 import gitutil
 
 import git
+import magic
 
 import traceback
 
@@ -255,9 +258,10 @@ if not (matching_files := glob.glob(f'{step_output_dir}/${asset.path}')):
   print('Error: no files matched ${asset.path}')
   exit(1)
 
+%  if asset.mode is FileAssetMode.TAR:
 # no need to use ctx-mgr - process is short-lived + we keep sole handle
-tmpfh = tempfile.TemporaryFile()
-tf = tarfile.open(mode='w:xz', fileobj=tmpfh)
+blobfh = tempfile.TemporaryFile()
+tf = tarfile.open(mode='w:xz', fileobj=blobfh)
 for f in matching_files:
   logger.info(f'adding {f} to tarchive')
   tf.add(
@@ -265,31 +269,41 @@ for f in matching_files:
     arcname=f.removeprefix(step_output_dir),
   )
 tf.close()
-tmpfh.flush()
+blobfh.flush()
+leng = blobfh.tell()
 
-leng = tmpfh.tell()
-tmpfh.seek(0)
+blob_mimetype = 'application/x-xz+tar'
+
+%  elif asset.mode is FileAssetMode.SINGLE_FILE:
+if not len(matching_files) == 1:
+  logger.error(f'expected single file, but found: {matching_files}')
+  exit(1)
+asset_path = matching_files[0]
+blob_mimetype = magic.detect_from_filename(asset_path).mime_type
+blobfh = open(asset_path, 'rb')
+leng = os.stat(asset_path).st_size
+%  endif
+blobfh.seek(0)
 
 hash = hashlib.sha256()
-while (chunk := tmpfh.read(4096)):
+while (chunk := blobfh.read(4096)):
   hash.update(chunk)
-tmpfh.seek(0)
+blobfh.seek(0)
 
 digest = f'sha256:{hash.hexdigest()}'
 oci_client.put_blob(
   image_reference=component_descriptor_target_ref,
   digest=digest,
   octets_count=leng,
-  data=tmpfh,
+  data=blobfh,
 )
-
 component.resources.append(
   cm.Resource(
     name='${asset.name}',
     version=version_str,
     type='${asset.artefact_type}',
     access=cm.LocalBlobAccess(
-      mediaType='application/x-xz+tar',
+      mediaType=blob_mimetype,
       localReference=digest,
       size=leng,
     ),
