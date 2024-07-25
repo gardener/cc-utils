@@ -3,7 +3,7 @@
 set -e
 
 repo_dir="$(readlink -f "$(dirname "$0")/..")"
-out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH:-}/dist")"
+out_dir="$(readlink -f "${repo_dir}/../${PYPI:-}/dist")"
 echo "out-dir: ${out_dir}"
 
 model_element_cmd="cli.py config model_element --cfg-type pypi --cfg-name gardener"
