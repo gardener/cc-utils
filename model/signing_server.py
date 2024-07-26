@@ -2,11 +2,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import enum
+
 from model.base import (
     ModelBase,
     NamedModelElement,
 )
 from model.proxy import DockerImageConfig
+
+
+class SigningAlgorithm(enum.StrEnum):
+    RSASSA_PSS = 'rsassa-pss'
+    RSASSA_PKCS1_V1_5 = 'rsassa-pkcs1-v1_5'
 
 
 class SigningServerEndpoint(NamedModelElement):
@@ -77,3 +84,6 @@ class SigningServerConfig(NamedModelElement):
 
     def ingress_config(self) -> SigningServerIngressConfig:
         return SigningServerIngressConfig(self.raw['ingress'])
+
+    def algorithm(self) -> SigningAlgorithm:
+        return SigningAlgorithm(self.raw.get('algorithm', SigningAlgorithm.RSASSA_PSS))
