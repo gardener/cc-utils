@@ -3,7 +3,6 @@ A client for Signing-Server
 '''
 
 import dataclasses
-import enum
 import hashlib
 import io
 import urllib.parse
@@ -14,11 +13,7 @@ import requests
 import urllib3
 
 import ci.util
-
-
-class SigningAlgorithm(enum.StrEnum):
-    RSASSA_PSS = 'rsassa-pss'
-    RSASSA_PKCS1_V1_5 = 'rsassa-pkcs1-v1_5'
+import model.signing_server as ms
 
 
 @dataclasses.dataclass
@@ -38,7 +33,7 @@ class SigningResponse:
     Instances are typically created from SigningserverClient.
     '''
     raw: str
-    signing_algorithm: SigningAlgorithm
+    signing_algorithm: ms.SigningAlgorithm
 
     @property
     def certificate(self) -> str:
@@ -98,9 +93,9 @@ class SigningserverClient:
         self,
         content: str | bytes | io.IOBase,
         hash_algorithm='sha256',
-        signing_algorithm: SigningAlgorithm | str = SigningAlgorithm.RSASSA_PSS,
+        signing_algorithm: ms.SigningAlgorithm | str = ms.SigningAlgorithm.RSASSA_PSS,
     ):
-        signing_algorithm = SigningAlgorithm(signing_algorithm)
+        signing_algorithm = ms.SigningAlgorithm(signing_algorithm)
         url = ci.util.urljoin(
             self.cfg.base_url,
             'sign',
