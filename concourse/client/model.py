@@ -192,12 +192,6 @@ class PipelineConfigResource:
         self.source = raw['source']
         self.name = raw['name']
 
-    def has_webhook_token(self):
-        return 'webhook_token' in self.raw and len(self.webhook_token()) > 0
-
-    def webhook_token(self):
-        return self.raw['webhook_token']
-
     def pipeline_name(self):
         return self.pipeline.name
 
@@ -208,11 +202,7 @@ class PipelineConfigResource:
         return self.raw.get('failing_to_check', False)
 
     def __str__(self):
-        return 'Concourse Resource {n}. Type: {t}, webhook_token: {wht}'.format(
-            n=self.name,
-            t=self.type,
-            wht=self.webhook_token(),
-        )
+        return f'Concourse Resource {self.name=} {self.type=}'
 
 
 class GithubSource:

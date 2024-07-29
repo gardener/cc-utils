@@ -20,12 +20,12 @@ import mako.template
 from ci.util import (
     existing_dir,
     merge_dicts,
-    FluentIterable,
     urljoin,
 )
 from mailutil import _send_mail
 import github.codeowners
 
+import concourse.client.api
 from concourse.factory import DefinitionFactory, RawPipelineDefinitionDescriptor
 from concourse.enumerator import (
     DefinitionDescriptor,
@@ -602,7 +602,11 @@ class ReplicationResultProcessor:
                 ),
             )
 
-    def _initialise_new_pipeline_resources(self, concourse_api, results):
+    def _initialise_new_pipeline_resources(
+        self,
+        concourse_api: concourse.client.api.ConcourseApiBase,
+        results,
+    ):
         newly_deployed_pipeline_names = [
             result.definition_descriptor.pipeline_name for result in results
             if result.deploy_status & DeployStatus.CREATED
@@ -615,15 +619,12 @@ class ReplicationResultProcessor:
 
             logger.info(f'triggering initial resource check for {pipeline_name=}')
 
-            trigger_pipeline_resource_check = functools.partial(
-                concourse_api.trigger_resource_check,
-                pipeline_name=pipeline_name,
-            )
-
-            FluentIterable(concourse_api.pipeline_resources(pipeline_name)) \
-            .filter(lambda resource: resource.has_webhook_token()) \
-            .map(lambda resource: trigger_pipeline_resource_check(resource_name=resource.name)) \
-            .as_list()
+            for pipeline_config_resource in concourse_api.pipeline_resources(pipeline_name):
+                pipeline_config_resource: concourse.client.api.PipelineConfigResource
+                concourse_api.trigger_resource_check(
+                    pipeline_name=pipeline_name,
+                    resource_name=pipeline_config_resource.name,
+                )
 
 
 class PipelineValidationError(Exception):

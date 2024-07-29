@@ -53,9 +53,6 @@ class GithubConfig(NamedModelElement):
     def tls_validation(self):
         return not self.raw.get('disable_tls_validation')
 
-    def webhook_secret(self):
-        return self.raw.get('webhook_token')
-
     def preferred_protocol(self):
         return self.available_protocols()[0]
 
@@ -138,7 +135,6 @@ class GithubConfig(NamedModelElement):
             'purpose_labels',
             'sshUrl',
             'repo_urls',
-            'webhook_token',
         )
 
     def _required_attributes(self):
