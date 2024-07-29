@@ -7,7 +7,6 @@ import tarfile
 import typing
 import yaml
 
-import ccc.oci
 import gci.componentmodel
 import oci.client
 import oci.model
@@ -121,6 +120,7 @@ def image_ref_with_digest(
 
     if not (digest and digest.value):
         if not oci_client:
+            import ccc.oci # late import to avoid cyclic imports
             oci_client = ccc.oci.oci_client()
 
         digest = gci.componentmodel.DigestSpec(
