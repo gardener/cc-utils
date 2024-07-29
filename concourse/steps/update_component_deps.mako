@@ -177,7 +177,7 @@ for from_ref, to_version in determine_upgrade_prs(
         version_lookup=version_lookup,
         merge_policy=merge_policy,
         merge_method=merge_method,
-        repo_hostname=repo_hostname,
+        repo_hostname='${repo_hostname}',
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
 % endif
