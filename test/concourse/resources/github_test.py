@@ -20,7 +20,6 @@ class TestGithubMakoResource:
             http_url='https://test.foo',
             api_url='made-up-api-url',
             disable_tls_validation=False,
-            webhook_token='made-up-token',
             available_protocols=['https', 'ssh'],
             tu_username='made-up-name',
             tu_password='made-up-password',
@@ -37,7 +36,6 @@ class TestGithubMakoResource:
                     'httpUrl': http_url,
                     'apiUrl': api_url,
                     'disable_tls_validation': disable_tls_validation,
-                    'webhook_token': webhook_token,
                     'available_protocols': available_protocols,
                     'technical_users': [{
                             'username': tu_username,

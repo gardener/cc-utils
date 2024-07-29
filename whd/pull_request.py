@@ -167,8 +167,7 @@ def matching_resources(
 
     for resource in resources_gen:
         resource: concourse.client.model.PipelineConfigResource
-        if not resource.has_webhook_token():
-            continue
+
         ghs = resource.github_source()
         repository = event.repository()
         if not ghs.hostname() == repository.github_host():
