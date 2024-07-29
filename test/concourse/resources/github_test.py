@@ -72,7 +72,6 @@ class TestGithubMakoResource:
             })
         return _repo_cfg
 
-    @pytest.mark.parametrize('configure_webhook', [True, False])
     @pytest.mark.parametrize('require_label', [None, 'some-label'])
     @pytest.mark.parametrize('include_paths', [[], ['path/to/include']])
     @pytest.mark.parametrize('exclude_paths', [[], ['path/to/exclude']])
@@ -81,7 +80,6 @@ class TestGithubMakoResource:
         self,
         repo_cfg,
         cfg_set,
-        configure_webhook,
         require_label,
         include_paths,
         exclude_paths,
@@ -94,7 +92,6 @@ class TestGithubMakoResource:
             test_repo_cfg,
             test_cfg_set,
             require_label,
-            configure_webhook,
         )
 
         required_attributes = [
@@ -103,8 +100,6 @@ class TestGithubMakoResource:
         ]
         if require_label:
             required_attributes.append('label')
-        if configure_webhook:
-            required_attributes.append('configure_webhook')
         if include_paths:
             required_attributes.append('paths')
         if exclude_paths:
@@ -120,7 +115,6 @@ class TestGithubMakoResource:
                 f'Required attributes are missing in render result: {",".join(missing_attributes)}'
             )
 
-    @pytest.mark.parametrize('configure_webhook', [True, False])
     @pytest.mark.parametrize('include_paths', [[], ['path/to/include']])
     @pytest.mark.parametrize('exclude_paths', [[], ['path/to/exclude']])
     @pytest.mark.parametrize('available_protocols', [['ssh','https'],['https', 'ssh']])
@@ -128,7 +122,6 @@ class TestGithubMakoResource:
         self,
         repo_cfg,
         cfg_set,
-        configure_webhook,
         include_paths,
         exclude_paths,
         available_protocols,
@@ -139,15 +132,12 @@ class TestGithubMakoResource:
         render_result = examinee.get_def('github_repo').render(
             test_repo_cfg,
             test_cfg_set,
-            configure_webhook,
         )
 
         required_attributes = [
             'branch', 'uri', 'disable_ci_skip', 'skip_ssl_verification', 'no_ssl_verify',
             'private_key', 'username', 'password',
         ]
-        if configure_webhook:
-            required_attributes.append('configure_webhook')
         if include_paths:
             required_attributes.append('paths')
         if exclude_paths:

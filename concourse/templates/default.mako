@@ -123,8 +123,9 @@ cfg_reporting_step = concourse.steps.step_def('cfg_reporting')
 <%namespace file="/resources/variants.mako" import="*"/>
 <%namespace file="/resources/time.mako" import="*"/>
 
-inherit:
-${configure_webhook(webhook_token=github.webhook_secret())}
+inherit: &resource_cfg
+  check_every: 4h
+
 resource_types:
 ${include_pull_request_resource_type()}
 ${include_git_resource_type()}
