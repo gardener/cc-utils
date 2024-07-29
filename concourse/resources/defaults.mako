@@ -26,8 +26,3 @@ ${task_image_resource(
   indent=0,
 )}
 </%def>
-<%def name='configure_webhook(webhook_token)'>
-  configure_webhook: &configure_webhook
-    webhook_token: ${webhook_token}
-    check_every: 4h
-</%def>

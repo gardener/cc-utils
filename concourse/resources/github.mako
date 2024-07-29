@@ -6,7 +6,7 @@
     ignore_paths: ${repo_cfg.trigger_exclude_paths()}
   % endif
 </%def>
-<%def name="github_repo(repo_cfg, cfg_set, configure_webhook=True)">
+<%def name="github_repo(repo_cfg, cfg_set)">
 <%
 import ccc.github
 import ci.util
@@ -45,9 +45,7 @@ if (overwrite_preferred_protocol := repo_cfg.preferred_protocol()):
   preferred_protocol = overwrite_preferred_protocol
 %>
 - name: ${repo_cfg.resource_name()}
-% if configure_webhook:
-  <<: *configure_webhook
-% endif
+  <<: *resource_cfg
   type: ${ResourceType.GIT.value}
   source:
 % if preferred_protocol is Protocol.SSH:
@@ -85,7 +83,7 @@ if (overwrite_preferred_protocol := repo_cfg.preferred_protocol()):
 % endif
 ${git_ignore_paths(repo_cfg)}
 </%def>
-<%def name="github_pr(repo_cfg, cfg_set, require_label=None, configure_webhook=True)">
+<%def name="github_pr(repo_cfg, cfg_set, require_label=None)">
 <%
 import ccc.github
 import ci.util
@@ -112,9 +110,7 @@ disable_tls_validation = github_cfg.tls_validation()
 credentials = github_cfg.credentials()
 %>
 - name: ${repo_cfg.resource_name()}
-% if configure_webhook:
-  <<: *configure_webhook
-% endif
+  <<: *resource_cfg
   type: ${ResourceType.PULL_REQUEST.value}
   source:
     repo: ${repo_cfg.repo_path()}
