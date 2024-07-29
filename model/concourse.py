@@ -179,13 +179,6 @@ class ConcourseConfig(NamedModelElement):
     def clamav_config(self):
         return self.raw.get('clamav_config')
 
-    def disable_github_pr_webhooks(self):
-        '''
-        If set to True, the rendered concourse pull-request resources don't have webhooks configured.
-        This is because of problems using webhooks on our internal Github.
-        '''
-        return self.raw.get('disable_webhook_for_pr', False)
-
     def ingress_host(self, config_factory):
         cluster_domain = cluster_domain_from_kubernetes_config(
             config_factory,
