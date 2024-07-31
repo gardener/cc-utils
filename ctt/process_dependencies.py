@@ -351,15 +351,22 @@ def process_upload_request(
 
     logging.info(f'{oci_manifest_annotations=}')
 
-    _, _, raw_manifest = container.util.filter_image(
-        source_ref=src_ref,
-        target_ref=tgt_ref,
-        remove_files=upload_request.remove_files,
-        mode=replication_mode,
-        platform_filter=platform_filter,
-        oci_client=oci_client,
-        oci_manifest_annotations=oci_manifest_annotations,
-    )
+    try:
+        _, _, raw_manifest = container.util.filter_image(
+            source_ref=src_ref,
+            target_ref=tgt_ref,
+            remove_files=upload_request.remove_files,
+            mode=replication_mode,
+            platform_filter=platform_filter,
+            oci_client=oci_client,
+            oci_manifest_annotations=oci_manifest_annotations,
+        )
+    except Exception as e:
+        logger.error(
+            f'error trying to replicate {src_ref=} -> {tgt_ref=}'
+        )
+        e.add_note(f'filter_image: {src_ref=} -> {tgt_ref=}')
+        raise e
 
     logger.info(f'finished processing {src_ref} -> {tgt_ref=}')
 
