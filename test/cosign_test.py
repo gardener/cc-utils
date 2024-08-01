@@ -8,40 +8,60 @@ import pytest
 import cosign
 
 
-def test_json_marshaling_with_annotations():
+@pytest.fixture
+def image_digest_tag() -> str:
+    return 'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
+
+
+@pytest.fixture
+def image_reference(
+    image_digest_tag: str,
+) -> str:
+    return f'eu.gcr.io/test/img@{image_digest_tag}'
+
+
+@pytest.fixture
+def payload(
+    image_reference: str,
+) -> bytes:
+    return cosign.payload_bytes(
+        image_reference=image_reference,
+    )
+
+
+
+
+def test_json_marshaling_with_annotations(
+    image_digest_tag: str,
+    image_reference: str,
+):
     expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},' \
         '"image":{"docker-manifest-digest":' \
-        '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
-        '"type":"gardener.vnd/oci/cosign-signature"},"optional":{"key":"val"}}'
+        f'"{image_digest_tag}"' \
+        '},"type":"gardener.vnd/oci/cosign-signature"},"optional":{"key":"val"}}'
 
-    image_ref = 'eu.gcr.io/test/img@' \
-        'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
     annotations = {
         "key": "val",
     }
 
     payload = cosign.payload_bytes(
-        image_reference=image_ref,
+        image_reference=image_reference,
         annotations=annotations,
     ).decode('utf-8')
 
     assert payload == expected_json
 
 
-def test_json_marshaling_without_annotations():
+def test_json_marshaling_without_annotations(
+    image_digest_tag: str,
+    payload: bytes,
+):
     expected_json = '{"critical":{"identity":{"docker-reference":"eu.gcr.io/test/img"},' \
         '"image":{"docker-manifest-digest":' \
-        '"sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b"},' \
-        '"type":"gardener.vnd/oci/cosign-signature"},"optional":null}'
+        f'"{image_digest_tag}"' \
+        '},"type":"gardener.vnd/oci/cosign-signature"},"optional":null}'
 
-    img_ref = 'eu.gcr.io/test/img@' \
-        'sha256:a904c847d39ae82ec8859ce623ae14ccbfff36d53ce1490b43d9bf5caa47f33b'
-
-    payload = cosign.payload_bytes(
-        image_reference=img_ref,
-    ).decode('utf-8')
-
-    assert payload == expected_json
+    assert payload.decode('utf-8') == expected_json
 
 
 def test_raise_error_for_img_ref_without_digest():
