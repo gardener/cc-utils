@@ -130,7 +130,7 @@ def sign_image(
         digest = hashlib.sha256(
             oci_client.manifest_raw(image_reference).content,
         ).hexdigest()
-        image_reference = f'{image_reference.ref_without_tag}@sha256{digest}'
+        image_reference = f'{image_reference.ref_without_tag}@sha256:{digest}'
 
     if on_exist in (OnExist.SKIP, OnExist.APPEND):
         exists = bool(oci_client.head_manifest(
