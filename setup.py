@@ -32,8 +32,6 @@ def modules():
     module_names.remove('setup.base')
     module_names.remove('setup.oci')
     module_names.remove('setup.whd')
-    # remove modules already contained in gardener-cicd-dso
-    module_names.remove('setup.dso')
     return module_names
 
 
@@ -46,10 +44,6 @@ def packages():
     package_names.remove('oci')
     # remove whd (released in separate module)
     package_names.remove('whd')
-    # remove dso (released in separate module)
-    package_names.remove('checkmarx')
-    package_names.remove('clamav')
-    package_names.remove('protecode')
 
     return package_names
 
