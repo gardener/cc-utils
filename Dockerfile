@@ -11,7 +11,6 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
   --find-links /cc/utils/dist \
   gardener-cicd-libs==$(cat /metadata/VERSION) \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
-  gardener-cicd-dso==$(cat /metadata/VERSION) \
   pycryptodome
 
 FROM ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.12.0 as ocm-cli

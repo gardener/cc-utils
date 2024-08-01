@@ -131,25 +131,7 @@ def add_global_args(parser):
 
 
 def add_module(module_name, parser):
-    try:
-        module = __import__(module_name)
-    except ImportError as ie:
-        if ie.name in (
-            'containerregistry',
-            'kubernetes',
-            'protecode',
-        ) or module_name in (
-            'checkmarx_cli',
-            'protecode_cli',
-        ):
-            # (checkmarx|protecode)_cli.py have different, additional
-            # requirements, as they belong to the "gardener-cicd-dso" package.
-            # "gardener-cicd-libs" might be present while "gardener-cicd-dso" is not,
-            # therefore their requirements might be missing.
-            # To still let the cli.py work as intended, ImportErrors caused by these
-            # modules are ignored.
-            return # XXX HACK: ignore these particular import errors for now
-        raise ie
+    module = __import__(module_name)
 
     # skip if module defines a symbol 'main'
     if hasattr(module, 'main'):

@@ -7,7 +7,6 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 
 def requirements():
     yield f'gardener-cicd-libs=={version()}'
-    yield f'gardener-cicd-dso=={version()}'
 
 
 def modules():

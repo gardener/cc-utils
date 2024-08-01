@@ -45,8 +45,6 @@ cc-utils:
             - '--package'
             - 'gardener-cicd-whd'
             - '--package'
-            - 'gardener-cicd-dso'
-            - '--package'
             - 'gardener-cicd-cli'
             - '--package'
             - 'gardener-cicd-base'
