@@ -46,8 +46,6 @@ cc-utils:
             - 'gardener-cicd-whd'
             - '--package'
             - 'gardener-cicd-cli'
-            - '--package'
-            - 'gardener-cicd-base'
       traits:
         component_descriptor:
           retention_policy:

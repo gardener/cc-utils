@@ -5,7 +5,6 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 def requirements():
-    yield 'gardener-cicd-base>=' + version()
     yield 'gardener-oci>=' + version()
 
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
@@ -26,10 +25,7 @@ def modules():
         if module.is_file() and module.name.endswith('.py')
     ]
 
-    # remove modules already contained in gardener-cicd-base
-    module_names.remove('util')
-    module_names.remove('ctx')
-    module_names.remove('setup.base')
+    # avoid including other setup-scripts
     module_names.remove('setup.oci')
     module_names.remove('setup.whd')
     return module_names
@@ -38,12 +34,9 @@ def modules():
 def packages():
     package_names = setuptools.find_packages()
 
-    # remove packages already contained in gardener-cicd-base
-    package_names.remove('ci')
-    package_names.remove('model')
-    package_names.remove('oci')
-    # remove whd (released in separate module)
+    # remove packages (distributed via separate distribution-packages)
     package_names.remove('whd')
+    package_names.remove('oci')
 
     return package_names
 
