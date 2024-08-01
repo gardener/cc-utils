@@ -422,8 +422,8 @@ class PipelineStep(ModelBase):
         ci.util.not_none(name)
         ci.util.not_none(variable_name)
 
-        if variable_name in self._inputs_dict:
-            raise ValueError(f'input already exists: {variable_name}')
+        if variable_name in self._inputs_dict and name != self._inputs_dict[variable_name]:
+            raise ValueError(f'conflict: {variable_name} was tried to be reset to different value')
         self._inputs_dict[variable_name] = name
 
     def remove_input(self, name):
