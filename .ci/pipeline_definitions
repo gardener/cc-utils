@@ -159,7 +159,38 @@ cc-utils:
               comment: |
                 we use bandit (linter) for SAST scans
                 see: https://bandit.readthedocs.io/en/latest/
-
+            - type: build-step-file
+              mode: single-file
+              step_name: build_python_packages
+              step_output_dir: pypi
+              path: 'gardener_cicd_libs-*.tar.gz'
+              name: gardener-cicd-libs
+              purposes: &purposes
+                - python
+                - setuptools
+                - pip
+                - distribution-package
+            - type: build-step-file
+              mode: single-file
+              step_name: build_python_packages
+              step_output_dir: pypi
+              path: 'gardener_oci-*.tar.gz'
+              name: gardener-oci
+              purposes: *purposes
+            - type: build-step-file
+              mode: single-file
+              step_name: build_python_packages
+              step_output_dir: pypi
+              path: 'gardener_whd-*.tar.gz'
+              name: gardener-whd
+              purposes: *purposes
+            - type: build-step-file
+              mode: single-file
+              step_name: build_python_packages
+              step_output_dir: pypi
+              path: 'gardener_cicd_cli-*.tar.gz'
+              name: gardener-cicd-cli
+              purposes: *purposes
 
 alpine-sap-image:
   jobs:
