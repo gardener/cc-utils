@@ -1,4 +1,5 @@
 import json
+import os
 
 import model.container_registry as mcr
 import oci.auth as oa
@@ -7,6 +8,7 @@ import oci.auth as oa
 def cfg(
     image_ref_prefixes: [str],
     privileges: str ='readwrite',
+    patch: bool=False,
 ):
     cfgs = set()
     if privileges == 'readwrite':
@@ -39,4 +41,9 @@ def cfg(
         'auths': dict(iter_auths()),
     }
 
-    print(json.dumps(docker_cfg, indent=2))
+    if not patch:
+        print(json.dumps(docker_cfg, indent=2))
+        exit(0)
+
+    with open(os.path.join(os.environ['HOME'], '.docker', 'config.json'), 'w') as f:
+        json.dump(docker_cfg, f)
