@@ -217,14 +217,6 @@ def sign_image(
         upload_payload = True
         manifest = None
 
-    if upload_payload:
-        oci_client.put_blob(
-            image_reference=signature_image_reference,
-            digest=payload_digest,
-            octets_count=payload_size,
-            data=payload,
-        )
-
         cfg_blob = cfg_blob_bytes(
             payload_digest=payload_digest,
         )
@@ -266,6 +258,14 @@ def sign_image(
     )
     else:
         manifest.layers.append(signature_layer)
+
+    if upload_payload:
+        oci_client.put_blob(
+            image_reference=signature_image_reference,
+            digest=payload_digest,
+            octets_count=payload_size,
+            data=payload,
+        )
 
     manifest_bytes = json.dumps(manifest.as_dict()).encode('utf-8')
 
