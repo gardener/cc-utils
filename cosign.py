@@ -115,12 +115,87 @@ annotation name used by cosign to store signatures for referenced layer-blob
 _cosign_signature_annotation_name = 'dev.cosignproject.cosign/signature'
 
 
+def sign_manifest(
+    manifest: om.OciImageManifest,
+    payload_size: int,
+    payload_digest: str,
+    signature: str,
+    signing_algorithm: str=None,
+    public_key: str=None,
+    on_exist: OnExist | str=OnExist.APPEND,
+) -> om.OciImageManifest:
+    on_exist = OnExist(on_exist)
+
+    if on_exist is OnExist.SKIP and manifest.layers:
+        logger.info('manifest already contains a signature - skipping')
+        return manifest
+
+    if on_exist is OnExist.APPEND:
+        for layer_idx, layer in enumerate(manifest.layers):
+            a = layer.annotations
+            existing_signature = a.get(_cosign_signature_annotation_name, None)
+            # todo: ideally, signatures should be parsed and compared independent of format
+            #       cosign seems to expect base64-part w/o PEM-headers (BEGIN/END), though
+            # todo2: should we also check digest (there might be multiple payloads in same
+            #        signature artefact; otoh, collissions are unlikely, so it should be safe to
+            #        not check this explicitly
+            if existing_signature == signature:
+                logger.info(f'found signature in {layer_idx=}')
+                logger.info('skipping (will not redundantly add signature again)')
+                return manifest
+
+            existing_public_key = a.get(_public_key_annotation_name, None)
+            if not existing_public_key or not public_key:
+                continue
+
+            existing_signing_algorithm = a.get(_signing_algorithm_annotation_name, None)
+            if (
+                signing_algorithm
+                and existing_signing_algorithm
+                and signing_algorithm != existing_signing_algorithm
+            ):
+                # we found an existing signature, however with different signing algorithm
+                # -> do not skip, as resigning with different algorithm is likely to be
+                #    caller's intent
+                continue
+
+            if existing_public_key == public_key:
+                logger.info(f'found matching public key in {layer_idx=}')
+                logger.info('skipping (will not redundantly add signature again)')
+                return manifest
+
+        # if this line is reached, we did not find the signature we are about to append
+
+    signature_layer = om.OciBlobRef(
+        digest=payload_digest,
+        size=payload_size,
+        mediaType='application/vnd.dev.cosign.simplesigning.v1+json',
+        annotations={
+            _cosign_signature_annotation_name: signature,
+        },
+    )
+
+    if public_key:
+        signature_layer.annotations[_public_key_annotation_name] = public_key
+    if signing_algorithm:
+        signature_layer.annotations[_signing_algorithm_annotation_name] = signing_algorithm
+
+    if on_exist is OnExist.APPEND:
+        manifest.layers.append(signature_layer)
+    else:
+        manifest.layers = [
+            signature_layer,
+        ]
+
+    return manifest
+
+
 def sign_image(
     image_reference: om.OciImageReference | str,
     signature: str,
     signing_algorithm: str=None,
     public_key: str=None,
-    on_exist: OnExist|str=OnExist.APPEND,
+    on_exist: OnExist | str=OnExist.APPEND,
     signature_image_reference: str=None,
     oci_client: oc.Client=None,
 ):
@@ -172,39 +247,6 @@ def sign_image(
         manifest = oci_client.manifest(
             image_reference=signature_image_reference,
         )
-        for layer_idx, layer in enumerate(manifest.layers):
-            a = layer.annotations
-            existing_signature = a.get(_cosign_signature_annotation_name, None)
-            # todo: ideally, signatures should be parsed and compared independent of format
-            #       cosign seems to expect base64-part w/o PEM-headers (BEGIN/END), though
-            # todo2: should we also check digest (there might be multiple payloads in same
-            #        signature artefact; otoh, collissions are unlikely, so it should be safe to
-            #        not check this explicitly
-            if existing_signature == signature:
-                logger.info(f'found signature in {layer_idx=} for {signature_image_reference=}')
-                logger.info('skipping (will not redundantly add signature again)')
-                return
-
-            existing_public_key = a.get(_public_key_annotation_name, None)
-            if not existing_public_key or not public_key:
-                continue
-
-            existing_signing_algorithm = a.get(_signing_algorithm_annotation_name, None)
-            if signing_algorithm and existing_signing_algorithm and \
-                signing_algorithm != existing_signing_algorithm:
-                # we found an existing signature, however with different signing algorithm
-                # -> do not skip, as resigning with different algorithm is likely to be
-                #    caller's intent
-                continue
-
-            if existing_public_key == public_key:
-                logger.info(
-                    f'found matching public key in {layer_idx=} for {signature_image_reference=}'
-                )
-                logger.info('skipping (will not redundantly add signature again)')
-                return
-
-        # if this line is reached, we did not find the signature we are about to append
 
         for layer in manifest.layers:
             if layer.digest == payload_digest:
@@ -215,7 +257,6 @@ def sign_image(
             upload_payload = True
     else:
         upload_payload = True
-        manifest = None
 
         cfg_blob = cfg_blob_bytes(
             payload_digest=payload_digest,
@@ -230,20 +271,6 @@ def sign_image(
             data=cfg_blob,
         )
 
-    signature_layer = om.OciBlobRef(
-        digest=payload_digest,
-        size=payload_size,
-        mediaType='application/vnd.dev.cosign.simplesigning.v1+json',
-        annotations={
-            _cosign_signature_annotation_name: signature,
-        },
-    )
-    if public_key:
-        signature_layer.annotations[_public_key_annotation_name] = public_key
-    if signing_algorithm:
-        signature_layer.annotations[_signing_algorithm_annotation_name] = signing_algorithm
-
-    if not manifest:
         manifest = om.OciImageManifest(
             config=om.OciBlobRef(
                 digest=cfg_blob_digest,
@@ -251,13 +278,19 @@ def sign_image(
                 size=cfg_blob_size,
             ),
             mediaType='application/vnd.oci.image.manifest.v1+json',
-            layers=[
-                signature_layer,
-            ],
+            layers=[],
             annotations={},
+        )
+
+    signed_manifest = sign_manifest(
+        manifest=manifest,
+        payload_size=payload_size,
+        payload_digest=payload_digest,
+        signature=signature,
+        signing_algorithm=signing_algorithm,
+        public_key=public_key,
+        on_exist=on_exist,
     )
-    else:
-        manifest.layers.append(signature_layer)
 
     if upload_payload:
         oci_client.put_blob(
@@ -267,7 +300,7 @@ def sign_image(
             data=payload,
         )
 
-    manifest_bytes = json.dumps(manifest.as_dict()).encode('utf-8')
+    manifest_bytes = json.dumps(signed_manifest.as_dict()).encode('utf-8')
 
     oci_client.put_manifest(
         image_reference=signature_image_reference,
