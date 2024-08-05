@@ -1,9 +1,7 @@
-import collections.abc
 import logging
 import os
 import subprocess
 import tempfile
-import textwrap
 import time
 import traceback
 import typing
@@ -12,13 +10,10 @@ import gci.componentmodel
 import github3.exceptions
 import github3.repos.repo
 
-import ccc.concourse
 import ccc.github
 import ci.util
 import cnudie.retrieve
 import cnudie.util
-import concourse.client.api
-import concourse.client.model
 import concourse.model.traits.update_component_deps
 import concourse.paths
 import concourse.steps.component_descriptor_util as cdu
@@ -35,7 +30,6 @@ from concourse.model.traits.update_component_deps import (
 from github.util import (
     GitHubRepoBranch,
 )
-
 
 logger = logging.getLogger('step.update_component_deps')
 
@@ -368,30 +362,6 @@ def _import_release_notes(
     return release_notes
 
 
-def _iter_concourse_resources(
-    concourse_api: concourse.client.api.ConcourseApiBase,
-    repo_hostname: str,
-    repo_path: str,
-) -> collections.abc.Generator[concourse.client.model.PipelineConfigResource, None, None]:
-    resources_gen = concourse_api.pipeline_resources(
-        concourse_api.pipelines(),
-        resource_type=concourse.client.model.ResourceType.GIT,
-    )
-
-    for resource in resources_gen:
-        resource: concourse.client.model.PipelineConfigResource
-
-        ghs = resource.github_source()
-
-        if not ghs.hostname() == repo_hostname:
-            continue
-
-        if not ghs.repo_path().lstrip('/') == repo_path:
-            continue
-
-        yield resource
-
-
 def create_upgrade_pr(
     component: gci.componentmodel.Component,
     from_ref: gci.componentmodel.ComponentReference,
@@ -407,7 +377,6 @@ def create_upgrade_pr(
     merge_method: MergeMethod,
     version_lookup,
     component_descriptor_lookup,
-    repo_hostname: str,
     after_merge_callback=None,
     container_image:str=None,
 ) -> github.util.UpgradePullRequest:
@@ -594,26 +563,6 @@ def create_upgrade_pr(
                 f'Unable to merge upgrade pull request #{pull_request.number} '
                 f'({pull_request.html_url}).'
             )
-            pull_request.create_comment(textwrap.dedent(
-                '''
-                Unable to auto-merge PR.
-                This is most likely caused by merge conflicts.
-                Will trigger resource-check and retry, next PR should be successfully merged.
-                '''
-            ))
-            pull_request.close()
-
-            concourse_api = ccc.concourse.client_from_env()
-            for resource in _iter_concourse_resources(
-                concourse_api=concourse_api,
-                repo_hostname=repo_hostname,
-                repo_path=githubrepobranch.github_repo_path(),
-            ):
-                logger.info('triggering resource check for: ' + resource.name)
-                concourse_api.trigger_resource_check(
-                    pipeline_name=resource.pipeline_name(),
-                    resource_name=resource.name,
-                )
 
     _merge_pr(merge_method=merge_method, pull_request=pull_request, attempts=3)
 
