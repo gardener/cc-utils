@@ -13,7 +13,7 @@ RUN cat /cc/utils/gardener-cicd-libs.apk-packages \
   gardener-cicd-cli==$(cat /metadata/VERSION) \
   pycryptodome
 
-FROM ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.12.0 as ocm-cli
+FROM ghcr.io/open-component-model/ocm/ocm.software/ocmcli/ocmcli-image:0.13.0 as ocm-cli
 FROM $BASE_IMAGE
 
 ARG TARGETARCH
