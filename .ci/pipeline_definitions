@@ -181,8 +181,8 @@ cc-utils:
               mode: single-file
               step_name: build_python_packages
               step_output_dir: pypi
-              path: 'dist/gardener_whd-*.tar.gz'
-              name: gardener-whd
+              path: 'dist/gardener_cicd_whd-*.tar.gz'
+              name: gardener-cicd-whd
               purposes: *purposes
             - type: build-step-file
               mode: single-file
