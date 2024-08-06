@@ -117,22 +117,13 @@ with different contents, all variants are subject to being scanned.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>matching_config</p></td>
-<td><p>no</p></td>
-<td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
-</pre></div>
-</div>
-</p></td>
-<td><p>list</p></td>
-<td><p>a list of configs to use for matching</p></td>
-</tr>
-<tr class="row-odd"><td><p>notify</p></td>
+<tr class="row-even"><td><p>notify</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">email_recipients</span></code></p></td>
 <td><p>Notify</p></td>
 <td><p>whom to notify about found issues</p></td>
 </tr>
-<tr class="row-even"><td><p>issue_policies</p></td>
+<tr class="row-odd"><td><p>issue_policies</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">max_processing_time_days</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">blocker</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
@@ -146,13 +137,13 @@ with different contents, all variants are subject to being scanned.</p>
 <td><p>IssuePolicies</p></td>
 <td><p>defines issues policies (e.g. SLAs for maximum processing times</p></td>
 </tr>
-<tr class="row-odd"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
+<tr class="row-even"><td><p>overwrite_github_issues_tgt_repository_url</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>if set, and notify is set to github_issues, overwrite target github repository</p></td>
 </tr>
-<tr class="row-even"><td><p>github_issue_templates</p></td>
+<tr class="row-odd"><td><p>github_issue_templates</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>List[GithubIssueTemplateCfg]</p></td>
@@ -174,13 +165,13 @@ use python3’s format-str syntax</p>
 </div>
 </p></td>
 </tr>
-<tr class="row-odd"><td><p>github_issue_labels_to_preserve</p></td>
+<tr class="row-even"><td><p>github_issue_labels_to_preserve</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>List[str]</p></td>
 <td><p>optional list of regexes for labels that will never be removed upon ticket-update</p></td>
 </tr>
-<tr class="row-even"><td><p>email_recipients</p></td>
+<tr class="row-odd"><td><p>email_recipients</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[]</span>
 </pre></div>
@@ -188,12 +179,6 @@ use python3’s format-str syntax</p>
 </p></td>
 <td><p>List[str]</p></td>
 <td><p>optional list of email recipients to be notified about critical scan results</p></td>
-</tr>
-<tr class="row-odd"><td><p>clam_av</p></td>
-<td><p>no</p></td>
-<td><p>None</p></td>
-<td><p>ClamAVScanCfg</p></td>
-<td><p>if present, perform ClamAV scanning</p></td>
 </tr>
 <tr class="row-even"><td><p>os_id</p></td>
 <td><p>no</p></td>
@@ -216,57 +201,6 @@ use python3’s format-str syntax</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">component_owners</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">github_issues</span></code></p></li>
 </ul>
-<h2>clam_av <em>(ClamAVScanCfg)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Link to this heading"></a></h2>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>name</p></th>
-<th class="head"><p>required?</p></th>
-<th class="head"><p>default</p></th>
-<th class="head"><p>type</p></th>
-<th class="head"><p>explanation</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>clamav_cfg_name</p></td>
-<td><p>yes</p></td>
-<td><p>None</p></td>
-<td><p>str</p></td>
-<td><p>clamav cfg name to use (see cc-config)</p></td>
-</tr>
-<tr class="row-odd"><td><p>parallel_jobs</p></td>
-<td><p>no</p></td>
-<td><p>8</p></td>
-<td><p>int</p></td>
-<td><p>the amount of (maximum) parallel workers</p></td>
-</tr>
-<tr class="row-even"><td><p>virus_db_max_age_days</p></td>
-<td><p>no</p></td>
-<td><p>0</p></td>
-<td><p>int</p></td>
-<td><p>The maxmimum age difference (in days) the virus definition database of ClamAV may have when being compared to the most current database before triggering rescans.</p></td>
-</tr>
-<tr class="row-odd"><td><p>rescore</p></td>
-<td><p>no</p></td>
-<td><p>()</p></td>
-<td><p>List[ClamAVRescoringEntry]</p></td>
-<td><p>rescoring hints (e.g. to mark false-positives / accept certain scan-abortions)</p></td>
-</tr>
-<tr class="row-even"><td><p>timeout</p></td>
-<td><p>no</p></td>
-<td><p>18h</p></td>
-<td><p>str</p></td>
-<td><p>go-style time interval (e.g.: ‘1h30m’) after which the image-scan-step will be interrupted
-and fail.</p></td>
-</tr>
-<tr class="row-odd"><td><p>aws_cfg_name</p></td>
-<td><p>no</p></td>
-<td><p></p></td>
-<td><p>str</p></td>
-<td><p>aws-cfg used to retrieve resources of access-type “s3”.
-If not specified, default cfg-set aws-cfg is used.</p></td>
-</tr>
-</tbody>
-</table>
 <h2>os_id <em>(OsIdScan)</em> Attributes<a class="headerlink" href="#trait-image-scan" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
 <thead>
