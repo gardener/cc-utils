@@ -12,8 +12,6 @@ def requirements():
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
-            if 'elasticsearch' in line:
-                continue
 
             yield line
 
