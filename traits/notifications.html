@@ -199,6 +199,12 @@ an environment variables:</p>
 </ul>
 </p></td>
 </tr>
+<tr class="row-odd"><td><p>slack</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>NotificationSlack</p></td>
+<td><p>send notification via Slack</p></td>
+</tr>
 </tbody>
 </table>
 <h2>default.on_error.triggering_policy Enumeration Values<a class="headerlink" href="#trait-notifications" title="Link to this heading"></a></h2>
@@ -229,9 +235,6 @@ an environment variables:</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>email_addresses</p></td>
-<td><p>notify committers of the last commit</p></td>
-</tr>
-<tr class="row-odd"><td><p>committers</p></td>
 <td><p><blockquote>
 <div><p>notifiy specific email addresses</p>
 <p>Example:</p>
@@ -244,11 +247,39 @@ an environment variables:</p>
 </div></blockquote>
 </p></td>
 </tr>
+<tr class="row-odd"><td><p>committers</p></td>
+<td><p>notify committers of the last commit</p></td>
+</tr>
 <tr class="row-even"><td><p>component_diff_owners</p></td>
 <td><p>notify the codeowners of a component. CODEOWNERS file must exist</p></td>
 </tr>
 <tr class="row-odd"><td><p>codeowners</p></td>
 <td><p>notify the codeowners of the repository. CODEOWNERS file must exist</p></td>
+</tr>
+</tbody>
+</table>
+<h2>default.on_error.slack Enumeration Values<a class="headerlink" href="#trait-notifications" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>value</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>channel_cfgs</p></td>
+<td><p><blockquote>
+<div><p>the slack channel configurations to use</p>
+<p>Example:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">slack</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">channel_cfgs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">channel_names</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&#39;my_slack_channel&#39;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&#39;my_other_slack_channel&#39;</span>
+<span class="w">    </span><span class="nt">slack_cfg_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;my_slack_cfg_name&#39;</span>
+</pre></div>
+</div>
+</div></blockquote>
+</p></td>
 </tr>
 </tbody>
 </table>
@@ -269,6 +300,11 @@ an environment variables:</p>
 <span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">committers</span>
 <span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">component_diff_owners</span>
 <span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">codeowners</span>
+<span class="w">                </span><span class="nt">slack</span><span class="p">:</span>
+<span class="w">                    </span><span class="nt">channel_cfgs</span><span class="p">:</span>
+<span class="w">                      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">channel_names</span><span class="p">:</span>
+<span class="w">                        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&#39;my_slack_channel&#39;</span>
+<span class="w">                        </span><span class="nt">slack_cfg_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;my_slack_cfg_name&#39;</span>
 <span class="w">                </span><span class="nt">inputs</span><span class="p">:</span>
 <span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">component_descriptor_dir</span>
 </pre></div>
