@@ -101,6 +101,18 @@ def default_signature_image_reference(
     return om.OciImageReference(cosign_sig_ref)
 
 
+def image_reference_from_signature_reference(
+    signature_image_reference: str | om.OciImageReference,
+) -> om.OciImageReference:
+    signature_image_reference = om.OciImageReference.to_image_ref(signature_image_reference)
+
+    # "sha256-<image-digest>.sig" -> "<image-digest>"
+    image_digest = signature_image_reference.tag.split('-')[-1].split('.')[0]
+    image_reference = f'{signature_image_reference.ref_without_tag}@sha256:{image_digest}'
+
+    return om.OciImageReference.to_image_ref(image_reference)
+
+
 '''
 annotation name used to store public-key along cosign signatures within cosign signature artefacts
 
