@@ -64,6 +64,7 @@ import ci.util
 import ci.log
 import github
 import mailutil
+import slackclient.util
 import version
 
 from ci.util import ctx
@@ -249,4 +250,17 @@ mailutil.notify(
     email_cfg_name=email_cfg_name,
     recipients=email_cfg['recipients'],
 )
+% if on_error_cfg.slack():
+slack_cfg = ${on_error_cfg.slack()}
+for channel_cfg in slack_cfg.get('channel_cfgs', []):
+  slack_cfg_name = channel_cfg['slack_cfg_name']
+  slack_helper = slackclient.util.SlackHelper(cfg_factory.slack(slack_cfg_name))
+  for slack_channel in channel_cfg['channel_names']:
+    logger.info(f'Posting notification to "{slack_channel}" with "{slack_cfg_name}"')
+    slack_helper.post_to_slack(
+      channel=slack_channel,
+      title=email_cfg['subject'],
+      message=body
+    )
+% endif
 </%def>
