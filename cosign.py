@@ -210,7 +210,7 @@ def sign_image(
     on_exist: OnExist | str=OnExist.APPEND,
     signature_image_reference: str=None,
     oci_client: oc.Client=None,
-):
+) -> tuple[str | om.OciImageReference, om.OciImageManifest]:
     '''
     creates an OCI Image signature as understood by cosign. if passed, public-key is added
     as additional annotation `gardener.cloud/cosign-public-key`
@@ -318,3 +318,5 @@ def sign_image(
         image_reference=signature_image_reference,
         manifest=manifest_bytes,
     )
+
+    return signature_image_reference, signed_manifest
