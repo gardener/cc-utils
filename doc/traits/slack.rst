@@ -19,4 +19,4 @@ Example
     slack:
       channel_cfgs:
       - channel_name: 'my_slack_channel'
-        slack_cfg_name: 'scp_workspace' # see cc-config repository
+        slack_cfg_name: 'my_slack_cfg_name'

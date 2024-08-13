@@ -27,5 +27,10 @@ Example
                    - committers
                    - component_diff_owners
                    - codeowners
+                   slack:
+                       channel_cfgs:
+                         - channel_names: 
+                           - 'my_slack_channel'
+                           slack_cfg_name: 'my_slack_cfg_name'
                    inputs:
                    - component_descriptor_dir

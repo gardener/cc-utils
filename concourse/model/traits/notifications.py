@@ -41,11 +41,6 @@ class NotificationTriggeringPolicy(EnumWithDocumentation):
 class NotificationRecipients(EnumWithDocumentation):
     EMAIL_ADDRESSES = EnumValueWithDocumentation(
         value='email_addresses',
-        doc='notify committers of the last commit',
-    )
-
-    COMMITTERS = EnumValueWithDocumentation(
-        value='committers',
         doc='''
                 notifiy specific email addresses
 
@@ -60,6 +55,11 @@ class NotificationRecipients(EnumWithDocumentation):
                 ''',
     )
 
+    COMMITTERS = EnumValueWithDocumentation(
+        value='committers',
+        doc='notify committers of the last commit',
+    )
+
     COMPONENT_DIFF_OWNERS = EnumValueWithDocumentation(
         value='component_diff_owners',
         doc='notify the codeowners of a component. CODEOWNERS file must exist',
@@ -68,6 +68,26 @@ class NotificationRecipients(EnumWithDocumentation):
     CODEOWNERS = EnumValueWithDocumentation(
         value='codeowners',
         doc='notify the codeowners of the repository. CODEOWNERS file must exist',
+    )
+
+
+class NotificationSlack(EnumWithDocumentation):
+    CHANNEL_CFGS = EnumValueWithDocumentation(
+        value='channel_cfgs',
+        doc='''
+                the slack channel configurations to use
+
+                Example:
+
+                .. code-block:: yaml
+
+                    slack:
+                      channel_cfgs:
+                      - channel_names:
+                        - 'my_slack_channel'
+                        - 'my_other_slack_channel'
+                        slack_cfg_name: 'my_slack_cfg_name'
+                ''',
     )
 
 
@@ -108,6 +128,12 @@ NOTIFICATION_CFG_ATTRS = (
         ''',
         type=typing.List[str],
     ),
+    AttributeSpec.optional(
+        name='slack',
+        default=None,
+        doc='send notification via Slack',
+        type=NotificationSlack,
+    )
 )
 
 
@@ -135,6 +161,9 @@ class NotificationCfg(ModelBase):
 
     def cfg_callback(self):
         return self.raw.get('cfg_callback')
+
+    def slack(self):
+        return self.raw.get('slack')
 
 
 NOTIFICATION_CFG_SET_ATTRS = (
