@@ -1,3 +1,4 @@
+import collections.abc
 import dataclasses
 import enum
 import functools
@@ -167,7 +168,7 @@ class OciImageReference:
             return OciTagType.NO_TAG
 
     @property
-    def parsed_digest_tag(self) -> typing.Tuple[str, str]:
+    def parsed_digest_tag(self) -> tuple[str, str]:
         if not self.tag_type is OciTagType.DIGEST:
             raise ValueError(f'not a digest-tag: {str(self)=}')
 
@@ -257,7 +258,7 @@ class OciBlobRef:
 @dataclasses.dataclass
 class OciImageManifest:
     config: OciBlobRef
-    layers: typing.Sequence[OciBlobRef]
+    layers: collections.abc.Sequence[OciBlobRef]
     mediaType: str = OCI_MANIFEST_SCHEMA_V2_MIME
     schemaVersion: int = 2
     annotations: dict = dataclasses.field(default_factory=dict)
@@ -277,7 +278,7 @@ class OciImageManifest:
             'annotations': self.annotations,
         }
 
-    def blobs(self) -> typing.Sequence[OciBlobRef]:
+    def blobs(self) -> collections.abc.Sequence[OciBlobRef]:
         yield self.config
         yield from self.layers
 
@@ -300,13 +301,13 @@ class OciImageManifestV1:
     name: str
     tag: str
     architecture: str
-    fsLayers: typing.List[OciBlobRefV1]
-    history: typing.List[typing.Dict] # don't care about details
-    signatures: typing.List[typing.Dict] = empty_dict # don't care about details
+    fsLayers: list[OciBlobRefV1]
+    history: list[dict] # don't care about details
+    signatures: list[dict] = empty_dict # don't care about details
     schemaVersion: int = 1
     layers = None # to be initialised by factory-function
 
-    def blobs(self) -> typing.Sequence[OciBlobRef]:
+    def blobs(self) -> collections.abc.Sequence[OciBlobRef]:
         if not self.layers:
             raise ValueError('instance was not properly initialised')
 
@@ -320,8 +321,8 @@ class OciPlatform:
     '''
     architecture: str
     os: str # could also be a dict (see spec)
-    variant: typing.Optional[str] = None
-    features: typing.Optional[list[str]] = dataclasses.field(default_factory=list)
+    variant: str | None = None
+    features: list[str] | None = dataclasses.field(default_factory=list)
 
     def as_dict(self) -> dict:
         # need custom serialisation, because some OCI registries do not like null-values
