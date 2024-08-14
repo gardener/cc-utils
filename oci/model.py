@@ -176,6 +176,11 @@ class OciImageReference:
         return algorithm, digest
 
     @property
+    def digest(self) -> str:
+        _, digest = self.parsed_digest_tag
+        return digest
+
+    @property
     @functools.cache
     def urlparsed(self) -> urllib.parse.ParseResult:
         if not '://' in (img_ref := str(self)):
