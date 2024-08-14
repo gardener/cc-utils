@@ -197,8 +197,6 @@ subject = 'Step {s} for {p}:{b} failed!'.format(
 def repos():
   if job_variant.has_main_repository():
     yield job_variant.main_repository()
-    if job_variant.has_publish_repository(job_variant.main_repository().logical_name()):
-      yield job_variant.publish_repository(job_variant.main_repository().logical_name())
 
 repo_cfgs = list(repos())
 src_dirs = [repo_cfg.resource_name() for repo_cfg in repo_cfgs]
