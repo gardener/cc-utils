@@ -55,6 +55,7 @@ class PrefixUploader:
         self,
         prefix,
         mangle=True,
+        mangle_replacement_char='_',
         convert_to_relative_refs=False,
         **kwargs
     ):
@@ -62,6 +63,7 @@ class PrefixUploader:
 
         self._prefix = prefix
         self._mangle = mangle
+        self._mangle_replacement_char = mangle_replacement_char
         self._convert_to_relative_refs = convert_to_relative_refs
 
     def process(
@@ -82,7 +84,7 @@ class PrefixUploader:
         src_tag = src_ref.tag
 
         if self._mangle:
-            src_base_ref = src_base_ref.replace('.', '_')
+            src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
 
         tgt_ref = ci.util.urljoin(
             self._prefix,
