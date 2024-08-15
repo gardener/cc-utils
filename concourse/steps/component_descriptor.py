@@ -45,6 +45,9 @@ def base_component_descriptor_v2(
     if parsed_version.finalize_version() == parsed_version:
         # "final" version --> there will be a tag, later (XXX hardcoded hack)
         src_ref = f'refs/tags/{effective_version}'
+    elif parsed_version.prerelease.startswith('timestamp'):
+        # prerelease is the build timestamp, not a "real" ref
+        src_ref = None
     else:
         # let's hope the version contains something committish
         if parsed_version.build:

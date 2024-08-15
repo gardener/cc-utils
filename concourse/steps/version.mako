@@ -1,5 +1,6 @@
 <%def name="version_step(job_step, job_variant, indent)", filter="indent_func(indent),trim">
 <%
+import datetime
 import os
 from makoutil import indent_func
 from concourse.steps import step_lib
@@ -43,6 +44,9 @@ elif version_operation in ('finalize-skip-patchlevel-zero', 'finalise-skip-patch
   version_operation_kwargs['skip_patchlevel_zero'] = True
 elif version_operation == 'noop':
   version_operation_kwargs['operation'] = 'noop'
+elif version_operation == 'inject-timestamp':
+  version_operation_kwargs['operation'] = 'set_prerelease'
+  prerelease = f'timestamp-{int(datetime.datetime.now(tz=datetime.timezone.utc).timestamp())}'
 elif version_operation == 'inject-branch-name':
   version_operation_kwargs['operation'] = 'set_prerelease'
   prerelease = branch_name
