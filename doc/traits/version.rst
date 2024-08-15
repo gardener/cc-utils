@@ -26,6 +26,8 @@ Component versions must be valid `SemVer <https://semver.org>`_ versions.
 +--------------------+------------------------------------------------------+
 | inject-commit-hash | set version suffix to main repo's head commit hash   |
 +--------------------+------------------------------------------------------+
+| inject-timestamp   | set version suffix to the POSIX timestamp            |
++--------------------+------------------------------------------------------+
 | inject-branch-name | set version suffix to main repository's branch name  |
 +--------------------+------------------------------------------------------+
 | use-branch-name    | set version to branch name                           |
