@@ -944,8 +944,15 @@ class Client:
         octets_count: int,
         data: requests.models.Response,
         max_chunk=1024 * 1024 * 1, # 1 MiB
-        mimetype: str='application/data',
+        mimetype: str='application/octet-stream',
     ):
+        '''
+        uploads blob as part of an image-upload as specified in oci-distribution-spec:
+        https://github.com/opencontainers/distribution-spec/blob/main/spec.md#push
+
+        mimetype should not be set to a different value than the default. It is exposed for
+        users seeking lowlevel control.
+        '''
         image_reference = om.OciImageReference(image_reference)
         head_res = self.head_blob(
             image_reference=image_reference,
@@ -978,6 +985,7 @@ class Client:
                 digest=digest,
                 octets_count=octets_count,
                 data=data,
+                mimetype=mimetype,
             )
         elif octets_count >= max_chunk and (data_is_generator or data_is_requests_resp):
             # workaround: write into temporary file, as at least GCR does not implement
@@ -1000,6 +1008,7 @@ class Client:
                     digest=digest,
                     octets_count=octets_count,
                     data=tf,
+                    mimetype=mimetype,
                 )
         else:
             if data_is_requests_resp:
@@ -1010,6 +1019,7 @@ class Client:
                       octets_count=octets_count,
                       data_iterator=data.iter_content(chunk_size=max_chunk),
                       chunk_size=max_chunk,
+                      mimetype=mimetype,
                   )
             else:
               raise NotImplementedError
@@ -1021,6 +1031,7 @@ class Client:
         octets_count: int,
         data_iterator: typing.Iterator[bytes],
         chunk_size: int=1024 * 1024 * 16, # 16 MiB
+        mimetype='application/octect-stream',
     ):
         image_reference = om.OciImageReference(image_reference)
         scope = _scope(image_reference=image_reference, action='push,pull')
@@ -1070,7 +1081,7 @@ class Client:
                 data=data,
                 headers={
                  'Content-Length': str(octets_to_send),
-                 'Content-Type': 'application/octet-stream',
+                 'Content-Type': mimetype,
                  'Content-Range': f'{crange_from}-{crange_to}',
                  'Range': f'{crange_from}-{crange_to}',
                 }
@@ -1103,6 +1114,7 @@ class Client:
         digest: str,
         octets_count: int,
         data: bytes,
+        mimetype: str='application/octet-stream',
     ):
         logger.debug(f'single-post {image_reference=} {octets_count=}')
         image_reference = om.OciImageReference(image_reference)
@@ -1141,7 +1153,7 @@ class Client:
             scope=scope,
             method='PUT',
             headers={
-                'content-type': 'application/octet-stream',
+                'content-type': mimetype,
                 'content-length': str(octets_count),
             },
             data=data,
