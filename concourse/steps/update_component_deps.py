@@ -16,6 +16,7 @@ import cnudie.util
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
+import dso.labels
 import github.util as gu
 import gitutil
 import model.container_registry as cr
@@ -228,6 +229,19 @@ def greatest_references(
             yield matching_refs[-1]
 
 
+def deserialise_extra_component_references(
+    extra_crefs_label: dso.labels.ExtraComponentReferencesLabel,
+) -> collections.abc.Generator[gci.componentmodel.ComponentReference, None, None]:
+    for extra_cref in extra_crefs_label.value:
+        extra_cref_id = extra_cref.component_reference
+
+        yield gci.componentmodel.ComponentReference(
+            name=extra_cref_id.name,
+            componentName=extra_cref_id.name,
+            version=extra_cref_id.version,
+        )
+
+
 def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: ucd.UpstreamUpdatePolicy,
@@ -238,8 +252,20 @@ def determine_upgrade_prs(
 ) -> collections.abc.Iterable[tuple[
     gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
 ]]:
+    component = current_component()
+    component_references = component.componentReferences
+
+    # don't use the deserialisation within `cnudie.iter.iter` here to avoid unnecessary lookups of
+    # component references and keep `ComponentReference` instances (!= `Component` instances)
+    if extra_crefs_label := component.find_label(
+        name=dso.labels.ExtraComponentReferencesLabel.name,
+    ):
+        extra_crefs_label = dso.labels.deserialise_label(extra_crefs_label)
+        extra_component_references = list(deserialise_extra_component_references(extra_crefs_label))
+        component_references = component_references + extra_component_references
+
     for greatest_component_reference in greatest_references(
-        references=current_component().componentReferences,
+        references=component_references,
     ):
         versions_to_consider = determine_reference_versions(
             component_name=greatest_component_reference.componentName,
