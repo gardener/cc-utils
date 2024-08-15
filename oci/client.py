@@ -942,7 +942,7 @@ class Client:
         image_reference: typing.Union[str, om.OciImageReference],
         digest: str,
         octets_count: int,
-        data: requests.models.Response,
+        data: requests.models.Response | collections.abc.Generator | bytes | typing.IO,
         max_chunk=1024 * 1024 * 1, # 1 MiB
         mimetype: str='application/octet-stream',
     ):
