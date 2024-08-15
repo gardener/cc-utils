@@ -1,3 +1,5 @@
+import collections.abc
+import dataclasses
 import datetime
 import functools
 import logging
@@ -5,21 +7,41 @@ import logging
 import github3.repos
 
 import delivery.client
-import delivery.model
+import delivery.model as dm
 
 
 logger = logging.getLogger(__name__)
 
 
-def _milestone_title(sprint: delivery.model.Sprint) -> str:
-    return f'sprint-{sprint.name}'
+@dataclasses.dataclass(frozen=True)
+class MilestoneConfiguration:
+    title_callback: collections.abc.Callable[[dm.Sprint], str] = lambda sprint: sprint.name
+    title_prefix: str | None = 'sprint-'
+    title_suffix: str | None = None
+    due_date_callback: collections.abc.Callable[[dm.Sprint], datetime.datetime] \
+        = lambda sprint: sprint.find_sprint_date('release_decision').value
+
+
+def _milestone_title(
+    sprint: dm.Sprint,
+    milestone_cfg: MilestoneConfiguration=None,
+) -> str:
+    if not milestone_cfg:
+        milestone_cfg = MilestoneConfiguration()
+
+    title = milestone_cfg.title_callback(sprint)
+    title_prefix = milestone_cfg.title_prefix or ''
+    title_suffix = milestone_cfg.title_suffix or ''
+
+    return f'{title_prefix}{title}{title_suffix}'
 
 
 def find_sprint_milestone(
     repo: github3.repos.Repository,
-    sprints: tuple[delivery.model.Sprint],
+    sprints: tuple[dm.Sprint],
+    milestone_cfg: MilestoneConfiguration=None,
 ) -> tuple[
-    delivery.model.Sprint,
+    dm.Sprint,
     github3.repos.repo.milestone.Milestone,
     list[github3.repos.repo.milestone.Milestone],
 ]:
@@ -29,7 +51,10 @@ def find_sprint_milestone(
 
     for sprint in sprints:
         for ms in all_milestones:
-            if ms.title == _milestone_title(sprint=sprint):
+            if ms.title == _milestone_title(
+                sprint=sprint,
+                milestone_cfg=milestone_cfg,
+            ):
                 sprint_milestone = ms
                 break
 
@@ -51,14 +76,19 @@ def find_sprint_milestone(
 @functools.cache
 def find_or_create_sprint_milestone(
     repo: github3.repos.Repository,
-    sprints: tuple[delivery.model.Sprint],
+    sprints: tuple[dm.Sprint],
+    milestone_cfg: MilestoneConfiguration=None,
 ) -> tuple[
     github3.repos.repo.milestone.Milestone | None,
     list[github3.repos.repo.milestone.Milestone],
 ]:
+    if not milestone_cfg:
+        milestone_cfg = MilestoneConfiguration()
+
     sprint, milestone, failed_milestones = find_sprint_milestone(
         repo=repo,
         sprints=sprints,
+        milestone_cfg=milestone_cfg,
     )
 
     if milestone:
@@ -70,17 +100,18 @@ def find_or_create_sprint_milestone(
         # we can't do anything here so write info to ticket
         return (None, failed_milestones)
 
-    title = _milestone_title(sprint=sprint)
-
-    sprint_release_decision = sprint.find_sprint_date(
-        name='release_decision',
+    title = _milestone_title(
+        sprint=sprint,
+        milestone_cfg=milestone_cfg,
     )
+
+    due_date = milestone_cfg.due_date_callback(sprint)
 
     ms = repo.create_milestone(
         title=title,
         state='open',
         description=f'used to track issues for upcoming sprint {title}',
-        due_on=sprint_release_decision.value.isoformat(),
+        due_on=due_date.isoformat(),
     )
 
     return (ms, failed_milestones)
@@ -90,7 +121,7 @@ def find_or_create_sprint_milestone(
 def _sprints(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
     today: datetime.date=datetime.date.today(), # used to refresh the cache daily
-) -> list[delivery.model.Sprint]:
+) -> list[dm.Sprint]:
     return delivery_svc_client.sprints()
 
 
@@ -98,7 +129,7 @@ def target_sprints(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
     latest_processing_date: datetime.date,
     sprints_count: int=1,
-) -> tuple[delivery.model.Sprint]:
+) -> tuple[dm.Sprint]:
     sprints = _sprints(
         delivery_svc_client=delivery_svc_client,
     )
