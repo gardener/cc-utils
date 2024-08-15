@@ -1,10 +1,10 @@
+import collections.abc
 import logging
 import os
 import subprocess
 import tempfile
 import time
 import traceback
-import typing
 
 import gci.componentmodel
 import github3.exceptions
@@ -12,29 +12,18 @@ import github3.repos.repo
 
 import ccc.github
 import ci.util
-import cnudie.retrieve
 import cnudie.util
-import concourse.model.traits.update_component_deps
-import concourse.paths
+import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
-import github.util
+import github.util as gu
 import gitutil
 import model.container_registry as cr
 import release_notes.fetch as release_notes_fetch
 import version
-from concourse.model.traits.update_component_deps import (
-    MergePolicy,
-    MergeMethod,
-)
-from github.util import (
-    GitHubRepoBranch,
-)
+
 
 logger = logging.getLogger('step.update_component_deps')
-
-
-UpstreamUpdatePolicy = concourse.model.traits.update_component_deps.UpstreamUpdatePolicy
 
 
 def current_product_descriptor():
@@ -73,9 +62,9 @@ def close_obsolete_pull_requests(
 def upgrade_pr_exists(
     component_reference: gci.componentmodel.ComponentReference,
     component_version: str,
-    upgrade_requests: typing.Iterable[github.util.UpgradePullRequest],
-    request_filter: typing.Callable[[github.util.UpgradePullRequest], bool] = lambda rq: True,
-) -> github.util.UpgradePullRequest | None:
+    upgrade_requests: collections.abc.Iterable[gu.UpgradePullRequest],
+    request_filter: collections.abc.Callable[[gu.UpgradePullRequest], bool] = lambda rq: True,
+) -> gu.UpgradePullRequest | None:
     if any(
         (matching_rq := upgrade_rq).target_matches(
             reference=component_reference,
@@ -167,9 +156,9 @@ def determine_reference_versions(
     version_lookup,
     ocm_lookup,
     upstream_component_name: str=None,
-    upstream_update_policy: UpstreamUpdatePolicy=UpstreamUpdatePolicy.STRICTLY_FOLLOW,
+    upstream_update_policy: ucd.UpstreamUpdatePolicy=ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=False,
-) -> typing.Sequence[str]:
+) -> collections.abc.Sequence[str]:
     if upstream_component_name is None:
         # no upstream component defined - look for greatest released version
         latest_component_version = greatest_component_version(
@@ -194,10 +183,10 @@ def determine_reference_versions(
         ignore_prerelease_versions=ignore_prerelease_versions,
     )
 
-    if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+    if upstream_update_policy is ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW:
         return (version_candidate,)
 
-    elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
+    elif upstream_update_policy is ucd.UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
         hotfix_candidate = greatest_component_version_with_matching_minor(
             component_name=component_name,
             version_lookup=version_lookup,
@@ -214,8 +203,8 @@ def determine_reference_versions(
 
 
 def greatest_references(
-    references: typing.Iterable[gci.componentmodel.ComponentReference],
-) -> typing.Iterable[gci.componentmodel.ComponentReference]:
+    references: collections.abc.Iterable[gci.componentmodel.ComponentReference],
+) -> collections.abc.Iterable[gci.componentmodel.ComponentReference]:
     '''
     yields the component references from the specified iterable of ComponentReference that
     have the greatest version (grouped by component name).
@@ -241,12 +230,12 @@ def greatest_references(
 
 def determine_upgrade_prs(
     upstream_component_name: str,
-    upstream_update_policy: UpstreamUpdatePolicy,
-    upgrade_pull_requests: typing.Iterable[github.util.UpgradePullRequest],
+    upstream_update_policy: ucd.UpstreamUpdatePolicy,
+    upgrade_pull_requests: collections.abc.Iterable[gu.UpgradePullRequest],
     version_lookup,
     ocm_lookup,
     ignore_prerelease_versions=False,
-) -> typing.Iterable[typing.Tuple[
+) -> collections.abc.Iterable[tuple[
     gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
 ]]:
     for greatest_component_reference in greatest_references(
@@ -287,7 +276,7 @@ def determine_upgrade_prs(
                 if (
                     candidate_version_semver == reference_version_semver or
                     not upstream_component_name
-                    or upstream_update_policy is not UpstreamUpdatePolicy.STRICTLY_FOLLOW
+                    or upstream_update_policy is not ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW
                 ):
                     logger.info(
                         f'skipping (outdated) {greatest_component_reference=}; '
@@ -367,19 +356,19 @@ def create_upgrade_pr(
     from_ref: gci.componentmodel.ComponentReference,
     to_ref: gci.componentmodel.ComponentReference,
     to_version: str,
-    pull_request_util: github.util.PullRequestUtil,
+    pull_request_util: gu.PullRequestUtil,
     upgrade_script_path,
     upgrade_script_relpath,
-    githubrepobranch: GitHubRepoBranch,
+    githubrepobranch: gu.GitHubRepoBranch,
     repo_dir,
     github_cfg_name,
-    merge_policy: MergePolicy,
-    merge_method: MergeMethod,
+    merge_policy: ucd.MergePolicy,
+    merge_method: ucd.MergeMethod,
     version_lookup,
     component_descriptor_lookup,
     after_merge_callback=None,
     container_image:str=None,
-) -> github.util.UpgradePullRequest:
+) -> gu.UpgradePullRequest:
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
 
@@ -506,7 +495,7 @@ def create_upgrade_pr(
 
     try:
         pull_request = ls_repo.create_pull(
-            title=github.util.PullRequestUtil.calculate_pr_title(
+            title=gu.PullRequestUtil.calculate_pr_title(
                 reference=to_ref,
                 from_version=from_version,
                 to_version=to_version
@@ -522,7 +511,7 @@ def create_upgrade_pr(
         logger.info(f'Intercepted UnprocessableEntity exception. Listed errors: {e.errors}')
         raise
 
-    if merge_policy is MergePolicy.MANUAL:
+    if merge_policy is ucd.MergePolicy.MANUAL:
         return pull_request_util._pr_to_upgrade_pull_request(pull_request)
 
     logger.info(
@@ -531,18 +520,18 @@ def create_upgrade_pr(
     )
 
     def  _merge_pr(
-        merge_method: MergeMethod,
+        merge_method: ucd.MergeMethod,
         pull_request: github3.github.pulls.ShortPullRequest,
         attempts: int,
         delay: int = 2,
     ):
         if attempts > 0:
             try:
-                if merge_method is MergeMethod.MERGE:
+                if merge_method is ucd.MergeMethod.MERGE:
                     pull_request.merge(merge_method='merge')
-                elif merge_method is MergeMethod.REBASE:
+                elif merge_method is ucd.MergeMethod.REBASE:
                     pull_request.merge(merge_method='rebase')
-                elif merge_method is MergeMethod.SQUASH:
+                elif merge_method is ucd.MergeMethod.SQUASH:
                     pull_request.merge(merge_method='squash')
                 else:
                     raise NotImplementedError(f'{merge_method=}')
@@ -584,7 +573,7 @@ def create_upgrade_pr(
 def push_upgrade_commit(
     ls_repo: github3.repos.repo.Repository,
     commit_message: str,
-    githubrepobranch: GitHubRepoBranch,
+    githubrepobranch: gu.GitHubRepoBranch,
     repo_dir: str,
 ) -> str:
     # mv diff into commit and push it
