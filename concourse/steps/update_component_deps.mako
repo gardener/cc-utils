@@ -53,11 +53,6 @@ import oci.auth as oa
 logger = logging.getLogger('step.update_component_deps')
 
 
-from github.util import (
-    GitHubRepoBranch,
-)
-from ci.util import check_env
-
 ${step_lib('update_component_deps')}
 ${step_lib('images')}
 
@@ -72,7 +67,7 @@ cfg_factory = ci.util.ctx().cfg_factory()
 github_cfg_name = '${github_cfg_name}'
 github_cfg=cfg_factory.github(github_cfg_name)
 
-githubrepobranch = GitHubRepoBranch(
+githubrepobranch = github.util.GitHubRepoBranch(
     github_config=github_cfg,
     repo_owner=REPO_OWNER,
     repo_name=REPO_NAME,
@@ -165,8 +160,8 @@ for from_ref, to_version in determine_upgrade_prs(
         merge_policy = applicable_merge_policy[0].merge_mode()
         merge_method = applicable_merge_policy[0].merge_method()
     elif len(applicable_merge_policy) == 0:
-        merge_policy = MergePolicy.MANUAL
-        merge_method = MergeMethod.MERGE
+        merge_policy = concourse.model.traits.update_component_deps.MergePolicy.MANUAL
+        merge_method = concourse.model.traits.update_component_deps.MergeMethod.MERGE
     else:
         merge_policy = applicable_merge_policy[0].merge_mode()
         merge_method = applicable_merge_policy[0].merge_method()
