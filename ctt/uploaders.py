@@ -57,6 +57,7 @@ class PrefixUploader:
         mangle=True,
         mangle_replacement_char='_',
         convert_to_relative_refs=False,
+        remove_prefixes=[],
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -65,6 +66,7 @@ class PrefixUploader:
         self._mangle = mangle
         self._mangle_replacement_char = mangle_replacement_char
         self._convert_to_relative_refs = convert_to_relative_refs
+        self._remove_prefixes = remove_prefixes
 
     def process(
         self,
@@ -82,6 +84,9 @@ class PrefixUploader:
         src_ref = om.OciImageReference.to_image_ref(src_ref)
         src_base_ref = src_ref.ref_without_tag
         src_tag = src_ref.tag
+
+        for remove_prefix in self._remove_prefixes:
+            src_base_ref = src_base_ref.removeprefix(remove_prefix)
 
         if self._mangle:
             src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
