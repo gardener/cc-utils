@@ -210,6 +210,7 @@ def sign_image(
     on_exist: OnExist | str=OnExist.APPEND,
     signature_image_reference: str=None,
     oci_client: oc.Client=None,
+    payload: bytes | None=None,
 ) -> tuple[str | om.OciImageReference, om.OciImageManifest]:
     '''
     creates an OCI Image signature as understood by cosign. if passed, public-key is added
@@ -247,11 +248,12 @@ def sign_image(
         logger.info(f'signature artefact exists: {signature_image_reference} - skipping')
         return
 
-    # payload is normalised JSON w/ reference to signed image. It is expected as (only)
-    # layer-blob for signature artefact
-    payload = payload_bytes(
-        image_reference=image_reference,
-    )
+    if not payload:
+        # payload is normalised JSON w/ reference to signed image. It is expected as (only)
+        # layer-blob for signature artefact
+        payload = payload_bytes(
+            image_reference=image_reference,
+        )
     payload_size = len(payload)
     payload_digest = f'sha256:{hashlib.sha256(payload).hexdigest()}'
 
