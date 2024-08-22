@@ -15,6 +15,8 @@ import oci.client as oc
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
+_no_overwrite_sentinel = object()
+
 
 class OnExist(enum.StrEnum):
     SKIP = 'skip'
@@ -25,10 +27,12 @@ class OnExist(enum.StrEnum):
 def payload_bytes(
     image_reference: om.OciImageReference | str,
     annotations: dict | None=None,
+    overwrite_docker_reference: str=_no_overwrite_sentinel,
 ) -> bytes:
     '''
     returns payload for given OCI Image Reference + optional annotations as output by
-    `cosign generate`
+    `cosign generate`, except `docker-reference` can be overwritten to allow replication of
+    artefacts as well as their signature artefacts (digest has to stay the same)
 
     Passed image-reference must have digest-tag.
     '''
@@ -36,10 +40,15 @@ def payload_bytes(
     if not image_reference.has_digest_tag:
         raise ValueError('image-reference must have digest tag', image_reference)
 
+    if overwrite_docker_reference is _no_overwrite_sentinel:
+        docker_reference = image_reference.ref_without_tag
+    else:
+        docker_reference = overwrite_docker_reference
+
     payload = {
         'critical': {
             'identity': {
-                'docker-reference': image_reference.ref_without_tag,
+                'docker-reference': docker_reference,
             },
             'image': {
                 'docker-manifest-digest': image_reference.tag,
