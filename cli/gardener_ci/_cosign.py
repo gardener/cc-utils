@@ -95,4 +95,5 @@ def sign(
         public_key=signature.public_key.replace('\n', ''),
         on_exist=on_exist,
         oci_client=oci_client,
+        payload=payload_bytes,
     )
