@@ -148,9 +148,6 @@ def sign_manifest(
             existing_signature = a.get(_cosign_signature_annotation_name, None)
             # todo: ideally, signatures should be parsed and compared independent of format
             #       cosign seems to expect base64-part w/o PEM-headers (BEGIN/END), though
-            # todo2: should we also check digest (there might be multiple payloads in same
-            #        signature artefact; otoh, collissions are unlikely, so it should be safe to
-            #        not check this explicitly
             if existing_signature == signature:
                 logger.info(f'found signature in {layer_idx=}')
                 logger.info('skipping (will not redundantly add signature again)')
@@ -169,6 +166,12 @@ def sign_manifest(
                 # we found an existing signature, however with different signing algorithm
                 # -> do not skip, as resigning with different algorithm is likely to be
                 #    caller's intent
+                continue
+
+            if payload_digest != layer.digest:
+                # the just calculated payload digest is different from the one of the existing
+                # signature, so don't skip as resigning with different payload is likely to be
+                # callers intent
                 continue
 
             if existing_public_key == public_key:
