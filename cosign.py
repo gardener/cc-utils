@@ -260,6 +260,13 @@ def sign_image(
         logger.info(f'signature artefact exists: {signature_image_reference} - skipping')
         return
 
+    if exists:
+        manifest = oci_client.manifest(
+            image_reference=signature_image_reference,
+        )
+    else:
+        manifest = None
+
     if not payload:
         # payload is normalised JSON w/ reference to signed image. It is expected as (only)
         # layer-blob for signature artefact
@@ -269,27 +276,21 @@ def sign_image(
     payload_size = len(payload)
     payload_digest = f'sha256:{hashlib.sha256(payload).hexdigest()}'
 
-    if on_exist is OnExist.APPEND and exists:
-        manifest = oci_client.manifest(
+    if not manifest or not any(l.digest == payload_digest for l in manifest.layers):
+        oci_client.put_blob(
             image_reference=signature_image_reference,
+            digest=payload_digest,
+            octets_count=payload_size,
+            data=payload,
         )
 
-        for layer in manifest.layers:
-            if layer.digest == payload_digest:
-                upload_payload = False
-                break
-        else:
-            # payload not yet present
-            upload_payload = True
-    else:
-        upload_payload = True
+    cfg_blob = cfg_blob_bytes(
+        payload_digest=payload_digest,
+    )
+    cfg_blob_size = len(cfg_blob)
+    cfg_blob_digest = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
 
-        cfg_blob = cfg_blob_bytes(
-            payload_digest=payload_digest,
-        )
-        cfg_blob_size = len(cfg_blob)
-        cfg_blob_digest = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
-
+    if not manifest or manifest.config.digest != cfg_blob_digest:
         oci_client.put_blob(
             image_reference=image_reference,
             digest=cfg_blob_digest,
@@ -297,6 +298,16 @@ def sign_image(
             data=cfg_blob,
         )
 
+    if manifest:
+        # update manifest's cfg blob to the one we just created, it may be different because
+        # we used to create those cfg blobs using the cosign command itself (which has slightly
+        # different semantics) in the past or because the contained payload digest is different
+        manifest.config = om.OciBlobRef(
+            digest=cfg_blob_digest,
+            mediaType='application/vnd.oci.image.config.v1+json',
+            size=cfg_blob_size,
+        )
+    else:
         manifest = om.OciImageManifest(
             config=om.OciBlobRef(
                 digest=cfg_blob_digest,
@@ -317,14 +328,6 @@ def sign_image(
         public_key=public_key,
         on_exist=on_exist,
     )
-
-    if upload_payload:
-        oci_client.put_blob(
-            image_reference=signature_image_reference,
-            digest=payload_digest,
-            octets_count=payload_size,
-            data=payload,
-        )
 
     manifest_bytes = json.dumps(signed_manifest.as_dict()).encode('utf-8')
 
