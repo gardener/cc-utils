@@ -4,11 +4,10 @@
 
 
 import json as json_m
-import pathlib
 import sys
 import yaml
 
-from ci.util import CliHints, ctx,existing_dir
+from ci.util import CliHints, ctx
 from model import ConfigFactory, ConfigSetSerialiser as CSS
 
 
@@ -26,10 +25,7 @@ def export_kubeconfig(
     cfg_factory = ctx().cfg_factory()
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
 
-    destination_path = pathlib.Path(output_file).resolve()
-    existing_dir(destination_path.parent)
-
-    with destination_path.open(mode='w') as f:
+    with output_file.open(mode='w') as f:
         yaml.dump(kubernetes_cfg.kubeconfig(), f)
 
 
