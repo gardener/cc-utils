@@ -80,6 +80,9 @@ def attribute(
                 f.write(str(output))
     else:
         if isinstance(output, bytes):
+            if sys.stdout.isatty():
+                print('Error: refusing to output binary data to terminal (redirect stdout)')
+                exit(1)
             sys.stdout.buffer.write(output)
         else:
             print(str(output))
@@ -109,6 +112,9 @@ def model_element(
                 f.write(str(cfg))
     else:
         if isinstance(cfg, bytes):
+            if sys.stdout.isatty():
+                print('Error: refusing to output binary data to terminal (redirect stdout)')
+                exit(1)
             sys.stdout.buffer.write(cfg)
         else:
             print(str(cfg))
