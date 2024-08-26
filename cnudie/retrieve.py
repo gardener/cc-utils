@@ -788,6 +788,8 @@ def component_diff(
     ignore_component_names=(),
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ) -> cnudie.util.ComponentDiff:
+    import cnudie.iter as ci # late import to avoid cyclic dependencies
+
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
 
@@ -795,20 +797,18 @@ def component_diff(
         component_descriptor_lookup = create_default_component_descriptor_lookup()
 
     left_components = tuple(
-        c for c in
-        components(
+        component_node.component for component_node in ci.iter(
             component=left_component,
-            component_descriptor_lookup=component_descriptor_lookup,
-        )
-        if c.name not in ignore_component_names
+            lookup=component_descriptor_lookup,
+            node_filter=ci.Filter.components,
+        ) if component_node.component.name not in ignore_component_names
     )
     right_components = tuple(
-        c for c in
-        components(
+        component_node.component for component_node in ci.iter(
             component=right_component,
-            component_descriptor_lookup=component_descriptor_lookup,
-        )
-        if c.name not in ignore_component_names
+            lookup=component_descriptor_lookup,
+            node_filter=ci.Filter.components,
+        ) if component_node.component.name not in ignore_component_names
     )
 
     return cnudie.util.diff_components(
