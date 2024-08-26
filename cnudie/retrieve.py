@@ -730,58 +730,6 @@ def create_default_component_descriptor_lookup(
     )
 
 
-def components(
-    component: typing.Union[cm.ComponentDescriptor, cm.Component],
-    component_descriptor_lookup: ComponentDescriptorLookupById=None,
-):
-    component = cnudie.util.to_component(component)
-
-    if not component_descriptor_lookup:
-        component_descriptor_lookup = create_default_component_descriptor_lookup(
-            ocm_repository_lookup=ocm_repository_lookup(
-                component.current_repository_ctx(),
-            ),
-        )
-
-    _visited_component_versions = [
-        (component.name, component.version)
-    ]
-
-    def resolve_component_dependencies(
-        component: cm.Component,
-    ) -> typing.Generator[cm.Component, None, None]:
-        nonlocal _visited_component_versions
-
-        yield component
-
-        for component_ref in component.componentReferences:
-            cref = (component_ref.componentName, component_ref.version)
-
-            if cref in _visited_component_versions:
-                continue
-            else:
-                _visited_component_versions.append(cref)
-
-            resolved_component_descriptor = component_descriptor_lookup(
-                cm.ComponentIdentity(
-                    name=component_ref.componentName,
-                    version=component_ref.version,
-                ),
-            )
-
-            if not resolved_component_descriptor:
-                logger.error(f'failed to find {component_ref=}')
-                raise RuntimeError(component_ref, component_descriptor_lookup)
-
-            yield from resolve_component_dependencies(
-                component=resolved_component_descriptor.component,
-            )
-
-    yield from resolve_component_dependencies(
-        component=component,
-    )
-
-
 def component_diff(
     left_component: typing.Union[cm.Component, cm.ComponentDescriptor],
     right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
