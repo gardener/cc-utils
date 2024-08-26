@@ -963,10 +963,11 @@ def close_issue(
 
     returns True if close was successful, False otherwise
     '''
-
     def try_close() -> bool:
         try:
-            return issue.close()
+            return issue.edit(
+                state='closed',
+            )
 
         except github3.exceptions.UnprocessableEntity:
             # likely that assignee was suspended from github
@@ -975,7 +976,9 @@ def close_issue(
                 raise
 
             issue.remove_assignees(issue.assignees)
-            return issue.close()
+            return issue.edit(
+                state='closed',
+            )
 
     closed = try_close()
     if not closed:
