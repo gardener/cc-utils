@@ -223,6 +223,7 @@ def sign_image(
     signature_image_reference: str=None,
     oci_client: oc.Client=None,
     payload: bytes | None=None,
+    annotations: dict[str, str] | None=None,
 ) -> tuple[str | om.OciImageReference, om.OciImageManifest]:
     '''
     creates an OCI Image signature as understood by cosign. if passed, public-key is added
@@ -307,6 +308,9 @@ def sign_image(
             mediaType='application/vnd.oci.image.config.v1+json',
             size=cfg_blob_size,
         )
+
+        if annotations:
+            manifest.annotations = manifest.annotations | annotations
     else:
         manifest = om.OciImageManifest(
             config=om.OciBlobRef(
@@ -316,7 +320,7 @@ def sign_image(
             ),
             mediaType='application/vnd.oci.image.manifest.v1+json',
             layers=[],
-            annotations={},
+            annotations=annotations or {},
         )
 
     signed_manifest = sign_manifest(
