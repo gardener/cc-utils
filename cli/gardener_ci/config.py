@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import pathlib
 import json as json_m
+import pathlib
+import sys
 import yaml
 
 from ci.util import CliHints, ctx,existing_dir
@@ -68,13 +69,20 @@ def attribute(
     elif yaml:
         output = globals()['yaml'].dump(attrib)
     else:
-        output = str(attrib)
+        output = attrib
 
     if output_file:
-        with open(output_file, 'w') as f:
-            f.write(output)
+        if isinstance(output, bytes):
+            with open(output_file, 'wb') as f:
+                f.write(output)
+        else:
+            with open(output_file, 'w') as f:
+                f.write(str(output))
     else:
-        print(output)
+        if isinstance(output, bytes):
+            sys.stdout.buffer.write(output)
+        else:
+            print(str(output))
 
 
 def model_element(
@@ -93,10 +101,17 @@ def model_element(
         cfg = getter()
 
     if output_file:
-        with open(output_file, 'w') as f:
-            f.write(str(cfg))
+        if isinstance(cfg, bytes):
+            with open(output_file, 'wb') as f:
+                f.write(cfg)
+        else:
+            with open(output_file, 'w') as f:
+                f.write(str(cfg))
     else:
-        print(str(cfg))
+        if isinstance(cfg, bytes):
+            sys.stdout.buffer.write(cfg)
+        else:
+            print(str(cfg))
 
 
 def __add_module_command_args(parser):
