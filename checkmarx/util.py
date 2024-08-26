@@ -14,6 +14,7 @@ import github3.repos
 
 import ccc.delivery
 import ccc.github
+import cnudie.iter
 import cnudie.retrieve
 import checkmarx.client
 import checkmarx.model as model
@@ -42,8 +43,19 @@ def scan_sources(
     include_paths: typing.Sequence[str] = (),
     force: bool = False,
 ) -> model.FinishedScans:
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+            component_descriptor.component.current_repository_ctx(),
+        ),
+    )
 
-    components = tuple(cnudie.retrieve.components(component=component_descriptor))
+    components = tuple(
+        component_node.component for component_node in cnudie.iter.iter(
+            component=component_descriptor.component,
+            lookup=component_descriptor_lookup,
+            node_filter=cnudie.iter.Filter.components,
+        )
+    )
 
     # identify scan artifacts and collect them in a sequence
     artifacts_gen = _get_scan_artifacts_from_components(

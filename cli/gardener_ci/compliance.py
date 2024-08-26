@@ -23,12 +23,12 @@ import re
 import dacite
 import yaml
 
-import gci.componentmodel as cm
-
 import ci.util
-import cnudie.util
+import cnudie.iter
 import cnudie.retrieve
+import cnudie.util
 import ctx
+import gci.componentmodel as cm
 import reutil
 
 
@@ -113,7 +113,7 @@ def diff(
     )
 
     def _components(
-        component,
+        component_descriptor: cm.ComponentDescriptor,
     ):
         if parsed.exclude_component_names:
             component_filter = reutil.re_filter(
@@ -124,21 +124,20 @@ def diff(
         else:
             component_filter = None
 
-        return tuple([
-            c for c in
-            cnudie.retrieve.components(
-                component=component,
-                component_descriptor_lookup=component_descriptor_lookup,
-            )
-            if not component_filter or (component_filter and component_filter(c))
-        ])
+        return tuple(
+            component_node.component for component_node in cnudie.iter.iter(
+                component=component_descriptor.component,
+                lookup=component_descriptor_lookup,
+                node_filter=cnudie.iter.Filter.components,
+            ) if not component_filter or component_filter(component_node.component)
+        )
 
     left_cd = component_descriptor_lookup(cm.ComponentIdentity(
         name=parsed.left_name,
         version=parsed.left_version,
     ))
     left_components = _components(
-        component=left_cd,
+        component_descriptor=left_cd,
     )
 
     right_cd = component_descriptor_lookup(cm.ComponentIdentity(
@@ -146,7 +145,7 @@ def diff(
         version=parsed.right_version,
     ))
     right_components = _components(
-        component=right_cd,
+        component_descriptor=right_cd,
     )
 
     def resource_version_id(component, resource):
