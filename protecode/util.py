@@ -298,7 +298,7 @@ def component_artifact_metadata(
                 digest=artefact.digest,
                 oci_client=oci_client,
             )
-            metadata['IMAGE_REFERENCE'] = image_reference
+            metadata['IMAGE_REFERENCE'] = image_reference.original_image_reference
             metadata['IMAGE_VERSION'] = artefact.version
     elif isinstance(artefact.access, cm.S3Access):
         metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'

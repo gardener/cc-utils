@@ -91,7 +91,7 @@ def cfg_blob_bytes(
 
 
 def default_signature_image_reference(
-    image_ref: str,
+    image_ref: str | om.OciImageReference,
 ) -> om.OciImageReference:
     '''
     calculate the (default) image reference of the cosign signature for a specific image.

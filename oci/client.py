@@ -706,7 +706,11 @@ class Client:
             size=size,
         )
 
-    def to_digest_hash(self, image_reference: str, accept: str=None):
+    def to_digest_hash(
+        self,
+        image_reference: str | om.OciImageReference,
+        accept: str=None,
+    ):
         image_reference = om.OciImageReference.to_image_ref(image_reference)
         if image_reference.has_digest_tag:
             return str(image_reference)

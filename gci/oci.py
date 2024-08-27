@@ -112,11 +112,13 @@ def image_ref_with_digest(
     image_reference: str | oci.model.OciImageReference,
     digest: gci.componentmodel.DigestSpec=None,
     oci_client: oci.client.Client=None,
-) -> str:
-    image_reference = oci.model.OciImageReference.to_image_ref(image_reference=image_reference)
+) -> oci.model.OciImageReference:
+    image_reference = oci.model.OciImageReference.to_image_ref(
+        image_reference=image_reference,
+    )
 
     if image_reference.has_digest_tag:
-        return image_reference.original_image_reference
+        return image_reference
 
     if not (digest and digest.value):
         if not oci_client:
@@ -132,4 +134,6 @@ def image_ref_with_digest(
             ).content).hexdigest(),
         )
 
-    return image_reference.with_tag(tag=digest.oci_tag)
+    return oci.model.OciImageReference.to_image_ref(
+        image_reference=image_reference.with_tag(tag=digest.oci_tag),
+    )
