@@ -208,9 +208,17 @@ class DigestUploader:
     '''
     sets `reference_target_by_digest` attribute in upload-request, which will result in
     target-component-descriptor's resouce's access use digest rather than tag to reference
-    oci image.
+    oci image. If `retain_symbolic_tag` is set, the symbolic tag is kept and the digest
+    is appended, otherwise the digest overwrites the symbolic tag.
     '''
+    def __init__(
+        self,
+        retain_symbolic_tag: bool=False,
+    ):
+        self._retain_symbolic_tag = retain_symbolic_tag
+
     def process(self, processing_job: pm.ProcessingJob, target_as_source=False):
         processing_job.upload_request.reference_target_by_digest = True
+        processing_job.upload_request.retain_symbolic_tag = self._retain_symbolic_tag
 
         return processing_job
