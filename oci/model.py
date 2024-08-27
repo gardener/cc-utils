@@ -107,7 +107,7 @@ class OciImageReference:
         returns the (normalised) image reference w/o the tag or digest tag.
         '''
         p = self.urlparsed
-        name = p.netloc + p.path.rsplit(':', 1)[0].rsplit('@', 1)[0]
+        name = p.netloc + p.path.rsplit('@', 1)[0].rsplit(':', 1)[0]
 
         return name
 
@@ -118,25 +118,19 @@ class OciImageReference:
         returns the (normalised) image name (omitting api-prefix and tag)
         '''
         p = self.urlparsed
-        name = p.path[1:].rsplit(':', 1)[0].rsplit('@', 1)[0]
+        name = p.path[1:].rsplit('@', 1)[0].rsplit(':', 1)[0]
 
         return name
 
     @property
     @functools.cache
     def has_digest_tag(self) -> bool:
-        if self.tag_type is OciTagType.DIGEST:
-            return True
-        else:
-            return False
+        return self.tag_type is OciTagType.DIGEST
 
     @property
     @functools.cache
     def has_symbolical_tag(self) -> bool:
-        if self.tag_type is OciTagType.SYMBOLIC:
-            return True
-        else:
-            return False
+        return self.tag_type is OciTagType.SYMBOLIC
 
     @property
     @functools.cache
@@ -188,7 +182,7 @@ class OciImageReference:
         return urllib.parse.urlparse(img_ref)
 
     def with_tag(self, tag: str) -> str:
-        if 'sha256' in tag:
+        if 'sha256' in tag and not '@' in tag:
             return f'{self.ref_without_tag}@{tag}'
         return f'{self.ref_without_tag}:{tag}'
 
