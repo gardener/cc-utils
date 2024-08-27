@@ -14,6 +14,7 @@ class ContainerImageUploadRequest:
     target_ref: str
     remove_files: typing.Sequence[str] = ()
     reference_target_by_digest: bool = False
+    retain_symbolic_tag: bool = False
 
 
 @dataclasses.dataclass

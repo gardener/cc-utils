@@ -478,7 +478,11 @@ def process_images(
 
         if processing_job.upload_request.reference_target_by_digest:
             target_ref = om.OciImageReference.to_image_ref(processing_job.upload_request.target_ref)
-            target_ref = f'{target_ref.ref_without_tag}@{oci_manifest_digest}'
+
+            if processing_job.upload_request.retain_symbolic_tag and target_ref.has_symbolical_tag:
+                target_ref = f'{target_ref.original_image_reference}@{oci_manifest_digest}'
+            else:
+                target_ref = f'{target_ref.ref_without_tag}@{oci_manifest_digest}'
 
             access = processed_resource.access
             if access.type is cm.AccessType.OCI_REGISTRY:
