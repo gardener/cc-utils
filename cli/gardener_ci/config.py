@@ -25,7 +25,7 @@ def export_kubeconfig(
     cfg_factory = ctx().cfg_factory()
     kubernetes_cfg = cfg_factory.kubernetes(kubernetes_config_name)
 
-    with output_file.open(mode='w') as f:
+    with open(output_file, mode='w') as f:
         yaml.dump(kubernetes_cfg.kubeconfig(), f)
 
 
