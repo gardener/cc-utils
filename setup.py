@@ -39,7 +39,10 @@ def packages():
 
 
 def version():
-    with open(os.path.join(own_dir, 'VERSION')) as f:
+    # HACK: as we can currently only manage a single version-file for monolithic release,
+    # and gardener-oci should have no dependencies towards other packages, point to
+    # oci-package's versionfile
+    with open(os.path.join(own_dir, 'oci', 'VERSION')) as f:
         return f.read().strip()
 
 
