@@ -91,10 +91,16 @@ class PrefixUploader:
         if self._mangle:
             src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
 
-        tgt_ref = ci.util.urljoin(
-            self._prefix,
-            src_base_ref,
-        )
+        # if a prefix is to be removed from existing src base ref, it is likely that it should be
+        # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
+        # Instead, leave it up to the configuration to decide on the joining character.
+        if not self._remove_prefixes:
+            tgt_ref = ci.util.urljoin(
+                self._prefix,
+                src_base_ref,
+            )
+        else:
+            tgt_ref = self._prefix + src_base_ref
 
         if src_ref.has_digest_tag:
             tgt_ref = f'{tgt_ref}@{src_tag}'
