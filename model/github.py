@@ -124,7 +124,7 @@ class GithubConfig(NamedModelElement):
 
         repo_url = ci.util.urljoin(parsed_repo_url.hostname, parsed_repo_url.path)
         for repo_url_regex in self.repo_urls():
-            if re.fullmatch(repo_url_regex, repo_url):
+            if re.fullmatch(repo_url_regex, repo_url, re.RegexFlag.IGNORECASE):
                 return True
 
         return False
