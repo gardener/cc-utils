@@ -47,19 +47,6 @@ cc-utils:
             - '--package'
             - 'gardener-cicd-cli'
       traits:
-        component_descriptor:
-          retention_policy:
-            name: 'cleanup-snapshots-and-releases'
-            dry_run: False
-            rules:
-              - name: 'snapshots'
-                match: 'snapshots'
-                restrict: 'none'
-                keep: 15
-              - name: 'releases'
-                match: 'releases'
-                restrict: 'none'
-                keep: 300
         notifications:
           default:
             on_error:
@@ -114,6 +101,14 @@ cc-utils:
       traits:
         component_descriptor:
           ocm_repository: europe-docker.pkg.dev/gardener-project/releases
+          retention_policy:
+            name: cleanup-releases
+            dry_run: False
+            rules:
+              - name: releases
+                match: releases
+                restrict: 'none'
+                keep: 300
         version:
           preprocess: 'finalize'
           inject_effective_version: True
