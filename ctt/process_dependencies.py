@@ -604,10 +604,20 @@ def process_images(
         if skip_component_upload and skip_component_upload(component):
             return
 
-        component_descriptor = dataclasses.replace(
-            component_descriptor_v2,
-            component=component,
-        )
+        # Note: We lose existing signatures of referenced components here since we don't store their
+        # complete component descriptor (only the `component` property). This is currently okay-ish
+        # since we only sign the root component descriptor and don't expect any referenced component
+        # descriptor to be signed.
+        if component.name == source_comp.name and component.version == source_comp.version:
+            component_descriptor = dataclasses.replace(
+                component_descriptor_v2,
+                component=component,
+            )
+        else:
+            component_descriptor = cm.ComponentDescriptor(
+                meta=cm.Metadata(),
+                component=component,
+            )
 
         # Validate the patched component-descriptor and exit on fail
         if not skip_cd_validation:
