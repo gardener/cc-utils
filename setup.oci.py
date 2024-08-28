@@ -20,7 +20,7 @@ def modules():
 
 
 def version():
-    with open(os.path.join(own_dir, 'VERSION')) as f:
+    with open(os.path.join(own_dir, 'oci', 'VERSION')) as f:
         return f.read().strip()
 
 
@@ -32,7 +32,7 @@ setuptools.setup(
     py_modules=modules(),
     packages=['oci'],
     package_data={
-        'ci':['version'],
+        'oci': ['VERSION'],
     },
     install_requires=list(requirements()),
     entry_points={

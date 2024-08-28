@@ -23,7 +23,7 @@ def modules():
 
 
 def version():
-    with open(os.path.join(own_dir, 'VERSION')) as f:
+    with open(os.path.join(own_dir, 'oci', 'VERSION')) as f:
         return f.read().strip()
 
 
