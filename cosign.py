@@ -220,7 +220,7 @@ def sign_image(
     signing_algorithm: str=None,
     public_key: str=None,
     on_exist: OnExist | str=OnExist.APPEND,
-    signature_image_reference: str=None,
+    signature_image_reference: om.OciImageReference | str=None,
     oci_client: oc.Client=None,
     payload: bytes | None=None,
     annotations: dict[str, str] | None=None,
@@ -244,6 +244,8 @@ def sign_image(
     on_exist = OnExist(on_exist)
     if not signature_image_reference:
         signature_image_reference = default_signature_image_reference(image_reference)
+    else:
+        signature_image_reference = om.OciImageReference.to_image_ref(signature_image_reference)
 
     if not oci_client:
         import ccc.oci
@@ -334,10 +336,17 @@ def sign_image(
     )
 
     manifest_bytes = json.dumps(signed_manifest.as_dict()).encode('utf-8')
+    manifest_digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
+    manifest_digest_ref = f'{signature_image_reference.ref_without_tag}@{manifest_digest}'
 
-    oci_client.put_manifest(
-        image_reference=signature_image_reference,
-        manifest=manifest_bytes,
-    )
+    # re-uploading manifest with same digest is a no-op
+    if not oci_client.head_manifest(
+        image_reference=manifest_digest_ref,
+        absent_ok=True,
+    ):
+        oci_client.put_manifest(
+            image_reference=signature_image_reference,
+            manifest=manifest_bytes,
+        )
 
     return signature_image_reference, signed_manifest
