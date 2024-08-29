@@ -4,6 +4,7 @@ repo_root="$(dirname "${BASH_SOURCE[0]}")/.."
 version=$(cat -)
 
 versionfiles=(
+  VERSION
   ci/VERSION
   oci/VERSION
   whd/VERSION
