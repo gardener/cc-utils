@@ -42,8 +42,12 @@ component_descriptor = parse_component_descriptor()
 delivery_db_client = ccc.delivery.default_client_if_available()
 oci_client = ccc.oci.oci_client()
 
+ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
+  component_descriptor.component.current_ocm_repo,
+)
+
 ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-  default_ctx_repo=component_descriptor.component.current_repository_ctx(),
+  ocm_repository_lookup=ocm_repository_lookup,
   oci_client=oci_client,
   delivery_client=delivery_db_client,
 )

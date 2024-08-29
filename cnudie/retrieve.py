@@ -130,7 +130,6 @@ class WriteBack:
 
 
 def in_memory_cache_component_descriptor_lookup(
-    default_ctx_repo: cm.OcmRepository=None,
     cache_ctor: cachetools.Cache=cachetools.LRUCache,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     **cache_kwargs,
@@ -140,7 +139,6 @@ def in_memory_cache_component_descriptor_lookup(
     In case of a cache miss, the required component descriptor can be added
     to the cache by using the writeback function.
 
-    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
     @param cache_ctor:       specification of the cache implementation
     @param cache_kwargs:     further args used for cache initialization, maxsize is defaulted to 2048
     '''
@@ -160,7 +158,7 @@ def in_memory_cache_component_descriptor_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OcmRepository=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=None,
         ocm_repository_lookup=ocm_repository_lookup,
     ):
         if ctx_repo:
@@ -170,7 +168,6 @@ def in_memory_cache_component_descriptor_lookup(
             ocm_repos = iter_ocm_repositories(
                 component_id,
                 ocm_repository_lookup,
-                default_ctx_repo,
             )
 
         for ocm_repo in ocm_repos:
@@ -192,7 +189,6 @@ def in_memory_cache_component_descriptor_lookup(
 
 
 def file_system_cache_component_descriptor_lookup(
-    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     cache_dir: str=None,
 ) -> ComponentDescriptorLookupById:
@@ -202,7 +198,6 @@ def file_system_cache_component_descriptor_lookup(
     to the cache by using the writeback function. If cache_dir is not specified,
     it is tried to retrieve it from configuration (see `ctx`).
 
-    @param default_ctx_repo: ctx_repo to be used if none is specified in the lookup function
     @param cache_dir:        directory used for caching. Must exist, other a ValueError is raised
     '''
     if not cache_dir:
@@ -243,7 +238,7 @@ def file_system_cache_component_descriptor_lookup(
 
     def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: cm.OcmRepository|str=default_ctx_repo,
+        ctx_repo: cm.OcmRepository|str=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
     ):
         if ctx_repo:
@@ -252,7 +247,6 @@ def file_system_cache_component_descriptor_lookup(
             ocm_repos = iter_ocm_repositories(
                 component_id,
                 ocm_repository_lookup,
-                default_ctx_repo,
             )
 
         for ocm_repo in ocm_repos:
@@ -287,7 +281,6 @@ def file_system_cache_component_descriptor_lookup(
 
 
 def delivery_service_component_descriptor_lookup(
-    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     delivery_client=None,
     default_absent_ok: bool=True,
@@ -300,7 +293,6 @@ def delivery_service_component_descriptor_lookup(
     '''
     Used to lookup referenced component descriptors in the delivery-service.
 
-    @param default_ctx_repo:    ctx_repo to be used if none is specified in the lookup function
     @param delivery_client:     client to establish the connection to the delivery-service. If \
                                 the client cannot be created, a ValueError is raised
     @param default_absent_ok:   sets the default behaviour in case of absent component \
@@ -314,7 +306,7 @@ def delivery_service_component_descriptor_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OcmRepository=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
         ignore_errors: tuple[Exception]=default_ignore_errors,
@@ -326,7 +318,6 @@ def delivery_service_component_descriptor_lookup(
             ocm_repos = iter_ocm_repositories(
                 component_id,
                 ocm_repository_lookup,
-                default_ctx_repo,
             )
 
         # if component descriptor is not found in `ocm_repos`, fallback to default ocm repo mapping
@@ -369,7 +360,6 @@ def delivery_service_component_descriptor_lookup(
 
 
 def oci_component_descriptor_lookup(
-    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client | collections.abc.Callable[[], oc.Client]=None,
     default_absent_ok=True,
@@ -377,7 +367,6 @@ def oci_component_descriptor_lookup(
     '''
     Used to lookup referenced component descriptors in the oci-registry.
 
-    @param default_ctx_repo:    ctx_repo to be used if none is specified in the lookup function
     @param oci_client:          client to establish the connection to the oci-registry. If the \
                                 client cannot be created, a ValueError is raised
     @param default_absent_ok:   sets the default behaviour in case of absent component \
@@ -391,7 +380,7 @@ def oci_component_descriptor_lookup(
 
     def lookup(
         component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OcmRepository=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
@@ -412,7 +401,6 @@ def oci_component_descriptor_lookup(
             ocm_repos = iter_ocm_repositories(
                 component_id,
                 ocm_repository_lookup,
-                default_ctx_repo,
             )
 
         for ocm_repo in ocm_repos:
@@ -511,7 +499,6 @@ def error_code_indicating_not_found(image_reference: str | om.OciImageReference)
 
 
 def version_lookup(
-    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client=None,
     default_absent_ok: bool=True,
@@ -524,7 +511,7 @@ def version_lookup(
 
     def lookup(
         component_id: ComponentName,
-        ctx_repo: cm.OcmRepository=default_ctx_repo,
+        ctx_repo: cm.OcmRepository=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
     ):
@@ -535,7 +522,6 @@ def version_lookup(
             ocm_repos = iter_ocm_repositories(
                 component_name,
                 ocm_repository_lookup,
-                default_ctx_repo,
             )
 
         versions = set()
@@ -658,7 +644,6 @@ def composite_component_descriptor_lookup(
 
 
 def create_default_component_descriptor_lookup(
-    default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
     cache_dir: str | None=None,
     oci_client: oc.Client=None,
@@ -671,7 +656,6 @@ def create_default_component_descriptor_lookup(
     configuration if available. It combines (in this order) an in-memory cache, file-system cache,
     delivery-service based, and oci-registry based lookup.
 
-    @param default_ctx_repo: deprecated. use ocm_repository_lookup instead
     @param ocm_repository_lookup: lookup for OCM Repositories
     @param cache_dir:        directory used for caching. If cache_dir does not exist, the file-\
                              system cache lookup is not included in the returned lookup
@@ -682,15 +666,6 @@ def create_default_component_descriptor_lookup(
     if not ocm_repository_lookup:
         import ctx
         ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
-
-    if ocm_repository_lookup and default_ctx_repo:
-        raise ValueError('default_ctx_repo and ocm_repository_lookup must not both be passed')
-
-    if default_ctx_repo:
-        logger.warn('passing default_ctx_repo is deprecated')
-        ocm_repository_lookup = globals()['ocm_repository_lookup'](
-            default_ctx_repo,
-        )
 
     lookups = [
         in_memory_cache_component_descriptor_lookup(
