@@ -44,9 +44,9 @@ if $running_in_pipeline; then
 fi
 
 # build into "${repo_dir}/dist"
-python3 "${repo_dir}/setup.oci.py" sdist
-python3 "${repo_dir}/setup.py" sdist
-python3 "${repo_dir}/setup.whd.py" sdist
+python3 "${repo_dir}/setup.oci.py" sdist bdist_wheel
+python3 "${repo_dir}/setup.py" sdist bdist_wheel
+python3 "${repo_dir}/setup.whd.py" sdist bdist_wheel
 
 # keep for subsequent docker build
 cp dist/* ${out_dir}
@@ -57,13 +57,12 @@ cp dist/* ${out_dir}
 
 cli_dir="${repo_dir}/cli"
 cd "${cli_dir}"
-python3 "${cli_dir}/setup.py" sdist
+python3 "${cli_dir}/setup.py" sdist bdist_wheel
 
 # do not cp for local build
 if [ "${out_dir}" != "${repo_dir}" ]; then
   # keep for subsequent docker build + publish-to-pypi
   cp dist/* ${out_dir}
+  echo "built packages:"
+  ls -lta "${out_dir}"
 fi
-
-echo "build packages:"
-ls -lta dist
