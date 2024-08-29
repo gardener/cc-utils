@@ -11,5 +11,5 @@ versionfiles=(
 )
 
 for fpath in "${versionfiles[@]}"; do
-  echo "${version}" > "${fpath}"
+  echo "${version}" > "${repo_root}/${fpath}"
 done
