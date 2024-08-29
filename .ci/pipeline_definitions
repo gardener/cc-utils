@@ -157,10 +157,10 @@ cc-utils:
                 we use bandit (linter) for SAST scans
                 see: https://bandit.readthedocs.io/en/latest/
             - type: build-step-file
-              mode: single-file
+              mode: tar
               step_name: build_python_packages
               step_output_dir: pypi
-              path: 'dist/gardener_cicd_libs-*.tar.gz'
+              path: 'dist/gardener_cicd_libs-*'
               name: gardener-cicd-libs
               purposes: &purposes
                 - python
