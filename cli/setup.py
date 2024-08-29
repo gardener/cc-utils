@@ -19,14 +19,23 @@ def modules():
 
 
 def version():
-    d = own_dir
-    while True:
-        candidate = os.path.join(d, 'VERSION')
-        if os.path.isfile(candidate):
-            with open(candidate) as f:
-                return f.read().strip()
-        d = os.path.abspath(os.path.join(d, os.pardir))
-    raise RuntimeError(f'did not find VERSION file in {own_dir} and all pardirs')
+    # HACK: as we can currently only manage a single version-file for monolithic release,
+    # and gardener-oci should have no dependencies towards other packages, point to
+    # oci-package's versionfile
+    def iter_candidate():
+        yield os.path.join(own_dir, 'oci', 'VERSION')
+        yield os.path.join(own_dir, '..', 'VERSION')
+        yield os.path.join(own_dir, '../..', 'VERSION')
+
+    for path in iter_candidate():
+        if not os.path.exists(path):
+            print(f'did not find versionfile at {path=}')
+            continue
+
+        with open(path) as f:
+            return f.read().strip()
+    else:
+        raise RuntimeError('did not find versionfile')
 
 
 # cp scripts
