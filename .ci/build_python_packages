@@ -10,6 +10,11 @@ else
   running_in_pipeline=false
 fi
 
+if ${running_in_pipeline}; then
+  version="$(cat managed-version/version)"
+  echo "${version}" | "${repo_dir}/.ci/write-version"
+fi
+
 if [ -n "${PYPI_PATH:-}" ]; then
   out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH:-}/dist")"
   mkdir "${out_dir}"
@@ -59,3 +64,6 @@ if [ "${out_dir}" != "${repo_dir}" ]; then
   # keep for subsequent docker build + publish-to-pypi
   cp dist/* ${out_dir}
 fi
+
+echo "build packages:"
+ls -lta dist
