@@ -149,10 +149,10 @@ def in_memory_cache_component_descriptor_lookup(
         component_id: cm.ComponentIdentity,
         component_descriptor: cm.ComponentDescriptor,
     ):
-        if (ctx_repo := component_descriptor.component.current_repository_ctx()):
-            cache.__setitem__((component_id, ctx_repo), component_descriptor)
+        if (ocm_repo := component_descriptor.component.current_ocm_repo):
+            cache.__setitem__((component_id, ocm_repo), component_descriptor)
         else:
-            raise ValueError(ctx_repo)
+            raise ValueError(ocm_repo)
 
     _writeback = WriteBack(writeback)
 
@@ -207,8 +207,8 @@ def file_system_cache_component_descriptor_lookup(
         component_id: cm.ComponentIdentity,
         component_descriptor: cm.ComponentDescriptor,
     ):
-        if not (ctx_repo := component_descriptor.component.current_repository_ctx()):
-            raise ValueError(ctx_repo)
+        if not (ocm_repo := component_descriptor.component.current_ocm_repo):
+            raise ValueError(ocm_repo)
 
         try:
             f = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -223,7 +223,7 @@ def file_system_cache_component_descriptor_lookup(
 
             descriptor_path = os.path.join(
                 cache_dir,
-                ctx_repo.oci_ref.replace('/', '-'),
+                ocm_repo.oci_ref.replace('/', '-'),
                 f'{component_id.name}-{component_id.version}',
             )
             if not os.path.isfile(descriptor_path):
