@@ -168,24 +168,24 @@ cc-utils:
                 - pip
                 - distribution-package
             - type: build-step-file
-              mode: single-file
+              mode: tar
               step_name: build_python_packages
               step_output_dir: pypi
-              path: 'dist/gardener_oci-*.tar.gz'
+              path: 'dist/gardener_oci-*'
               name: gardener-oci
               purposes: *purposes
             - type: build-step-file
-              mode: single-file
+              mode: tar
               step_name: build_python_packages
               step_output_dir: pypi
-              path: 'dist/gardener_cicd_whd-*.tar.gz'
+              path: 'dist/gardener_cicd_whd-*'
               name: gardener-cicd-whd
               purposes: *purposes
             - type: build-step-file
-              mode: single-file
+              mode: tar
               step_name: build_python_packages
               step_output_dir: pypi
-              path: 'dist/gardener_cicd_cli-*.tar.gz'
+              path: 'dist/gardener_cicd_cli-*'
               name: gardener-cicd-cli
               purposes: *purposes
 
