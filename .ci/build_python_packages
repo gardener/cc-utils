@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -eu
 
 repo_dir="$(readlink -f "$(dirname "$0")/..")"
 out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH:-}/dist")"
