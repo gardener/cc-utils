@@ -1,3 +1,4 @@
+import collections.abc
 import dataclasses
 import io
 import itertools
@@ -6,7 +7,6 @@ import logging
 import os
 import shutil
 import tempfile
-import typing
 
 import requests
 import yaml
@@ -26,14 +26,14 @@ logger = logging.getLogger(__name__)
 
 ComponentName = str | tuple[str, str] | cm.Component | cm.ComponentIdentity
 
-ComponentDescriptorLookupById = typing.Callable[
+ComponentDescriptorLookupById = collections.abc.Callable[
     [cm.ComponentIdentity, cm.OcmRepository],
     cm.ComponentDescriptor
 ]
 
-VersionLookupByComponent = typing.Callable[
+VersionLookupByComponent = collections.abc.Callable[
     [ComponentName, cm.OcmRepository],
-    typing.Sequence[str]
+    collections.abc.Sequence[str]
 ]
 
 
@@ -43,12 +43,12 @@ class OcmRepositoryMappingEntry:
     prefix: str | None = None
 
 
-OcmRepositoryCfg = str | typing.Iterable[str]
+OcmRepositoryCfg = str | collections.abc.Iterable[str]
 
 
-OcmRepositoryLookup = typing.Callable[
+OcmRepositoryLookup = collections.abc.Callable[
     [ComponentName],
-    typing.Generator[cm.OciOcmRepository | str, None, None],
+    collections.abc.Generator[cm.OciOcmRepository | str, None, None],
 ]
 
 
@@ -81,7 +81,7 @@ def iter_ocm_repositories(
     component: str | cm.ComponentIdentity | cm.Component,
     /,
     *repository_cfgs: OcmRepositoryCfg,
-) -> typing.Generator[OcmRepositoryLookup, None, None]:
+) -> collections.abc.Generator[OcmRepositoryLookup, None, None]:
     for repository_cfg in repository_cfgs:
         if not repository_cfg:
             # convenience: ignore, e.g. None
@@ -117,7 +117,7 @@ class WriteBack:
     '''
     def __init__(
         self,
-        writeback: typing.Callable[[cm.ComponentIdentity, cm.ComponentDescriptor], None],
+        writeback: collections.abc.Callable[[cm.ComponentIdentity, cm.ComponentDescriptor], None],
     ):
         self.writeback = writeback
 
@@ -371,7 +371,7 @@ def delivery_service_component_descriptor_lookup(
 def oci_component_descriptor_lookup(
     default_ctx_repo: cm.OcmRepository=None,
     ocm_repository_lookup: OcmRepositoryLookup=None,
-    oci_client: oc.Client | typing.Callable[[], oc.Client]=None,
+    oci_client: oc.Client | collections.abc.Callable[[], oc.Client]=None,
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -398,7 +398,7 @@ def oci_component_descriptor_lookup(
         component_id = cnudie.util.to_component_id(component_id)
         component_name = component_id.name.lower() # oci-spec allows only lowercase
 
-        if isinstance(oci_client, typing.Callable):
+        if isinstance(oci_client, collections.abc.Callable):
             local_oci_client = oci_client()
         else:
             local_oci_client = oci_client
@@ -574,7 +574,7 @@ def version_lookup(
 
 
 def composite_component_descriptor_lookup(
-    lookups: typing.Tuple[ComponentDescriptorLookupById, ...],
+    lookups: tuple[ComponentDescriptorLookupById, ...],
     ocm_repository_lookup: OcmRepositoryLookup | None=None,
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
@@ -735,8 +735,8 @@ def create_default_component_descriptor_lookup(
 
 
 def component_diff(
-    left_component: typing.Union[cm.Component, cm.ComponentDescriptor],
-    right_component: typing.Union[cm.Component, cm.ComponentDescriptor],
+    left_component: cm.Component | cm.ComponentDescriptor,
+    right_component: cm.Component | cm.ComponentDescriptor,
     ignore_component_names=(),
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ) -> cnudie.util.ComponentDiff:
@@ -774,7 +774,7 @@ def component_versions(
     component_name: str,
     ctx_repo: cm.OcmRepository,
     oci_client: oc.Client=None,
-) -> typing.Sequence[str]:
+) -> collections.abc.Sequence[str]:
     if not isinstance(ctx_repo, cm.OciOcmRepository):
         raise NotImplementedError(ctx_repo)
 
