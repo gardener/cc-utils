@@ -19,23 +19,8 @@ def modules():
 
 
 def version():
-    # HACK: as we can currently only manage a single version-file for monolithic release,
-    # and gardener-oci should have no dependencies towards other packages, point to
-    # oci-package's versionfile
-    def iter_candidate():
-        yield os.path.join(own_dir, 'oci', 'VERSION')
-        yield os.path.join(own_dir, '..', 'VERSION')
-        yield os.path.join(own_dir, '../..', 'VERSION')
-
-    for path in iter_candidate():
-        if not os.path.exists(path):
-            print(f'did not find versionfile at {path=}')
-            continue
-
-        with open(path) as f:
-            return f.read().strip()
-    else:
-        raise RuntimeError('did not find versionfile')
+    with open(os.path.join(own_dir, 'gardener_ci', 'VERSION')) as f:
+        return f.read().strip()
 
 
 # cp scripts
@@ -51,6 +36,9 @@ setuptools.setup(
     python_requires='>=3.11',
     py_modules=modules(),
     packages=setuptools.find_packages(),
+    package_data={
+        'gardener_ci': ['VERSION'],
+    },
     install_requires=list(requirements()),
     scripts=[os.path.join(tgt_bin_dir, 'purge_history')],
     entry_points={

@@ -23,7 +23,7 @@ def modules():
 
 
 def version():
-    with open(os.path.join(own_dir, 'oci', 'VERSION')) as f:
+    with open(os.path.join(own_dir, 'whd', 'VERSION')) as f:
         return f.read().strip()
 
 
@@ -35,7 +35,7 @@ setuptools.setup(
     py_modules=modules(),
     packages=['whd'],
     package_data={
-        'ci':['version'],
+        'whd':['VERSION'],
     },
     install_requires=list(requirements()),
     entry_points={

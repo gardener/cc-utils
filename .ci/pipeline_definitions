@@ -18,7 +18,8 @@ cc-utils:
       disable_ci_skip: True
     traits:
       version:
-        versionfile: oci/VERSION
+        read_callback: .ci/read-version
+        write_callback: .ci/write-version
       component_descriptor:
         ocm_repository: europe-docker.pkg.dev/gardener-project/snapshots
         component_labels:
