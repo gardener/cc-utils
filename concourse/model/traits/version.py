@@ -77,6 +77,7 @@ class VersionTrait(Trait):
         'finalize-skip-patchlevel-zero',
         'inject-branch-name',
         'inject-commit-hash',
+        'inject-commit-hash-nodash',
         'inject-timestamp',
         'noop',
         'use-branch-name',

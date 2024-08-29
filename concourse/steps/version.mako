@@ -35,7 +35,7 @@ branch_name = main_repo.branch()
 version_operation_kwargs = dict()
 prerelease = None
 
-if version_operation == 'inject-commit-hash':
+if version_operation in ('inject-commit-hash', 'inject-commit-hash-nodash'):
   version_operation_kwargs['operation'] = 'set_prerelease'
 elif version_operation in ('finalize', 'finalise'):
   version_operation_kwargs['operation'] = 'finalize_version'
@@ -92,11 +92,16 @@ current_version = read_version(
   path=version_path,
 )
 
-if ${quote_str(version_operation)} == 'inject-commit-hash':
-  head_sha_file = ci.util.existing_file(pathlib.Path(${quote_str(head_sha_file)}))
-  prerelease = 'dev-' + head_sha_file.read_text().strip()
-else:
-  prerelease = ${quote_str(prerelease)}
+% if version_operation in ('inject-commit-hash', 'inject-commit-hash-nodash'):
+head_sha_file = ci.util.existing_file(pathlib.Path(${quote_str(head_sha_file)}))
+%  if version_operation == 'inject-commit-hash':
+prerelease = 'dev-' + head_sha_file.read_text().strip()
+%  else:
+prerelease = 'dev' + head_sha_file.read_text().strip()
+%  endif
+% else:
+prerelease = ${quote_str(prerelease)}
+% endif
 
 effective_version = version.process_version(
     version_str=current_version,
