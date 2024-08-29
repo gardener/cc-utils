@@ -2,11 +2,22 @@
 
 set -eu
 
-repo_dir="$(readlink -f "$(dirname "$0")/..")"
-out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH:-}/dist")"
-mkdir "${out_dir}"
+repo_dir="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 
-if [ ! -z "${VERSION_PATH}" ]; then
+if [ -n "${CC_ROOT_DIR:-}" ]; then
+  running_in_pipeline=true
+else
+  running_in_pipeline=false
+fi
+
+if [ -n "${PYPI_PATH:-}" ]; then
+  out_dir="$(readlink -f "${repo_dir}/../${PYPI_PATH:-}/dist")"
+  mkdir "${out_dir}"
+else
+  out_dir="${repo_dir}"
+fi
+
+if [ ! -z "${VERSION_PATH:-}" ]; then
   effective_version="$(cat "${VERSION_PATH}/version")"
   last_release_tag_path="${repo_dir}/concourse/resources/LAST_RELEASED_TAG"
   if [ ! -f "${last_release_tag_path}" ]; then
@@ -21,9 +32,11 @@ fi
 
 cd $repo_dir
 
-# install build-only dependencies (no need to include in image)
-pip3 install --upgrade pip wheel setuptools
-pip3 uninstall -y gardener-cicd-cli gardener-cicd-libs
+if $running_in_pipeline; then
+  # install build-only dependencies (no need to include in image)
+  pip3 install --upgrade pip wheel setuptools
+  pip3 uninstall -y gardener-cicd-cli gardener-cicd-libs
+fi
 
 # build into "${repo_dir}/dist"
 python3 "${repo_dir}/setup.oci.py" sdist
@@ -41,5 +54,8 @@ cli_dir="${repo_dir}/cli"
 cd "${cli_dir}"
 python3 "${cli_dir}/setup.py" sdist
 
-# keep for subsequent docker build + publish-to-pypi
-cp dist/* ${out_dir}
+# do not cp for local build
+if [ "${out_dir}" != "${repo_dir}" ]; then
+  # keep for subsequent docker build + publish-to-pypi
+  cp dist/* ${out_dir}
+fi
