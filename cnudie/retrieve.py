@@ -139,8 +139,12 @@ def in_memory_cache_component_descriptor_lookup(
     In case of a cache miss, the required component descriptor can be added
     to the cache by using the writeback function.
 
-    @param cache_ctor:       specification of the cache implementation
-    @param cache_kwargs:     further args used for cache initialization, maxsize is defaulted to 2048
+    @param cache_ctor:
+        specification of the cache implementation
+    @param ocm_repository_lookup:
+        lookup for OCM repositories
+    @param cache_kwargs:
+        further args used for cache initialization, maxsize is defaulted to 2048
     '''
     cache_kwargs['maxsize'] = cache_kwargs.get('maxsize', 2048)
     cache = cache_ctor(**cache_kwargs)
@@ -198,7 +202,10 @@ def file_system_cache_component_descriptor_lookup(
     to the cache by using the writeback function. If cache_dir is not specified,
     it is tried to retrieve it from configuration (see `ctx`).
 
-    @param cache_dir:        directory used for caching. Must exist, other a ValueError is raised
+    @param ocm_repository_lookup:
+        lookup for OCM repositories
+    @param cache_dir:
+        directory used for caching. Must exist, otherwise a ValueError is raised
     '''
     if not cache_dir:
         raise ValueError(cache_dir)
@@ -293,10 +300,22 @@ def delivery_service_component_descriptor_lookup(
     '''
     Used to lookup referenced component descriptors in the delivery-service.
 
-    @param delivery_client:     client to establish the connection to the delivery-service. If \
-                                the client cannot be created, a ValueError is raised
-    @param default_absent_ok:   sets the default behaviour in case of absent component \
-                                descriptors for the returned lookup function
+    @param ocm_repository_lookup:
+        lookup for OCM repositories
+    @param delivery_client:
+        client to establish the connection to the delivery-service. If the client cannot be created,
+        a ValueError is raised
+    @param default_absent_ok:
+        sets the default behaviour in case of absent component descriptors for the returned lookup
+        function
+    @param default_ignore_errors:
+        collection of exceptions which should be ignored by default. In case of such an exception,
+        no component descriptor will be returned, so that a subsequent lookup can retry retrieving
+        it
+    @param fallback_to_service_mapping:
+        if set, it is tried to retrieve the requested component descriptor using the OCM repository
+        mapping of the  delivery-service, in case it could not be retrieved using
+        `ocm_repository_lookup`
     '''
     if not delivery_client:
         import ccc.delivery
@@ -367,10 +386,14 @@ def oci_component_descriptor_lookup(
     '''
     Used to lookup referenced component descriptors in the oci-registry.
 
-    @param oci_client:          client to establish the connection to the oci-registry. If the \
-                                client cannot be created, a ValueError is raised
-    @param default_absent_ok:   sets the default behaviour in case of absent component \
-                                descriptors for the returned lookup function
+    @param ocm_repository_lookup:
+        lookup for OCM repositories
+    @param oci_client:
+        client to establish the connection to the oci-registry. If the client cannot be created, a
+        ValueError is raised
+    @param default_absent_ok:
+        sets the default behaviour in case of absent component descriptors for the returned lookup
+        function
     '''
     if not oci_client:
         import ccc.oci
@@ -569,9 +592,13 @@ def composite_component_descriptor_lookup(
     the order they are specified. If the required component descriptor is found, it is
     written back to the prior lookups (if they have a WriteBack defined).
 
-    @param lookups:          a tuple of ComponentDescriptorLookupByIds which should be combined
-    @param ocm_repository_lookup: ocm_repository_lookup to be used if none is specified
-                                  in the lookup function
+    @param lookups:
+        a tuple of ComponentDescriptorLookupByIds which should be combined
+    @param ocm_repository_lookup:
+        ocm_repository_lookup to be used if none is specified in the lookup function
+    @param default_absent_ok:
+        sets the default behaviour in case of absent component descriptors for the returned lookup
+        function
     '''
     def lookup(
         component_id: cm.ComponentIdentity,
@@ -646,7 +673,7 @@ def composite_component_descriptor_lookup(
 def create_default_component_descriptor_lookup(
     ocm_repository_lookup: OcmRepositoryLookup=None,
     cache_dir: str | None=None,
-    oci_client: oc.Client=None,
+    oci_client: oc.Client | collections.abc.Callable[[], oc.Client]=None,
     delivery_client=None,
     default_absent_ok: bool=False,
     fallback_to_service_mapping: bool=True,
@@ -656,12 +683,24 @@ def create_default_component_descriptor_lookup(
     configuration if available. It combines (in this order) an in-memory cache, file-system cache,
     delivery-service based, and oci-registry based lookup.
 
-    @param ocm_repository_lookup: lookup for OCM Repositories
-    @param cache_dir:        directory used for caching. If cache_dir does not exist, the file-\
-                             system cache lookup is not included in the returned lookup
-    @param delivery_client:  client to establish the connection to the delivery-service. If the \
-                             client cannot be created, the delivery-service based lookup is not \
-                             included in the returned lookup
+    @param ocm_repository_lookup:
+        lookup for OCM repositories
+    @param cache_dir:
+        directory used for caching. If cache_dir is not specified, the filesystem cache lookup is
+        not included in the returned lookup
+    @param oci_client:
+        client to establish the connection to the oci-registry. If the client cannot be created, a
+        ValueError is raised
+    @param delivery_client:
+        client to establish the connection to the delivery-service. If the client cannot be created,
+        the delivery-service based lookup is not included in the returned lookup
+    @param default_absent_ok:
+        sets the default behaviour in case of absent component descriptors for the returned lookup
+        function
+    @param fallback_to_service_mapping:
+        if set, it is tried to retrieve the requested component descriptor using the OCM repository
+        mapping of thedelivery-service, in case it could not be retrieved using
+        `ocm_repository_lookup`
     '''
     if not ocm_repository_lookup:
         import ctx
