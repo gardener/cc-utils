@@ -295,6 +295,7 @@ def delivery_service_component_descriptor_lookup(
         requests.exceptions.ConnectionError,
         requests.exceptions.ReadTimeout,
     ),
+    fallback_to_service_mapping: bool=True,
 ) -> ComponentDescriptorLookupById:
     '''
     Used to lookup referenced component descriptors in the delivery-service.
@@ -330,7 +331,8 @@ def delivery_service_component_descriptor_lookup(
 
         # if component descriptor is not found in `ocm_repos`, fallback to default ocm repo mapping
         # defined in delivery service (i.e. specify no ocm repository)
-        ocm_repos = itertools.chain(ocm_repos, (None,))
+        if fallback_to_service_mapping:
+            ocm_repos = itertools.chain(ocm_repos, (None,))
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
@@ -661,7 +663,8 @@ def create_default_component_descriptor_lookup(
     cache_dir: str | None=None,
     oci_client: oc.Client=None,
     delivery_client=None,
-    default_absent_ok=False,
+    default_absent_ok: bool=False,
+    fallback_to_service_mapping: bool=True,
 ) -> ComponentDescriptorLookupById:
     '''
     This is a convenience function combining commonly used/recommended lookups, using global
@@ -714,6 +717,7 @@ def create_default_component_descriptor_lookup(
         lookups.append(delivery_service_component_descriptor_lookup(
             delivery_client=delivery_client,
             ocm_repository_lookup=ocm_repository_lookup,
+            fallback_to_service_mapping=fallback_to_service_mapping,
         ))
 
     lookups.append(
