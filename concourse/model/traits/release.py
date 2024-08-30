@@ -152,6 +152,10 @@ class BuildstepFileAsset(Asset):
     `path` is interpreted relative to `step_output_dir`. Using Unix globbing, any matching files
     will be included (use `*` to include all, except files starting with period (`.`) character).
 
+    `prefix` will be removed from fnames in tar (similar to tar's -C option). Only effective in
+    TAR mode (ignored otherwise). If any path does not start w/ prefix, this is not considered an
+    error. Instead, such paths will silently be kept unchanged.
+
     By default, matching files will be wrapped in a compressed TAR archive (controlled by `mode`
     attribute). If mode is set to `single-file`, `path` must match exactly one regular file.
 
@@ -160,6 +164,7 @@ class BuildstepFileAsset(Asset):
     type: str = 'build-step-file'
     step_output_dir: str
     path: str # rel-path; globbing is allowed
+    prefix: str | None = None
     mode: FileAssetMode = FileAssetMode.TAR
 
 
