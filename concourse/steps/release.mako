@@ -267,7 +267,7 @@ for f in matching_files:
   tf.add(
     name=f,
 %    if asset.prefix:
-    arcname=f.removeprefix(step_output_dir).removeprefix(asset.prefix),
+    arcname=f.removeprefix(step_output_dir).removeprefix('${asset.prefix}'),
 %    else:
     arcname=f.removeprefix(step_output_dir),
 %    endif
