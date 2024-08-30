@@ -20,6 +20,7 @@ cc-utils:
       version:
         read_callback: .ci/read-version
         write_callback: .ci/write-version
+        preprocess: inject-commit-hash-nodash
       component_descriptor:
         ocm_repository: europe-docker.pkg.dev/gardener-project/snapshots
         component_labels:
