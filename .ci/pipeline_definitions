@@ -172,6 +172,7 @@ cc-utils:
               step_name: build_python_packages
               step_output_dir: pypi
               path: 'dist/gardener_oci-*'
+              prefix: dist/
               name: gardener-oci
               purposes: *purposes
             - type: build-step-file
@@ -179,6 +180,7 @@ cc-utils:
               step_name: build_python_packages
               step_output_dir: pypi
               path: 'dist/gardener_cicd_whd-*'
+              prefix: dist/
               name: gardener-cicd-whd
               purposes: *purposes
             - type: build-step-file
@@ -186,6 +188,7 @@ cc-utils:
               step_name: build_python_packages
               step_output_dir: pypi
               path: 'dist/gardener_cicd_cli-*'
+              prefix: dist/
               name: gardener-cicd-cli
               purposes: *purposes
 
