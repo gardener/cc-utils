@@ -364,8 +364,12 @@ def delivery_service_component_descriptor_lookup(
                 if component_descriptor:
                     return component_descriptor
             except requests.exceptions.HTTPError as e:
-                if e.response.status_code != 404:
-                    raise
+                if e.response.status_code == 404:
+                    continue
+                elif e.response.status_code >= 500:
+                    # in case delivery-service is not reachable, fallback to next lookup (if any)
+                    return None
+                raise
             except ignore_errors:
                 # already return here to not use unintended "fallback" ocm repositories
                 return None
