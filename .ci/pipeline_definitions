@@ -95,10 +95,6 @@ cc-utils:
         lint: ~
         build_python_packages:
           output_dir: 'pypi'
-        release_to_pypi:
-          trait_depends: ['release']
-          inputs:
-            'pypi': 'pypi'
         generate_documentation:
           publish_to: ['gh_pages']
       traits:
