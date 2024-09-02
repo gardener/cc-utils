@@ -162,6 +162,7 @@ cc-utils:
               step_name: build_python_packages
               step_output_dir: pypi
               path: 'dist/gardener_cicd_libs-*'
+              prefix: dist/
               name: gardener-cicd-libs
               purposes: &purposes
                 - python
