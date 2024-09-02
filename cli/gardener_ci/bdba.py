@@ -1,3 +1,4 @@
+import collections.abc
 import itertools
 import logging
 import os
@@ -261,7 +262,7 @@ def assess(
 def scan(
     protecode_cfg_name: str,
     protecode_group_id: str,
-    component: str,
+    component_id: str, # <name>:<version>
     cve_threshold: float=7.0,
     protecode_api_url=None,
     reference_protecode_group_ids: list[int]=[],
@@ -284,7 +285,7 @@ def scan(
     logger.info(f'Using Protecode at: {protecode_api_url} with group {protecode_group_id}')
 
     lookup = cr.create_default_component_descriptor_lookup()
-    component_descriptor = lookup(component)
+    component_descriptor = lookup(component_id)
 
     cvss_version = pm.CVSSVersion.V3
 
@@ -299,21 +300,39 @@ def scan(
 
     logger.info('running protecode scan for all components')
 
-    client = ccc.protecode.client(
+    bdba_client = ccc.protecode.client(
         protecode_cfg=protecode_cfg,
         group_id=protecode_group_id,
         base_url=protecode_api_url,
         cfg_factory=cfg_factory,
     )
 
-    results = tuple(ps.upload_grouped_images(
-        protecode_api=client,
-        component=component_descriptor,
-        protecode_group_id=protecode_group_id,
-        reference_group_ids=reference_protecode_group_ids,
-        oci_client=oci_client,
-        s3_client=s3_client,
-    ))
+    def iter_resource_scans() -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
+        for resource_node in cnudie.iter.iter(
+            component=component_descriptor.component,
+            lookup=lookup,
+            node_filter=cnudie.iter.Filter.resources,
+        ):
+            known_scan_results = ps.retrieve_existing_scan_results(
+                protecode_client=bdba_client,
+                group_id=protecode_group_id,
+                resource_node=resource_node,
+                oci_client=oci_client,
+            )
+            processor = ps.ResourceGroupProcessor(
+                group_id=protecode_group_id,
+                reference_group_ids=reference_protecode_group_ids,
+                protecode_client=bdba_client,
+                oci_client=oci_client,
+            )
+            yield from processor.process(
+                resource_node=resource_node,
+                processing_mode=pm.ProcessingMode.RESCAN,
+                known_scan_results=known_scan_results,
+                s3_client=s3_client,
+            )
+
+    results = list(iter_resource_scans())
 
     results_above_threshold = [
         r for r in results
