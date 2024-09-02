@@ -35,44 +35,6 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging(print_thread_id=True)
 
 
-def _resource_group_id(
-    resource_group: tuple[cnudie.iter.ResourceNode],
-) -> tuple[str, cm.ResourceIdentity, cm.ArtefactType|str]:
-    '''
-    return resource-id, identifying resource by
-    - component-name
-    - resource-name, resource-version ("resource id")
-    - resource-type
-    '''
-    r = resource_group[0]
-    return tuple((
-        r.component.name,
-        (r.resource.name, r.resource.version),
-        r.resource.type,
-    ))
-
-
-def find_related_groups(
-    group: tuple[cnudie.iter.ResourceNode],
-    groups: tuple[tuple[cnudie.iter.ResourceNode]],
-    omit_resource_version: bool=False,
-) -> collections.abc.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
-    group_representative = group[0]
-
-    for g in groups:
-        node = g[0]
-        if group_representative.component.name != node.component.name:
-            continue
-        if group_representative.artefact.name != node.artefact.name:
-            continue
-        if group_representative.artefact.type != node.artefact.type:
-            continue
-        if (not omit_resource_version and
-            group_representative.artefact.version != node.artefact.version):
-            continue
-        yield g
-
-
 @functools.lru_cache(maxsize=200)
 def _wait_for_scan_result(
     protecode_client: protecode.client.ProtecodeApi,
@@ -98,17 +60,14 @@ class ResourceGroupProcessor:
 
     def _products_with_relevant_triages(
         self,
-        resource_group: tuple[cnudie.iter.ResourceNode],
+        resource_node: cnudie.iter.ResourceNode,
     ) -> collections.abc.Generator[pm.Product, None, None]:
         relevant_group_ids = set(self.reference_group_ids)
         relevant_group_ids.add(self.group_id)
 
-        c = resource_group[0].component
-        r = resource_group[0].resource
-
         metadata = protecode.util.component_artifact_metadata(
-            component=c,
-            artefact=r,
+            component=resource_node.component,
+            artefact=resource_node.resource,
             # we want to find all possibly relevant scans, so omit all version data
             omit_resource_version=True,
             oci_client=self.oci_client,
@@ -188,99 +147,88 @@ class ResourceGroupProcessor:
                 result=result,
             )
 
-    def scan_requests(
+    def scan_request(
         self,
-        resource_group: tuple[cnudie.iter.ResourceNode],
-        known_artifact_scans: dict[
-            tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
-            tuple[pm.Product],
-        ],
+        resource_node: cnudie.iter.ResourceNode,
+        known_artifact_scans: tuple[pm.Product],
         s3_client: 'botocore.client.S3',
-    ) -> collections.abc.Generator[pm.ScanRequest, None, None]:
-        c = resource_group[0].component
-        r = resource_group[0].resource
+    ) -> pm.ScanRequest:
+        component = resource_node.component
+        resource = resource_node.resource
 
-        group_id = _resource_group_id(resource_group)
-        group_name = f'{c.name}/{r.name}:{r.version} {r.type}'
-        known_results = known_artifact_scans.get(group_id)
-        display_name = f'{r.name}_{r.version}_{c.name}'.replace('/', '_')
+        display_name = f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
 
-        if r.type is cm.ResourceType.OCI_IMAGE:
-            for resource_node in resource_group:
-                c = resource_node.component
-                r = resource_node.resource
-
-                # find product existing bdba scans (if any)
-                component_artifact_metadata = protecode.util.component_artifact_metadata(
-                    component=c,
-                    artefact=r,
-                    omit_resource_version=False,
-                    oci_client=self.oci_client
-                )
-                target_product_id = protecode.util._matching_analysis_result_id(
-                    component_artifact_metadata=component_artifact_metadata,
-                    analysis_results=known_results,
-                )
-                if target_product_id:
-                    logger.info(f'{group_name=}: found {target_product_id=}')
-                else:
-                    logger.info(f'{group_name=}: did not find old scan')
-
-                def iter_content():
-                    image_reference = gci.oci.image_ref_with_digest(
-                        image_reference=r.access.imageReference,
-                        digest=r.digest,
-                        oci_client=self.oci_client,
-                    )
-                    yield from oci.image_layers_as_tarfile_generator(
-                        image_reference=image_reference,
-                        oci_client=self.oci_client,
-                        include_config_blob=False,
-                        fallback_to_first_subimage_if_index=True,
-                    )
-
-                yield pm.ScanRequest(
-                    component=c,
-                    artefact=r,
-                    scan_content=iter_content(),
-                    display_name=display_name,
-                    target_product_id=target_product_id,
-                    custom_metadata=component_artifact_metadata,
-                )
-        elif r.type == 'application/tar+vm-image-rootfs':
-            # hardcoded semantics for vm-images:
-            # merge all appropriate (tar)artifacts into one big tararchive
+        if resource.type is cm.ResourceType.OCI_IMAGE:
+            # find product existing bdba scans (if any)
             component_artifact_metadata = protecode.util.component_artifact_metadata(
-                component=c,
-                artefact=r,
+                component=component,
+                artefact=resource,
                 omit_resource_version=False,
                 oci_client=self.oci_client
             )
             target_product_id = protecode.util._matching_analysis_result_id(
                 component_artifact_metadata=component_artifact_metadata,
-                analysis_results=known_results,
+                analysis_results=known_artifact_scans,
+            )
+            if target_product_id:
+                logger.info(f'{display_name=}: found {target_product_id=}')
+            else:
+                logger.info(f'{display_name=}: did not find old scan')
+
+            def iter_content():
+                image_reference = gci.oci.image_ref_with_digest(
+                    image_reference=resource.access.imageReference,
+                    digest=resource.digest,
+                    oci_client=self.oci_client,
+                )
+                yield from oci.image_layers_as_tarfile_generator(
+                    image_reference=image_reference,
+                    oci_client=self.oci_client,
+                    include_config_blob=False,
+                    fallback_to_first_subimage_if_index=True,
+                )
+
+            return pm.ScanRequest(
+                component=component,
+                artefact=resource,
+                scan_content=iter_content(),
+                display_name=display_name,
+                target_product_id=target_product_id,
+                custom_metadata=component_artifact_metadata,
+            )
+        elif resource.type == 'application/tar+vm-image-rootfs':
+            # hardcoded semantics for vm-images:
+            # merge all appropriate (tar)artifacts into one big tararchive
+            component_artifact_metadata = protecode.util.component_artifact_metadata(
+                component=component,
+                artefact=resource,
+                omit_resource_version=False,
+                oci_client=self.oci_client
+            )
+            target_product_id = protecode.util._matching_analysis_result_id(
+                component_artifact_metadata=component_artifact_metadata,
+                analysis_results=known_artifact_scans,
             )
 
             if target_product_id:
-                logger.info(f'{group_name=}: found {target_product_id=}')
+                logger.info(f'{display_name=}: found {target_product_id=}')
             else:
-                logger.info(f'{group_name=}: did not find old scan')
+                logger.info(f'{display_name=}: did not find old scan')
 
             # hardcode assumption about all accesses being of s3-type
             def as_blob_descriptors():
-                for idx, resource in enumerate(resource_group):
-                    name = resource.resource.extraIdentity.get('platform', str(idx))
+                name = resource.extraIdentity.get('platform', 'dummy')
 
-                    access: cm.S3Access = resource.resource.access
-                    yield cnudie.access.s3_access_as_blob_descriptor(
-                        s3_client=s3_client,
-                        s3_access=access,
-                        name=name,
-                    )
+                access: cm.S3Access = resource.access
+                yield cnudie.access.s3_access_as_blob_descriptor(
+                    s3_client=s3_client,
+                    s3_access=access,
+                    name=name,
+                )
 
-            yield pm.ScanRequest(
-                component=c,
-                artefact=r,
+            return pm.ScanRequest(
+                component=component,
+                artefact=resource,
                 scan_content=tarutil.concat_blobs_as_tarstream(
                     blobs=as_blob_descriptors(),
                 ),
@@ -289,7 +237,7 @@ class ResourceGroupProcessor:
                 custom_metadata=component_artifact_metadata,
             )
         else:
-            raise NotImplementedError(r.type)
+            raise NotImplementedError(resource.type)
 
     def process_scan_request(
         self,
@@ -394,13 +342,10 @@ class ResourceGroupProcessor:
 
     def process(
         self,
-        resource_group: tuple[cnudie.iter.ResourceNode],
-        processing_mode: pm.ProcessingMode,
-        known_scan_results: dict[
-            tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
-            tuple[pm.Product],
-        ],
+        resource_node: cnudie.iter.ResourceNode,
+        known_scan_results: tuple[pm.Product],
         s3_client: 'botocore.client.S3',
+        processing_mode: pm.ProcessingMode,
         delivery_client: delivery.client.DeliveryServiceClient=None,
         license_cfg: image_scan.LicenseCfg=None,
         cve_rescoring_rules: tuple[dso.cvss.RescoringRule]=tuple(),
@@ -408,121 +353,119 @@ class ResourceGroupProcessor:
         use_product_cache: bool=True,
         delete_inactive_products_after_seconds: int=None,
     ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
-        r = resource_group[0].resource
-        c = resource_group[0].component
-        group_name = f'{c.name}/{r.name}:{r.version} - {r.type}'
-        logger.info(f'Processing {group_name}')
+        resource = resource_node.resource
+        component = resource_node.component
 
         products_to_import_from = list(self._products_with_relevant_triages(
-            resource_group=resource_group,
+            resource_node=resource_node,
         ))
-        # todo: deduplicate/merge assessments
+
         assessments = self.iter_products(
             products_to_import_from=products_to_import_from,
             use_product_cache=use_product_cache,
             delete_inactive_products_after_seconds=delete_inactive_products_after_seconds,
         )
 
-        for scan_request in self.scan_requests(
-            resource_group=resource_group,
+        scan_request = self.scan_request(
+            resource_node=resource_node,
             known_artifact_scans=known_scan_results,
             s3_client=s3_client,
+        )
+        try:
+            scan_result = self.process_scan_request(
+                scan_request=scan_request,
+                processing_mode=processing_mode,
+            )
+            scan_result = self.protecode_client.wait_for_scan_result(scan_result.product_id())
+            scan_failed = False
+        except pm.BdbaScanError as bse:
+            scan_result = bse
+            scan_failed = True
+            logger.warning(bse.print_stacktrace())
+
+        # don't include component version here since it is also not considered in the BDBA scan
+        # -> this will deduplicate findings of the same artefact version across different
+        # component versions
+        component = dataclasses.replace(scan_request.component, version=None)
+        resource = scan_request.artefact
+        scanned_element = cnudie.iter.ResourceNode(
+            path=(cnudie.iter.NodePathEntry(component),),
+            resource=resource,
+        )
+
+        if scan_failed:
+            logger.error(f'scan of {scanned_element=} failed; {scan_result=}')
+            return
+
+        logger.info(
+            f'scan of {scan_result.display_name()} succeeded, going to post-process results'
+        )
+
+        if version_hints := _package_version_hints(
+            component=component,
+            artefact=resource,
+            result=scan_result,
         ):
-            try:
-                scan_result = self.process_scan_request(
-                    scan_request=scan_request,
-                    processing_mode=processing_mode,
-                )
-                scan_result = self.protecode_client.wait_for_scan_result(scan_result.product_id())
-                scan_failed = False
-            except pm.BdbaScanError as bse:
-                scan_result = bse
-                scan_failed = True
-                logger.warning(bse.print_stacktrace())
-
-            # don't include component version here since it is also not considered in the BDBA scan
-            # -> this will deduplicate findings of the same artefact version across different
-            # component versions
-            c = dataclasses.replace(scan_request.component, version=None)
-            r = scan_request.artefact
-            scanned_element = cnudie.iter.ResourceNode(
-                path=(cnudie.iter.NodePathEntry(c),),
-                resource=r,
+            logger.info(f'uploading package-version-hints for {scan_result.display_name()}')
+            scan_result = protecode.assessments.upload_version_hints(
+                scan_result=scan_result,
+                hints=version_hints,
+                client=self.protecode_client,
             )
 
-            if scan_failed:
-                logger.error(f'scan of {scanned_element=} failed; {scan_result=}')
-                return
+        assessed_vulns_by_component = collections.defaultdict(list)
 
-            logger.info(
-                f'scan of {scan_result.display_name()} succeeded, going to post-process results'
-            )
-
-            if version_hints := _package_version_hints(
-                component=c,
-                artefact=r,
-                result=scan_result,
-            ):
-                logger.info(f'uploading package-version-hints for {scan_result.display_name()}')
-                scan_result = protecode.assessments.upload_version_hints(
-                    scan_result=scan_result,
-                    hints=version_hints,
-                    client=self.protecode_client,
-                )
-
-            assessed_vulns_by_component = collections.defaultdict(list)
-
-            if scan_request.auto_triage_scan():
-                assessed_vulns_by_component = protecode.assessments.auto_triage(
-                    analysis_result=scan_result,
-                    protecode_client=self.protecode_client,
-                    assessed_vulns_by_component=assessed_vulns_by_component,
-                )
-
-            assessed_vulns_by_component = protecode.assessments.add_assessments_if_none_exist(
-                tgt=scan_result,
-                tgt_group_id=self.group_id,
-                assessments=assessments,
+        if scan_request.auto_triage_scan():
+            assessed_vulns_by_component = protecode.assessments.auto_triage(
+                analysis_result=scan_result,
                 protecode_client=self.protecode_client,
                 assessed_vulns_by_component=assessed_vulns_by_component,
             )
 
-            if cve_rescoring_rules:
-                assessed_vulns_by_component = protecode.rescore.rescore(
-                    bdba_client=self.protecode_client,
-                    scan_result=scan_result,
-                    scanned_element=scanned_element,
-                    rescoring_rules=cve_rescoring_rules,
-                    max_rescore_severity=auto_assess_max_severity,
-                    assessed_vulns_by_component=assessed_vulns_by_component,
-                )
+        assessed_vulns_by_component = protecode.assessments.add_assessments_if_none_exist(
+            tgt=scan_result,
+            tgt_group_id=self.group_id,
+            assessments=assessments,
+            protecode_client=self.protecode_client,
+            assessed_vulns_by_component=assessed_vulns_by_component,
+        )
 
-            if assessed_vulns_by_component:
-                logger.info(
-                    f'retrieving result again from bdba for {scan_result.display_name()} ' +
-                    '(this may take a while)'
-                )
-                scan_result = self.protecode_client.wait_for_scan_result(
-                    product_id=scan_result.product_id(),
-                )
-
-            if delete_inactive_products_after_seconds is not None:
-                # remove deletion flag for current product as it is still in use
-                self.protecode_client.set_metadata(
-                    product_id=scan_result.product_id(),
-                    custom_attribs={
-                        'DELETE_AFTER': None,
-                    },
-                )
-
-            logger.info(f'post-processing of {scan_result.display_name()} done')
-
-            yield from protecode.util.iter_artefact_metadata(
-                scanned_element=scanned_element,
+        if cve_rescoring_rules:
+            assessed_vulns_by_component = protecode.rescore.rescore(
+                bdba_client=self.protecode_client,
                 scan_result=scan_result,
-                license_cfg=license_cfg,
-                delivery_client=delivery_client,
+                scanned_element=scanned_element,
+                rescoring_rules=cve_rescoring_rules,
+                max_rescore_severity=auto_assess_max_severity,
+                assessed_vulns_by_component=assessed_vulns_by_component,
             )
+
+        if assessed_vulns_by_component:
+            logger.info(
+                f'retrieving result again from bdba for {scan_result.display_name()} ' +
+                '(this may take a while)'
+            )
+            scan_result = self.protecode_client.wait_for_scan_result(
+                product_id=scan_result.product_id(),
+            )
+
+        if delete_inactive_products_after_seconds is not None:
+            # remove deletion flag for current product as it is still in use
+            self.protecode_client.set_metadata(
+                product_id=scan_result.product_id(),
+                custom_attribs={
+                    'DELETE_AFTER': None,
+                },
+            )
+
+        logger.info(f'post-processing of {scan_result.display_name()} done')
+
+        yield from protecode.util.iter_artefact_metadata(
+            scanned_element=scanned_element,
+            scan_result=scan_result,
+            license_cfg=license_cfg,
+            delivery_client=delivery_client,
+        )
 
 
 def _package_version_hints(
@@ -565,82 +508,23 @@ def _package_version_hints(
     ]
 
 
-def _retrieve_existing_scan_results(
+def retrieve_existing_scan_results(
     protecode_client: protecode.client.ProtecodeApi,
     group_id: int,
-    resource_groups: collections.abc.Iterable[tuple[cnudie.iter.ResourceNode]],
+    resource_node: cnudie.iter.ResourceNode,
     oci_client: oci.client.Client,
-) -> dict[
-    tuple[str, cm.ResourceIdentity, cm.ArtefactType|str],
-    list[pm.Product],
-]:
-    # This function populates a dict that contains all relevant scans for all artifacts in a given
-    # protecode group.
-    # The created dict is later used to lookup existing scans when creating scan requests
-    scan_results = dict()
-    seen_apps = dict()
-    for resource_group in resource_groups:
-        # groups are assumed to belong to same component + resource version name, and type so it
-        # is okay to choose first one as representative
-        c = resource_group[0].component
-        r = resource_group[0].resource
+) -> list[pm.Product]:
+    query_data = protecode.util.component_artifact_metadata(
+        component=resource_node.component,
+        artefact=resource_node.resource,
+        omit_resource_version=True,
+        oci_client=oci_client,
+    )
 
-        query_data = protecode.util.component_artifact_metadata(
-            component=c,
-            artefact=r,
-            omit_resource_version=True,
-            oci_client=oci_client,
-        )
-
-        meta = frozenset([(k, v) for k, v in query_data.items()])
-
-        if not meta in seen_apps:
-            seen_apps[meta] = list(protecode_client.list_apps(
-                group_id=group_id,
-                custom_attribs=query_data,
-            ))
-
-        resource_group_id = _resource_group_id(resource_group=resource_group)
-        scan_results[resource_group_id] = seen_apps[meta]
-
-    return scan_results
-
-
-def _resource_groups(
-    resource_nodes: collections.abc.Iterable[cnudie.iter.ResourceNode, None, None],
-    filter_function: collections.abc.Callable[[cnudie.iter.ResourceNode], bool],
-    artefact_types=(
-        cm.ResourceType.OCI_IMAGE,
-        'application/tar+vm-image-rootfs',
-    ),
-) -> collections.abc.Generator[tuple[cnudie.iter.ResourceNode], None, None]:
-    '''
-    group resources of same component name and resource version name
-
-    this grouping is done in order to deduplicate identical resource versions shared between
-    different component versions.
-    '''
-
-    # artefact-groups are grouped by:
-    # component-name, resource-name, resource-version, resource-type
-    # (thus implicitly deduplicating same resource-versions on different components)
-    resource_groups: dict[
-        tuple[str, cm.ResourceIdentity, str],
-        list[cnudie.iter.ResourceNode],
-    ] = collections.defaultdict(list)
-
-    for resource_node in resource_nodes:
-        if not resource_node.resource.type in artefact_types:
-            continue
-
-        if filter_function and not filter_function(resource_node):
-            continue
-
-        group_id = _resource_group_id((resource_node,))
-        resource_groups[group_id].append(resource_node)
-
-    logger.info(f'{len(resource_groups)=}')
-    yield from (tuple(g) for g in resource_groups.values())
+    return list(protecode_client.list_apps(
+        group_id=group_id,
+        custom_attribs=query_data,
+    ))
 
 
 def upload_grouped_images(
