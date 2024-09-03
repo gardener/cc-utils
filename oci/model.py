@@ -134,6 +134,26 @@ class OciImageReference:
 
     @property
     @functools.cache
+    def has_mixed_tag(self) -> bool:
+        if not self.has_digest_tag:
+            return False
+
+        p = self.urlparsed
+        ref_without_digest_tag = p.netloc + p.path.rsplit('@', 1)[0]
+
+        return ':' in ref_without_digest_tag
+
+    @property
+    @functools.cache
+    def with_symbolical_tag(self) -> str:
+        if not (self.has_symbolical_tag or self.has_mixed_tag):
+            raise ValueError(f'does not contain a symbolical tag: {str(self)=}')
+
+        p = self.urlparsed
+        return p.netloc + p.path.rsplit('@', 1)[0]
+
+    @property
+    @functools.cache
     def has_tag(self):
         return not self.tag_type is OciTagType.NO_TAG
 
