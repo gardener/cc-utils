@@ -12,6 +12,11 @@ fi
 
 if ${running_in_pipeline}; then
   version="$(cat managed-version/version)"
+  if echo "${version}"| grep -e-dev; then
+    # workaround: pypi only allows numbers (not hex-strs); as we do not publish
+    # snapshot-packages anyhow, it is okay to hardcode prerelease-suffix
+    version="$(echo "${version}" | cut -d- -f1)-dev0"
+  fi
   echo "${version}" | "${repo_dir}/.ci/write-version"
 fi
 
