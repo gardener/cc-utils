@@ -1,6 +1,14 @@
+import collections.abc
+
 import gci.componentmodel as cm
 
 import ioutil
+
+
+ResolveArtefactAccess = collections.abc.Callable[
+    [cm.Access],
+    collections.abc.Generator[bytes, None, None],
+]
 
 
 def s3_access_as_blob_descriptor(

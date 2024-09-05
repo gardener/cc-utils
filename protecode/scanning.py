@@ -20,14 +20,12 @@ import dso.cvss
 import dso.labels
 import dso.model
 import gci.componentmodel as cm
-import gci.oci
 import oci.client
 import protecode.assessments
 import protecode.client
 import protecode.model as pm
 import protecode.rescore
 import protecode.util
-import tarutil
 
 
 logger = logging.getLogger(__name__)
@@ -148,92 +146,36 @@ class ResourceGroupProcessor:
     def scan_request(
         self,
         resource_node: cnudie.iter.ResourceNode,
+        resolve_access: cnudie.access.ResolveArtefactAccess,
         known_artifact_scans: tuple[pm.Product],
-        s3_client: 'botocore.client.S3',
     ) -> pm.ScanRequest:
         component = resource_node.component
         resource = resource_node.resource
-
         display_name = f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
 
-        if resource.type is cm.ArtefactType.OCI_IMAGE:
-            # find product existing bdba scans (if any)
-            component_artifact_metadata = protecode.util.component_artifact_metadata(
-                resource_node=resource_node,
-                omit_resource_version=False,
-                oci_client=self.oci_client
-            )
-            target_product_id = protecode.util._matching_analysis_result_id(
-                component_artifact_metadata=component_artifact_metadata,
-                analysis_results=known_artifact_scans,
-            )
-            if target_product_id:
-                logger.info(f'{display_name=}: found {target_product_id=}')
-            else:
-                logger.info(f'{display_name=}: did not find old scan')
+        component_artifact_metadata = protecode.util.component_artifact_metadata(
+            resource_node=resource_node,
+            omit_resource_version=False,
+            oci_client=self.oci_client
+        )
+        target_product_id = protecode.util._matching_analysis_result_id(
+            component_artifact_metadata=component_artifact_metadata,
+            analysis_results=known_artifact_scans,
+        )
 
-            def iter_content():
-                image_reference = gci.oci.image_ref_with_digest(
-                    image_reference=resource.access.imageReference,
-                    digest=resource.digest,
-                    oci_client=self.oci_client,
-                )
-                yield from oci.image_layers_as_tarfile_generator(
-                    image_reference=image_reference,
-                    oci_client=self.oci_client,
-                    include_config_blob=False,
-                    fallback_to_first_subimage_if_index=True,
-                )
-
-            return pm.ScanRequest(
-                component=component,
-                artefact=resource,
-                scan_content=iter_content(),
-                display_name=display_name,
-                target_product_id=target_product_id,
-                custom_metadata=component_artifact_metadata,
-            )
-        elif resource.type == 'application/tar+vm-image-rootfs':
-            # hardcoded semantics for vm-images:
-            # merge all appropriate (tar)artifacts into one big tararchive
-            component_artifact_metadata = protecode.util.component_artifact_metadata(
-                resource_node=resource_node,
-                omit_resource_version=False,
-                oci_client=self.oci_client
-            )
-            target_product_id = protecode.util._matching_analysis_result_id(
-                component_artifact_metadata=component_artifact_metadata,
-                analysis_results=known_artifact_scans,
-            )
-
-            if target_product_id:
-                logger.info(f'{display_name=}: found {target_product_id=}')
-            else:
-                logger.info(f'{display_name=}: did not find old scan')
-
-            # hardcode assumption about all accesses being of s3-type
-            def as_blob_descriptors():
-                name = resource.extraIdentity.get('platform', 'dummy')
-
-                access: cm.S3Access = resource.access
-                yield cnudie.access.s3_access_as_blob_descriptor(
-                    s3_client=s3_client,
-                    s3_access=access,
-                    name=name,
-                )
-
-            return pm.ScanRequest(
-                component=component,
-                artefact=resource,
-                scan_content=tarutil.concat_blobs_as_tarstream(
-                    blobs=as_blob_descriptors(),
-                ),
-                display_name=display_name,
-                target_product_id=target_product_id,
-                custom_metadata=component_artifact_metadata,
-            )
+        if target_product_id:
+            logger.info(f'{display_name=}: found {target_product_id=}')
         else:
-            raise NotImplementedError(resource.type)
+            logger.info(f'{display_name=}: did not find old scan')
+
+        return pm.ScanRequest(
+            component=component,
+            artefact=resource,
+            scan_content=resolve_access(resource.access),
+            display_name=display_name,
+            target_product_id=target_product_id,
+            custom_metadata=component_artifact_metadata,
+        )
 
     def process_scan_request(
         self,
@@ -339,8 +281,8 @@ class ResourceGroupProcessor:
     def process(
         self,
         resource_node: cnudie.iter.ResourceNode,
+        resolve_access: cnudie.access.ResolveArtefactAccess,
         known_scan_results: tuple[pm.Product],
-        s3_client: 'botocore.client.S3',
         processing_mode: pm.ProcessingMode,
         delivery_client: delivery.client.DeliveryServiceClient=None,
         license_cfg: image_scan.LicenseCfg=None,
@@ -364,8 +306,8 @@ class ResourceGroupProcessor:
 
         scan_request = self.scan_request(
             resource_node=resource_node,
+            resolve_access=resolve_access(resource.access),
             known_artifact_scans=known_scan_results,
-            s3_client=s3_client,
         )
         try:
             scan_result = self.process_scan_request(
