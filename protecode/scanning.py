@@ -65,8 +65,7 @@ class ResourceGroupProcessor:
         relevant_group_ids.add(self.group_id)
 
         metadata = protecode.util.component_artifact_metadata(
-            component=resource_node.component,
-            artefact=resource_node.resource,
+            resource_node=resource_node,
             # we want to find all possibly relevant scans, so omit all version data
             omit_resource_version=True,
             oci_client=self.oci_client,
@@ -160,8 +159,7 @@ class ResourceGroupProcessor:
         if resource.type is cm.ArtefactType.OCI_IMAGE:
             # find product existing bdba scans (if any)
             component_artifact_metadata = protecode.util.component_artifact_metadata(
-                component=component,
-                artefact=resource,
+                resource_node=resource_node,
                 omit_resource_version=False,
                 oci_client=self.oci_client
             )
@@ -199,8 +197,7 @@ class ResourceGroupProcessor:
             # hardcoded semantics for vm-images:
             # merge all appropriate (tar)artifacts into one big tararchive
             component_artifact_metadata = protecode.util.component_artifact_metadata(
-                component=component,
-                artefact=resource,
+                resource_node=resource_node,
                 omit_resource_version=False,
                 oci_client=self.oci_client
             )
@@ -514,8 +511,7 @@ def retrieve_existing_scan_results(
     oci_client: oci.client.Client,
 ) -> list[pm.Product]:
     query_data = protecode.util.component_artifact_metadata(
-        component=resource_node.component,
-        artefact=resource_node.resource,
+        resource_node=resource_node,
         omit_resource_version=True,
         oci_client=oci_client,
     )
