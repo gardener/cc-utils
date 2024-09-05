@@ -9,6 +9,7 @@ import logging
 
 import ci.log
 import cnudie.iter
+import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import dso.model
@@ -307,6 +308,17 @@ def component_artifact_metadata(
         metadata['RESOURCE_TYPE'] = resource.type
         if not omit_resource_version:
             metadata['IMAGE_VERSION'] = resource.version
+
+    elif resource.access.type is cm.AccessType.LOCAL_BLOB:
+        metadata['IMAGE_REFERENCE_NAME'] = resource.name
+        metadata['RESOURCE_TYPE'] = cm.AccessType.LOCAL_BLOB
+        # do not use global access as it is optional
+        img_ref = component.current_ocm_repo.component_version_oci_ref(
+            name=component.name,
+            version=component.version,
+        )
+        digest = resource.access.localReference
+        metadata['IMAGE_REFERENCE'] = f'{img_ref}@sha256:{digest}'
 
     else:
         raise NotImplementedError(resource.access)
