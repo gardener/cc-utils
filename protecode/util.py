@@ -280,32 +280,36 @@ def enum_triages(
 
 
 def component_artifact_metadata(
-    component: cm.Component,
-    artefact: cm.Artifact,
+    resource_node: cnudie.iter.ResourceNode,
     omit_resource_version: bool,
     oci_client: oci.client.Client,
 ):
     ''' returns a dict for querying bdba scan results (use for custom-data query)
     '''
+    component = resource_node.component
+    resource = resource_node.resource
+
     metadata = {'COMPONENT_NAME': component.name}
 
-    if isinstance(artefact.access, cm.OciAccess):
-        metadata['IMAGE_REFERENCE_NAME'] = artefact.name
-        metadata['RESOURCE_TYPE'] = 'ociImage'
+    if resource.access.type is cm.AccessType.OCI_REGISTRY:
+        metadata['IMAGE_REFERENCE_NAME'] = resource.name
+        metadata['RESOURCE_TYPE'] = cm.ArtefactType.OCI_IMAGE
         if not omit_resource_version:
             image_reference = gci.oci.image_ref_with_digest(
-                image_reference=artefact.access.imageReference,
-                digest=artefact.digest,
+                image_reference=resource.access.imageReference,
+                digest=resource.digest,
                 oci_client=oci_client,
             )
             metadata['IMAGE_REFERENCE'] = image_reference.original_image_reference
-            metadata['IMAGE_VERSION'] = artefact.version
-    elif isinstance(artefact.access, cm.S3Access):
-        metadata['RESOURCE_TYPE'] = 'application/tar+vm-image-rootfs'
+            metadata['IMAGE_VERSION'] = resource.version
+
+    elif resource.access.type is cm.AccessType.S3:
+        metadata['RESOURCE_TYPE'] = resource.type
         if not omit_resource_version:
-            metadata['IMAGE_VERSION'] = artefact.version
+            metadata['IMAGE_VERSION'] = resource.version
+
     else:
-        raise NotImplementedError(artefact.access)
+        raise NotImplementedError(resource.access)
 
     return metadata
 
