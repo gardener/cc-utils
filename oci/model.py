@@ -182,6 +182,16 @@ class OciImageReference:
             return OciTagType.NO_TAG
 
     @property
+    def parsed_mixed_tag(self) -> tuple[str, str]:
+        if not self.has_mixed_tag:
+            raise ValueError(f'not a mixed-tag: {str(self)=}')
+
+        p = self.urlparsed
+        digest_tag = p.path.rsplit('@', 1)[-1]
+        symbolical_tag = p.path.rsplit('@', 1)[0].rsplit(':', 1)[-1]
+        return symbolical_tag, digest_tag
+
+    @property
     def parsed_digest_tag(self) -> tuple[str, str]:
         if not self.tag_type is OciTagType.DIGEST:
             raise ValueError(f'not a digest-tag: {str(self)=}')

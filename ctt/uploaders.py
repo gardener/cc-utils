@@ -83,7 +83,6 @@ class PrefixUploader:
 
         src_ref = om.OciImageReference.to_image_ref(src_ref)
         src_base_ref = src_ref.ref_without_tag
-        src_tag = src_ref.tag
 
         for remove_prefix in self._remove_prefixes:
             src_base_ref = src_base_ref.removeprefix(remove_prefix)
@@ -102,11 +101,16 @@ class PrefixUploader:
         else:
             tgt_ref = self._prefix + src_base_ref
 
-        if src_ref.has_digest_tag:
-            tgt_ref = f'{tgt_ref}@{src_tag}'
-            processing_job.upload_request.reference_target_by_digest = True
+        if src_ref.has_mixed_tag:
+            symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
+            tgt_ref = f'{tgt_ref}:{symbolical_tag}@{digest_tag}'
+        elif src_ref.has_digest_tag:
+            tgt_ref = f'{tgt_ref}@{src_ref.tag}'
         elif src_ref.has_symbolical_tag:
-            tgt_ref = f'{tgt_ref}:{src_tag}'
+            tgt_ref = f'{tgt_ref}:{src_ref.tag}'
+
+        if src_ref.has_digest_tag:
+            processing_job.upload_request.reference_target_by_digest = True
 
         upload_request = dataclasses.replace(
             processing_job.upload_request,
