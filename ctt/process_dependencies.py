@@ -493,10 +493,18 @@ def process_images(
                     processed_resource.access,
                     imageReference=target_ref,
                 )
-                processed_resource = dataclasses.replace(
-                    processed_resource,
-                    access=access,
+
+            elif access.type is cm.AccessType.RELATIVE_OCI_REFERENCE:
+                access = dataclasses.replace(
+                    processed_resource.access,
+                    reference=om.OciImageReference.to_image_ref(target_ref).local_ref,
                 )
+
+            processed_resource = dataclasses.replace(
+                processed_resource,
+                access=access,
+            )
+
             processing_job.processed_resource = processed_resource
 
             processing_job.upload_request = dataclasses.replace(
