@@ -205,9 +205,13 @@ class OciImageReference:
         return digest
 
     @property
+    def local_ref(self) -> str:
+        return self.urlparsed.path
+
+    @property
     @functools.cache
     def urlparsed(self) -> urllib.parse.ParseResult:
-        if not '://' in (img_ref := str(self)):
+        if not '://' in (img_ref := str(self)) and not img_ref.startswith('/'):
             return urllib.parse.urlparse(f'https://{img_ref}')
         return urllib.parse.urlparse(img_ref)
 

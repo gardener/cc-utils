@@ -121,9 +121,9 @@ class PrefixUploader:
         if self._convert_to_relative_refs:
             # remove host from target ref
             # don't use artifact_path as self._prefix can also contain path elements
-            relative_artifact_path = '/'.join(tgt_ref.split("/")[1:])
+            relative_artifact_path = om.OciImageReference.to_image_ref(tgt_ref).local_ref
             access = cm.RelativeOciAccess(
-                reference=relative_artifact_path
+                reference=relative_artifact_path,
             )
         else:
             access = cm.OciAccess(
