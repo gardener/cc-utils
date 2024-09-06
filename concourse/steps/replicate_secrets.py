@@ -1,6 +1,7 @@
 import base64
 import logging
 import random
+import urllib3.exceptions
 
 import kubernetes.client
 import kubernetes.config
@@ -175,12 +176,19 @@ def _put_k8s_secret(
         f"deploying config into k8s-secret '{secret_name}' in namespace "
         f"'{secret_namespace}' on cluster '{api_client.configuration.host}'"
     )
-    _put_secret(
-        core_api=core_api,
-        name=secret_name,
-        raw_data={secret_key: secret_data},
-        namespace=secret_namespace,
-    )
+
+    try:
+        _put_secret(
+            core_api=core_api,
+            name=secret_name,
+            raw_data={secret_key: secret_data},
+            namespace=secret_namespace,
+        )
+    except urllib3.exceptions.MaxRetryError as e:
+        logger.error(
+            f'cannot update k8s-secret on cluster {api_client.configuration.host} '
+            f'- maybe it is hibernated? Will continue with remaining secret replication; {e}'
+        )
 
 
 def _put_secrets_server_secret(
