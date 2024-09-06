@@ -72,19 +72,30 @@ class OciRegistryType(enum.Enum):
 
 class OciImageReference:
     @staticmethod
-    def to_image_ref(image_reference: typing.Union[str, 'OciImageReference']):
+    def to_image_ref(
+        image_reference: typing.Union[str, 'OciImageReference'],
+        normalise: bool=True,
+    ):
         if isinstance(image_reference, OciImageReference):
             return image_reference
         else:
-            return OciImageReference(image_reference=image_reference)
+            return OciImageReference(
+                image_reference=image_reference,
+                normalise=normalise,
+            )
 
-    def __init__(self, image_reference: typing.Union[str, 'OciImageReference']):
+    def __init__(
+        self,
+        image_reference: typing.Union[str, 'OciImageReference'],
+        normalise: bool=True,
+    ):
         if isinstance(image_reference, OciImageReference):
             self._orig_image_reference = image_reference._orig_image_reference
         elif isinstance(image_reference, str):
             self._orig_image_reference = image_reference
         else:
             raise ValueError(image_reference)
+        self._normalise = normalise
 
     @property
     def original_image_reference(self) -> str:
@@ -221,7 +232,9 @@ class OciImageReference:
         return f'{self.ref_without_tag}:{tag}'
 
     def __str__(self) -> str:
-        return self.normalised_image_reference
+        if self._normalise:
+            return self.normalised_image_reference
+        return self._orig_image_reference
 
     def __repr__(self) -> str:
         return f'OciImageReference({str(self)})'

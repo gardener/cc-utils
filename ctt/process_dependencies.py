@@ -497,7 +497,10 @@ def process_images(
             elif access.type is cm.AccessType.RELATIVE_OCI_REFERENCE:
                 access = dataclasses.replace(
                     processed_resource.access,
-                    reference=om.OciImageReference.to_image_ref(target_ref).local_ref,
+                    reference=om.OciImageReference.to_image_ref(
+                        image_reference=target_ref,
+                        normalise=False, # don't inject docker special handlings
+                    ).local_ref,
                 )
 
             processed_resource = dataclasses.replace(
