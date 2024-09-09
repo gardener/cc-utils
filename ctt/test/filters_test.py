@@ -14,7 +14,7 @@ def img(
     name='image_name',
     version='1.2.3',
     ref='image_ref:1.2.3',
-    type=cm.ResourceType.OCI_IMAGE,
+    type=cm.ArtefactType.OCI_IMAGE,
 ):
     def _img(name=name, version=version, ref=ref, type=type):
         return cm.Resource(

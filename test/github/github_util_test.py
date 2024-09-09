@@ -162,7 +162,7 @@ def test_target_matches():
         cm.Resource(
             name='res1',
             version='2.0.0',
-            type=cm.ResourceType.OCI_IMAGE,
+            type=cm.ArtefactType.OCI_IMAGE,
             access=None,
         )
     )

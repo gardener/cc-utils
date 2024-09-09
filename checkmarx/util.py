@@ -80,8 +80,8 @@ def _get_scan_artifacts_from_components(
     for component in components:
         for source in component.sources:
             if source.type not in (
-                cm.SourceType.DIRECTORY_TREE,
-                cm.SourceType.GIT,
+                cm.ArtefactType.DIRECTORY_TREE,
+                cm.ArtefactType.GIT,
             ):
                 source_name = f'{component.name}:{component.version}/{source.name}:{source.version}'
                 logger.warning(f'skipping {source_name} with {source.type=}')

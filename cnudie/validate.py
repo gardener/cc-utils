@@ -40,7 +40,7 @@ class ValidationError:
 
 def validate_resource_node(node: ci.ResourceNode) -> typing.Generator[ValidationError, None, None]:
     resource = node.resource
-    if resource.type != cm.ResourceType.OCI_IMAGE:
+    if resource.type != cm.ArtefactType.OCI_IMAGE:
         return
 
     resource.access: cm.OciAccess
