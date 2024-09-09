@@ -106,13 +106,13 @@ class ProcessingPipeline:
             job = uploader.process(job, target_as_source=not first)
             first = False
 
-        lssd_label = create_lssd_label(
+        ctt_label = create_ctt_label(
             processing_rules=[
                 self._name,
             ],
         )
         patched_resource = job.processed_resource.set_label(
-            label=lssd_label,
+            label=ctt_label,
         )
         job = dataclasses.replace(
             job,
@@ -122,12 +122,12 @@ class ProcessingPipeline:
         return job
 
 
-def create_lssd_label(
+def create_ctt_label(
     processing_rules: list[str],
 ) -> cm.Label:
-    lssd_label_name = 'cloud.gardener.cnudie/sdo/lssd'
+    ctt_label_name = 'cloud.gardener/ctt-hint'
     label = cm.Label(
-        name=lssd_label_name,
+        name=ctt_label_name,
         value={
             'processingRules': processing_rules,
         },

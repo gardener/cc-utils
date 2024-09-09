@@ -152,7 +152,7 @@ class TestVersionValidation(unittest.TestCase):
 
 
 def test_set_label():
-    lssd_label_name = 'cloud.gardener.cnudie/sdo/lssd'
+    ctt_label_name = 'cloud.gardener/ctt-hint'
     processing_rule_name = 'test-processing-rule'
 
     @dataclasses.dataclass
@@ -169,7 +169,7 @@ def test_set_label():
             name='appends label to empty input_labels list with raise_if_present == True',
             input_labels=[],
             label_to_set=cm.Label(
-                name=lssd_label_name,
+                name=ctt_label_name,
                 value={
                     'processingRules': [
                         processing_rule_name,
@@ -179,7 +179,7 @@ def test_set_label():
             raise_if_present=True,
             expected_labels=[
                 cm.Label(
-                    name=lssd_label_name,
+                    name=ctt_label_name,
                     value={
                         'processingRules': [
                             processing_rule_name,
@@ -193,7 +193,7 @@ def test_set_label():
             name='appends label to empty input_labels list with raise_if_present == False',
             input_labels=[],
             label_to_set=cm.Label(
-                name=lssd_label_name,
+                name=ctt_label_name,
                 value={
                     'processingRules': [
                         processing_rule_name,
@@ -203,7 +203,7 @@ def test_set_label():
             raise_if_present=False,
             expected_labels=[
                 cm.Label(
-                    name=lssd_label_name,
+                    name=ctt_label_name,
                     value={
                         'processingRules': [
                             processing_rule_name,
@@ -217,7 +217,7 @@ def test_set_label():
             name='throws exception if label exists and raise_if_present == True',
             input_labels=[
                 cm.Label(
-                    name=lssd_label_name,
+                    name=ctt_label_name,
                     value={
                         'processingRules': [
                             'first-pipeline',
@@ -226,7 +226,7 @@ def test_set_label():
                 ),
             ],
             label_to_set=cm.Label(
-                name=lssd_label_name,
+                name=ctt_label_name,
                 value={
                     'processingRules': [
                         processing_rule_name,
@@ -235,7 +235,7 @@ def test_set_label():
             ),
             raise_if_present=True,
             expected_labels=None,
-            expected_err_msg=f'label {lssd_label_name} is already present'
+            expected_err_msg=f'label {ctt_label_name} is already present'
         ),
         TestCase(
             name='throws no exception if label exists and raise_if_present == False',
@@ -245,7 +245,7 @@ def test_set_label():
                     value='test-val',
                 ),
                 cm.Label(
-                    name=lssd_label_name,
+                    name=ctt_label_name,
                     value={
                         'processingRules': [
                             'first-pipeline',
@@ -255,7 +255,7 @@ def test_set_label():
                 ),
             ],
             label_to_set=cm.Label(
-                name=lssd_label_name,
+                name=ctt_label_name,
                 value={
                     'processingRules': [
                         processing_rule_name,
@@ -269,7 +269,7 @@ def test_set_label():
                     value='test-val',
                 ),
                 cm.Label(
-                    name=lssd_label_name,
+                    name=ctt_label_name,
                     value={
                         'processingRules': [
                             processing_rule_name,
