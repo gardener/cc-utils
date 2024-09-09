@@ -421,7 +421,7 @@ def create_upgrade_pr(
     else:
         cmd_env['REPO_DIR'] = repo_dir
     cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
-    cmd_env['CTX_REPO_URL'] = component.current_repository_ctx().baseUrl
+    cmd_env['CTX_REPO_URL'] = component.current_ocm_repo.baseUrl
 
     if not container_image:
         # create upgrade diff

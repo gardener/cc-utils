@@ -95,7 +95,7 @@ def to_component_id_and_repository_url(
 
     if not repository: # component is sure to be of type cm.Component by now (checked above)
         component: cm.Component
-        repository = component.current_repository_ctx()
+        repository = component.current_ocm_repo
 
     if isinstance(repository, cm.OciOcmRepository):
         repo_base_url = repository.baseUrl
@@ -196,7 +196,7 @@ def oci_artefact_reference(
 ) -> str:
     if isinstance(component, cm.Component):
         if not ocm_repository:
-            ocm_repository = component.current_repository_ctx()
+            ocm_repository = component.current_ocm_repo
         component_name = component.name
         component_version = component.version
 
@@ -249,7 +249,7 @@ def target_oci_ref(
     component_name = normalise_component_name(component_name)
     component_version = component_ref.version
 
-    last_ctx_repo = component.current_repository_ctx()
+    last_ctx_repo = component.current_ocm_repo
 
     return last_ctx_repo.component_version_oci_ref(
         name=component_name,

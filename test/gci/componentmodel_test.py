@@ -71,7 +71,7 @@ def test_component():
         labels=(),
     )
 
-    assert component.current_repository_ctx().baseUrl == 'current-ctx-url'
+    assert component.current_ocm_repo.baseUrl == 'current-ctx-url'
 
 
 class TestVersionValidation(unittest.TestCase):

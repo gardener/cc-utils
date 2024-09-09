@@ -280,7 +280,7 @@ def upload(
         )
     component = component_descriptor.component
 
-    target_ocm_repo = component.current_repository_ctx()
+    target_ocm_repo = component.current_ocm_repo
     target_ref = target_ocm_repo.component_version_oci_ref(component)
 
     print(f'will upload to: {target_ref=}')
