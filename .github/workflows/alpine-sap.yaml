@@ -14,11 +14,6 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - uses: dataaxiom/ghcr-cleanup-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          package: cicd/alpine
-          older-than: "30 days"
 
       - name: Setup Docker-Buildx
         uses: docker/setup-buildx-action@v3
@@ -42,3 +37,9 @@ jobs:
           platforms: ${{ steps.qemu.outputs.platforms }}
           tags: ghcr.io/${{ github.repository_owner }}/cc-utils/alpine:3
           file: Dockerfile.alpine-sap
+
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          package: cc-utils/alpine
+          older-than: "30 days"
