@@ -396,7 +396,7 @@ def validate(component_descriptor: str):
     schema_file = os.path.join(
         repo_root,
         'gci',
-        'component-descriptor-v2-schema.yaml',
+        'ocm-component-descriptor-schema.yaml',
     )
     with open(schema_file) as f:
         schema_dict = yaml.safe_load(f)

@@ -4,6 +4,7 @@ import enum
 import functools
 import io
 import logging
+import os
 import typing
 import urllib.parse
 
@@ -13,9 +14,13 @@ import deprecated
 import jsonschema
 import yaml
 
-from . import default_json_schema_path
 
 dc = dataclasses.dataclass
+own_dir = os.path.dirname(__file__)
+default_json_schema_path = os.path.join(
+    own_dir,
+    'ocm-component-descriptor-schema.yaml',
+)
 
 logger = logging.getLogger(__name__)
 
@@ -364,7 +369,7 @@ class Artifact(LabelMethodsMixin):
         '''
         returns the identity-object for this artifact (component-ref, resource, or source).
 
-        Note that, in component-descriptor-v2, the `version` attribute is implicitly added iff
+        Note that, the `version` attribute is implicitly added iff
         there would otherwise be a conflict, iff this artifact only uses its `name` as
         identity-attr (which is the default).
 
