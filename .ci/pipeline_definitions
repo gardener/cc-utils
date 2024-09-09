@@ -189,20 +189,3 @@ cc-utils:
               prefix: dist/
               name: gardener-cicd-cli
               purposes: *purposes
-
-alpine-sap-image:
-  jobs:
-    update-alpine-sap-image:
-      traits:
-        cronjob:
-          interval: 24h
-        version:
-          preprocess: noop
-          versionfile: ALPINE_SAP_VERSION
-          inject_effective_version: True
-        publish:
-          dockerimages:
-            alpine-sap:
-              image: europe-docker.pkg.dev/gardener-project/snapshots/cicd/alpine-sap
-              dockerfile: Dockerfile.alpine-sap
-              tag_as_latest: True
