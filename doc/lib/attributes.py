@@ -64,7 +64,9 @@ class AttributesDocumentation:
         return self._child_elements
 
     def _type_name(self, type_):
-        if _is_generic_alias(type_):
+        if dataclasses.is_dataclass(type_):
+            return type_.__name__
+        elif _is_generic_alias(type_):
             if type_.__origin__ is dict:
                 key_type, val_type = type_.__args__
                 return f'Dict[{self._type_name(key_type)}, {self._type_name(val_type)}]'
@@ -124,7 +126,12 @@ class AttributesDocumentation:
 
         type_ = attr_spec.type()
         type_str = self._type_name(type_)
-        if _is_generic_alias(type_):
+        if dataclasses.is_dataclass(type_):
+            self.add_child(
+                model_element_type=type_,
+                element_name=name
+            )
+        elif _is_generic_alias(type_):
             if type_.__origin__ is dict:
                 # assumption: type is typing.Dict[T1, T2]
                 _, val_type = type_.__args__
@@ -141,7 +148,9 @@ class AttributesDocumentation:
                     element_types = element_type,
 
                 for element_type in element_types:
-                    if issubclass(element_type, base_model.AttributeSpec) \
+                    if dataclasses.is_dataclass(element_type):
+                        self.add_child(model_element_type=element_type, element_name=f'{name}[]')
+                    elif issubclass(element_type, base_model.AttributeSpec) \
                       or issubclass(element_type, enum.Enum):
                         self.add_child(model_element_type=type_.__args__[0], element_name=name)
         elif isinstance(type_, types.UnionType):
@@ -159,7 +168,33 @@ class AttributesDocumentation:
             return (name, required, default_value, type_str, doc)
 
     def fill_table(self, table_builder):
-        if issubclass(self._model_element_type, base_model.EnumWithDocumentation):
+        if dataclasses.is_dataclass(self._model_element_type):
+            table_builder.add_table_header(['name', 'required?', 'default', 'type', 'explanation'])
+
+            for field in dataclasses.fields(self._model_element_type):
+                name = field.name
+                required = 'yes' if field.default is dataclasses.MISSING else 'no'
+                default_value = self._default_value(getattr(self._model_element_type, name, None))
+                type_str = self._type_name(field.type)
+                doc = field.metadata.get('doc', '') if 'doc' in field.metadata else ''
+
+                table_builder.add_table_row((name, required, default_value, type_str, doc))
+
+                if dataclasses.is_dataclass(field.type):
+                    self.add_child(
+                        model_element_type=field.type,
+                        element_name=name
+                    )
+
+                elif _is_generic_alias(field.type):
+                    element_type = field.type.__args__[0]
+                    if dataclasses.is_dataclass(element_type):
+                        self.add_child(
+                            model_element_type=element_type,
+                            element_name=f'{name}'
+                        )
+
+        elif issubclass(self._model_element_type, base_model.EnumWithDocumentation):
             table_builder.add_table_header(['value', 'explanation'])
             for e in self._model_element_type:
                 table_builder.add_table_row((e.value, e.__doc__))
