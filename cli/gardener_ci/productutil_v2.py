@@ -46,7 +46,7 @@ def _raw_image_dep_to_v2(raw: dict):
   args = {
     'name': raw['name'],
     'version': raw['version'],
-    'type': cm.ResourceType.OCI_IMAGE,
+    'type': cm.ArtefactType.OCI_IMAGE,
     'relation': cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.EXTERNAL)),
     'access': cm.OciAccess(type=cm.AccessType.OCI_REGISTRY, imageReference=img_ref),
   }

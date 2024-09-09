@@ -156,7 +156,7 @@ def diff(
         for c in components:
             for r in c.resources:
                 if parsed.resource_types:
-                    if isinstance(r.type, cm.ResourceType):
+                    if isinstance(r.type, cm.ArtefactType):
                         resource_type = r.type.value
                     else:
                         resource_type = r.type

@@ -88,7 +88,7 @@ def base_component_descriptor_v2(
         sources=[
           cm.ComponentSource(
             name=logical_name,
-            type=cm.SourceType.GIT,
+            type=cm.ArtefactType.GIT,
             access=cm.GithubAccess(
               type=cm.AccessType.GITHUB,
               repoUrl=repo_url,

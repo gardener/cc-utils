@@ -157,7 +157,7 @@ class ResourceGroupProcessor:
 
         display_name = f'{resource.name}_{resource.version}_{component.name}'.replace('/', '_')
 
-        if resource.type is cm.ResourceType.OCI_IMAGE:
+        if resource.type is cm.ArtefactType.OCI_IMAGE:
             # find product existing bdba scans (if any)
             component_artifact_metadata = protecode.util.component_artifact_metadata(
                 component=component,

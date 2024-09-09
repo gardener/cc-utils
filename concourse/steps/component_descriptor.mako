@@ -130,7 +130,7 @@ if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.res
 component_v2.sources.append(
     cm.ComponentSource(
         name='${repository.logical_name().replace('/', '_').replace('.', '_')}',
-        type=cm.SourceType.GIT,
+        type=cm.ArtefactType.GIT,
         access=cm.GithubAccess(
             type=cm.AccessType.GITHUB,
             repoUrl='${repository.repo_hostname()}/${repository.repo_path()}',
@@ -158,7 +158,7 @@ component_v2.resources.append(
   cm.Resource(
     name='${target_spec.name}',
     version=effective_version, # always inherited from component
-    type=cm.ResourceType.OCI_IMAGE,
+    type=cm.ArtefactType.OCI_IMAGE,
     relation=cm.ResourceRelation.LOCAL,
     access=cm.OciAccess(
       type=cm.AccessType.OCI_REGISTRY,

@@ -123,7 +123,7 @@ def _remove_resource(
     oci_client: oc.Client,
 ) -> bool:
     resource = node.resource
-    if not resource.type in (cm.ResourceType.OCI_IMAGE, 'ociImage'):
+    if not resource.type in (cm.ArtefactType.OCI_IMAGE, 'ociImage'):
         return False # we only support removal of oci-images for now
 
     if not resource.relation in (cm.ResourceRelation.LOCAL, 'local'):

@@ -191,11 +191,6 @@ ArtefactType._value2member_map_ |= {
 }
 
 
-# aliases (deprecated!) for backwards-compatibility
-SourceType = ArtefactType
-ResourceType = ArtefactType
-
-
 class ResourceRelation(enum.StrEnum):
     LOCAL = 'local'
     EXTERNAL = 'external'

@@ -19,7 +19,7 @@ def test_labels_with_migration_hint_doesnt_overwrite_original_ref():
     res = cm.Resource(
         name='my-image',
         version='1.0.0',
-        type=cm.ResourceType.OCI_IMAGE,
+        type=cm.ArtefactType.OCI_IMAGE,
         access=cm.OciAccess(
             imageReference='target-repo.com/my-image:1.0.0',
         ),
@@ -49,7 +49,7 @@ def test_labels_with_migration_hint_adds_original_ref_if_not_present():
     res = cm.Resource(
         name='my-image',
         version='1.0.0',
-        type=cm.ResourceType.OCI_IMAGE,
+        type=cm.ArtefactType.OCI_IMAGE,
         access=cm.OciAccess(
             imageReference='target-repo.com/my-image:1.0.0',
         ),

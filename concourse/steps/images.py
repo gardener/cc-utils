@@ -8,13 +8,6 @@ import gci.componentmodel
 import reutil
 
 
-def _ensure_resource_is_oci(resource):
-    if resource.type is not gci.componentmodel.ResourceType.OCI_IMAGE:
-        raise NotImplementedError
-    if resource.access.type is not gci.componentmodel.AccessType.OCI_REGISTRY:
-        raise NotImplementedError
-
-
 def component_ref_component_name_filter(include_regexes=(), exclude_regexes=()):
     if not include_regexes and not exclude_regexes:
         return lambda component: True
