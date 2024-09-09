@@ -2,7 +2,7 @@
 temporary (hopefully short..) migration util as a backwards-compatible replacement for
 productutil.py -> add_dependencies
 
-different to the aforementioned cmd, a component-descriptor-v2 is expected as input, and
+different to the aforementioned cmd, an ocm-component-descriptor is expected as input, and
 created as output
 '''
 

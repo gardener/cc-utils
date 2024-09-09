@@ -59,7 +59,7 @@ setuptools.setup(
             '*.mako',
         ],
         'gci':[
-            'component-descriptor-v2-schema.yaml',
+            'ocm-component-descriptor-schema.yaml',
         ],
     },
     install_requires=list(requirements()),
