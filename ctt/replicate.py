@@ -33,7 +33,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     client = ccc.oci.oci_client()
 
     component = patched_component_descriptor.component
-    target_repository = component.current_repository_ctx()
+    target_repository = component.current_ocm_repo
     target_ref = target_repository.component_version_oci_ref(component)
 
     if client.head_manifest(image_reference=target_ref, absent_ok=True):

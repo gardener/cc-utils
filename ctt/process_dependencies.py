@@ -405,7 +405,7 @@ def process_images(
     if processing_mode is ProcessingMode.DRY_RUN:
         ci.util.warning('dry-run: not downloading or uploading any images')
 
-    src_ctx_base_url = component_descriptor_v2.component.current_repository_ctx().baseUrl
+    src_ctx_base_url = component_descriptor_v2.component.current_ocm_repo.baseUrl
 
     if src_ctx_base_url == tgt_ctx_base_url:
         raise RuntimeError('current repo context and target repo context must be different!')
@@ -542,7 +542,7 @@ def process_images(
         else:
             raise TypeError(ctx_base_url)
 
-        if component.current_repository_ctx().baseUrl != ocm_repo.baseUrl:
+        if component.current_ocm_repo.baseUrl != ocm_repo.baseUrl:
             component.repositoryContexts.append(ocm_repo)
 
     components: list[cm.Component] = []
@@ -600,7 +600,7 @@ def process_images(
             src_component = root
         else:
             src_component = component_descriptor_lookup(component).component
-        src_ocm_repo = src_component.current_repository_ctx()
+        src_ocm_repo = src_component.current_ocm_repo
         append_ctx_repo(src_ocm_repo, component)
         append_ctx_repo(tgt_ctx_base_url, component)
 

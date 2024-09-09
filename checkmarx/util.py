@@ -45,7 +45,7 @@ def scan_sources(
 ) -> model.FinishedScans:
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
-            component_descriptor.component.current_repository_ctx(),
+            component_descriptor.component.current_ocm_repo,
         ),
     )
 

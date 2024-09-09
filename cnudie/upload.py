@@ -118,7 +118,7 @@ def upload_component_descriptor(
         else:
             raise TypeError(type(ocm_repository))
 
-        if not component.current_repository_ctx() == ocm_repository:
+        if not component.current_ocm_repo == ocm_repository:
             component.repositoryContexts.append(ocm_repository)
 
     target_ref = cnudie.util.oci_artefact_reference(component)
