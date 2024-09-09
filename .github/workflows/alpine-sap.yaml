@@ -40,5 +40,5 @@ jobs:
         with:
           push: true
           platforms: ${{ steps.qemu.outputs.platforms }}
-          tags: ghcr.io/${{ github.repository_owner }}/cicd/alpine:3
+          tags: ghcr.io/${{ github.repository_owner }}/cc-utils/alpine:3
           file: Dockerfile.alpine-sap
