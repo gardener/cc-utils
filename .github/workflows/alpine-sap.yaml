@@ -3,6 +3,7 @@ run-name: Building Alpine-SAP-Image
 on:
   schedule:
     - cron: "0 0 * * *" # daily
+  workflow_dispatch:
 
 jobs:
   build-and-push:
