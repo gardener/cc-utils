@@ -217,7 +217,7 @@ class OciImageReference:
 
     @property
     def local_ref(self) -> str:
-        return self.urlparsed.path
+        return self.urlparsed.path.removeprefix('/')
 
     @property
     @functools.cache
