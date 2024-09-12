@@ -101,12 +101,12 @@ class OciBasicAuthCredentials(OciCredentials):
 
 # typehint-alias
 image_reference = str
-credentials_lookup = typing.Callable[[image_reference, Privileges, bool], OciCredentials]
+credentials_lookup = collections.abc.Callable[[image_reference, Privileges, bool], OciCredentials]
 
 
 def mk_credentials_lookup(
     cfgs: typing.Union[OciCredentials, typing.Sequence[OciCredentials]],
-) -> typing.Callable[[image_reference, Privileges, bool], OciConfig]:
+) -> collections.abc.Callable[[image_reference, Privileges, bool], OciConfig]:
     '''
     returns a callable that can be queried for matching OciCredentials for requested
     privileges and image-references
