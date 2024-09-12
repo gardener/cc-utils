@@ -286,7 +286,7 @@ else:
 if descriptor_v2 and ctx_repository_base_url:
   ocm_repository = cm.OciOcmRepository(baseUrl=ctx_repository_base_url)
 
-  if descriptor_v2.component.current_repository_ctx() != ocm_repository:
+  if descriptor_v2.component.current_ocm_repo != ocm_repository:
     descriptor_v2.component.repositoryContexts.append(ocm_repository)
 
   target_ref = cnudie.util.oci_artefact_reference(descriptor_v2.component)
