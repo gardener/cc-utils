@@ -108,6 +108,9 @@ class AnalysisResult(ModelBase):
     def scanned_bytes(self) -> int:
         return self.raw.get('scanned_bytes')
 
+    def fail_reason(self) -> str:
+        return self.raw.get('fail-reason')
+
     def __repr__(self):
         return f'{self.__class__.__name__}: {self.display_name()}({self.product_id()})'
 
