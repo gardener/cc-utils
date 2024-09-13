@@ -9,4 +9,6 @@ ADD http://aia.pki.co.sap.com/aia/SAP%20Global%20Root%20CA.crt \
     /usr/local/share/ca-certificates/SAP_Global_Root_CA.crt
 ADD http://aia.pki.co.sap.com/aia/SAPNetCA_G2.crt \
     /usr/local/share/ca-certificates/SAPNetCA_G2.crt
+ADD http://aia.pki.co.sap.com/aia/SAPNetCA_G2_2.crt \
+    /usr/local/share/ca-certificates/SAPNetCA_G2_2.crt
 RUN update-ca-certificates
