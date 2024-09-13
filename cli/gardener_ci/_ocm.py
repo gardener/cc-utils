@@ -33,6 +33,7 @@ own_dir = os.path.dirname(__file__)
 repo_root = os.path.join(own_dir, '../..')
 
 
+__cmd_name__ = 'ocm'
 _cfg = ctx.cfg
 
 logger = logging.getLogger(__name__)

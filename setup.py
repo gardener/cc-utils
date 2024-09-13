@@ -25,6 +25,7 @@ def modules():
 
     # avoid including other setup-scripts
     module_names.remove('setup.oci')
+    module_names.remove('setup.ocm')
     module_names.remove('setup.whd')
     return module_names
 
@@ -35,6 +36,7 @@ def packages():
     # remove packages (distributed via separate distribution-packages)
     package_names.remove('whd')
     package_names.remove('oci')
+    module_names.remove('ocm')
     return package_names
 
 
