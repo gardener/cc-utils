@@ -243,9 +243,13 @@ class ProtecodeApi:
     ) -> pm.AnalysisResult:
         def scan_finished():
             result = self.scan_result(product_id=product_id)
-            if result.status() in (pm.ProcessingStatus.READY, pm.ProcessingStatus.FAILED):
+            if result.status() is pm.ProcessingStatus.READY:
                 return result
-            return False
+            elif result.status() is pm.ProcessingStatus.FAILED:
+                # failed scans do not contain package infos, raise to prevent side effects
+                raise RuntimeError(f'scan failed; {result.fail_reason()=}')
+            else:
+                return False
 
         result = scan_finished()
         while not result:
