@@ -1,3 +1,4 @@
 dacite
 python-dateutil
+requests
 www-authenticate
