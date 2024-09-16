@@ -155,6 +155,12 @@ ATTRIBUTES = (
         doc='env vars to pass to after_merge_callback (similar to step\'s vars)',
         type=dict,
     ),
+    AttributeSpec.optional(
+        name='pullrequest_body_suffix',
+        default=None,
+        doc='optional suffix to be appended to created upgrade-pullrequest-bodies',
+        type=str,
+    ),
 )
 
 
@@ -215,6 +221,10 @@ class UpdateComponentDependenciesTrait(Trait):
 
     def vars(self):
         return self.raw['vars']
+
+    @property
+    def pullrequest_body_suffix(self) -> str | None:
+        return self.raw.get('pullrequest_body_suffix', None)
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self)

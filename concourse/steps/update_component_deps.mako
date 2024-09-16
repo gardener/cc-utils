@@ -21,6 +21,7 @@ set_dependency_version_script_path = update_component_deps_trait.set_dependency_
 after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
+pullrequest_body_suffix = update_component_deps_trait.pullrequest_body_suffix
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
@@ -183,6 +184,9 @@ for from_ref, to_version in determine_upgrade_prs(
         merge_method=merge_method,
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
+% endif
+% if pullrequest_body_suffix:
+        pullrequest_body_suffix='${pullrequest_body_suffix}',
 % endif
 % if set_version_script_image:
         container_image='${set_version_script_image}',

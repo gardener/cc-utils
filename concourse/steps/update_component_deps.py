@@ -394,6 +394,7 @@ def create_upgrade_pr(
     component_descriptor_lookup,
     after_merge_callback=None,
     container_image:str=None,
+    pullrequest_body_suffix: str=None,
 ) -> gu.UpgradePullRequest:
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
@@ -516,8 +517,11 @@ def create_upgrade_pr(
         else:
             pr_body = split_release_notes[0] + max_body_length_exceeded_remark
     else:
-        pr_body = None
+        pr_body = ''
         additional_notes = []
+
+    if pullrequest_body_suffix:
+        pr_body += f'\n{pullrequest_body_suffix}'
 
     try:
         pull_request = ls_repo.create_pull(
@@ -528,7 +532,7 @@ def create_upgrade_pr(
             ),
             base=githubrepobranch.branch(),
             head=upgrade_branch_name,
-            body=pr_body,
+            body=pr_body.strip(),
         )
 
         for release_note_part in additional_notes:
