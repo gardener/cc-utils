@@ -423,9 +423,10 @@ class HelmchartCfg:
 
 
 ATTRIBUTES = (
-    AttributeSpec.required(
+    AttributeSpec.optional(
         name='dockerimages',
         doc='specifies the container images to be built',
+        default={},
         type=typing.Dict[str, PublishDockerImageDescriptor],
     ),
     AttributeSpec.optional(
