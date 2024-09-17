@@ -227,16 +227,72 @@ def enum_processing_cfgs(
     )
 
 
-def create_jobs(
-    processing_cfg_path: str,
-    component_descriptor_v2: cm.ComponentDescriptor,
-    inject_ocm_coordinates_into_oci_manifests: bool,
+def determine_changed_components(
+    component_descriptor: cm.ComponentDescriptor,
+    tgt_ocm_repo_url: str,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     component_filter: collections.abc.Callable[[cm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
-):
-    processing_cfg = parse_processing_cfg(processing_cfg_path)
+) -> collections.abc.Generator[cm.ComponentDescriptor, None, None]:
+    component = component_descriptor.component
 
+    if component_filter and component_filter(component):
+        return
+
+    if tgt_component_descriptor_lookup(
+        component.identity(),
+        absent_ok=True,
+    ):
+        logger.info(
+            f'{component.identity()} already exists in {tgt_ocm_repo_url=} '
+            '- skipping replication of transitive closure'
+        )
+        return
+
+    for cref in component.componentReferences:
+        referenced_component_descriptor = component_descriptor_lookup(cm.ComponentIdentity(
+            name=cref.componentName,
+            version=cref.version,
+        ))
+
+        yield from determine_changed_components(
+            component_descriptor=referenced_component_descriptor,
+            tgt_ocm_repo_url=tgt_ocm_repo_url,
+            component_descriptor_lookup=component_descriptor_lookup,
+            tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
+            component_filter=component_filter,
+            reftype_filter=reftype_filter,
+        )
+
+    if not (
+        reftype_filter and reftype_filter(cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL)
+    ) and (
+        label := component.find_label(dso.labels.ExtraComponentReferencesLabel.name)
+    ):
+        extra_crefs_label = dso.labels.deserialise_label(label)
+
+        for extra_cref in extra_crefs_label.value:
+            extra_cref_id = extra_cref.component_reference
+            referenced_component_descriptor = component_descriptor_lookup(extra_cref_id)
+
+            yield from determine_changed_components(
+                component_descriptor=referenced_component_descriptor,
+                tgt_ocm_repo_url=tgt_ocm_repo_url,
+                component_descriptor_lookup=component_descriptor_lookup,
+                tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
+                component_filter=component_filter,
+                reftype_filter=reftype_filter,
+            )
+
+    yield component_descriptor
+
+
+def create_jobs(
+    component_descriptors: collections.abc.Iterable[cm.ComponentDescriptor],
+    processing_cfg: dict,
+    inject_ocm_coordinates: bool,
+) -> collections.abc.Generator[processing_model.ProcessingJob, None, None]:
     shared_processors = {
         name: _processor(cfg) for name, cfg in processing_cfg.get('processors', {}).items()
     }
@@ -244,38 +300,34 @@ def create_jobs(
         name: _uploader(cfg) for name, cfg in processing_cfg.get('uploaders', {}).items()
     }
 
-    for component, resource in cnudie.iter.iter_resources(
-        component=component_descriptor_v2,
-        lookup=component_descriptor_lookup,
-        component_filter=component_filter,
-        reftype_filter=reftype_filter,
-    ):
-        resource: cm.Resource
-        # XXX only support OCI-resources for now
-        if not resource.access.type is cm.AccessType.OCI_REGISTRY:
-            continue
+    for component_descriptor in component_descriptors:
+        component = component_descriptor.component
 
-        oci_resource = resource
-        for pipeline in enum_processing_cfgs(
-            parse_processing_cfg(processing_cfg_path),
-            shared_processors,
-            shared_uploaders,
-        ):
-            job = pipeline.process(
-                component=component,
-                resource=oci_resource,
-                inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
-            )
+        for resource in component.resources:
+            # XXX only support OCI-resources for now
+            if not resource.access.type is cm.AccessType.OCI_REGISTRY:
+                continue
 
-            if not job:
-                continue  # pipeline did not want to process
+            for pipeline in enum_processing_cfgs(
+                processing_cfg=processing_cfg,
+                shared_processors=shared_processors,
+                shared_uploaders=shared_uploaders,
+            ):
+                job = pipeline.process(
+                    component=component,
+                    resource=resource,
+                    inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates,
+                )
 
-            yield job
-            break
-        else:
-            ci.util.warning(
-                f' no matching processor: {component.name}:{oci_resource.access}'
-            )
+                if not job:
+                    continue # pipeline did not want to process
+
+                yield job
+                break
+            else:
+                ci.util.warning(
+                    f'no matching processor: {component.name}:{resource.access}'
+                )
 
 
 uploaded_image_refs_to_digests = {}  # <ref>:<digest>
@@ -379,7 +431,6 @@ def process_upload_request(
 def process_images(
     processing_cfg_path: str,
     component_descriptor_v2: cm.ComponentDescriptor,
-    tgt_ctx_base_url: str,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
@@ -390,6 +441,8 @@ def process_images(
     oci_client: oci.client.Client=None,
     component_filter: collections.abc.Callable[[cm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
+    tgt_ocm_base_url: str=None,
+    tgt_ctx_base_url: str=None, # deprecated -> replaced by `tgt_ocm_base_url`
 ) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -399,15 +452,21 @@ def process_images(
     references from the replication. In both cases, `True` means the respective component is
     _excluded_.
     '''
+    if tgt_ctx_base_url:
+        tgt_ocm_base_url = tgt_ctx_base_url
+
+    if not tgt_ocm_base_url:
+        raise ValueError(tgt_ocm_base_url)
+
     if not oci_client:
         oci_client = ccc.oci.oci_client()
 
     if processing_mode is ProcessingMode.DRY_RUN:
         ci.util.warning('dry-run: not downloading or uploading any images')
 
-    src_ctx_base_url = component_descriptor_v2.component.current_ocm_repo.baseUrl
+    src_ocm_base_url = component_descriptor_v2.component.current_ocm_repo.baseUrl
 
-    if src_ctx_base_url == tgt_ctx_base_url:
+    if src_ocm_base_url == tgt_ocm_base_url:
         raise RuntimeError('current repo context and target repo context must be different!')
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
@@ -419,13 +478,25 @@ def process_images(
 
         reftype_filter = filter_extra_component_refs
 
-    jobs = create_jobs(
-        processing_cfg_path=processing_cfg_path,
-        component_descriptor_v2=component_descriptor_v2,
-        inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
+    tgt_component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(tgt_ocm_base_url),
+        oci_client=oci_client,
+        fallback_to_service_mapping=False,
+    )
+
+    component_descriptors = tuple(determine_changed_components(
+        component_descriptor=component_descriptor_v2,
+        tgt_ocm_repo_url=tgt_ocm_base_url,
         component_descriptor_lookup=component_descriptor_lookup,
+        tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
+    ))
+
+    jobs = create_jobs(
+        component_descriptors=component_descriptors,
+        processing_cfg=parse_processing_cfg(processing_cfg_path),
+        inject_ocm_coordinates=inject_ocm_coordinates_into_oci_manifests,
     )
 
     def process_job(processing_job: processing_model.ProcessingJob):
@@ -467,8 +538,10 @@ def process_images(
         if processed_resource and (digest := processed_resource.digest):
             # if resource has a digest we understand, and is an ociArtifact, then we need to
             # update the digest, because we might have changed the oci-artefact
-            if digest.hashAlgorithm.upper() == 'SHA-256' and \
-              digest.normalisationAlgorithm == 'ociArtifactDigest/v1':
+            if (
+                digest.hashAlgorithm.upper() == 'SHA-256'
+                and digest.normalisationAlgorithm == 'ociArtifactDigest/v1'
+            ):
                 digest.value = oci_manifest_digest.removeprefix('sha256:')
 
                 processed_resource = dataclasses.replace(
@@ -521,117 +594,52 @@ def process_images(
         try:
             return process_job(processing_job=processing_job)
         except Exception as e:
-            logger.warn(f'exception while processing {processing_job=}')
+            logger.error(f'exception while processing {processing_job=}')
             raise e
 
     jobs = executor.map(wrap_process_job, jobs)
 
-    # group jobs by component-version (TODO: either make Component immutable, or implement
-    # __eq__ / __hash__
-    def cname_version(component: cm.Component):
-        return (component.name, component.version)
-
-    def job_cname_version(job: processing_model.ProcessingJob):
-        return cname_version(job.component)
-
-    def append_ctx_repo(ctx_base_url: str | cm.OciOcmRepository, component: cm.Component):
-        if isinstance(ctx_base_url, str):
-            ocm_repo = cm.OciOcmRepository(baseUrl=ctx_base_url)
-        elif isinstance(ctx_base_url, cm.OciOcmRepository):
-            ocm_repo = ctx_base_url
+    def append_ocm_repo(
+        component: cm.Component,
+        ocm_repo: str | cm.OciOcmRepository,
+    ):
+        if isinstance(ocm_repo, str):
+            ocm_repo = cm.OciOcmRepository(baseUrl=ocm_repo)
+        elif isinstance(ocm_repo, cm.OciOcmRepository):
+            pass
         else:
-            raise TypeError(ctx_base_url)
+            raise TypeError(ocm_repo)
 
         if component.current_ocm_repo.baseUrl != ocm_repo.baseUrl:
             component.repositoryContexts.append(ocm_repo)
 
-    components: list[cm.Component] = []
-    for _, job_group in itertools.groupby(
-        sorted(jobs, key=job_cname_version),
-        job_cname_version,
-    ):
+    for component_descriptor in component_descriptors:
+        component = component_descriptor.component
+
+        job_group = [
+            job for job in jobs
+            if job.component.identity() == component.identity()
+        ]
+
         patched_resources = {}
 
         # patch-in overwrites (caveat: must be done sequentially, as lists are not threadsafe)
         for job in job_group:
-            component = job.component
             patched_resource = job.processed_resource or job.resource
             patched_resources[job.resource.identity(component.resources)] = patched_resource
 
-            yield cnudie.iter.ResourceNode(
-                path=(cnudie.iter.NodePathEntry(component),),
-                resource=patched_resource,
-            )
-            continue
+        component.resources = [
+            patched_resources.get(resource.identity(component.resources), resource)
+            for resource in component.resources
+        ]
 
-        res_list = []
-        for res in component.resources:
-            if res.identity(component.resources) in patched_resources:
-                res_list.append(patched_resources[res.identity(component.resources)])
-            else:
-                res_list.append(res)
-
-        components.append(dataclasses.replace(
-            component,
-            resources=res_list,
-        ))
-
-    processed_component_versions = {cname_version(c) for c in components}
-
-    # hack: add all components w/o resources (those would otherwise be ignored)
-    for component_node in cnudie.iter.iter(
-        component=component_descriptor_v2,
-        lookup=component_descriptor_lookup,
-        node_filter=cnudie.iter.Filter.components,
-        component_filter=component_filter,
-        reftype_filter=reftype_filter,
-    ):
-        component = component_node.component
-        if not cname_version(component) in processed_component_versions:
-            components.append(component)
-            processed_component_versions.add(cname_version(component))
-
-    root = component_descriptor_v2.component
-
-    for component in components:
-        # root component descriptor is typically not uploaded prior to calling CTT
-        # -> use passed-in component-descriptor
-        if component.name == root.name and component.version == root.version:
-            src_component = root
-        else:
-            src_component = component_descriptor_lookup(component).component
-        src_ocm_repo = src_component.current_ocm_repo
-        append_ctx_repo(src_ocm_repo, component)
-        append_ctx_repo(tgt_ctx_base_url, component)
+        append_ocm_repo(
+            component=component,
+            ocm_repo=tgt_ocm_base_url,
+        )
 
         if remove_label:
             component.labels = [label for label in component.labels if not remove_label(label.name)]
-
-        yield cnudie.iter.ComponentNode(
-            path=(cnudie.iter.NodePathEntry(component),),
-        )
-
-    source_comp = component_descriptor_v2.component
-
-    # publish the (patched) component-descriptors
-    def reupload_component(component: cm.Component):
-        if skip_component_upload and skip_component_upload(component):
-            return
-
-        # Note: We lose existing signatures of referenced components here since we don't store their
-        # complete component descriptor (only the `component` property). This is currently okay-ish
-        # since we only sign the root component descriptor and don't expect any referenced component
-        # descriptor to be signed.
-        if component.name == source_comp.name and component.version == source_comp.version:
-            component_descriptor = dataclasses.replace(
-                component_descriptor_v2,
-                component=component,
-            )
-        else:
-            component_descriptor = cm.ComponentDescriptor(
-                meta=cm.Metadata(),
-                component=component,
-            )
 
         # Validate the patched component-descriptor and exit on fail
         if not skip_cd_validation:
@@ -640,16 +648,12 @@ def process_images(
             try:
                 raw_json = json.dumps(raw, cls=ctt_util.EnumJSONEncoder)
             except Exception as e:
-                logger.error(
-                    f'Component-Descriptor could not be json-serialised: {e}'
-                )
+                logger.error(f'Component-Descriptor could not be json-serialised: {e}')
                 raise
             try:
                 raw = json.loads(raw_json)
             except Exception as e:
-                logger.error(
-                    f'Component-Descriptor could not be deserialised: {e}'
-                )
+                logger.error(f'Component-Descriptor could not be deserialised: {e}')
                 raise
 
             try:
@@ -660,61 +664,55 @@ def process_images(
                 )
                 print(rre)
             except Exception as e:
-                c = component_descriptor.component
-                component_id = f'{c.name}:{c.version}'
+                component_id = f'{component.name}:{component.version}'
                 logger.warning(
                     f'Schema validation for component-descriptor {component_id} failed with {e}'
                 )
 
-        if processing_mode is ProcessingMode.REGULAR:
-            if component.name == source_comp.name and component.version == source_comp.version:
-                # we must differentiate whether the input component descriptor (1) exists in the
-                # source context or (2) not (e.g. if a component descriptor from a local
-                # file is used).
-                # for case (2) the copying of resources isn't supported by the coding.
-                if component_descriptor_lookup(component_descriptor, absent_ok=True):
-                    cd_exists_in_src_ctx = True
-                else:
-                    cd_exists_in_src_ctx = False
+        # publish the (patched) component-descriptors
+        if skip_component_upload and skip_component_upload(component):
+            continue
 
-                if cd_exists_in_src_ctx:
-                    orig_ocm_repo = component.repositoryContexts[-2]
-                    ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
-                        src_name=component_descriptor.component.name,
-                        src_version=component_descriptor.component.version,
-                        patched_component_descriptor=component_descriptor,
-                        src_ctx_repo=orig_ocm_repo,
-                    )
-                else:
-                    if component.resources:
-                        raise NotImplementedError('cannot replicate resources of root component')
-                    cnudie.upload.upload_component_descriptor(
-                        component_descriptor=component_descriptor,
-                        ocm_repository=tgt_ctx_base_url,
-                        on_exist=cnudie.upload.UploadMode.SKIP,
-                    )
-            else:
-                if len(ocm_repos := component.repositoryContexts) >= 2:
-                    orig_ocm_repo = component.repositoryContexts[-2]
-                elif len(ocm_repos) == 1:
-                    logger.warn(f'{component.name}:{component.version} has only one ocm-repository')
-                    logger.warn('(expected: two or more)')
-                    logger.warn(f'{ocm_repos=}')
-                    orig_ocm_repo = component.repositoryContexts[-1]
-                else:
-                    raise RuntimeError(f'{component.name}:{component.version} has no ocm-repository')
-
-                ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
-                    src_name=component_descriptor.component.name,
-                    src_version=component_descriptor.component.version,
-                    patched_component_descriptor=component_descriptor,
-                    src_ctx_repo=orig_ocm_repo,
-                )
-        elif processing_mode == ProcessingMode.DRY_RUN:
+        if processing_mode is ProcessingMode.DRY_RUN:
             print('dry-run - will not publish component-descriptor')
-            return
-        else:
+            continue
+        elif processing_mode is not ProcessingMode.REGULAR:
             raise NotImplementedError(processing_mode)
 
-    for _ in executor.map(reupload_component, components):
-        pass
+        if len(ocm_repos := component.repositoryContexts) >= 2:
+            orig_ocm_repo = component.repositoryContexts[-2]
+        elif len(ocm_repos) == 1:
+            logger.warning(f'{component.name}:{component.version} has only one ocm-repository')
+            logger.warning('(expected: two or more)')
+            logger.warning(f'{ocm_repos=}')
+            orig_ocm_repo = component.repositoryContexts[-1]
+        else:
+            raise RuntimeError(f'{component.name}:{component.version} has no ocm-repository')
+
+        ctt.replicate.replicate_oci_artifact_with_patched_component_descriptor(
+            src_name=component.name,
+            src_version=component.version,
+            patched_component_descriptor=component_descriptor,
+            src_ctx_repo=orig_ocm_repo,
+        )
+
+    for node in cnudie.iter.iter(
+        component=component_descriptor_v2,
+        lookup=tgt_component_descriptor_lookup,
+        component_filter=component_filter,
+        reftype_filter=reftype_filter,
+    ):
+        if cnudie.iter.Filter.components(node):
+            pass
+        elif cnudie.iter.Filter.resources(node):
+            node: cnudie.iter.ResourceNode
+
+            if node.resource.access.type not in (
+                cm.AccessType.OCI_REGISTRY,
+                cm.AccessType.RELATIVE_OCI_REFERENCE,
+            ):
+                continue
+        else:
+            continue
+
+        yield node
