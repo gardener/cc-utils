@@ -261,7 +261,7 @@ def target_oci_ref(
 def main_source(
     component: cm.Component,
     absent_ok: bool=True,
-) -> cm.ComponentSource:
+) -> cm.Source:
     component = to_component(component)
     for source in component.sources:
         if label := source.find_label('cloud.gardener/cicd/source'):
@@ -400,8 +400,8 @@ def diff_components(
 
 
 def _enumerate_group_pairs(
-    left_elements: collections.abc.Sequence[cm.Resource | cm.ComponentSource | cm.Label],
-    right_elements: collections.abc.Sequence[cm.Resource | cm.ComponentSource, cm.Label],
+    left_elements: collections.abc.Sequence[cm.Resource | cm.Source | cm.Label],
+    right_elements: collections.abc.Sequence[cm.Resource | cm.Source, cm.Label],
     unique_name: bool = False,
 ) -> collections.abc.Generator[tuple[list, list], None, None] | \
 collections.abc.Generator[tuple, None, None]:

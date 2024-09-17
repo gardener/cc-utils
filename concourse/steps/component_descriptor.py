@@ -86,7 +86,7 @@ def base_component_descriptor_v2(
         ],
         provider=provider,
         sources=[
-          cm.ComponentSource(
+          cm.Source(
             name=logical_name,
             type=cm.ArtefactType.GIT,
             access=cm.GithubAccess(

@@ -200,7 +200,7 @@ class ScanResultGroup:
         return result.scanned_element.component
 
     @property
-    def artifact(self) -> cm.ComponentSource | cm.Resource:
+    def artifact(self) -> cm.Source | cm.Resource:
         result = self.results[0]
         if not is_ocm_artefact_node(result.scanned_element):
             raise RuntimeError('property not allowed to be used if scanned_element is '
@@ -342,7 +342,7 @@ class ScanResultGroupCollection:
 
 def artifact_from_node(
     node: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
-) -> cm.ComponentSource | cm.Resource:
+) -> cm.Source | cm.Resource:
     if isinstance(node, cnudie.iter.SourceNode):
         return node.source
     elif isinstance(node, cnudie.iter.ResourceNode):

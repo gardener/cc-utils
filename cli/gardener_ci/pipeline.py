@@ -101,7 +101,7 @@ def _main_source(
     version: str,
     job: dict,
 ):
-    return cm.ComponentSource(
+    return cm.Source(
         name='dummy-name',
         version=version,
         access=cm.GithubAccess(

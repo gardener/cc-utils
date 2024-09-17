@@ -223,7 +223,7 @@ def test_label_usage():
     component_name = 'c'
     component_version = '1.2.3'
     sources = [
-        cm.ComponentSource(
+        cm.Source(
             name='repo_aux_source',
             access=cm.GithubAccess(
                 type=cm.AccessType.GITHUB,
@@ -237,7 +237,7 @@ def test_label_usage():
                 ),
             ],
         ),
-        cm.ComponentSource(
+        cm.Source(
             name='repo_main_source',
             access=cm.GithubAccess(
                 type=cm.AccessType.GITHUB,
@@ -276,7 +276,7 @@ def test_label_usage():
         name=component_name,
         version=component_version,
         sources=[
-            cm.ComponentSource(
+            cm.Source(
                 name='repo_main_source',
                 access=cm.GithubAccess(
                     type=cm.AccessType.GITHUB,
@@ -284,7 +284,7 @@ def test_label_usage():
                     repoUrl='github.com/org/repo'
                 ),
             ),
-            cm.ComponentSource(
+            cm.Source(
                 name='repo_aux_source',
                 access=cm.GithubAccess(
                     type=cm.AccessType.GITHUB,

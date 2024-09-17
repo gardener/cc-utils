@@ -45,7 +45,7 @@ class CheckmarxProject:
         self,
         scan_id: int,
         component: cm.Component,
-        source: cm.ComponentSource,
+        source: cm.Source,
         timeout_seconds: int,
     ) -> model.ScanResult:
 

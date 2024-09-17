@@ -17,7 +17,7 @@ class ScanArtifact:
     name: str
     label: dso.labels.SourceScanLabel
     component: cm.Component
-    source: cm.ComponentSource
+    source: cm.Source
 
 
 class Datasource:
