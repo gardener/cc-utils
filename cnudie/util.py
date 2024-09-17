@@ -1,6 +1,6 @@
+import collections.abc
 import dataclasses
 import graphlib
-import typing
 
 import ci.util
 import gci.componentmodel as cm
@@ -125,8 +125,9 @@ def oci_ref(
     )
 
 
-def iter_sorted(components: typing.Iterable[cm.Component], /) \
--> typing.Generator[cm.Component, None, None]:
+def iter_sorted(
+    components: collections.abc.Iterable[cm.Component], /
+) -> collections.abc.Generator[cm.Component, None, None]:
     '''
     returns a generator yielding the given components, honouring their dependencies, starting
     with "leaf" components (i.e. components w/o dependencies), also known as topologically sorted.
@@ -288,9 +289,9 @@ class ComponentResource:
 
 @dataclasses.dataclass(frozen=True)
 class LabelDiff:
-    labels_only_left: typing.List[cm.Label] = dataclasses.field(default_factory=list)
-    labels_only_right: typing.List[cm.Label] = dataclasses.field(default_factory=list)
-    label_pairs_changed: typing.List[typing.Tuple[cm.Label, cm.Label]] = dataclasses.field(default_factory=list) # noqa:E501
+    labels_only_left: list[cm.Label] = dataclasses.field(default_factory=list)
+    labels_only_right: list[cm.Label] = dataclasses.field(default_factory=list)
+    label_pairs_changed: list[tuple[cm.Label, cm.Label]] = dataclasses.field(default_factory=list)
 
 
 empty_list = lambda: dataclasses.field(default_factory=list) # noqa:E3701
@@ -309,8 +310,8 @@ class ComponentDiff:
 
 
 def diff_labels(
-    left_labels: typing.List[cm.Label],
-    right_labels: typing.List[cm.Label],
+    left_labels: list[cm.Label],
+    right_labels: list[cm.Label],
 ) -> LabelDiff:
 
     left_label_name_to_label = {l.name: l for l in left_labels}
@@ -341,8 +342,8 @@ def diff_labels(
 
 
 def diff_components(
-    left_components: typing.Tuple[cm.Component],
-    right_components: typing.Tuple[cm.Component],
+    left_components: tuple[cm.Component],
+    right_components: tuple[cm.Component],
     ignore_component_names=(),
 ) -> ComponentDiff:
     left_component_identities = {
@@ -367,7 +368,7 @@ def diff_components(
 
     def find_changed_component(
         changed_component: cm.Component,
-        components: typing.List[cm.Component],
+        components: list[cm.Component],
     ):
         for c in components:
             if c.name == changed_component.name:
@@ -399,13 +400,11 @@ def diff_components(
 
 
 def _enumerate_group_pairs(
-    left_elements: typing.Sequence[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
-    right_elements: typing.Sequence[typing.Union[cm.Resource, cm.ComponentSource, cm.Label]],
+    left_elements: collections.abc.Sequence[cm.Resource | cm.ComponentSource | cm.Label],
+    right_elements: collections.abc.Sequence[cm.Resource | cm.ComponentSource, cm.Label],
     unique_name: bool = False,
-) -> typing.Union[
-        typing.Generator[typing.Tuple[typing.List, typing.List], None, None],
-        typing.Generator[typing.Tuple, None, None],
-]:
+) -> collections.abc.Generator[tuple[list, list], None, None] | \
+collections.abc.Generator[tuple, None, None]:
     '''Groups elements of two sequences with the same name.
 
     Can be used for Resources, Sources and Label
@@ -436,9 +435,9 @@ def _enumerate_group_pairs(
 class ResourceDiff:
     left_component: cm.Component
     right_component: cm.Component
-    resource_refs_only_left: typing.List[cm.Resource] = dataclasses.field(default_factory=list)
-    resource_refs_only_right: typing.List[cm.Resource] = dataclasses.field(default_factory=list)
-    resourcepairs_version_changed: typing.List[typing.Tuple[cm.Resource, cm.Resource]] = dataclasses.field(default_factory=list) # noqa:E501
+    resource_refs_only_left: list[cm.Resource] = dataclasses.field(default_factory=list)
+    resource_refs_only_right: list[cm.Resource] = dataclasses.field(default_factory=list)
+    resourcepairs_version_changed: list[tuple[cm.Resource, cm.Resource]] = dataclasses.field(default_factory=list) # noqa:E501
 
 
 def _add_if_not_duplicate(list, res):
@@ -490,9 +489,9 @@ def diff_resources(
 
     # groups the resources by name. The version will be used at a later point
     def enumerate_group_pairs(
-        left_resources: typing.List[cm.Resource],
-        right_resources: typing.List[cm.Resource]
-    ) -> typing.Tuple[typing.List[cm.Resource], typing.List[cm.Resource]]:
+        left_resources: list[cm.Resource],
+        right_resources: list[cm.Resource]
+    ) -> collections.abc.Generator[tuple[list[cm.Resource], list[cm.Resource]], None, None]:
         # group the resources with the same name on both sides
         for name in left_names_to_resource.keys():
             right_resource_group = [r for r in right_resources if r.name == name]
