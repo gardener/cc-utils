@@ -238,10 +238,15 @@ class LabelMethodsMixin:
         )
 
 
+class NormalisationAlgorithm(enum.StrEnum):
+    JSON_NORMALISATION = 'jsonNormalisation/v1'
+    OCI_ARTIFACT_DIGEST = 'ociArtifactDigest/v1'
+
+
 @dc
 class DigestSpec:
     hashAlgorithm: str
-    normalisationAlgorithm: str
+    normalisationAlgorithm: NormalisationAlgorithm | str
     value: str
 
     @property
