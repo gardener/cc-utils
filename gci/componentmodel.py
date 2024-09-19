@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 class ValidationMode(enum.StrEnum):
     FAIL = 'fail'
     WARN = 'warn'
-    NONE = 'none'
 
 
 class SchemaVersion(enum.StrEnum):
@@ -595,12 +594,10 @@ class ComponentDescriptor:
     @staticmethod
     def validate(
         component_descriptor_dict: dict,
-        validation_mode: ValidationMode,
+        validation_mode: ValidationMode=ValidationMode.FAIL,
         json_schema_file_path: str = None,
     ):
-        if validation_mode is ValidationMode.NONE:
-            return
-
+        validation_mode = ValidationMode(validation_mode)
         json_schema_file_path = json_schema_file_path or default_json_schema_path
         schema_dict = _read_schema_file(json_schema_file_path)
 
@@ -615,12 +612,12 @@ class ComponentDescriptor:
             elif validation_mode is ValidationMode.FAIL:
                 raise
             else:
-                raise NotImplementedError(validation_mode)
+                raise ValueError(validation_mode)
 
     @staticmethod
     def from_dict(
         component_descriptor_dict: dict,
-        validation_mode: ValidationMode = ValidationMode.NONE,
+        validation_mode: ValidationMode | None=None,
     ):
         def dateparse(v):
             if not v:
@@ -654,7 +651,7 @@ class ComponentDescriptor:
                 },
             )
         )
-        if not validation_mode is ValidationMode.NONE:
+        if validation_mode is not None:
             ComponentDescriptor.validate(
                 component_descriptor_dict=component_descriptor_dict,
                 validation_mode=validation_mode,
