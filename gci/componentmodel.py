@@ -17,7 +17,6 @@ import typing
 import urllib.parse
 
 import dacite
-import dateutil.parser
 
 # optional dependencies
 
@@ -644,7 +643,7 @@ class ComponentDescriptor:
                 return None
             if isinstance(v, datetime.datetime):
                 return v
-            return dateutil.parser.isoparse(v)
+            return datetime.datetime.fromisoformat(v)
 
         component_descriptor = dacite.from_dict(
             data_class=ComponentDescriptor,
