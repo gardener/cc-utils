@@ -696,8 +696,16 @@ def process_images(
             src_ctx_repo=orig_ocm_repo,
         )
 
+    # retrieve component descriptor from the target registry as local descriptor might not contain
+    # patched image references (if it was already existing the the target registry and thus patching
+    # has been skipped)
+    component_descriptor = tgt_component_descriptor_lookup(cm.ComponentIdentity(
+        name=component_descriptor_v2.component.name,
+        version=component_descriptor_v2.component.version,
+    ))
+
     for node in cnudie.iter.iter(
-        component=component_descriptor_v2,
+        component=component_descriptor,
         lookup=tgt_component_descriptor_lookup,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
