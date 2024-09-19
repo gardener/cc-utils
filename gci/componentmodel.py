@@ -522,11 +522,6 @@ class OciOcmRepository(OcmRepository):
         return f'{self.component_oci_ref(name)}:{version}'
 
 
-# XXX remove type-aliases after renaming all usages of old names
-RepositoryContext = OcmRepository
-OciRepositoryContext = OciOcmRepository
-
-
 @dc
 class Source(Artifact, LabelMethodsMixin):
     name: str
@@ -544,10 +539,6 @@ class Source(Artifact, LabelMethodsMixin):
             if not 'type' in access:
                 raise ValueError('attribute `type` must be present')
             self.access = AccessDict(access)
-
-
-# backwards-compatibility
-ComponentSource = Source
 
 
 @dc
