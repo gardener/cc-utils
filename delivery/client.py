@@ -280,7 +280,7 @@ class DeliveryServiceClient:
         ctx_repo_url: str=None,
         ocm_repo_url: str=None,
         version_filter: str | None=None,
-        validation_mode: cm.ValidationMode=cm.ValidationMode.NONE,
+        validation_mode: cm.ValidationMode | None=None,
     ):
         params = {
             'component_name': name,

@@ -602,7 +602,7 @@ class ComponentDescriptor:
     @staticmethod
     def validate(
         component_descriptor_dict: dict,
-        validation_mode: ValidationMode,
+        validation_mode: ValidationMode=ValidationMode.FAIL,
         json_schema_file_path: str = None,
     ):
         if not _have_jsonschema:
@@ -628,7 +628,7 @@ class ComponentDescriptor:
     @staticmethod
     def from_dict(
         component_descriptor_dict: dict,
-        validation_mode: ValidationMode | None,
+        validation_mode: ValidationMode | None=None,
     ):
         def dateparse(v):
             if not v:
