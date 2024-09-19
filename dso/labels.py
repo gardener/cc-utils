@@ -6,7 +6,7 @@ import sys
 
 import dacite
 
-import gci.componentmodel as cm
+import ocm
 import dso.cvss
 
 
@@ -93,7 +93,7 @@ class CveCategorisationLabel(Label):
 
 @dataclasses.dataclass(frozen=True)
 class ExtraComponentReference:
-    component_reference: cm.ComponentIdentity
+    component_reference: ocm.ComponentIdentity
     purpose: tuple[str] | None
 
 
@@ -121,12 +121,12 @@ def _label_to_type() -> dict[str, Label]:
 
 
 def deserialise_label(
-    label: cm.Label | dict,
+    label: ocm.Label | dict,
 ):
     if not (t := _label_to_type().get(label.name)):
         raise ValueError(f'unknown {label.name=}')
 
-    if isinstance(label, cm.Label):
+    if isinstance(label, ocm.Label):
         label = {
             'name': label.name,
             'value': label.value,

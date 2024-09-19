@@ -8,7 +8,7 @@ import enum
 
 from concourse.steps import step_lib
 from makoutil import indent_func
-import gci.componentmodel as cm
+import ocm
 
 main_repo = job_variant.main_repository()
 repo_name = main_repo.repo_name()
@@ -46,7 +46,7 @@ import cnudie.retrieve
 import concourse.model.traits.release
 import concourse.model.traits.update_component_deps
 import ctx
-import gci.componentmodel
+import ocm
 import github.util
 import gitutil
 import oci.auth as oa

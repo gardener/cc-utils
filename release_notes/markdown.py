@@ -4,7 +4,7 @@ import logging
 import typing
 from collections import defaultdict
 
-import gci.componentmodel as cm
+import ocm
 import release_notes.model as rnm
 
 logger = logging.getLogger(__name__)
@@ -181,24 +181,24 @@ def render(notes: set[rnm.ReleaseNote]):
     return objs
 
 
-def release_notes_for_ocm_resource(resource: cm.Resource) -> str | None:
+def release_notes_for_ocm_resource(resource: ocm.Resource) -> str | None:
     if not resource.access:
         return None
 
-    if resource.access.type is cm.AccessType.OCI_REGISTRY:
+    if resource.access.type is ocm.AccessType.OCI_REGISTRY:
         return f'- {resource.name}: `{resource.access.imageReference}`'
 
     return None
 
 
-def release_note_for_ocm_component(component: cm.Component) -> str | None:
+def release_note_for_ocm_component(component: ocm.Component) -> str | None:
     '''Create a markdown string containing information about the Resources included in the given
     Component.
     '''
     local_resources = [
         r
         for r in component.resources
-        if r.relation is cm.ResourceRelation.LOCAL
+        if r.relation is ocm.ResourceRelation.LOCAL
     ]
 
     component_release_notes = ''
@@ -211,9 +211,9 @@ def release_note_for_ocm_component(component: cm.Component) -> str | None:
             ) if l is not None
         }
 
-        if resource_type is cm.ArtefactType.OCI_IMAGE:
+        if resource_type is ocm.ArtefactType.OCI_IMAGE:
             category_title = 'Docker Images'
-        elif resource_type is cm.ArtefactType.HELM_CHART:
+        elif resource_type is ocm.ArtefactType.HELM_CHART:
             category_title = 'Helm Charts'
         else:
             category_title = str(resource_type)

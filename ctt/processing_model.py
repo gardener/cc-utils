@@ -5,7 +5,7 @@
 import dataclasses
 import typing
 
-import gci.componentmodel as cm
+import ocm
 
 
 @dataclasses.dataclass
@@ -19,9 +19,9 @@ class ContainerImageUploadRequest:
 
 @dataclasses.dataclass
 class ProcessingJob:
-    component: cm.Component
-    resource: cm.Resource
+    component: ocm.Component
+    resource: ocm.Resource
     upload_request: ContainerImageUploadRequest
-    processed_resource: cm.Resource | None = None  # added after re-upload
+    processed_resource: ocm.Resource | None = None  # added after re-upload
     inject_ocm_coordinates_into_oci_manifest: bool = False
     extra_tags: tuple[str] = ()

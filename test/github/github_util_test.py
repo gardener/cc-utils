@@ -9,7 +9,7 @@ import pytest
 
 import github.util as ghu
 
-import gci.componentmodel as cm
+import ocm
 
 
 # test gear
@@ -23,48 +23,48 @@ create_upgrade_pr = functools.partial(
 def test_ctor():
     # upgrade component
     create_upgrade_pr(
-        from_ref=cm.ComponentReference(
+        from_ref=ocm.ComponentReference(
             name='abcd', componentName='a.b/c1', version='1.2.3'
         ),
-        to_ref=cm.ComponentReference(
+        to_ref=ocm.ComponentReference(
             name='abcd', componentName='a.b/c1', version='2.0.0'
         ),
     )
     # upgrade web dependency
     create_upgrade_pr(
-        from_ref=cm.Resource(
+        from_ref=ocm.Resource(
             name='dep_red',
             version='1.2.3',
-            type=cm.ArtefactType.BLOB,
+            type=ocm.ArtefactType.BLOB,
             access=None,
         ),
-        to_ref=cm.Resource(
+        to_ref=ocm.Resource(
             name='dep_red',
             version='2.0.0',
-            type=cm.ArtefactType.BLOB,
+            type=ocm.ArtefactType.BLOB,
             access=None,
         ),
     )
     # error: mismatch in dependency name
     with pytest.raises(ValueError, match='reference name mismatch'):
         create_upgrade_pr(
-            from_ref=cm.ComponentReference(
+            from_ref=ocm.ComponentReference(
                 name='foo', componentName='a.b/c1', version='1.2.3'
             ),
-            to_ref=cm.ComponentReference(
+            to_ref=ocm.ComponentReference(
                 name='bar', componentName='a.b/c1', version='2.0.0'
             ),
         )
     # error: mismatch in dependency types
     with pytest.raises(ValueError, match='reference types do not match'):
         create_upgrade_pr(
-            from_ref=cm.ComponentReference(
+            from_ref=ocm.ComponentReference(
                 name='dep_red', componentName='a.b/c1', version='1.2.3'
             ),
-            to_ref=cm.Resource(
+            to_ref=ocm.Resource(
                 name='dep_red',
                 version='2.0.0',
-                type=cm.ArtefactType.BLOB,
+                type=ocm.ArtefactType.BLOB,
                 access=None,
             ),
         )
@@ -72,25 +72,25 @@ def test_ctor():
 
 def test_is_obsolete():
     examinee = create_upgrade_pr(
-        from_ref=cm.ComponentReference(
+        from_ref=ocm.ComponentReference(
             name='c1',
             componentName='c1',
             version='1.2.3',
         ),
-        to_ref=cm.ComponentReference(
+        to_ref=ocm.ComponentReference(
             name='c1',
             componentName='c1',
             version='2.0.0',
         ),
     )
 
-    cref = cm.ComponentReference(
+    cref = ocm.ComponentReference(
         name='c1',
         componentName='c1',
         version='6.0.0',
     )
 
-    reference_component = cm.Component(
+    reference_component = ocm.Component(
         name='c1',
         version='6.6.6',
         repositoryContexts=(),
@@ -118,10 +118,10 @@ def test_is_obsolete():
     # add same-named resource of greater version but different type
     # todo: we should actually also test dependencies towards resources of two different types
     reference_component.resources = (
-        cm.Resource(
+        ocm.Resource(
             name='c1',
             version='6.0.0',
-            type=cm.ArtefactType.BLOB,
+            type=ocm.ArtefactType.BLOB,
             access=None,
         ),
     )
@@ -135,17 +135,17 @@ def test_is_obsolete():
 
 
 def test_target_matches():
-    old_resource = cm.Resource(
+    old_resource = ocm.Resource(
         name='res1',
         version='1.2.3',
-        type=cm.ArtefactType.BLOB,
-        access=cm.Access(),
+        type=ocm.ArtefactType.BLOB,
+        access=ocm.Access(),
     )
-    new_resource = cm.Resource(
+    new_resource = ocm.Resource(
         name='res1',
         version='2.0.0',
-        type=cm.ArtefactType.BLOB,
-        access=cm.Access(),
+        type=ocm.ArtefactType.BLOB,
+        access=ocm.Access(),
     )
 
     examinee = create_upgrade_pr(
@@ -159,40 +159,40 @@ def test_target_matches():
 
     # different type, same name and version
     assert not examinee.target_matches(
-        cm.Resource(
+        ocm.Resource(
             name='res1',
             version='2.0.0',
-            type=cm.ArtefactType.OCI_IMAGE,
+            type=ocm.ArtefactType.OCI_IMAGE,
             access=None,
         )
     )
 
     # same type, and version, different name
     assert not examinee.target_matches(
-        cm.Resource(
+        ocm.Resource(
             name='different-name',
             version='2.0.0',
-            type=cm.ArtefactType.BLOB,
-            access=cm.Access(),
+            type=ocm.ArtefactType.BLOB,
+            access=ocm.Access(),
         )
     )
 
     # same type, and name, different version
     assert not examinee.target_matches(
-        cm.Resource(
+        ocm.Resource(
             name='res1',
             version='8.7.9',
-            type=cm.ArtefactType.BLOB,
-            access=cm.Access(),
+            type=ocm.ArtefactType.BLOB,
+            access=ocm.Access(),
         )
     )
 
     # all matches
     assert examinee.target_matches(
-        cm.Resource(
+        ocm.Resource(
             name='res1',
             version='2.0.0',
-            type=cm.ArtefactType.BLOB,
-            access=cm.Access(),
+            type=ocm.ArtefactType.BLOB,
+            access=ocm.Access(),
         )
     )

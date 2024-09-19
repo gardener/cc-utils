@@ -7,7 +7,7 @@ import time
 
 import dacite
 
-import gci.componentmodel as cm
+import ocm
 
 import ccc.github
 import ci.util
@@ -280,7 +280,7 @@ class DeliveryServiceClient:
         ctx_repo_url: str=None,
         ocm_repo_url: str=None,
         version_filter: str | None=None,
-        validation_mode: cm.ValidationMode | None=None,
+        validation_mode: ocm.ValidationMode | None=None,
     ):
         params = {
             'component_name': name,
@@ -299,7 +299,7 @@ class DeliveryServiceClient:
 
         res.raise_for_status()
 
-        return cm.ComponentDescriptor.from_dict(
+        return ocm.ComponentDescriptor.from_dict(
             res.json(),
             validation_mode=validation_mode,
         )
@@ -309,7 +309,7 @@ class DeliveryServiceClient:
         component_name: str,
         max_versions: int=5,
         greatest_version: str=None,
-        ocm_repo: cm.OcmRepository=None,
+        ocm_repo: ocm.OcmRepository=None,
         version_filter: str | None=None,
     ):
         params = {
@@ -319,7 +319,7 @@ class DeliveryServiceClient:
         if greatest_version:
             params['version'] = greatest_version
         if ocm_repo:
-            if not isinstance(ocm_repo, cm.OciOcmRepository):
+            if not isinstance(ocm_repo, ocm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
             params['ocm_repo_url'] = ocm_repo.oci_ref
         if version_filter is not None:
@@ -397,8 +397,8 @@ class DeliveryServiceClient:
         ctx_repo_url: str=None,
         ocm_repo_url: str=None,
         version_filter: str | None=None,
-        component: cm.Component | cm.ComponentDescriptor=None,
-        artifact: cm.Artifact | str=None,
+        component: ocm.Component | ocm.ComponentDescriptor=None,
+        artifact: ocm.Artifact | str=None,
     ) -> tuple[dict, list[dm.Status]]:
         '''
         retrieves component-responsibles and optional status info.
@@ -440,7 +440,7 @@ class DeliveryServiceClient:
             params['version_filter'] = version_filter
 
         if artifact:
-            if isinstance(artifact, cm.Artifact):
+            if isinstance(artifact, ocm.Artifact):
                 artifact_name = artifact.name
             else:
                 artifact_name = artifact
@@ -517,7 +517,7 @@ class DeliveryServiceClient:
 
     def query_metadata(
         self,
-        components: collections.abc.Iterable[cm.Component]=(),
+        components: collections.abc.Iterable[ocm.Component]=(),
         artefacts: collections.abc.Iterable[dso.model.ComponentArtefactId]=(),
         type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
         referenced_type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
@@ -681,7 +681,7 @@ class DeliveryServiceClient:
             component = node.component
             artefact = node.artefact
 
-        if isinstance(artefact, cm.Artifact):
+        if isinstance(artefact, ocm.Artifact):
             artefact_name = artefact.name
             artefact_version = artefact.version
         elif isinstance(artefact, str):

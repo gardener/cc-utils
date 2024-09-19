@@ -28,7 +28,7 @@ import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
 import ctx
-import gci.componentmodel as cm
+import ocm
 import reutil
 
 
@@ -113,7 +113,7 @@ def diff(
     )
 
     def _components(
-        component_descriptor: cm.ComponentDescriptor,
+        component_descriptor: ocm.ComponentDescriptor,
     ):
         if parsed.exclude_component_names:
             component_filter = reutil.re_filter(
@@ -132,7 +132,7 @@ def diff(
             ) if not component_filter or component_filter(component_node.component)
         )
 
-    left_cd = component_descriptor_lookup(cm.ComponentIdentity(
+    left_cd = component_descriptor_lookup(ocm.ComponentIdentity(
         name=parsed.left_name,
         version=parsed.left_version,
     ))
@@ -140,7 +140,7 @@ def diff(
         component_descriptor=left_cd,
     )
 
-    right_cd = component_descriptor_lookup(cm.ComponentIdentity(
+    right_cd = component_descriptor_lookup(ocm.ComponentIdentity(
         name=parsed.right_name,
         version=parsed.right_version,
     ))
@@ -156,7 +156,7 @@ def diff(
         for c in components:
             for r in c.resources:
                 if parsed.resource_types:
-                    if isinstance(r.type, cm.ArtefactType):
+                    if isinstance(r.type, ocm.ArtefactType):
                         resource_type = r.type.value
                     else:
                         resource_type = r.type
@@ -198,12 +198,12 @@ def diff(
     def resource_as_dict(component, resource, resource_id):
         if (main_src := cnudie.util.main_source(component, absent_ok=True)):
             src_url = main_src.access.repoUrl
-        elif isinstance(resource.access, cm.OciAccess):
+        elif isinstance(resource.access, ocm.OciAccess):
             src_url = resource.access.imageReference
         else:
             src_url = '<unknown>'
 
-        if isinstance(resource.access, cm.OciAccess):
+        if isinstance(resource.access, ocm.OciAccess):
             if orig_label := resource.find_label(
                 'cloud.gardener.cnudie/migration/original_ref'
             ):

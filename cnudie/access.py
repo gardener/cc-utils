@@ -1,11 +1,11 @@
-import gci.componentmodel as cm
+import ocm
 
 import ioutil
 
 
 def s3_access_as_blob_descriptor(
     s3_client: 'botocore.client.S3',
-    s3_access: cm.S3Access,
+    s3_access: ocm.S3Access,
     chunk_size: int=4096,
     name: str=None,
 ) -> ioutil.BlobDescriptor:

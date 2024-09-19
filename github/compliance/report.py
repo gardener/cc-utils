@@ -13,7 +13,7 @@ import github3.issues
 import github3.issues.issue
 import github3.repos
 
-import gci.componentmodel as cm
+import ocm
 import requests
 
 import ccc.github
@@ -69,7 +69,7 @@ def _criticality_classification(cve_score: float) -> gcm.Severity:
 
 
 def _delivery_dashboard_url(
-    component: cm.Component,
+    component: ocm.Component,
     base_url: str,
 ):
     url = ci.util.urljoin(
@@ -94,20 +94,20 @@ def _pluralise(prefix: str, count: int):
     return f'{prefix}s'
 
 
-def _artifact_url(artifact: cm.Artifact) -> str | None:
+def _artifact_url(artifact: ocm.Artifact) -> str | None:
     access = artifact.access
 
-    if access.type is cm.AccessType.OCI_REGISTRY:
+    if access.type is ocm.AccessType.OCI_REGISTRY:
         return access.imageReference
-    elif access.type is cm.AccessType.S3:
+    elif access.type is ocm.AccessType.S3:
         return f'http://{access.bucketName}.s3.amazonaws.com/{access.objectKey}'
-    elif access.type is cm.AccessType.GITHUB:
+    elif access.type is ocm.AccessType.GITHUB:
         return access.repoUrl
 
 
 def _compliance_status_summary(
-    component: cm.Component,
-    artifacts: typing.Sequence[cm.Artifact],
+    component: ocm.Component,
+    artifacts: typing.Sequence[ocm.Artifact],
     report_urls: tuple[str] | set[str],
     issue_description: str,
     issue_value: str,
@@ -317,7 +317,7 @@ def _scanned_element_repository(
     if gcm.is_ocm_artefact_node(scanned_element):
         source = cnudie.util.main_source(component=scanned_element.component)
 
-        if not source.access.type is cm.AccessType.GITHUB:
+        if not source.access.type is ocm.AccessType.GITHUB:
             raise NotImplementedError(source)
 
         org = source.access.org_name()

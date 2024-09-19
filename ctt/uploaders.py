@@ -8,7 +8,7 @@ import typing
 import ci.util
 import ctt.processing_model as pm
 import ctt.util as ctt_util
-import gci.componentmodel as cm
+import ocm
 import oci.client
 import oci.model as om
 
@@ -36,10 +36,10 @@ class IdentityUploader:
 
 
 def labels_with_migration_hint(
-    resource: cm.Resource,
+    resource: ocm.Resource,
     src_img_ref,
 ):
-    original_ref_label = cm.Label(
+    original_ref_label = ocm.Label(
         name=original_ref_label_name,
         value=src_img_ref,
     )
@@ -73,7 +73,7 @@ class PrefixUploader:
         processing_job: pm.ProcessingJob,
         target_as_source=False,
     ):
-        if processing_job.resource.access.type is not cm.AccessType.OCI_REGISTRY:
+        if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
             raise RuntimeError('PrefixUploader only supports access type == ociRegistry')
 
         if not target_as_source:
@@ -125,11 +125,11 @@ class PrefixUploader:
                 image_reference=tgt_ref,
                 normalise=False, # don't inject docker special handlings
             ).local_ref
-            access = cm.RelativeOciAccess(
+            access = ocm.RelativeOciAccess(
                 reference=relative_artifact_path,
             )
         else:
-            access = cm.OciAccess(
+            access = ocm.OciAccess(
                 imageReference=tgt_ref,
             )
 
@@ -163,7 +163,7 @@ class TagSuffixUploader:
         processing_job: pm.ProcessingJob,
         target_as_source: bool=False,
     ):
-        if processing_job.resource.access.type is not cm.AccessType.OCI_REGISTRY:
+        if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
             raise NotImplementedError
 
         if not target_as_source:
@@ -188,7 +188,7 @@ class TagSuffixUploader:
         # propagate changed resource
         processing_job.processed_resource = dataclasses.replace(
             processing_job.resource,
-            access=cm.OciAccess(
+            access=ocm.OciAccess(
                 imageReference=tgt_ref,
             ),
             labels=labels_with_migration_hint(

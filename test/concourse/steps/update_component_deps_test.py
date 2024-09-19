@@ -1,4 +1,4 @@
-import gci.componentmodel as cm
+import ocm
 
 import pytest
 
@@ -33,7 +33,7 @@ def job_variant():
         },
     )
 
-    component_descriptor_trait.ctx_repository = lambda: cm.OciOcmRepository(
+    component_descriptor_trait.ctx_repository = lambda: ocm.OciOcmRepository(
         baseUrl='dummy-base-url',
     )
 

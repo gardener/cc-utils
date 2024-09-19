@@ -10,7 +10,7 @@ import github3.repos
 import cfg_mgmt.model as cmm
 import cnudie.iter
 import delivery.client
-import gci.componentmodel as cm
+import ocm
 import github.compliance.milestone as gcmi
 import unixutil.model
 
@@ -171,7 +171,7 @@ class ScanResultGroup:
     grouping is done so alike scanned_elements are grouped into common "reporting
     targets" (github issues if used in the context of this package)
 
-    components and artifacts are understood as defined by the OCM (gci.componentmodel)
+    components and artifacts are understood as defined by the OCM (ocm)
 
     ScanResultGroup caches calculated values to reduce amount of (potentially expensive) callbacks.
     Altering `results`, or external state passed-in callbacks rely on will thus result in
@@ -191,7 +191,7 @@ class ScanResultGroup:
         return tuple(r for r in self.results if r.scan_succeeded)
 
     @property
-    def component(self) -> cm.Component:
+    def component(self) -> ocm.Component:
         result = self.results[0]
         if not is_ocm_artefact_node(result.scanned_element):
             raise RuntimeError('property not allowed to be used if scanned_element is '
@@ -200,7 +200,7 @@ class ScanResultGroup:
         return result.scanned_element.component
 
     @property
-    def artifact(self) -> cm.Source | cm.Resource:
+    def artifact(self) -> ocm.Source | ocm.Resource:
         result = self.results[0]
         if not is_ocm_artefact_node(result.scanned_element):
             raise RuntimeError('property not allowed to be used if scanned_element is '
@@ -342,7 +342,7 @@ class ScanResultGroupCollection:
 
 def artifact_from_node(
     node: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
-) -> cm.Source | cm.Resource:
+) -> ocm.Source | ocm.Resource:
     if isinstance(node, cnudie.iter.SourceNode):
         return node.source
     elif isinstance(node, cnudie.iter.ResourceNode):

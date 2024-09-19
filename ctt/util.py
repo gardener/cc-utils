@@ -9,14 +9,14 @@ import enum
 import json
 import typing
 
-import gci.componentmodel as cm
+import ocm
 
 
 # adds the defined label to a list of labels. won't overwrite existing labels with the same key
 def add_label(
-    src_labels: typing.Sequence[cm.Label],
-    label: cm.Label,
-) -> typing.Sequence[cm.Label]:
+    src_labels: typing.Sequence[ocm.Label],
+    label: ocm.Label,
+) -> typing.Sequence[ocm.Label]:
     label_exists = [src_label for src_label in src_labels if src_label.name == label.name]
     if label_exists:
         # label exists --> do not overwrite it

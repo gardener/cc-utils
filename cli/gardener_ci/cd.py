@@ -2,7 +2,7 @@ import concurrent.futures
 import logging
 import sys
 
-import gci.componentmodel as cm
+import ocm
 
 import ccc.oci
 import cnudie.iter
@@ -37,7 +37,7 @@ def retrieve(
     ocm_lookup = _ocm_lookup(ocm_repo=ocm_repo)
 
     component_descriptor = ocm_lookup(
-        cm.ComponentIdentity(
+        ocm.ComponentIdentity(
             name=name,
             version=version,
         ),
@@ -67,7 +67,7 @@ def validate(
 
     logger.info('retrieving component-descriptor..')
     component_descriptor = ocm_lookup(
-        cm.ComponentIdentity(
+        ocm.ComponentIdentity(
             name=name,
             version=version,
         ),
@@ -195,7 +195,7 @@ def purge(
     lookup = cnudie.retrieve.oci_component_descriptor_lookup()
 
     component_descriptor = ocm_lookup(
-        cm.ComponentIdentity(
+        ocm.ComponentIdentity(
             name=name,
             version=version,
         ),

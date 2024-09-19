@@ -4,7 +4,7 @@
 
 import pytest
 
-import gci.componentmodel as cm
+import ocm
 
 import ctt.filters as filters
 
@@ -14,14 +14,14 @@ def img(
     name='image_name',
     version='1.2.3',
     ref='image_ref:1.2.3',
-    type=cm.ArtefactType.OCI_IMAGE,
+    type=ocm.ArtefactType.OCI_IMAGE,
 ):
     def _img(name=name, version=version, ref=ref, type=type):
-        return cm.Resource(
+        return ocm.Resource(
             name=name,
             version=version,
             type=type,
-            access=cm.OciAccess(
+            access=ocm.OciAccess(
                 imageReference=ref,
             )
         )
@@ -31,7 +31,7 @@ def img(
 @pytest.fixture
 def comp(name='a.b/c/e', version='1.2.3'):
     def _comp(name=name, version=version):
-        return cm.ComponentReference(
+        return ocm.ComponentReference(
             name=name,
             componentName=name,
             version=version,
@@ -45,8 +45,8 @@ def test_image_filter(img):
         exclude_image_refs=('image:2', 'image3'),
         include_image_names=('in1', 'in2'),
         exclude_image_names=('in3',),
-        include_artefact_types=(cm.ArtefactType.OCI_IMAGE, 'unknown-type'),
-        exclude_artefact_types=(cm.ArtefactType.GIT, 'another-unknown-type')
+        include_artefact_types=(ocm.ArtefactType.OCI_IMAGE, 'unknown-type'),
+        exclude_artefact_types=(ocm.ArtefactType.GIT, 'another-unknown-type')
     )
 
     image1 = img(ref='image:1', name='in1')
@@ -60,7 +60,7 @@ def test_image_filter(img):
     artefact3 = img(ref='image:1', name='in1', type='unknown-type')
     assert examinee.matches(component=None, resource=artefact3)
 
-    artefact4 = img(ref='image:1', name='in1', type=cm.ArtefactType.GIT)
+    artefact4 = img(ref='image:1', name='in1', type=ocm.ArtefactType.GIT)
     assert not examinee.matches(component=None, resource=artefact4)
 
 

@@ -14,7 +14,7 @@ import jsonpath_ng
 from ci.util import not_none
 from model import NamedModelElement
 import concourse.model.traits.component_descriptor
-import gci.componentmodel as cm
+import ocm
 import oci.model as om
 
 from concourse.model.job import (
@@ -150,7 +150,7 @@ IMG_DESCRIPTOR_ATTRIBS = (
     AttributeSpec.optional(
         name='resource_labels',
         default=[],
-        type=typing.List[cm.Label],
+        type=typing.List[ocm.Label],
         doc='labels to add to the resource declaration for this image in base-component-descriptor'
     ),
     AttributeSpec.optional(
@@ -331,7 +331,7 @@ class PublishDockerImageDescriptor(NamedModelElement, ModelDefaultsMixin, Attrib
         for label in self.resource_labels():
             try:
                 dacite.from_dict(
-                    data_class=cm.Label,
+                    data_class=ocm.Label,
                     data=label,
                     config=dacite.Config(strict=True),
                 )

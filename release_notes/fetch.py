@@ -3,7 +3,7 @@ import typing
 import datetime
 import enum
 
-import gci.componentmodel
+import ocm
 import git
 import github3.repos
 
@@ -238,7 +238,7 @@ def _determine_blocks_to_include(
 
 def fetch_draft_release_notes(
     current_version: str,
-    component: gci.componentmodel.Component,
+    component: ocm.Component,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     repo_path: str,
@@ -297,7 +297,7 @@ def fetch_draft_release_notes(
 
 
 def fetch_release_notes(
-    component: gci.componentmodel.Component,
+    component: ocm.Component,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     repo_path: str,

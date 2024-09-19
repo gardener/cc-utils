@@ -16,7 +16,7 @@ import yaml.scanner
 
 import ccc
 import ccc.github
-import gci.componentmodel
+import ocm
 import github.util
 import gitutil
 import release_notes.model as rnm
@@ -260,7 +260,7 @@ def request_pull_requests_from_api(
 
 
 def github_helper_from_github_access(
-    github_access=gci.componentmodel.GithubAccess,
+    github_access=ocm.GithubAccess,
 ):
     logger.info(f'Creating GH Repo-helper for {github_access.repoUrl}')
     return github.util.GitHubRepositoryHelper(
@@ -271,7 +271,7 @@ def github_helper_from_github_access(
 
 
 def git_helper_from_github_access(
-    github_access: gci.componentmodel.GithubAccess,
+    github_access: ocm.GithubAccess,
     repo_path: str,
 ):
     logger.info(f'Creating Git-helper for {github_access.repoUrl}')

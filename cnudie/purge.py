@@ -2,7 +2,7 @@ import logging
 import traceback
 import typing
 
-import gci.componentmodel as cm
+import ocm
 
 import ccc.oci
 import cnudie.iter
@@ -16,13 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 def iter_componentversions_to_purge(
-    component: cm.Component | cm.ComponentDescriptor,
+    component: ocm.Component | ocm.ComponentDescriptor,
     policy: version.VersionRetentionPolicies,
     oci_client: oc.Client=None,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
-) -> typing.Generator[cm.ComponentIdentity, None, None]:
+) -> typing.Generator[ocm.ComponentIdentity, None, None]:
     oci_ref = cnudie.util.oci_ref(component=component)
-    if isinstance(component, cm.ComponentDescriptor):
+    if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
 
     for v in version.versions_to_purge(
@@ -30,20 +30,20 @@ def iter_componentversions_to_purge(
         reference_version=component.version,
         policy=policy,
     ):
-        yield cm.ComponentIdentity(
+        yield ocm.ComponentIdentity(
             name=component.name,
             version=v,
         )
 
 
 def remove_component_descriptor_and_referenced_artefacts(
-    component: cm.Component | cm.ComponentDescriptor,
+    component: ocm.Component | ocm.ComponentDescriptor,
     oci_client: oc.Client=None,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursive: bool=False,
     on_error: str='abort', # todo: implement, e.g. patch-component-descriptor-and-abort
 ):
-    if isinstance(component, cm.ComponentDescriptor):
+    if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
 
     logger.info(f'will try to purge {component.name}:{component.version} including local resources')
@@ -75,7 +75,7 @@ def remove_component_descriptor_and_referenced_artefacts(
             continue # we ignore source-nodes for now
 
         if isinstance(node, cnudie.iter.ResourceNode):
-            if not node.resource.relation is cm.ResourceRelation.LOCAL:
+            if not node.resource.relation is ocm.ResourceRelation.LOCAL:
                 logger.debug(f'skipping non-local {node.resource.name=}')
                 continue
             try:
@@ -105,7 +105,7 @@ def remove_component_descriptor_and_referenced_artefacts(
 
 
 def _remove_component_descriptor(
-    component: cm.Component,
+    component: ocm.Component,
     oci_client: oc.Client,
 ):
     oci_ref = cnudie.util.oci_ref(
@@ -123,16 +123,16 @@ def _remove_resource(
     oci_client: oc.Client,
 ) -> bool:
     resource = node.resource
-    if not resource.type in (cm.ArtefactType.OCI_IMAGE, 'ociImage'):
+    if not resource.type in (ocm.ArtefactType.OCI_IMAGE, 'ociImage'):
         return False # we only support removal of oci-images for now
 
-    if not resource.relation in (cm.ResourceRelation.LOCAL, 'local'):
+    if not resource.relation in (ocm.ResourceRelation.LOCAL, 'local'):
         return False # external resources can never be removed (as we do not "own" them)
 
-    if not isinstance(resource.access, cm.OciAccess):
+    if not isinstance(resource.access, ocm.OciAccess):
         return False # similar to above: we only support removal of oci-images in oci-registries
 
-    access: cm.OciAccess = resource.access
+    access: ocm.OciAccess = resource.access
     image_reference = om.OciImageReference(access.imageReference)
 
     manifest = oci_client.manifest(

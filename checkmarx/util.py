@@ -27,14 +27,14 @@ import reutil
 import dso.labels
 import dso.model
 
-import gci.componentmodel as cm
+import ocm
 import github.compliance.model as gcm
 
 logger = logging.getLogger(__name__)
 
 
 def scan_sources(
-    component_descriptor: cm.ComponentDescriptor,
+    component_descriptor: ocm.ComponentDescriptor,
     cx_client: checkmarx.client.CheckmarxClient,
     team_id: str,
     timeout_seconds: int,
@@ -75,19 +75,19 @@ def scan_sources(
 
 
 def _get_scan_artifacts_from_components(
-    components: typing.List[cm.Component],
+    components: typing.List[ocm.Component],
 ) -> typing.Generator:
     for component in components:
         for source in component.sources:
             if source.type not in (
-                cm.ArtefactType.DIRECTORY_TREE,
-                cm.ArtefactType.GIT,
+                ocm.ArtefactType.DIRECTORY_TREE,
+                ocm.ArtefactType.GIT,
             ):
                 source_name = f'{component.name}:{component.version}/{source.name}:{source.version}'
                 logger.warning(f'skipping {source_name} with {source.type=}')
                 continue
 
-            if source.access.type is not cm.AccessType.GITHUB:
+            if source.access.type is not ocm.AccessType.GITHUB:
                 raise NotImplementedError
 
             cx_label = source.find_label(name=dso.labels.SourceScanLabel.name)
@@ -172,7 +172,7 @@ def scan_artifacts(
             team_id=team_id,
         )
 
-        if scan_artifact.source.access.type is cm.AccessType.GITHUB:
+        if scan_artifact.source.access.type is ocm.AccessType.GITHUB:
             return scan_func(
                 cx_project=cx_project,
                 scan_artifact=scan_artifact,

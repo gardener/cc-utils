@@ -6,7 +6,7 @@ import unittest
 import jsonschema.exceptions
 import yaml
 
-import gci.componentmodel as cm
+import ocm
 
 own_dir = os.path.dirname(__file__)
 test_res_dir = own_dir
@@ -15,24 +15,24 @@ test_res_dir = own_dir
 def test_deserialisation():
     with open(os.path.join(test_res_dir, 'component_descriptor_v2.yaml')) as f:
         component_descriptor_dict = yaml.safe_load(f)
-    component_descriptor = cm.ComponentDescriptor.from_dict(
+    component_descriptor = ocm.ComponentDescriptor.from_dict(
         component_descriptor_dict=component_descriptor_dict,
     )
     component = component_descriptor.component
 
-    assert component.resources[0].type is cm.ArtefactType.OCI_IMAGE
-    assert isinstance(component.resources[0].access, cm.OciAccess)
-    assert component.resources[0].access.type is cm.AccessType.OCI_REGISTRY
+    assert component.resources[0].type is ocm.ArtefactType.OCI_IMAGE
+    assert isinstance(component.resources[0].access, ocm.OciAccess)
+    assert component.resources[0].access.type is ocm.AccessType.OCI_REGISTRY
 
     source = component.sources[0]
-    assert isinstance(source.access, cm.GithubAccess)
+    assert isinstance(source.access, ocm.GithubAccess)
 
 
 def test_deserialisation_of_custom_resources():
     with open(os.path.join(test_res_dir, 'component_descriptor_v2_custom.yaml')) as f:
         component_descriptor_dict = yaml.safe_load(f)
 
-    component_descriptor = cm.ComponentDescriptor.from_dict(
+    component_descriptor = ocm.ComponentDescriptor.from_dict(
         component_descriptor_dict=component_descriptor_dict,
     )
     component = component_descriptor.component
@@ -41,14 +41,14 @@ def test_deserialisation_of_custom_resources():
     assert component.resources[0].access.type == 'localFilesystemBlob'
     assert component.resources[1].access is None
     assert isinstance(component.resources[2].access, dict)
-    assert isinstance(component.resources[3].access, cm.RelativeOciAccess)
+    assert isinstance(component.resources[3].access, ocm.RelativeOciAccess)
 
 
 def test_github_access():
-    gha = cm.GithubAccess(
+    gha = ocm.GithubAccess(
         repoUrl='github.com/org/repo',
         ref='refs/heads/master',
-        type=cm.AccessType.GITHUB,
+        type=ocm.AccessType.GITHUB,
     )
 
     assert gha.repository_name() == 'repo'
@@ -57,12 +57,12 @@ def test_github_access():
 
 
 def test_component():
-    component = cm.Component(
+    component = ocm.Component(
         name='component-name',
         version='1.2.3',
         repositoryContexts=[
-            cm.OciOcmRepository(baseUrl='old-ctx-url'),
-            cm.OciOcmRepository(baseUrl='current-ctx-url'),
+            ocm.OciOcmRepository(baseUrl='old-ctx-url'),
+            ocm.OciOcmRepository(baseUrl='current-ctx-url'),
         ],
         provider=None,
         sources=(),
@@ -130,7 +130,7 @@ class TestVersionValidation(unittest.TestCase):
             source_version='3.6.9',
         )
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            cm.ComponentDescriptor.validate(test_cd_dict, validation_mode=cm.ValidationMode.FAIL)
+            ocm.ComponentDescriptor.validate(test_cd_dict, validation_mode=ocm.ValidationMode.FAIL)
 
     def test_validation_fails_on_absent_resource_version(self):
         test_cd_dict = self._create_test_component_dict(
@@ -139,7 +139,7 @@ class TestVersionValidation(unittest.TestCase):
             source_version='3.6.9',
         )
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            cm.ComponentDescriptor.validate(test_cd_dict, validation_mode=cm.ValidationMode.FAIL)
+            ocm.ComponentDescriptor.validate(test_cd_dict, validation_mode=ocm.ValidationMode.FAIL)
 
     def test_validation_fails_on_absent_source_version(self):
         test_cd_dict = self._create_test_component_dict(
@@ -148,7 +148,7 @@ class TestVersionValidation(unittest.TestCase):
             source_version=None,
         )
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            cm.ComponentDescriptor.validate(test_cd_dict, validation_mode=cm.ValidationMode.FAIL)
+            ocm.ComponentDescriptor.validate(test_cd_dict, validation_mode=ocm.ValidationMode.FAIL)
 
 
 def test_set_label():
@@ -158,17 +158,17 @@ def test_set_label():
     @dataclasses.dataclass
     class TestCase(unittest.TestCase):
         name: str
-        input_labels: typing.List[cm.Label]
-        label_to_set: cm.Label
+        input_labels: typing.List[ocm.Label]
+        label_to_set: ocm.Label
         raise_if_present: bool
-        expected_labels: typing.List[cm.Label]
+        expected_labels: typing.List[ocm.Label]
         expected_err_msg: str
 
     testcases = [
         TestCase(
             name='appends label to empty input_labels list with raise_if_present == True',
             input_labels=[],
-            label_to_set=cm.Label(
+            label_to_set=ocm.Label(
                 name=ctt_label_name,
                 value={
                     'processingRules': [
@@ -178,7 +178,7 @@ def test_set_label():
             ),
             raise_if_present=True,
             expected_labels=[
-                cm.Label(
+                ocm.Label(
                     name=ctt_label_name,
                     value={
                         'processingRules': [
@@ -192,7 +192,7 @@ def test_set_label():
         TestCase(
             name='appends label to empty input_labels list with raise_if_present == False',
             input_labels=[],
-            label_to_set=cm.Label(
+            label_to_set=ocm.Label(
                 name=ctt_label_name,
                 value={
                     'processingRules': [
@@ -202,7 +202,7 @@ def test_set_label():
             ),
             raise_if_present=False,
             expected_labels=[
-                cm.Label(
+                ocm.Label(
                     name=ctt_label_name,
                     value={
                         'processingRules': [
@@ -216,7 +216,7 @@ def test_set_label():
         TestCase(
             name='throws exception if label exists and raise_if_present == True',
             input_labels=[
-                cm.Label(
+                ocm.Label(
                     name=ctt_label_name,
                     value={
                         'processingRules': [
@@ -225,7 +225,7 @@ def test_set_label():
                     },
                 ),
             ],
-            label_to_set=cm.Label(
+            label_to_set=ocm.Label(
                 name=ctt_label_name,
                 value={
                     'processingRules': [
@@ -240,11 +240,11 @@ def test_set_label():
         TestCase(
             name='throws no exception if label exists and raise_if_present == False',
             input_labels=[
-                cm.Label(
+                ocm.Label(
                     name='test-label',
                     value='test-val',
                 ),
-                cm.Label(
+                ocm.Label(
                     name=ctt_label_name,
                     value={
                         'processingRules': [
@@ -254,7 +254,7 @@ def test_set_label():
                     },
                 ),
             ],
-            label_to_set=cm.Label(
+            label_to_set=ocm.Label(
                 name=ctt_label_name,
                 value={
                     'processingRules': [
@@ -264,11 +264,11 @@ def test_set_label():
             ),
             raise_if_present=False,
             expected_labels=[
-                cm.Label(
+                ocm.Label(
                     name='test-label',
                     value='test-val',
                 ),
-                cm.Label(
+                ocm.Label(
                     name=ctt_label_name,
                     value={
                         'processingRules': [
@@ -282,11 +282,11 @@ def test_set_label():
     ]
 
     for testcase in testcases:
-        test_resource = cm.Resource(
+        test_resource = ocm.Resource(
             name='test-resource',
             version='v0.1.0',
-            type=cm.ArtefactType.OCI_IMAGE,
-            access=cm.OciAccess(
+            type=ocm.ArtefactType.OCI_IMAGE,
+            access=ocm.OciAccess(
                 imageReference='test-repo.com/test-resource:v0.1.0',
             ),
             labels=testcase.input_labels,

@@ -15,7 +15,7 @@ import re
 import logging
 
 import ctx
-import gci.componentmodel as cm
+import ocm
 import ci.util
 
 logger = logging.getLogger(__name__)
@@ -164,7 +164,7 @@ def _writeBOM(bom: RBSCBom, local_path: str):
         yaml.dump(
             data=dataclasses.asdict(bom),
             stream=bom_file,
-            Dumper=cm.EnumValueYamlDumper,
+            Dumper=ocm.EnumValueYamlDumper,
         )
 
 

@@ -13,7 +13,7 @@ import yaml
 
 import cachetools
 import dacite
-import gci.componentmodel as cm
+import ocm
 import gci.oci
 
 import ci.util
@@ -24,15 +24,15 @@ import oci.model as om
 
 logger = logging.getLogger(__name__)
 
-ComponentName = str | tuple[str, str] | cm.Component | cm.ComponentIdentity
+ComponentName = str | tuple[str, str] | ocm.Component | ocm.ComponentIdentity
 
 ComponentDescriptorLookupById = collections.abc.Callable[
-    [cm.ComponentIdentity, cm.OcmRepository],
-    cm.ComponentDescriptor
+    [ocm.ComponentIdentity, ocm.OcmRepository],
+    ocm.ComponentDescriptor
 ]
 
 VersionLookupByComponent = collections.abc.Callable[
-    [ComponentName, cm.OcmRepository],
+    [ComponentName, ocm.OcmRepository],
     collections.abc.Sequence[str]
 ]
 
@@ -48,21 +48,21 @@ OcmRepositoryCfg = str | collections.abc.Iterable[str]
 
 OcmRepositoryLookup = collections.abc.Callable[
     [ComponentName],
-    collections.abc.Generator[cm.OciOcmRepository | str, None, None],
+    collections.abc.Generator[ocm.OciOcmRepository | str, None, None],
 ]
 
 
 def _iter_ocm_repositories(
-    component: str | cm.ComponentIdentity | cm.Component,
+    component: str | ocm.ComponentIdentity | ocm.Component,
     repository_cfg: OcmRepositoryCfg,
     /,
 ):
-    if isinstance(component, cm.ComponentIdentity):
+    if isinstance(component, ocm.ComponentIdentity):
         component = component.name
-    elif isinstance(component, cm.Component):
+    elif isinstance(component, ocm.Component):
         component = component.name
 
-    if isinstance(repository_cfg, cm.OciOcmRepository):
+    if isinstance(repository_cfg, ocm.OciOcmRepository):
         yield repository_cfg
         return
 
@@ -78,7 +78,7 @@ def _iter_ocm_repositories(
 
 
 def iter_ocm_repositories(
-    component: str | cm.ComponentIdentity | cm.Component,
+    component: str | ocm.ComponentIdentity | ocm.Component,
     /,
     *repository_cfgs: OcmRepositoryCfg,
 ) -> collections.abc.Generator[OcmRepositoryLookup, None, None]:
@@ -103,7 +103,7 @@ def iter_ocm_repositories(
 
 def ocm_repository_lookup(*repository_cfgs: OcmRepositoryCfg):
     def lookup(
-        component: str | cm.ComponentIdentity | cm.Component,
+        component: str | ocm.ComponentIdentity | ocm.Component,
     ):
         return iter_ocm_repositories(component, repository_cfgs)
 
@@ -117,14 +117,14 @@ class WriteBack:
     '''
     def __init__(
         self,
-        writeback: collections.abc.Callable[[cm.ComponentIdentity, cm.ComponentDescriptor], None],
+        writeback: collections.abc.Callable[[ocm.ComponentIdentity, ocm.ComponentDescriptor], None],
     ):
         self.writeback = writeback
 
     def __call__(
         self,
-        component_id: cm.ComponentIdentity,
-        component_descriptor: cm.ComponentDescriptor,
+        component_id: ocm.ComponentIdentity,
+        component_descriptor: ocm.ComponentDescriptor,
     ):
         self.writeback(component_id, component_descriptor)
 
@@ -150,8 +150,8 @@ def in_memory_cache_component_descriptor_lookup(
     cache = cache_ctor(**cache_kwargs)
 
     def writeback(
-        component_id: cm.ComponentIdentity,
-        component_descriptor: cm.ComponentDescriptor,
+        component_id: ocm.ComponentIdentity,
+        component_descriptor: ocm.ComponentDescriptor,
     ):
         if (ocm_repo := component_descriptor.component.current_ocm_repo):
             cache.__setitem__((component_id, ocm_repo), component_descriptor)
@@ -161,8 +161,8 @@ def in_memory_cache_component_descriptor_lookup(
     _writeback = WriteBack(writeback)
 
     def lookup(
-        component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OcmRepository=None,
+        component_id: ocm.ComponentIdentity,
+        ctx_repo: ocm.OcmRepository=None,
         ocm_repository_lookup=ocm_repository_lookup,
     ):
         if ctx_repo:
@@ -176,8 +176,8 @@ def in_memory_cache_component_descriptor_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciOcmRepository(
-                    type=cm.AccessType.OCI_REGISTRY,
+                ocm_repo = ocm.OciOcmRepository(
+                    type=ocm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                 )
             try:
@@ -211,8 +211,8 @@ def file_system_cache_component_descriptor_lookup(
         raise ValueError(cache_dir)
 
     def writeback(
-        component_id: cm.ComponentIdentity,
-        component_descriptor: cm.ComponentDescriptor,
+        component_id: ocm.ComponentIdentity,
+        component_descriptor: ocm.ComponentDescriptor,
     ):
         if not (ocm_repo := component_descriptor.component.current_ocm_repo):
             raise ValueError(ocm_repo)
@@ -223,7 +223,7 @@ def file_system_cache_component_descriptor_lookup(
             # processes or threads (assuming mv is an atomic operation)
             yaml.dump(
                 data=dataclasses.asdict(component_descriptor),
-                Dumper=cm.EnumValueYamlDumper,
+                Dumper=ocm.EnumValueYamlDumper,
                 stream=f.file,
             )
             f.close() # need to close filehandle for NT
@@ -245,7 +245,7 @@ def file_system_cache_component_descriptor_lookup(
 
     def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: cm.OcmRepository|str=None,
+        ctx_repo: ocm.OcmRepository|str=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
     ):
         if ctx_repo:
@@ -261,12 +261,12 @@ def file_system_cache_component_descriptor_lookup(
                 raise ValueError(ocm_repo)
 
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciOcmRepository(
-                    type=cm.AccessType.OCI_REGISTRY,
+                ocm_repo = ocm.OciOcmRepository(
+                    type=ocm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                 )
 
-            if not isinstance(ocm_repo, cm.OciOcmRepository):
+            if not isinstance(ocm_repo, ocm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             component_id = cnudie.util.to_component_id(component_id)
@@ -277,7 +277,7 @@ def file_system_cache_component_descriptor_lookup(
                 f'{component_id.name}-{component_id.version}',
             )
             if os.path.isfile(descriptor_path):
-                return cm.ComponentDescriptor.from_dict(
+                return ocm.ComponentDescriptor.from_dict(
                     ci.util.parse_yaml_file(descriptor_path)
                 )
 
@@ -324,8 +324,8 @@ def delivery_service_component_descriptor_lookup(
         raise ValueError(delivery_client)
 
     def lookup(
-        component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OcmRepository=None,
+        component_id: ocm.ComponentIdentity,
+        ctx_repo: ocm.OcmRepository=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
         ignore_errors: tuple[Exception]=default_ignore_errors,
@@ -346,12 +346,12 @@ def delivery_service_component_descriptor_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciOcmRepository(
-                    type=cm.AccessType.OCI_REGISTRY,
+                ocm_repo = ocm.OciOcmRepository(
+                    type=ocm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                 )
 
-            if ocm_repo and not isinstance(ocm_repo, cm.OciOcmRepository):
+            if ocm_repo and not isinstance(ocm_repo, ocm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             try:
@@ -406,8 +406,8 @@ def oci_component_descriptor_lookup(
         raise ValueError(oci_client)
 
     def lookup(
-        component_id: cm.ComponentIdentity,
-        ctx_repo: cm.OcmRepository=None,
+        component_id: ocm.ComponentIdentity,
+        ctx_repo: ocm.OcmRepository=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
@@ -432,12 +432,12 @@ def oci_component_descriptor_lookup(
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciOcmRepository(
-                    type=cm.OciAccess,
+                ocm_repo = ocm.OciOcmRepository(
+                    type=ocm.OciAccess,
                     baseUrl=ocm_repo,
                 )
 
-            if not isinstance(ocm_repo, cm.OciOcmRepository):
+            if not isinstance(ocm_repo, ocm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             target_ref = ci.util.urljoin(
@@ -538,7 +538,7 @@ def version_lookup(
 
     def lookup(
         component_id: ComponentName,
-        ctx_repo: cm.OcmRepository=None,
+        ctx_repo: ocm.OcmRepository=None,
         ocm_repository_lookup: OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
     ):
@@ -554,11 +554,11 @@ def version_lookup(
         versions = set()
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
-                ocm_repo = cm.OciOcmRepository(
-                    type=cm.OciAccess,
+                ocm_repo = ocm.OciOcmRepository(
+                    type=ocm.OciAccess,
                     baseUrl=ocm_repo,
                 )
-            if not isinstance(ocm_repo, cm.OciOcmRepository):
+            if not isinstance(ocm_repo, ocm.OciOcmRepository):
                 raise NotImplementedError(ocm_repo)
 
             try:
@@ -605,9 +605,9 @@ def composite_component_descriptor_lookup(
         function
     '''
     def lookup(
-        component_id: cm.ComponentIdentity,
+        component_id: ocm.ComponentIdentity,
         /,
-        ctx_repo: cm.OciOcmRepository|str=None,
+        ctx_repo: ocm.OciOcmRepository|str=None,
         ocm_repository_lookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
@@ -633,7 +633,7 @@ def composite_component_descriptor_lookup(
                     raise
                 logger.warning(f'caught error {he} in {lookup=}, will try next lookup if any')
 
-            if isinstance(res, cm.ComponentDescriptor):
+            if isinstance(res, ocm.ComponentDescriptor):
                 for wb in writebacks: wb(component_id, res)
                 return res
             elif res is None: continue
@@ -644,8 +644,8 @@ def composite_component_descriptor_lookup(
             return
 
         if isinstance(ctx_repo, str):
-            ctx_repo = cm.OciOcmRepository(
-                type=cm.OciAccess,
+            ctx_repo = ocm.OciOcmRepository(
+                type=ocm.OciAccess,
                 baseUrl=ctx_repo,
             )
 
@@ -753,8 +753,8 @@ def create_default_component_descriptor_lookup(
 
 
 def component_diff(
-    left_component: cm.Component | cm.ComponentDescriptor,
-    right_component: cm.Component | cm.ComponentDescriptor,
+    left_component: ocm.Component | ocm.ComponentDescriptor,
+    right_component: ocm.Component | ocm.ComponentDescriptor,
     ignore_component_names=(),
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ) -> cnudie.util.ComponentDiff:
@@ -790,17 +790,17 @@ def component_diff(
 
 def component_versions(
     component_name: str,
-    ctx_repo: cm.OcmRepository,
+    ctx_repo: ocm.OcmRepository,
     oci_client: oc.Client=None,
 ) -> collections.abc.Sequence[str]:
-    if not isinstance(ctx_repo, cm.OciOcmRepository):
+    if not isinstance(ctx_repo, ocm.OciOcmRepository):
         raise NotImplementedError(ctx_repo)
 
     if not oci_client:
         import ccc.oci
         oci_client = ccc.oci.oci_client()
 
-    ctx_repo: cm.OciOcmRepository
+    ctx_repo: ocm.OciOcmRepository
     oci_ref = ctx_repo.component_oci_ref(component_name)
 
     return oci_client.tags(image_reference=oci_ref)

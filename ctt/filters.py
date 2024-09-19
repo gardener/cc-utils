@@ -6,15 +6,15 @@ import abc
 import enum
 import reutil
 
-import gci.componentmodel as cm
+import ocm
 
 
 class FilterBase:
     @abc.abstractmethod
     def matches(
         self,
-        component: cm.Component,
-        resource: cm.Resource,
+        component: ocm.Component,
+        resource: ocm.Resource,
     ):
         pass
 
@@ -25,8 +25,8 @@ class MatchAllFilter(FilterBase):
     '''
     def matches(
         self,
-        component: cm.Component,
-        resource: cm.Resource,
+        component: ocm.Component,
+        resource: ocm.Resource,
     ):
         return True
 
@@ -56,10 +56,10 @@ class ImageFilter(FilterBase):
 
     def matches(
         self,
-        component: cm.Component,
-        resource: cm.Resource,
+        component: ocm.Component,
+        resource: ocm.Resource,
     ):
-        if resource.access.type is not cm.AccessType.OCI_REGISTRY:
+        if resource.access.type is not ocm.AccessType.OCI_REGISTRY:
             return False
 
         name_matches = self._image_ref_filter(resource) and \
@@ -79,7 +79,7 @@ class ImageFilter(FilterBase):
 
         for exclude_type_name in self._exclude_artefact_types:
             try:
-                exclude_type = cm.ArtefactType(exclude_type_name)
+                exclude_type = ocm.ArtefactType(exclude_type_name)
                 if exclude_type is resource.type:
                     return False # type was explicitly excluded
             except ValueError:
@@ -94,7 +94,7 @@ class ImageFilter(FilterBase):
 
         for include_type_name in self._include_artefact_types:
             try:
-                include_type = cm.ArtefactType(include_type_name)
+                include_type = ocm.ArtefactType(include_type_name)
                 if include_type is resource.type:
                     return True
             except ValueError:
@@ -121,7 +121,7 @@ class ComponentFilter(FilterBase):
 
     def matches(
         self,
-        component: cm.Component,
-        resource: cm.Resource,
+        component: ocm.Component,
+        resource: ocm.Resource,
     ):
         return self._comp_name_filter(component)

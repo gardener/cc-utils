@@ -10,7 +10,7 @@ import dataclasses
 import sys
 import yaml
 
-import gci.componentmodel as cm
+import ocm
 
 import ci.util
 
@@ -38,7 +38,7 @@ def _raw_component_dep_to_v2(raw: dict):
   if 'labels' in raw:
     args['labels'] = raw['labels']
 
-  return cm.ComponentReference(**args)
+  return ocm.ComponentReference(**args)
 
 
 def _raw_image_dep_to_v2(raw: dict):
@@ -46,23 +46,23 @@ def _raw_image_dep_to_v2(raw: dict):
   args = {
     'name': raw['name'],
     'version': raw['version'],
-    'type': cm.ArtefactType.OCI_IMAGE,
-    'relation': cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.EXTERNAL)),
-    'access': cm.OciAccess(type=cm.AccessType.OCI_REGISTRY, imageReference=img_ref),
+    'type': ocm.ArtefactType.OCI_IMAGE,
+    'relation': ocm.ResourceRelation(raw.get('relation', ocm.ResourceRelation.EXTERNAL)),
+    'access': ocm.OciAccess(type=ocm.AccessType.OCI_REGISTRY, imageReference=img_ref),
   }
 
   if 'labels' in raw:
     args['labels'] = raw['labels']
 
-  return cm.Resource(**args)
+  return ocm.Resource(**args)
 
 
 def _raw_generic_dep_to_v2(raw: dict):
   name = raw['name']
   version = raw['version']
-  rel = cm.ResourceRelation(raw.get('relation', cm.ResourceRelation.LOCAL))
+  rel = ocm.ResourceRelation(raw.get('relation', ocm.ResourceRelation.LOCAL))
 
-  return cm.Resource(
+  return ocm.Resource(
     name=name,
     version=version,
     type='generic', # removed in later OCM versions, kept for backwards compatibility
@@ -80,7 +80,7 @@ def add_dependencies(
   container_image_dependencies: [str]=[],
   generic_dependencies: [str]=[],
 ):
-  component_descriptor = cm.ComponentDescriptor.from_dict(
+  component_descriptor = ocm.ComponentDescriptor.from_dict(
     ci.util.parse_yaml_file(descriptor_src_file)
   )
   component = component_descriptor.component
@@ -112,6 +112,6 @@ def add_dependencies(
 
   yaml.dump(
     data=dataclasses.asdict(component_descriptor),
-    Dumper=cm.EnumValueYamlDumper,
+    Dumper=ocm.EnumValueYamlDumper,
     stream=outfh,
   )

@@ -3,22 +3,22 @@ import dataclasses
 import graphlib
 
 import ci.util
-import gci.componentmodel as cm
+import ocm
 import oci.model as om
 
 ComponentId = (
-    cm.Component
-    | cm.ComponentDescriptor
-    | cm.ComponentIdentity
-    | cm.ComponentReference
+    ocm.Component
+    | ocm.ComponentDescriptor
+    | ocm.ComponentIdentity
+    | ocm.ComponentReference
     | str
     | tuple[str, str]
 )
 ComponentName = (
-    cm.Component
-    | cm.ComponentReference
-    | cm.ComponentDescriptor
-    | cm.ComponentIdentity
+    ocm.Component
+    | ocm.ComponentReference
+    | ocm.ComponentDescriptor
+    | ocm.ComponentIdentity
     | str
 )
 
@@ -27,17 +27,17 @@ META_SEPARATOR = '.build-'
 
 def to_component_id(
     component: ComponentId, /
-) -> cm.ComponentIdentity:
-    if isinstance(component, cm.ComponentIdentity):
+) -> ocm.ComponentIdentity:
+    if isinstance(component, ocm.ComponentIdentity):
         return component
 
-    if isinstance(component, cm.ComponentDescriptor):
+    if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
         # fall through to next case
-    if isinstance(component, cm.Component):
+    if isinstance(component, ocm.Component):
         name = component.name
         version = component.version
-    if isinstance(component, cm.ComponentReference):
+    if isinstance(component, ocm.ComponentReference):
         name = component.componentName
         version = component.version
     if isinstance(component, str):
@@ -45,7 +45,7 @@ def to_component_id(
     if isinstance(component, tuple):
         name, version = component
 
-    return cm.ComponentIdentity(
+    return ocm.ComponentIdentity(
         name=name,
         version=version,
     )
@@ -54,13 +54,13 @@ def to_component_id(
 def to_component_name(
     component: ComponentName,
 ) -> str:
-    if isinstance(component, cm.ComponentDescriptor):
+    if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
-    if isinstance(component, cm.Component):
+    if isinstance(component, ocm.Component):
         component = component.name
-    elif isinstance(component, cm.ComponentIdentity):
+    elif isinstance(component, ocm.ComponentIdentity):
         component = component.name
-    elif isinstance(component, cm.ComponentReference):
+    elif isinstance(component, ocm.ComponentReference):
         component = component.componentName
     elif isinstance(component, tuple):
         if not len(component) == 2:
@@ -78,26 +78,26 @@ def to_component_name(
 
 
 def to_component_id_and_repository_url(
-    component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
-    repository: cm.OciOcmRepository|str=None,
+    component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentIdentity | str,
+    repository: ocm.OciOcmRepository|str=None,
 ):
     if isinstance(component, str):
         name, version = component.rsplit(':', 1)
-        component = cm.ComponentIdentity(
+        component = ocm.ComponentIdentity(
             name=name,
             version=version,
         )
 
-    if isinstance(component, cm.ComponentDescriptor):
+    if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
-    elif isinstance(component, cm.ComponentIdentity) and not repository:
+    elif isinstance(component, ocm.ComponentIdentity) and not repository:
         raise ValueError('repository must be passed if calling w/ component-identity')
 
-    if not repository: # component is sure to be of type cm.Component by now (checked above)
-        component: cm.Component
+    if not repository: # component is sure to be of type ocm.Component by now (checked above)
+        component: ocm.Component
         repository = component.current_ocm_repo
 
-    if isinstance(repository, cm.OciOcmRepository):
+    if isinstance(repository, ocm.OciOcmRepository):
         repo_base_url = repository.baseUrl
     elif isinstance(repository, str):
         repo_base_url = repository
@@ -108,8 +108,8 @@ def to_component_id_and_repository_url(
 
 
 def oci_ref(
-    component: cm.Component | cm.ComponentDescriptor | cm.ComponentIdentity | str,
-    repository: cm.OciOcmRepository|str=None,
+    component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentIdentity | str,
+    repository: ocm.OciOcmRepository|str=None,
 ) -> om.OciImageReference:
     component, repo_base_url = to_component_id_and_repository_url(
         component=component,
@@ -126,8 +126,8 @@ def oci_ref(
 
 
 def iter_sorted(
-    components: collections.abc.Iterable[cm.Component], /
-) -> collections.abc.Generator[cm.Component, None, None]:
+    components: collections.abc.Iterable[ocm.Component], /
+) -> collections.abc.Generator[ocm.Component, None, None]:
     '''
     returns a generator yielding the given components, honouring their dependencies, starting
     with "leaf" components (i.e. components w/o dependencies), also known as topologically sorted.
@@ -137,8 +137,8 @@ def iter_sorted(
 
     toposorter = graphlib.TopologicalSorter()
 
-    def ref_to_comp_id(component_ref: cm.ComponentReference) -> cm.ComponentIdentity:
-        return cm.ComponentIdentity(
+    def ref_to_comp_id(component_ref: ocm.ComponentReference) -> ocm.ComponentIdentity:
+        return ocm.ComponentIdentity(
             name=component_ref.componentName,
             version=component_ref.version,
         )
@@ -158,12 +158,12 @@ def iter_sorted(
         yield components_by_id[component_id]
 
 
-def to_component(*args, **kwargs) -> cm.Component:
+def to_component(*args, **kwargs) -> ocm.Component:
     if not kwargs and len(args) == 1:
         component = args[0]
-        if isinstance(component, cm.Component):
+        if isinstance(component, ocm.Component):
             return component
-        elif isinstance(component, cm.ComponentDescriptor):
+        elif isinstance(component, ocm.ComponentDescriptor):
             return component.component
         else:
             raise ValueError(args)
@@ -187,25 +187,25 @@ def normalise_component_name(component_name: str) -> str:
 
 def oci_artefact_reference(
         component: (
-            cm.Component
-            | cm.ComponentIdentity
-            | cm.ComponentReference
+            ocm.Component
+            | ocm.ComponentIdentity
+            | ocm.ComponentReference
             | str # 'name:version'
             | tuple[str, str] # (name, version)
         ),
-        ocm_repository: str | cm.OciOcmRepository = None
+        ocm_repository: str | ocm.OciOcmRepository = None
 ) -> str:
-    if isinstance(component, cm.Component):
+    if isinstance(component, ocm.Component):
         if not ocm_repository:
             ocm_repository = component.current_ocm_repo
         component_name = component.name
         component_version = component.version
 
-    elif isinstance(component, cm.ComponentIdentity):
+    elif isinstance(component, ocm.ComponentIdentity):
         component_name = component.name
         component_version = component.version
 
-    elif isinstance(component, cm.ComponentReference):
+    elif isinstance(component, ocm.ComponentReference):
         component_name = component.componentName
         component_version = component.version
 
@@ -224,8 +224,8 @@ def oci_artefact_reference(
     if not ocm_repository:
         raise ValueError('ocm_repository must be given unless a Component is passed.')
     elif isinstance(ocm_repository, str):
-        repo_ctx = cm.OciOcmRepository(baseUrl=ocm_repository)
-    elif isinstance(ocm_repository, cm.OciOcmRepository):
+        repo_ctx = ocm.OciOcmRepository(baseUrl=ocm_repository)
+    elif isinstance(ocm_repository, ocm.OciOcmRepository):
         repo_ctx = ocm_repository
     else:
         raise TypeError(type(ocm_repository))
@@ -237,8 +237,8 @@ def oci_artefact_reference(
 
 
 def target_oci_ref(
-    component: cm.Component,
-    component_ref: cm.ComponentReference=None,
+    component: ocm.Component,
+    component_ref: ocm.ComponentReference=None,
     component_version: str=None,
 ):
     if not component_ref:
@@ -259,9 +259,9 @@ def target_oci_ref(
 
 
 def main_source(
-    component: cm.Component,
+    component: ocm.Component,
     absent_ok: bool=True,
-) -> cm.Source:
+) -> ocm.Source:
     component = to_component(component)
     for source in component.sources:
         if label := source.find_label('cloud.gardener/cicd/source'):
@@ -283,15 +283,15 @@ determine_main_source_for_component = main_source
 
 @dataclasses.dataclass(frozen=True)
 class ComponentResource:
-    component: cm.Component
-    resource: cm.Resource
+    component: ocm.Component
+    resource: ocm.Resource
 
 
 @dataclasses.dataclass(frozen=True)
 class LabelDiff:
-    labels_only_left: list[cm.Label] = dataclasses.field(default_factory=list)
-    labels_only_right: list[cm.Label] = dataclasses.field(default_factory=list)
-    label_pairs_changed: list[tuple[cm.Label, cm.Label]] = dataclasses.field(default_factory=list)
+    labels_only_left: list[ocm.Label] = dataclasses.field(default_factory=list)
+    labels_only_right: list[ocm.Label] = dataclasses.field(default_factory=list)
+    label_pairs_changed: list[tuple[ocm.Label, ocm.Label]] = dataclasses.field(default_factory=list)
 
 
 empty_list = lambda: dataclasses.field(default_factory=list) # noqa:E3701
@@ -301,7 +301,7 @@ empty_list = lambda: dataclasses.field(default_factory=list) # noqa:E3701
 class ComponentDiff:
     cidentities_only_left: set = empty_list()
     cidentities_only_right: set = empty_list()
-    cpairs_version_changed: list[tuple[cm.Component, cm.Component]] = empty_list
+    cpairs_version_changed: list[tuple[ocm.Component, ocm.Component]] = empty_list
     # only set when new component is added/removed
     names_only_left: set = dataclasses.field(default_factory=set)
     names_only_right: set = dataclasses.field(default_factory=set)
@@ -310,8 +310,8 @@ class ComponentDiff:
 
 
 def diff_labels(
-    left_labels: list[cm.Label],
-    right_labels: list[cm.Label],
+    left_labels: list[ocm.Label],
+    right_labels: list[ocm.Label],
 ) -> LabelDiff:
 
     left_label_name_to_label = {l.name: l for l in left_labels}
@@ -342,8 +342,8 @@ def diff_labels(
 
 
 def diff_components(
-    left_components: tuple[cm.Component],
-    right_components: tuple[cm.Component],
+    left_components: tuple[ocm.Component],
+    right_components: tuple[ocm.Component],
     ignore_component_names=(),
 ) -> ComponentDiff:
     left_component_identities = {
@@ -367,8 +367,8 @@ def diff_components(
     ))
 
     def find_changed_component(
-        changed_component: cm.Component,
-        components: list[cm.Component],
+        changed_component: ocm.Component,
+        components: list[ocm.Component],
     ):
         for c in components:
             if c.name == changed_component.name:
@@ -400,8 +400,8 @@ def diff_components(
 
 
 def _enumerate_group_pairs(
-    left_elements: collections.abc.Sequence[cm.Resource | cm.Source | cm.Label],
-    right_elements: collections.abc.Sequence[cm.Resource | cm.Source, cm.Label],
+    left_elements: collections.abc.Sequence[ocm.Resource | ocm.Source | ocm.Label],
+    right_elements: collections.abc.Sequence[ocm.Resource | ocm.Source, ocm.Label],
     unique_name: bool = False,
 ) -> collections.abc.Generator[tuple[list, list], None, None] | \
 collections.abc.Generator[tuple, None, None]:
@@ -433,11 +433,11 @@ collections.abc.Generator[tuple, None, None]:
 
 @dataclasses.dataclass
 class ResourceDiff:
-    left_component: cm.Component
-    right_component: cm.Component
-    resource_refs_only_left: list[cm.Resource] = dataclasses.field(default_factory=list)
-    resource_refs_only_right: list[cm.Resource] = dataclasses.field(default_factory=list)
-    resourcepairs_version_changed: list[tuple[cm.Resource, cm.Resource]] = dataclasses.field(default_factory=list) # noqa:E501
+    left_component: ocm.Component
+    right_component: ocm.Component
+    resource_refs_only_left: list[ocm.Resource] = dataclasses.field(default_factory=list)
+    resource_refs_only_right: list[ocm.Resource] = dataclasses.field(default_factory=list)
+    resourcepairs_version_changed: list[tuple[ocm.Resource, ocm.Resource]] = dataclasses.field(default_factory=list) # noqa:E501
 
 
 def _add_if_not_duplicate(list, res):
@@ -446,14 +446,14 @@ def _add_if_not_duplicate(list, res):
 
 
 def diff_resources(
-    left_component: cm.Component,
-    right_component: cm.Component,
+    left_component: ocm.Component,
+    right_component: ocm.Component,
 ) -> ResourceDiff:
-    if type(left_component) is not cm.Component:
+    if type(left_component) is not ocm.Component:
         raise NotImplementedError(
             f'unsupported {type(left_component)=}',
         )
-    if type(right_component) is not cm.Component:
+    if type(right_component) is not ocm.Component:
         raise NotImplementedError(
             f'unsupported {type(right_component)=}',
         )
@@ -489,9 +489,9 @@ def diff_resources(
 
     # groups the resources by name. The version will be used at a later point
     def enumerate_group_pairs(
-        left_resources: list[cm.Resource],
-        right_resources: list[cm.Resource]
-    ) -> collections.abc.Generator[tuple[list[cm.Resource], list[cm.Resource]], None, None]:
+        left_resources: list[ocm.Resource],
+        right_resources: list[ocm.Resource]
+    ) -> collections.abc.Generator[tuple[list[ocm.Resource], list[ocm.Resource]], None, None]:
         # group the resources with the same name on both sides
         for name in left_names_to_resource.keys():
             right_resource_group = [r for r in right_resources if r.name == name]

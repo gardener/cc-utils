@@ -16,7 +16,7 @@ from git.exc import (
 )
 import git.types
 
-import gci.componentmodel as cm
+import ocm
 
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
@@ -426,15 +426,15 @@ def upload_github_release_asset(
     try:
         release = github_helper.repository.release_from_tag(release_tag_name)
 
-        component_descriptor = cm.ComponentDescriptor(
+        component_descriptor = ocm.ComponentDescriptor(
             component=component,
-            meta=cm.Metadata(),
+            meta=ocm.Metadata(),
             signatures=[],
         )
 
         descriptor_str = yaml.dump(
             data=dataclasses.asdict(component_descriptor),
-            Dumper=cm.EnumValueYamlDumper,
+            Dumper=ocm.EnumValueYamlDumper,
         )
 
         normalized_component_name = component.name.replace('/', '_')
@@ -461,7 +461,7 @@ def clean_draft_releases(
 
 def post_to_slack(
     release_notes_markdown,
-    component: cm.Component,
+    component: ocm.Component,
     slack_cfg_name: str,
     slack_channel: str,
 ):

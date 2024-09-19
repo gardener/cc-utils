@@ -22,7 +22,7 @@ import cnudie.retrieve
 import cnudie.upload
 import container.util
 import dso.labels
-import gci.componentmodel as cm
+import ocm
 import oci
 import oci.client
 import oci.model as om
@@ -60,8 +60,8 @@ class ProcessingPipeline:
 
     def matches(
         self,
-        component: cm.Component,
-        resource: cm.Resource,
+        component: ocm.Component,
+        resource: ocm.Resource,
     ):
         filters_count = len(self._filters)
         return all(
@@ -75,8 +75,8 @@ class ProcessingPipeline:
 
     def process(
         self,
-        component: cm.Component,
-        resource: cm.Resource,
+        component: ocm.Component,
+        resource: ocm.Resource,
         inject_ocm_coordinates_into_oci_manifests: bool=False,
     ) -> processing_model.ProcessingJob:
         if not self.matches(component, resource):
@@ -124,9 +124,9 @@ class ProcessingPipeline:
 
 def create_ctt_label(
     processing_rules: list[str],
-) -> cm.Label:
+) -> ocm.Label:
     ctt_label_name = 'cloud.gardener/ctt-hint'
-    label = cm.Label(
+    label = ocm.Label(
         name=ctt_label_name,
         value={
             'processingRules': processing_rules,
@@ -228,13 +228,13 @@ def enum_processing_cfgs(
 
 
 def determine_changed_components(
-    component_descriptor: cm.ComponentDescriptor,
+    component_descriptor: ocm.ComponentDescriptor,
     tgt_ocm_repo_url: str,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
-) -> collections.abc.Generator[cm.ComponentDescriptor, None, None]:
+) -> collections.abc.Generator[ocm.ComponentDescriptor, None, None]:
     component = component_descriptor.component
 
     if component_filter and component_filter(component):
@@ -251,7 +251,7 @@ def determine_changed_components(
         return
 
     for cref in component.componentReferences:
-        referenced_component_descriptor = component_descriptor_lookup(cm.ComponentIdentity(
+        referenced_component_descriptor = component_descriptor_lookup(ocm.ComponentIdentity(
             name=cref.componentName,
             version=cref.version,
         ))
@@ -289,7 +289,7 @@ def determine_changed_components(
 
 
 def create_jobs(
-    component_descriptors: collections.abc.Iterable[cm.ComponentDescriptor],
+    component_descriptors: collections.abc.Iterable[ocm.ComponentDescriptor],
     processing_cfg: dict,
     inject_ocm_coordinates: bool,
 ) -> collections.abc.Generator[processing_model.ProcessingJob, None, None]:
@@ -305,7 +305,7 @@ def create_jobs(
 
         for resource in component.resources:
             # XXX only support OCI-resources for now
-            if not resource.access.type is cm.AccessType.OCI_REGISTRY:
+            if not resource.access.type is ocm.AccessType.OCI_REGISTRY:
                 continue
 
             for pipeline in enum_processing_cfgs(
@@ -430,16 +430,16 @@ def process_upload_request(
 
 def process_images(
     processing_cfg_path: str,
-    component_descriptor_v2: cm.ComponentDescriptor,
+    component_descriptor_v2: ocm.ComponentDescriptor,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     skip_cd_validation: bool=False,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
-    skip_component_upload: collections.abc.Callable[[cm.Component], bool]=None,
+    skip_component_upload: collections.abc.Callable[[ocm.Component], bool]=None,
     oci_client: oci.client.Client=None,
-    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
     tgt_ocm_base_url: str=None,
     tgt_ctx_base_url: str=None, # deprecated -> replaced by `tgt_ocm_base_url`
@@ -540,7 +540,7 @@ def process_images(
             # update the digest, because we might have changed the oci-artefact
             if (
                 digest.hashAlgorithm.upper() == 'SHA-256'
-                and digest.normalisationAlgorithm == cm.NormalisationAlgorithm.OCI_ARTIFACT_DIGEST
+                and digest.normalisationAlgorithm == ocm.NormalisationAlgorithm.OCI_ARTIFACT_DIGEST
             ):
                 digest.value = oci_manifest_digest.removeprefix('sha256:')
 
@@ -561,13 +561,13 @@ def process_images(
                 target_ref = f'{target_ref.ref_without_tag}@{oci_manifest_digest}'
 
             access = processed_resource.access
-            if access.type is cm.AccessType.OCI_REGISTRY:
+            if access.type is ocm.AccessType.OCI_REGISTRY:
                 access = dataclasses.replace(
                     processed_resource.access,
                     imageReference=target_ref,
                 )
 
-            elif access.type is cm.AccessType.RELATIVE_OCI_REFERENCE:
+            elif access.type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
                 access = dataclasses.replace(
                     processed_resource.access,
                     reference=om.OciImageReference.to_image_ref(
@@ -600,12 +600,12 @@ def process_images(
     jobs = tuple(executor.map(wrap_process_job, jobs))
 
     def append_ocm_repo(
-        component: cm.Component,
-        ocm_repo: str | cm.OciOcmRepository,
+        component: ocm.Component,
+        ocm_repo: str | ocm.OciOcmRepository,
     ):
         if isinstance(ocm_repo, str):
-            ocm_repo = cm.OciOcmRepository(baseUrl=ocm_repo)
-        elif isinstance(ocm_repo, cm.OciOcmRepository):
+            ocm_repo = ocm.OciOcmRepository(baseUrl=ocm_repo)
+        elif isinstance(ocm_repo, ocm.OciOcmRepository):
             pass
         else:
             raise TypeError(ocm_repo)
@@ -657,7 +657,7 @@ def process_images(
                 raise
 
             try:
-                cm.ComponentDescriptor.validate(raw, validation_mode=cm.ValidationMode.FAIL)
+                ocm.ComponentDescriptor.validate(raw, validation_mode=ocm.ValidationMode.FAIL)
             except jsonschema.exceptions.RefResolutionError as rre:
                 logger.warning(
                     'error whilst resolving reference from json-schema (see below) - will ignore'
@@ -700,7 +700,7 @@ def process_images(
     # patched image references (if it was already existing the the target registry and thus patching
     # has been skipped)
     if not skip_component_upload or not skip_component_upload(component_descriptor_v2.component):
-        component_descriptor_v2 = tgt_component_descriptor_lookup(cm.ComponentIdentity(
+        component_descriptor_v2 = tgt_component_descriptor_lookup(ocm.ComponentIdentity(
             name=component_descriptor_v2.component.name,
             version=component_descriptor_v2.component.version,
         ))
@@ -717,8 +717,8 @@ def process_images(
             node: cnudie.iter.ResourceNode
 
             if node.resource.access.type not in (
-                cm.AccessType.OCI_REGISTRY,
-                cm.AccessType.RELATIVE_OCI_REFERENCE,
+                ocm.AccessType.OCI_REGISTRY,
+                ocm.AccessType.RELATIVE_OCI_REFERENCE,
             ):
                 continue
         else:

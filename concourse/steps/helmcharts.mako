@@ -24,7 +24,7 @@ import jsonpath_ng
 import yaml
 
 import ccc.oci
-import gci.componentmodel as cm
+import ocm
 import oci.model
 import concourse.steps.component_descriptor_util as cdu
 import oci.model
@@ -70,7 +70,7 @@ with open(values_yaml_path) as f:
 
 def find_resource(name: str):
   for resource in component.resources:
-    if not resource.type is cm.ArtefactType.OCI_IMAGE:
+    if not resource.type is ocm.ArtefactType.OCI_IMAGE:
       continue
     if resource.name == name:
       return resource

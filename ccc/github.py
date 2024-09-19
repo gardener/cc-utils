@@ -12,7 +12,7 @@ import urllib.parse
 
 import cachecontrol
 import deprecated
-import gci.componentmodel as cm
+import ocm
 import github3
 import github3.github
 import github3.session
@@ -340,9 +340,9 @@ def log_stack_trace_information_hook(resp, *args, **kwargs):
 
 
 def github_api_from_gh_access(
-    access: cm.GithubAccess,
+    access: ocm.GithubAccess,
 ) -> github3.github.GitHub | github3.github.GitHubEnterprise:
-    if access.type is not cm.AccessType.GITHUB:
+    if access.type is not ocm.AccessType.GITHUB:
         raise ValueError(f'{access=}')
 
     github_cfg = github_cfg_for_repo_url(repo_url=access.repoUrl)

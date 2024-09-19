@@ -6,7 +6,7 @@ from makoutil import indent_func
 import ci.util
 import os
 import concourse.steps.component_descriptor_util as cdu
-import gci.componentmodel
+import ocm
 version_file = job_step.input('version_path') + '/version'
 repo = job_variant.main_repository()
 draft_release_trait = job_variant.trait('draft_release')
@@ -15,7 +15,7 @@ component_name = component_descriptor_trait.component_name()
 version_operation = draft_release_trait._preprocess()
 component_descriptor_path = os.path.join(
     job_step.input('component_descriptor_dir'),
-    cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
+    cdu.component_descriptor_fname(ocm.SchemaVersion.V2),
 )
 %>
 import logging
@@ -27,7 +27,7 @@ import ci.log
 import ci.util
 import cnudie.retrieve
 import cnudie.util
-import gci.componentmodel as cm
+import ocm
 import release_notes.fetch
 import release_notes.markdown
 
@@ -58,11 +58,11 @@ repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 have_cd = os.path.exists(component_descriptor_path := '${component_descriptor_path}')
 
 if have_cd:
-    component = cm.ComponentDescriptor.from_dict(
+    component = ocm.ComponentDescriptor.from_dict(
             component_descriptor_dict=ci.util.parse_yaml_file(
                 component_descriptor_path,
             ),
-            validation_mode=cm.ValidationMode.WARN,
+            validation_mode=ocm.ValidationMode.WARN,
     ).component
 else:
    print('did not find component-descriptor')

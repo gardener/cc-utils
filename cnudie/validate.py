@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import typing
 
-import gci.componentmodel as cm
+import ocm
 
 import ccc.oci
 import cnudie.iter as ci
@@ -18,10 +18,10 @@ class ValidationError:
 
     @property
     def as_error_message(self):
-        def _node_id(node: ci.Node | cm.Component):
+        def _node_id(node: ci.Node | ocm.Component):
             if isinstance(node, ci.ComponentNode):
                 return f'{node.component.name}:{node.component.version}'
-            elif isinstance(node, cm.Component):
+            elif isinstance(node, ocm.Component):
                 component = node
                 return f'{component.name}:{component.version}'
             elif isinstance(node, ci.ResourceNode):
@@ -40,10 +40,10 @@ class ValidationError:
 
 def validate_resource_node(node: ci.ResourceNode) -> typing.Generator[ValidationError, None, None]:
     resource = node.resource
-    if resource.type != cm.ArtefactType.OCI_IMAGE:
+    if resource.type != ocm.ArtefactType.OCI_IMAGE:
         return
 
-    resource.access: cm.OciAccess
+    resource.access: ocm.OciAccess
     image_reference = resource.access.imageReference
 
     try:

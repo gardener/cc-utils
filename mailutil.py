@@ -7,7 +7,7 @@ import git
 import smtplib
 import typing
 
-import gci.componentmodel as cm
+import ocm
 
 import cnudie.retrieve
 import cnudie.util
@@ -180,7 +180,7 @@ def determine_codeowner_file_recipients(
 def determine_mail_recipients(
     github_cfg_name,
     src_dirs=(),
-    components: typing.Sequence[cm.Component]=(),
+    components: typing.Sequence[ocm.Component]=(),
     component_names=(),
     codeowners_files=(),
     branch_name='master',
@@ -272,14 +272,14 @@ def _codeowners_parser_from_component_name(
 
 
 def _codeowners_parser_from_component(
-    component: cm.Component,
+    component: ocm.Component,
     branch_name: str='master',
 ):
     main_source = cnudie.util.main_source(
         component=component,
         absent_ok=False,
     )
-    if not main_source.access.type is cm.AccessType.GITHUB:
+    if not main_source.access.type is ocm.AccessType.GITHUB:
         raise NotImplementedError(main_source.access.type)
 
     access = main_source.access
