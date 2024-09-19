@@ -597,7 +597,7 @@ def process_images(
             logger.error(f'exception while processing {processing_job=}')
             raise e
 
-    jobs = executor.map(wrap_process_job, jobs)
+    jobs = tuple(executor.map(wrap_process_job, jobs))
 
     def append_ocm_repo(
         component: cm.Component,
