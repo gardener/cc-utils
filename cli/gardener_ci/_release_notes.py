@@ -1,6 +1,6 @@
 import cnudie.retrieve
 import ctx
-import gci.componentmodel as cm
+import ocm
 import release_notes.fetch
 import release_notes.markdown
 import version
@@ -42,21 +42,21 @@ def print_release_notes(
             versions=version_lookup(component_name),
         )
         component_descriptor = ocm_lookup(
-            cm.ComponentIdentity(
+            ocm.ComponentIdentity(
                 name=component_name,
                 version=greatest_version,
             ),
         )
     elif current_version:
         component_descriptor = ocm_lookup(
-            cm.ComponentIdentity(
+            ocm.ComponentIdentity(
                 name=component_name,
                 version=current_version,
             ),
         )
     elif previous_version:
         component_descriptor = ocm_lookup(
-            cm.ComponentIdentity(
+            ocm.ComponentIdentity(
                 name=component_name,
                 version=previous_version,
             ),

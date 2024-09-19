@@ -6,7 +6,7 @@ import typing
 
 import ccc.oci
 import cnudie.util
-import gci.componentmodel as cm
+import ocm
 import gci.oci
 import oci.client
 import oci.model as om
@@ -19,7 +19,7 @@ class UploadMode(enum.StrEnum):
 
 
 def _oci_blob_ref_from_access(
-    access: cm.LocalBlobAccess,
+    access: ocm.LocalBlobAccess,
     oci_client: oci.client.Client=None,
     oci_image_reference: om.OciImageReference=None,
 ) -> om.OciBlobRef:
@@ -69,13 +69,13 @@ def _oci_blob_ref_from_access(
 
 
 def _iter_oci_blob_refs(
-    component: cm.Component,
+    component: ocm.Component,
     oci_client: oci.client.Client=None,
     oci_image_reference: om.OciImageReference=None,
 ) -> typing.Generator[None, None, om.OciBlobRef]:
     for artefact in component.iter_artefacts():
         access = artefact.access
-        if not isinstance(access, cm.LocalBlobAccess):
+        if not isinstance(access, ocm.LocalBlobAccess):
             continue
 
         blob_ref = _oci_blob_ref_from_access(
@@ -87,9 +87,9 @@ def _iter_oci_blob_refs(
 
 
 def upload_component_descriptor(
-    component_descriptor: cm.ComponentDescriptor | cm.Component,
+    component_descriptor: ocm.ComponentDescriptor | ocm.Component,
     on_exist:UploadMode|str=UploadMode.SKIP,
-    ocm_repository: cm.OciOcmRepository | str = None,
+    ocm_repository: ocm.OciOcmRepository | str = None,
     oci_client: oci.client.Client=None,
 ):
     if not oci_client:
@@ -97,23 +97,23 @@ def upload_component_descriptor(
 
     on_exist = UploadMode(on_exist)
 
-    if isinstance(component_descriptor, cm.Component):
-        component_descriptor = cm.ComponentDescriptor(
+    if isinstance(component_descriptor, ocm.Component):
+        component_descriptor = ocm.ComponentDescriptor(
             component=component_descriptor,
-            meta=cm.Metadata(),
+            meta=ocm.Metadata(),
             signatures=[],
         )
 
     component = component_descriptor.component
 
     schema_version = component_descriptor.meta.schemaVersion
-    if not schema_version is cm.SchemaVersion.V2:
+    if not schema_version is ocm.SchemaVersion.V2:
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
 
     if ocm_repository:
         if isinstance(ocm_repository, str):
-            ocm_repository = cm.OciOcmRepository(baseUrl=ocm_repository)
-        elif isinstance(ocm_repository, cm.OciOcmRepository):
+            ocm_repository = ocm.OciOcmRepository(baseUrl=ocm_repository)
+        elif isinstance(ocm_repository, ocm.OciOcmRepository):
             pass
         else:
             raise TypeError(type(ocm_repository))

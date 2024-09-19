@@ -1,26 +1,26 @@
 # SPDX-FileCopyrightText: 2021 SAP SE or an SAP affiliate company and Gardener contributors
 #
 # SPDX-License-Identifier: Apache-2.0
-import gci.componentmodel as cm
+import ocm
 
 import ctt.uploaders as uploaders
 
 
 def test_labels_with_migration_hint_doesnt_overwrite_original_ref():
-    firstLabel = cm.Label(
+    firstLabel = ocm.Label(
         name='another_label',
         value='test'
     )
-    secondLabel = cm.Label(
+    secondLabel = ocm.Label(
         name=uploaders.original_ref_label_name,
         value='original-repo-0.com/my-image:1.0.0'
     )
 
-    res = cm.Resource(
+    res = ocm.Resource(
         name='my-image',
         version='1.0.0',
-        type=cm.ArtefactType.OCI_IMAGE,
-        access=cm.OciAccess(
+        type=ocm.ArtefactType.OCI_IMAGE,
+        access=ocm.OciAccess(
             imageReference='target-repo.com/my-image:1.0.0',
         ),
         labels=[
@@ -37,20 +37,20 @@ def test_labels_with_migration_hint_doesnt_overwrite_original_ref():
 
 
 def test_labels_with_migration_hint_adds_original_ref_if_not_present():
-    firstLabel = cm.Label(
+    firstLabel = ocm.Label(
         name='another_label',
         value='test'
     )
-    expectedOriginalRefLabel = cm.Label(
+    expectedOriginalRefLabel = ocm.Label(
         name=uploaders.original_ref_label_name,
         value='original-repo.com/my-image:1.0.0'
     )
 
-    res = cm.Resource(
+    res = ocm.Resource(
         name='my-image',
         version='1.0.0',
-        type=cm.ArtefactType.OCI_IMAGE,
-        access=cm.OciAccess(
+        type=ocm.ArtefactType.OCI_IMAGE,
+        access=ocm.OciAccess(
             imageReference='target-repo.com/my-image:1.0.0',
         ),
         labels=[

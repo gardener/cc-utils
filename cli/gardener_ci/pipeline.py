@@ -10,7 +10,7 @@ import urllib.parse
 import git
 import yaml
 
-import gci.componentmodel as cm
+import ocm
 
 import ci.util
 import concourse.enumerator as ce
@@ -101,17 +101,17 @@ def _main_source(
     version: str,
     job: dict,
 ):
-    return cm.Source(
+    return ocm.Source(
         name='dummy-name',
         version=version,
-        access=cm.GithubAccess(
-            type=cm.AccessType.GITHUB,
+        access=ocm.GithubAccess(
+            type=ocm.AccessType.GITHUB,
             repoUrl=next(repo.remote().urls),
             ref=repo.active_branch.name,
             commit=repo.head.commit.hexsha,
         ),
         labels=[
-            cm.Label(
+            ocm.Label(
                 name='cloud.gardener/cicd/source',
                 value={
                     'repository-classification': 'main',
@@ -136,24 +136,24 @@ def _iter_resources(
 
     for name, image in images.items():
         if 'image' in image:
-            yield cm.Resource(
+            yield ocm.Resource(
                 name=name,
                 version=version,
-                type=cm.ArtefactType.OCI_IMAGE,
-                access=cm.OciAccess(
-                    type=cm.AccessType.OCI_REGISTRY,
+                type=ocm.ArtefactType.OCI_IMAGE,
+                access=ocm.OciAccess(
+                    type=ocm.AccessType.OCI_REGISTRY,
                     imageReference=image['image'] + ':' + version,
                 ),
                 labels=image.get('resource_labels', []),
             )
         else:
             for target in image['targets']:
-                yield cm.Resource(
+                yield ocm.Resource(
                     name=target['name'],
                     version=version,
-                    type=cm.ArtefactType.OCI_IMAGE,
-                    access=cm.OciAccess(
-                        type=cm.AccessType.OCI_REGISTRY,
+                    type=ocm.ArtefactType.OCI_IMAGE,
+                    access=ocm.OciAccess(
+                        type=ocm.AccessType.OCI_REGISTRY,
                         imageReference=target['image'] + ':' + version,
                     ),
                     labels=image.get('resource_labels', []),
@@ -307,14 +307,14 @@ def base_component_descriptor(
         else:
             version = f'{prefix}1.2.3'
 
-    component_descriptor = cm.ComponentDescriptor(
-        meta=cm.Metadata(),
-        component=cm.Component(
+    component_descriptor = ocm.ComponentDescriptor(
+        meta=ocm.Metadata(),
+        component=ocm.Component(
             name=component_name,
             version=version,
             repositoryContexts=[
-                cm.OciOcmRepository(
-                    type=cm.AccessType.OCI_REGISTRY,
+                ocm.OciOcmRepository(
+                    type=ocm.AccessType.OCI_REGISTRY,
                     baseUrl=ocm_repo,
                     subPath='',
                 ),
@@ -345,7 +345,7 @@ def base_component_descriptor(
     yaml.dump(
         data=dataclasses.asdict(component_descriptor),
         stream=outfileh,
-        Dumper=cm.EnumValueYamlDumper,
+        Dumper=ocm.EnumValueYamlDumper,
     )
 
     return component_descriptor
@@ -394,7 +394,7 @@ def component_descriptor(
         shutil.copyfile(base_component_descriptor_path, base_component_descriptor_file.name)
         with open(base_component_descriptor_path) as f:
             raw = yaml.safe_load(f)
-        base_descriptor = cm.ComponentDescriptor.from_dict(raw)
+        base_descriptor = ocm.ComponentDescriptor.from_dict(raw)
 
     base_component = base_descriptor.component
 

@@ -3,9 +3,9 @@ import typing
 
 import checkmarx.model as cmx_model
 import checkmarx.util
-import gci
 import github.compliance.model as gcm
 import github.compliance.issue as gciss
+import ocm
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def scan_result_group_collection(
 
 def scan_sources(
     checkmarx_cfg_name: str,
-    component_descriptor: gci.componentmodel.ComponentDescriptor,
+    component_descriptor: ocm.ComponentDescriptor,
     timeout_seconds: int=3600,
     team_id: str = None,
     threshold: str = 'medium',

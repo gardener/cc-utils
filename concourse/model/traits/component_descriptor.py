@@ -11,10 +11,10 @@ import typing
 import dacite
 
 from ci.util import not_none
-from gci.componentmodel import Label
+from ocm import Label
 import ci.util
 import cnudie.retrieve
-import gci.componentmodel as cm
+import ocm
 import model.base
 import version
 
@@ -296,7 +296,7 @@ class ComponentDescriptorTrait(Trait):
         return ()
 
     @property
-    def ocm_repository(self) -> cm.OciOcmRepository:
+    def ocm_repository(self) -> ocm.OciOcmRepository:
         ocm_repo = self.raw.get('ocm_repository') or self.raw.get('ctx_repository')
         # XXX hack for unittests
         if not self.cfg_set:
@@ -312,7 +312,7 @@ class ComponentDescriptorTrait(Trait):
                 ctx_repo_cfg = self.cfg_set.ctx_repository(ocm_repo)
             except model.base.ConfigElementNotFoundError:
                 # assume it is a ocm-repository-url
-                return cm.OciOcmRepository(
+                return ocm.OciOcmRepository(
                     baseUrl=ocm_repo,
                 )
         else:
@@ -320,7 +320,7 @@ class ComponentDescriptorTrait(Trait):
 
         ctx_repo_cfg: model.ctx_repository.CtxRepositoryCfg
 
-        return cm.OciOcmRepository(
+        return ocm.OciOcmRepository(
             baseUrl=ctx_repo_cfg.base_url(),
         )
 

@@ -7,7 +7,7 @@ import tarfile
 import typing
 import yaml
 
-import gci.componentmodel
+import ocm
 import oci.client
 import oci.model
 
@@ -65,7 +65,7 @@ class ComponentDescriptorOciCfg:
 
 
 def component_descriptor_to_tarfileobj(
-    component_descriptor: typing.Union[dict, gci.componentmodel.ComponentDescriptor],
+    component_descriptor: typing.Union[dict, ocm.ComponentDescriptor],
 ):
     if not isinstance(component_descriptor, dict):
         component_descriptor = dataclasses.asdict(component_descriptor)
@@ -73,7 +73,7 @@ def component_descriptor_to_tarfileobj(
     component_descriptor_buf = io.BytesIO(
         yaml.dump(
           data=component_descriptor,
-          Dumper=gci.componentmodel.EnumValueYamlDumper,
+          Dumper=ocm.EnumValueYamlDumper,
         ).encode('utf-8')
     )
     component_descriptor_buf.seek(0, os.SEEK_END)
@@ -105,12 +105,12 @@ def component_descriptor_from_tarfileobj(
         if raw_dict is None:
           raise ValueError('Component Descriptor appears to be empty')
 
-        return gci.componentmodel.ComponentDescriptor.from_dict(raw_dict)
+        return ocm.ComponentDescriptor.from_dict(raw_dict)
 
 
 def image_ref_with_digest(
     image_reference: str | oci.model.OciImageReference,
-    digest: gci.componentmodel.DigestSpec=None,
+    digest: ocm.DigestSpec=None,
     oci_client: oci.client.Client=None,
 ) -> oci.model.OciImageReference:
     image_reference = oci.model.OciImageReference.to_image_ref(
@@ -125,7 +125,7 @@ def image_ref_with_digest(
             import ccc.oci # late import to avoid cyclic imports
             oci_client = ccc.oci.oci_client()
 
-        digest = gci.componentmodel.DigestSpec(
+        digest = ocm.DigestSpec(
             hashAlgorithm=None,
             normalisationAlgorithm=None,
             value=hashlib.sha256(oci_client.manifest_raw(

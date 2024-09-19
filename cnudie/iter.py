@@ -4,7 +4,7 @@ import enum
 
 import cnudie.retrieve
 import dso.labels
-import gci.componentmodel as cm
+import ocm
 
 
 class NodeReferenceType(enum.StrEnum):
@@ -14,7 +14,7 @@ class NodeReferenceType(enum.StrEnum):
 
 @dataclasses.dataclass(frozen=True)
 class NodePathEntry:
-    component: cm.Component
+    component: ocm.Component
     reftype: NodeReferenceType = NodeReferenceType.COMPONENT_REFERENCE
 
 
@@ -44,7 +44,7 @@ class ArtefactNode:
     - iterable (useful for pattern-matching, e.g. c,a = node)
     '''
     @property
-    def artefact(self) -> cm.Resource | cm.Source:
+    def artefact(self) -> ocm.Resource | ocm.Source:
         if isinstance(self, ResourceNode):
             return self.resource
         if isinstance(self, SourceNode):
@@ -53,7 +53,7 @@ class ArtefactNode:
 
     def __iter__(
         self,
-    ) -> collections.abc.Generator[cm.Component | cm.Resource | cm.Source, None, None]:
+    ) -> collections.abc.Generator[ocm.Component | ocm.Resource | ocm.Source, None, None]:
         # pylint: disable=E1101
         yield self.component
         yield self.artefact
@@ -61,12 +61,12 @@ class ArtefactNode:
 
 @dataclasses.dataclass
 class ResourceNode(Node, ArtefactNode):
-    resource: cm.Resource
+    resource: ocm.Resource
 
 
 @dataclasses.dataclass
 class SourceNode(Node, ArtefactNode):
-    source: cm.Source
+    source: ocm.Source
 
 
 class Filter:
@@ -88,14 +88,14 @@ class Filter:
 
 
 def iter(
-    component: cm.Component,
+    component: ocm.Component,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
     node_filter: collections.abc.Callable[[Node], bool]=None,
-    ocm_repo: cm.OcmRepository | str=None,
-    ctx_repo: cm.OcmRepository | str=None, # deprecated, use `ocm_repo` instead
-    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    ocm_repo: ocm.OcmRepository | str=None,
+    ctx_repo: ocm.OcmRepository | str=None, # deprecated, use `ocm_repo` instead
+    component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[NodeReferenceType], bool]=None,
 ) -> collections.abc.Generator[Node, None, None]:
     '''
@@ -123,7 +123,7 @@ def iter(
     if not ocm_repo and ctx_repo:
         ocm_repo = ctx_repo
 
-    if isinstance(component, cm.ComponentDescriptor):
+    if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
 
     seen_component_ids = set()
@@ -133,7 +133,7 @@ def iter(
 
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
-        component: cm.Component,
+        component: ocm.Component,
         lookup: cnudie.retrieve.ComponentDescriptorLookupById,
         recursion_depth,
         path: tuple[NodePathEntry]=(),
@@ -169,7 +169,7 @@ def iter(
             recursion_depth -= 1
 
         for cref in component.componentReferences:
-            cref_id = cm.ComponentIdentity(
+            cref_id = ocm.ComponentIdentity(
                 name=cref.componentName,
                 version=cref.version,
             )
@@ -230,11 +230,11 @@ def iter(
 
 
 def iter_resources(
-    component: cm.Component,
+    component: ocm.Component,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
-    component_filter: collections.abc.Callable[[cm.Component], bool]=None,
+    component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[NodeReferenceType], bool]=None,
 ) -> collections.abc.Generator[ResourceNode, None, None]:
     '''

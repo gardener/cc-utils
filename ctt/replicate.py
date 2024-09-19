@@ -11,7 +11,7 @@ import logging
 import gci.oci
 
 import ccc.oci
-import gci.componentmodel as cm
+import ocm
 import oci
 import oci.model as om
 
@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 def replicate_oci_artifact_with_patched_component_descriptor(
     src_name: str,
     src_version: str,
-    patched_component_descriptor: cm.ComponentDescriptor,
-    src_ctx_repo: cm.OciOcmRepository,
+    patched_component_descriptor: ocm.ComponentDescriptor,
+    src_ctx_repo: ocm.OciOcmRepository,
 ):
     if isinstance(src_ctx_repo, str):
-        src_ctx_repo = cm.OciOcmRepository(baseUrl=src_ctx_repo)
+        src_ctx_repo = ocm.OciOcmRepository(baseUrl=src_ctx_repo)
 
-    if not isinstance(src_ctx_repo, cm.OciOcmRepository):
+    if not isinstance(src_ctx_repo, ocm.OciOcmRepository):
         raise NotImplementedError(src_ctx_repo)
 
     client = ccc.oci.oci_client()

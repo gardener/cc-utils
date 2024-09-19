@@ -3,7 +3,7 @@ import logging
 import tarfile
 import typing
 
-import gci.componentmodel as cm
+import ocm
 
 import ci.log
 import ci.util
@@ -25,7 +25,7 @@ ci.log.configure_default_logging()
 
 
 def determine_os_ids(
-    component_descriptor: cm.ComponentDescriptor,
+    component_descriptor: ocm.ComponentDescriptor,
     oci_client: oci.client.Client,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     delivery_service_client: delivery.client.DeliveryServiceClient,
@@ -34,13 +34,13 @@ def determine_os_ids(
         component=component_descriptor,
         lookup=lookup,
     ):
-        if resource.type != cm.ArtefactType.OCI_IMAGE:
+        if resource.type != ocm.ArtefactType.OCI_IMAGE:
             continue
 
         if not resource.access:
             continue
 
-        if resource.access.type != cm.AccessType.OCI_REGISTRY:
+        if resource.access.type != ocm.AccessType.OCI_REGISTRY:
             continue
 
         yield base_image_os_id(
@@ -54,8 +54,8 @@ def determine_os_ids(
 def base_image_os_id(
     oci_client: oci.client.Client,
     delivery_service_client: delivery.client.DeliveryServiceClient,
-    component: cm.Component,
-    resource: cm.Resource,
+    component: ocm.Component,
+    resource: ocm.Resource,
 ) -> gcm.OsIdScanResult:
     # shortcut scan if there is already a scan-result
     if delivery_service_client:
@@ -179,7 +179,7 @@ def scan_result_group_collection_for_outdated_os_ids(
         ):
             return True
 
-        if not relation is cm.ResourceRelation.LOCAL:
+        if not relation is ocm.ResourceRelation.LOCAL:
             logger.info(f'{result.scanned_element.resource.name=} '
                 f'is not "local" - will ignore findings')
             return False
@@ -203,8 +203,8 @@ def scan_result_group_collection_for_outdated_os_ids(
 
 def upload_to_delivery_db(
     db_client: delivery.client.DeliveryServiceClient,
-    resource: cm.Resource,
-    component: cm.Component,
+    resource: ocm.Resource,
+    component: ocm.Component,
     os_info: um.OperatingSystemId,
 ):
     artefact_ref = dm.component_artefact_id_from_ocm(

@@ -11,7 +11,7 @@ import ci.util
 import concourse.steps.component_descriptor_util as cdu
 import concourse.model.traits.version
 import concourse.model.traits.release
-import gci.componentmodel
+import ocm
 import version
 ReleaseCommitPublishingPolicy = concourse.model.traits.release.ReleaseCommitPublishingPolicy
 ReleaseNotesPolicy = concourse.model.traits.release.ReleaseNotesPolicy
@@ -49,7 +49,7 @@ repo = job_variant.main_repository()
 
 component_descriptor_path = os.path.join(
   job_step.input('component_descriptor_dir'),
-  cdu.component_descriptor_fname(gci.componentmodel.SchemaVersion.V2),
+  cdu.component_descriptor_fname(ocm.SchemaVersion.V2),
 )
 
 component_descriptor_trait = job_variant.trait('component_descriptor')
@@ -104,7 +104,7 @@ import concourse.steps.release
 import concourse.model.traits.version
 import concourse.model.traits.release
 import concourse.util
-import gci.componentmodel as cm
+import ocm
 import github.util
 import gitutil
 
@@ -179,14 +179,14 @@ oci_client.put_blob(
 )
 
 component.resources.append(
-  cm.Resource(
+  ocm.Resource(
     name='${helmchart.name}',
     version=version_str,
     type='helmchart-imagemap',
     extraIdentity={
       'type': 'helmchart-imagemap',
     },
-    access=cm.LocalBlobAccess(
+    access=ocm.LocalBlobAccess(
       mediaType='application/data',
       localReference=mapping_digest,
       size=mapping_leng,
@@ -237,11 +237,11 @@ with tempfile.TemporaryFile() as f:
     data=f,
   )
 component.resources.append(
-  cm.Resource(
+  ocm.Resource(
     name='${asset.name}',
     version=version_str,
     type='${asset.artefact_type}',
-    access=cm.LocalBlobAccess(
+    access=ocm.LocalBlobAccess(
       mediaType='application/gzip',
       localReference=digest,
       size=leng,
@@ -302,11 +302,11 @@ oci_client.put_blob(
   data=blobfh,
 )
 component.resources.append(
-  cm.Resource(
+  ocm.Resource(
     name='${asset.name}',
     version=version_str,
     type='${asset.artefact_type}',
-    access=cm.LocalBlobAccess(
+    access=ocm.LocalBlobAccess(
       mediaType=blob_mimetype,
       localReference=digest,
       size=leng,

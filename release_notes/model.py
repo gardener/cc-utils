@@ -4,7 +4,7 @@ import re
 import traceback
 import typing
 
-import gci.componentmodel
+import ocm
 import git
 import github3.pulls
 
@@ -241,7 +241,7 @@ class ReleaseNote:
     author: typing.Optional[Author]  # the author of the commit / pull request
     reference: _Reference
 
-    source_component: gci.componentmodel.Component
+    source_component: ocm.Component
     is_current_repo: bool
     from_same_github_instance: bool
 
@@ -273,15 +273,15 @@ class ReleaseNote:
 def _source_component(
     component_descriptor_lookup,
     version_lookup,
-    current_component: gci.componentmodel.Component,
+    current_component: ocm.Component,
     source_component_name: str,
-) -> gci.componentmodel.Component | None:
+) -> ocm.Component | None:
     try:
         # try to fetch greatest component-descriptor for source component. The
         # actual version (hopefully) does not matter, as we assume the GithubAccess
         # (which we need to lookup release-notes) will rarely change.
         source_component_descriptor = component_descriptor_lookup(
-            gci.componentmodel.ComponentIdentity(
+            ocm.ComponentIdentity(
                 name=source_component_name,
                 version=version.greatest_version(
                     versions=version_lookup(source_component_name),
@@ -302,8 +302,8 @@ def create_release_notes_obj(
     component_descriptor_lookup,
     version_lookup,
     source_block: SourceBlock,
-    source_component: gci.componentmodel.Component,
-    current_component: gci.componentmodel.Component,
+    source_component: ocm.Component,
+    current_component: ocm.Component,
 ) -> ReleaseNote:
     target = source_block.source
     if isinstance(target, git.Commit):

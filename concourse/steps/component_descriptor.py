@@ -13,24 +13,24 @@ import cnudie.retrieve
 import cnudie.migrate
 import version
 
-import gci.componentmodel as cm
+import ocm
 
 logger = logging.getLogger('step.component_descriptor')
 
 
-def dump_component_descriptor_v2(component_descriptor_v2: cm.ComponentDescriptor):
-    import gci.componentmodel as cm
+def dump_component_descriptor_v2(component_descriptor_v2: ocm.ComponentDescriptor):
+    import ocm
     import dataclasses
     import yaml
     return yaml.dump(
         data=dataclasses.asdict(component_descriptor_v2),
-        Dumper=cm.EnumValueYamlDumper,
+        Dumper=ocm.EnumValueYamlDumper,
     )
 
 
 def base_component_descriptor_v2(
     component_name_v2: str,
-    component_labels: list[cm.Label],
+    component_labels: list[ocm.Label],
     effective_version: str,
     source_labels: tuple,
     ctx_repository_base_url: str,
@@ -39,7 +39,7 @@ def base_component_descriptor_v2(
 ):
     import datetime
     import cnudie.migrate
-    import gci.componentmodel as cm
+    import ocm
     import version as version_util
     parsed_version = version_util.parse_to_semver(effective_version)
     if parsed_version.finalize_version() == parsed_version:
@@ -67,30 +67,30 @@ def base_component_descriptor_v2(
 
     component_labels = list(component_labels)
     component_labels.append(
-        cm.Label(
+        ocm.Label(
             name='cloud.gardener/ocm/creation-date',
             value=datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         ),
     )
 
-    base_descriptor_v2 = cm.ComponentDescriptor(
-      meta=cm.Metadata(schemaVersion=cm.SchemaVersion.V2),
-      component=cm.Component(
+    base_descriptor_v2 = ocm.ComponentDescriptor(
+      meta=ocm.Metadata(schemaVersion=ocm.SchemaVersion.V2),
+      component=ocm.Component(
         name=component_name_v2,
         version=effective_version,
         repositoryContexts=[
-          cm.OciOcmRepository(
+          ocm.OciOcmRepository(
             baseUrl=ctx_repository_base_url,
-            type=cm.AccessType.OCI_REGISTRY,
+            type=ocm.AccessType.OCI_REGISTRY,
           )
         ],
         provider=provider,
         sources=[
-          cm.Source(
+          ocm.Source(
             name=logical_name,
-            type=cm.ArtefactType.GIT,
-            access=cm.GithubAccess(
-              type=cm.AccessType.GITHUB,
+            type=ocm.ArtefactType.GIT,
+            access=ocm.GithubAccess(
+              type=ocm.AccessType.GITHUB,
               repoUrl=repo_url,
               ref=src_ref,
               commit=commit,
@@ -110,11 +110,11 @@ def base_component_descriptor_v2(
 
 
 def component_diff_since_last_release(
-    component_descriptor: cm.ComponentDescriptor,
+    component_descriptor: ocm.ComponentDescriptor,
     component_descriptor_lookup,
     version_lookup,
 ):
-    component: cm.Component = ci.util.not_none(
+    component: ocm.Component = ci.util.not_none(
         component_descriptor.component,
     )
 
@@ -135,7 +135,7 @@ def component_diff_since_last_release(
     greatest_release_version = str(greatest_release_version)
     logger.info('last released version: ' + str(greatest_release_version))
 
-    greatest_released_cd = component_descriptor_lookup(cm.ComponentIdentity(
+    greatest_released_cd = component_descriptor_lookup(ocm.ComponentIdentity(
         name=component.name,
         version=greatest_release_version,
     ))

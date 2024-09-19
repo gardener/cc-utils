@@ -6,7 +6,7 @@
 import pytest
 
 import cnudie.util
-import gci.componentmodel as cm
+import ocm
 
 # functions under test
 diff_components = cnudie.util.diff_components
@@ -16,7 +16,7 @@ diff_resources = cnudie.util.diff_resources
 @pytest.fixture
 def cid():
     def component_id(name: str, version: str):
-        return cm.ComponentIdentity(name=name, version=version)
+        return ocm.ComponentIdentity(name=name, version=version)
 
     return component_id
 
@@ -25,8 +25,8 @@ def comp(
     name,
     version,
     componentReferences=None,
-) -> cm.Component:
-    return cm.Component(
+) -> ocm.Component:
+    return ocm.Component(
         name=name,
         version=version,
         provider={
@@ -40,9 +40,9 @@ def comp(
     )
 
 
-def comp_desc(name, version) -> cm.ComponentDescriptor:
-    return cm.ComponentDescriptor(
-        meta=cm.Metadata(),
+def comp_desc(name, version) -> ocm.ComponentDescriptor:
+    return ocm.ComponentDescriptor(
+        meta=ocm.Metadata(),
         component=comp(name, version),
     )
 
@@ -50,11 +50,11 @@ def comp_desc(name, version) -> cm.ComponentDescriptor:
 @pytest.fixture
 def iref():
     def image_ref(name, version):
-        return cm.Resource(
+        return ocm.Resource(
             name=name,
             version=version,
-            access=cm.OciAccess,
-            type=cm.AccessType.OCI_REGISTRY,
+            access=ocm.OciAccess,
+            type=ocm.AccessType.OCI_REGISTRY,
             extraIdentity={},
             labels=[],
             srcRefs=[],
@@ -65,8 +65,8 @@ def iref():
 
 
 def test_iter_sorted():
-    def cref(component: cm.Component):
-        return cm.ComponentReference(
+    def cref(component: ocm.Component):
+        return ocm.ComponentReference(
             name='dont-care',
             componentName=component.name,
             version=component.version,
@@ -223,43 +223,43 @@ def test_label_usage():
     component_name = 'c'
     component_version = '1.2.3'
     sources = [
-        cm.Source(
+        ocm.Source(
             name='repo_aux_source',
-            access=cm.GithubAccess(
-                type=cm.AccessType.GITHUB,
+            access=ocm.GithubAccess(
+                type=ocm.AccessType.GITHUB,
                 ref='refs/heads/master',
                 repoUrl='github.com/otherOrg/otherRepo'
             ),
             labels=[
-                cm.Label(
+                ocm.Label(
                     name='cloud.gardener/cicd/source',
                     value={'repository-classification': 'auxiliary'},
                 ),
             ],
         ),
-        cm.Source(
+        ocm.Source(
             name='repo_main_source',
-            access=cm.GithubAccess(
-                type=cm.AccessType.GITHUB,
+            access=ocm.GithubAccess(
+                type=ocm.AccessType.GITHUB,
                 ref='refs/heads/master',
                 repoUrl='github.com/org/repo'
             ),
             labels=[
-                cm.Label(
+                ocm.Label(
                     name='cloud.gardener/cicd/source',
                     value={'repository-classification': 'main'},
                 ),
             ],
         ),
     ]
-    component_with_source_label = cm.Component(
+    component_with_source_label = ocm.Component(
         name=component_name,
         version=component_version,
         sources=sources,
         componentReferences=[],
         labels=[],
         repositoryContexts=[
-            cm.OciOcmRepository(
+            ocm.OciOcmRepository(
                 baseUrl='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/landscapes',
                 type='ociRegistry',
             ),
@@ -272,22 +272,22 @@ def test_label_usage():
     assert main_source.labels[0].value == {'repository-classification': 'main'}
     assert main_source.name == 'repo_main_source'
 
-    component_without_source_label = cm.Component(
+    component_without_source_label = ocm.Component(
         name=component_name,
         version=component_version,
         sources=[
-            cm.Source(
+            ocm.Source(
                 name='repo_main_source',
-                access=cm.GithubAccess(
-                    type=cm.AccessType.GITHUB,
+                access=ocm.GithubAccess(
+                    type=ocm.AccessType.GITHUB,
                     ref='refs/heads/master',
                     repoUrl='github.com/org/repo'
                 ),
             ),
-            cm.Source(
+            ocm.Source(
                 name='repo_aux_source',
-                access=cm.GithubAccess(
-                    type=cm.AccessType.GITHUB,
+                access=ocm.GithubAccess(
+                    type=ocm.AccessType.GITHUB,
                     ref='refs/heads/master',
                     repoUrl='github.com/otherOrg/otherRepo'
                 ),
@@ -296,7 +296,7 @@ def test_label_usage():
         componentReferences=[],
         labels=[],
         repositoryContexts=[
-            cm.OciOcmRepository(
+            ocm.OciOcmRepository(
                 baseUrl='eu.gcr.io/sap-se-gcr-k8s-private/cnudie/gardener/landscapes',
                 type='ociRegistry',
             ),
@@ -311,7 +311,7 @@ def test_label_usage():
 
 
 def test_diff_label():
-    label_foo = cm.Label(name='foo', value='bar v1')
+    label_foo = ocm.Label(name='foo', value='bar v1')
 
     left_labels = [
         label_foo
@@ -327,7 +327,7 @@ def test_diff_label():
     assert len(label_diff.labels_only_right) == 0
 
     # check left exclusive label
-    label_only_left = cm.Label(name='left', value='only')
+    label_only_left = ocm.Label(name='left', value='only')
     left_labels.append(label_only_left)
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 0
@@ -336,7 +336,7 @@ def test_diff_label():
     assert len(label_diff.labels_only_right) == 0
 
     # check right exclusive label
-    label_only_right = cm.Label(name='right', value='only')
+    label_only_right = ocm.Label(name='right', value='only')
     right_labels.append(label_only_right)
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 0
@@ -353,7 +353,7 @@ def test_diff_label():
     assert len(label_diff.labels_only_right) == 1
 
     # check different label value with the same name
-    label_foo_updated = cm.Label(name='foo', value='bar v2')
+    label_foo_updated = ocm.Label(name='foo', value='bar v2')
     right_labels.append(label_foo_updated)
     label_diff = cnudie.util.diff_labels(left_labels=left_labels, right_labels=right_labels)
     assert len(label_diff.label_pairs_changed) == 1
@@ -369,12 +369,12 @@ def test_diff_label():
 
 
 def test_to_component_id():
-    base_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
+    base_identity = ocm.ComponentIdentity(name='Foo', version='1.2.3')
 
-    test_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
+    test_identity = ocm.ComponentIdentity(name='Foo', version='1.2.3')
     assert cnudie.util.to_component_id(test_identity) == base_identity
 
-    test_component = cm.Component(
+    test_component = ocm.Component(
         name='Foo',
         version='1.2.3',
         repositoryContexts=[],
@@ -385,14 +385,14 @@ def test_to_component_id():
     )
     assert cnudie.util.to_component_id(test_component) == base_identity
 
-    test_component_descriptor = cm.ComponentDescriptor(
-        meta=cm.Metadata(),
+    test_component_descriptor = ocm.ComponentDescriptor(
+        meta=ocm.Metadata(),
         component=test_component,
         signatures=[],
     )
     assert cnudie.util.to_component_id(test_component_descriptor) == base_identity
 
-    test_component_reference = cm.ComponentReference(
+    test_component_reference = ocm.ComponentReference(
         componentName='Foo', name='Bar', version='1.2.3',
     )
     assert cnudie.util.to_component_id(test_component_reference) == base_identity
@@ -411,10 +411,10 @@ def test_to_component_id():
 def test_to_component_name():
     base_name = 'Foo'
 
-    test_identity = cm.ComponentIdentity(name='Foo', version='1.2.3')
+    test_identity = ocm.ComponentIdentity(name='Foo', version='1.2.3')
     assert cnudie.util.to_component_name(test_identity) == base_name
 
-    test_component = cm.Component(
+    test_component = ocm.Component(
         name='Foo',
         version='1.2.3',
         repositoryContexts=[],
@@ -425,14 +425,14 @@ def test_to_component_name():
     )
     assert cnudie.util.to_component_name(test_component) == base_name
 
-    test_component_descriptor = cm.ComponentDescriptor(
-        meta=cm.Metadata(),
+    test_component_descriptor = ocm.ComponentDescriptor(
+        meta=ocm.Metadata(),
         component=test_component,
         signatures=[],
     )
     assert cnudie.util.to_component_name(test_component_descriptor) == base_name
 
-    test_component_reference = cm.ComponentReference(
+    test_component_reference = ocm.ComponentReference(
         componentName='Foo', name='Bar', version='1.2.3',
     )
     assert cnudie.util.to_component_name(test_component_reference) == base_name

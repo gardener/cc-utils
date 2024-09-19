@@ -24,8 +24,7 @@ from github3.orgs import Team
 from github3.pulls import PullRequest
 from github3.repos.release import Release
 
-import gci.componentmodel
-import gci.componentmodel as cm
+import ocm
 import ccc.github
 import ci.util
 import version
@@ -132,14 +131,14 @@ class UpgradePullRequest:
     def __init__(
         self,
         pull_request: PullRequest,
-        from_ref: typing.Union[cm.Resource, cm.ComponentReference],
-        to_ref: typing.Union[cm.Resource, cm.ComponentReference],
+        from_ref: typing.Union[ocm.Resource, ocm.ComponentReference],
+        to_ref: typing.Union[ocm.Resource, ocm.ComponentReference],
     ):
         self.pull_request = ci.util.not_none(pull_request)
 
         if from_ref.name != to_ref.name:
             raise ValueError(f'reference name mismatch {from_ref.name=} {to_ref.name=}')
-        if (isinstance(from_ref, cm.Resource) and isinstance(to_ref, cm.Resource) and
+        if (isinstance(from_ref, ocm.Resource) and isinstance(to_ref, ocm.Resource) and
             from_ref.type != to_ref.type
             ) or \
             type(from_ref) != type(to_ref):
@@ -149,14 +148,14 @@ class UpgradePullRequest:
 
         self.from_ref = from_ref
         self.to_ref = to_ref
-        if isinstance(from_ref, cm.Resource):
+        if isinstance(from_ref, ocm.Resource):
             if isinstance(from_ref.type, enum.Enum):
                 self.reference_type_name = from_ref.type.value
             elif isinstance(from_ref.type, str):
                 self.reference_type_name = from_ref.type
             else:
                 raise ValueError(from_ref.type)
-        elif isinstance(from_ref, cm.ComponentReference):
+        elif isinstance(from_ref, ocm.ComponentReference):
             self.reference_type_name = 'component'
         else:
             raise NotImplementedError(from_ref.type)
@@ -168,7 +167,7 @@ class UpgradePullRequest:
 
     def is_obsolete(
         self,
-        reference_component: gci.componentmodel.Component,
+        reference_component: ocm.Component,
     ):
         '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
 
@@ -177,7 +176,7 @@ class UpgradePullRequest:
         - the destination version is greater than the greatest reference component version
         '''
         # find matching component versions
-        if not isinstance(reference_component, gci.componentmodel.Component):
+        if not isinstance(reference_component, ocm.Component):
             raise TypeError(reference_component)
 
         if self.reference_type_name == 'component':
@@ -202,19 +201,19 @@ class UpgradePullRequest:
 
     def target_matches(
         self,
-        reference: typing.Tuple[cm.ComponentReference, cm.Resource],
+        reference: typing.Tuple[ocm.ComponentReference, ocm.Resource],
         reference_version: str = None,
     ):
-        if not isinstance(reference, cm.ComponentReference) and not \
-                isinstance(reference, cm.Resource):
+        if not isinstance(reference, ocm.ComponentReference) and not \
+                isinstance(reference, ocm.Resource):
             raise TypeError(reference)
 
-        if isinstance(reference, cm.ComponentReference):
+        if isinstance(reference, ocm.ComponentReference):
             if self.reference_type_name != 'component':
                 return False
             if reference.componentName != self.ref_name:
                 return False
-        else: # cm.Resource, already checked above
+        else: # ocm.Resource, already checked above
             if reference.name != self.ref_name:
                 return False
             if isinstance(reference.type, enum.Enum):
@@ -294,11 +293,11 @@ class PullRequestUtil(RepositoryHelperBase):
 
     @staticmethod
     def calculate_pr_title(
-            reference: gci.componentmodel.ComponentReference,
+            reference: ocm.ComponentReference,
             from_version: str,
             to_version: str,
     ) -> str:
-        if not isinstance(reference, gci.componentmodel.ComponentReference):
+        if not isinstance(reference, ocm.ComponentReference):
             raise TypeError(reference)
 
         type_name = 'component'
@@ -334,12 +333,12 @@ class PullRequestUtil(RepositoryHelperBase):
         from_version = match.group(3)
         to_version = match.group(4)
 
-        from_ref = cm.ComponentReference(
+        from_ref = ocm.ComponentReference(
             name=ref_name,
             componentName=ref_name,
             version=from_version,
         )
-        to_ref = cm.ComponentReference(
+        to_ref = ocm.ComponentReference(
             name=ref_name,
             componentName=ref_name,
             version=to_version,

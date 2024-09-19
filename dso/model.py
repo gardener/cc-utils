@@ -8,7 +8,7 @@ import dateutil.parser
 import cnudie.iter
 import dso.cvss
 import dso.labels
-import gci.componentmodel as cm
+import ocm
 import unixutil.model
 
 
@@ -16,8 +16,8 @@ import unixutil.model
 class ScanArtifact:
     name: str
     label: dso.labels.SourceScanLabel
-    component: cm.Component
-    source: cm.Source
+    component: ocm.Component
+    source: ocm.Source
 
 
 class Datasource:
@@ -110,8 +110,8 @@ class ComponentArtefactId:
 
 
 def component_artefact_id_from_ocm(
-    component: cm.Component,
-    artefact: cm.Resource | cm.Source,
+    component: ocm.Component,
+    artefact: ocm.Resource | ocm.Source,
 ) -> ComponentArtefactId:
     local_artefact = LocalArtefactId(
         artefact_name=artefact.name,
@@ -120,9 +120,9 @@ def component_artefact_id_from_ocm(
         artefact_extra_id=artefact.extraIdentity,
     )
 
-    if isinstance(artefact, cm.Resource):
+    if isinstance(artefact, ocm.Resource):
         artefact_kind = ArtefactKind.RESOURCE
-    elif isinstance(artefact, cm.Source):
+    elif isinstance(artefact, ocm.Source):
         artefact_kind = ArtefactKind.SOURCE
     else:
         # should not occur

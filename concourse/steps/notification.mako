@@ -13,7 +13,7 @@
 import ci.util
 from makoutil import indent_func
 from concourse.steps import step_lib
-import gci.componentmodel as cm
+import ocm
 # xxx: for now, assume all repositories are from same github
 default_github_cfg_name = cfg_set.github().name()
 
@@ -54,7 +54,7 @@ import logging
 import sys
 import os
 
-import gci.componentmodel as cm
+import ocm
 
 import ccc.concourse
 import ccc.github

@@ -6,7 +6,7 @@ import tempfile
 import time
 import traceback
 
-import gci.componentmodel
+import ocm
 import github3.exceptions
 import github3.repos.repo
 
@@ -29,12 +29,12 @@ logger = logging.getLogger('step.update_component_deps')
 
 def current_product_descriptor():
     component_descriptor_file_path = cdu.component_descriptor_path(
-        schema_version=gci.componentmodel.SchemaVersion.V2,
+        schema_version=ocm.SchemaVersion.V2,
     )
 
     # cd is supplied via component-descriptor file. Parse and return
     if os.path.isfile(component_descriptor_file_path):
-        return gci.componentmodel.ComponentDescriptor.from_dict(
+        return ocm.ComponentDescriptor.from_dict(
             component_descriptor_dict=ci.util.parse_yaml_file(component_descriptor_file_path,)
         )
     else:
@@ -47,7 +47,7 @@ def current_component():
 
 def close_obsolete_pull_requests(
     upgrade_pull_requests,
-    reference_component: gci.componentmodel.Component,
+    reference_component: ocm.Component,
 ):
     obsolete_upgrade_requests = [
         pr for pr in upgrade_pull_requests
@@ -61,7 +61,7 @@ def close_obsolete_pull_requests(
 
 
 def upgrade_pr_exists(
-    component_reference: gci.componentmodel.ComponentReference,
+    component_reference: ocm.ComponentReference,
     component_version: str,
     upgrade_requests: collections.abc.Iterable[gu.UpgradePullRequest],
     request_filter: collections.abc.Callable[[gu.UpgradePullRequest], bool] = lambda rq: True,
@@ -138,7 +138,7 @@ def latest_component_version_from_upstream(
         )
 
     upstream_component_descriptor = ocm_lookup(
-        gci.componentmodel.ComponentIdentity(
+        ocm.ComponentIdentity(
             name=upstream_component_name,
             version=upstream_component_version,
         ),
@@ -204,8 +204,8 @@ def determine_reference_versions(
 
 
 def greatest_references(
-    references: collections.abc.Iterable[gci.componentmodel.ComponentReference],
-) -> collections.abc.Iterable[gci.componentmodel.ComponentReference]:
+    references: collections.abc.Iterable[ocm.ComponentReference],
+) -> collections.abc.Iterable[ocm.ComponentReference]:
     '''
     yields the component references from the specified iterable of ComponentReference that
     have the greatest version (grouped by component name).
@@ -231,11 +231,11 @@ def greatest_references(
 
 def deserialise_extra_component_references(
     extra_crefs_label: dso.labels.ExtraComponentReferencesLabel,
-) -> collections.abc.Generator[gci.componentmodel.ComponentReference, None, None]:
+) -> collections.abc.Generator[ocm.ComponentReference, None, None]:
     for extra_cref in extra_crefs_label.value:
         extra_cref_id = extra_cref.component_reference
 
-        yield gci.componentmodel.ComponentReference(
+        yield ocm.ComponentReference(
             name=extra_cref_id.name,
             componentName=extra_cref_id.name,
             version=extra_cref_id.version,
@@ -250,7 +250,7 @@ def determine_upgrade_prs(
     ocm_lookup,
     ignore_prerelease_versions=False,
 ) -> collections.abc.Iterable[tuple[
-    gci.componentmodel.ComponentReference, gci.componentmodel.ComponentReference, str
+    ocm.ComponentReference, ocm.ComponentReference, str
 ]]:
     component = current_component()
     component_references = component.componentReferences
@@ -342,7 +342,7 @@ def determine_upgrade_prs(
 
 
 def _import_release_notes(
-    component: gci.componentmodel.Component,
+    component: ocm.Component,
     to_version: str,
     pull_request_util,
     version_lookup,
@@ -378,9 +378,9 @@ def _import_release_notes(
 
 
 def create_upgrade_pr(
-    component: gci.componentmodel.Component,
-    from_ref: gci.componentmodel.ComponentReference,
-    to_ref: gci.componentmodel.ComponentReference,
+    component: ocm.Component,
+    from_ref: ocm.ComponentReference,
+    to_ref: ocm.ComponentReference,
     to_version: str,
     pull_request_util: gu.PullRequestUtil,
     upgrade_script_path,
@@ -402,7 +402,7 @@ def create_upgrade_pr(
     ls_repo = pull_request_util.repository
 
     from_component_descriptor = component_descriptor_lookup(
-        gci.componentmodel.ComponentIdentity(
+        ocm.ComponentIdentity(
             name=from_ref.componentName,
             version=from_ref.version,
         ),
@@ -631,7 +631,7 @@ def push_upgrade_commit(
 
 
 def create_release_notes(
-    from_component: gci.componentmodel.Component,
+    from_component: ocm.Component,
     from_github_cfg,
     from_repo_owner: str,
     from_repo_name: str,

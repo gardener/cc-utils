@@ -17,7 +17,7 @@ import zlib
 import dacite
 import yaml
 
-import gci.componentmodel as cm
+import ocm
 import gci.oci as goci
 
 import ccc.oci
@@ -48,7 +48,7 @@ def edit(
         ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
         ocm_repo = next(ocm_repo_lookup(name))
         if isinstance(ocm_repo, str):
-            ocm_repo = cm.OciOcmRepository(
+            ocm_repo = ocm.OciOcmRepository(
                 baseUrl=ocm_repo,
             )
 
@@ -178,7 +178,7 @@ def retrieve(
         print(
             yaml.dump(
                 dataclasses.asdict(component_descriptor),
-                Dumper=cm.EnumValueYamlDumper,
+                Dumper=ocm.EnumValueYamlDumper,
             )
         )
     elif format == 'json':
@@ -216,12 +216,12 @@ def artefact(
         exit(1)
 
     access = artefact.access
-    if not isinstance(access, cm.LocalBlobAccess):
+    if not isinstance(access, ocm.LocalBlobAccess):
         print(f'unsupported {access.type=}')
         print('only localBlobAccess is implemented')
         exit(1)
 
-    access: cm.LocalBlobAccess
+    access: ocm.LocalBlobAccess
 
     if out == '-' and sys.stdout.isatty():
         print('refusing to print blob to terminal (redirect stdout or set --out)')
@@ -276,7 +276,7 @@ def upload(
     file: str,
 ):
     with open(file) as f:
-        component_descriptor = cm.ComponentDescriptor.from_dict(
+        component_descriptor = ocm.ComponentDescriptor.from_dict(
             yaml.safe_load(f)
         )
     component = component_descriptor.component
@@ -325,7 +325,7 @@ def traverse(
         ocm_repository_lookup=ocm_repo_lookup,
     )
 
-    component_descriptor = component_descriptor_lookup(cm.ComponentIdentity(
+    component_descriptor = component_descriptor_lookup(ocm.ComponentIdentity(
         name=name,
         version=version,
     ))
@@ -418,13 +418,13 @@ def add_labels(
     component_descriptor_out_file: str=None,
     labels: list[str]=[],
 ):
-    component_descriptor = cm.ComponentDescriptor.from_dict(
+    component_descriptor = ocm.ComponentDescriptor.from_dict(
         ci.util.parse_yaml_file(component_descriptor_src_file)
     )
 
     for raw_label in labels:
         parsed_label = yaml.safe_load(raw_label)
-        label = cm.Label(
+        label = ocm.Label(
             name=parsed_label.get('name'),
             value=parsed_label.get('value'),
         )
@@ -437,6 +437,6 @@ def add_labels(
 
     yaml.dump(
         data=dataclasses.asdict(component_descriptor),
-        Dumper=cm.EnumValueYamlDumper,
+        Dumper=ocm.EnumValueYamlDumper,
         stream=outfh,
     )

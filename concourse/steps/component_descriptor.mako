@@ -7,7 +7,7 @@ import collections
 import dataclasses
 from makoutil import indent_func
 from concourse.steps import step_lib
-import gci.componentmodel as cm
+import ocm
 import concourse.model.traits.component_descriptor as comp_descr_trait
 
 if job_variant.has_trait('publish'):
@@ -27,7 +27,7 @@ ocm_repository_mappings = descriptor_trait.ocm_repository_mappings()
 # label main repo as main
 if not 'cloud.gardener/cicd/source' in [label.name for label in main_repo_labels]:
   main_repo_labels.append(
-    cm.Label(
+    ocm.Label(
       name='cloud.gardener/cicd/source',
       value={'repository-classification': 'main'},
     )
@@ -62,11 +62,12 @@ import cnudie.purge
 import cnudie.retrieve
 import cnudie.upload
 import cnudie.util
-import gci.componentmodel as cm
+import ocm
+import ocm
 import oci.auth as oa
 import version
 # required for deserializing labels
-Label = cm.Label
+Label = ocm.Label
 
 from ci.util import fail, parse_yaml_file, ctx
 
@@ -118,7 +119,7 @@ component_v2 = base_descriptor_v2.component
 repo_labels = ${repository.source_labels()}
 if not 'cloud.gardener/cicd/source' in [label.name for label in repo_labels]:
   repo_labels.append(
-    cm.Label(
+    ocm.Label(
       name='cloud.gardener/cicd/source',
       value={'repository-classification': 'auxiliary'},
     ),
@@ -128,11 +129,11 @@ if not (repo_commit_hash := head_commit_hexsha(os.path.abspath('${repository.res
     logger.warning('Could not determine commit hash')
 
 component_v2.sources.append(
-    cm.Source(
+    ocm.Source(
         name='${repository.logical_name().replace('/', '_').replace('.', '_')}',
-        type=cm.ArtefactType.GIT,
-        access=cm.GithubAccess(
-            type=cm.AccessType.GITHUB,
+        type=ocm.ArtefactType.GIT,
+        access=ocm.GithubAccess(
+            type=ocm.AccessType.GITHUB,
             repoUrl='${repository.repo_hostname()}/${repository.repo_path()}',
             ref='${repository.branch()}',
             commit=repo_commit_hash,
@@ -155,13 +156,13 @@ component_v2.sources.append(
   target_names.add(target_spec.name)
 %>
 component_v2.resources.append(
-  cm.Resource(
+  ocm.Resource(
     name='${target_spec.name}',
     version=effective_version, # always inherited from component
-    type=cm.ArtefactType.OCI_IMAGE,
-    relation=cm.ResourceRelation.LOCAL,
-    access=cm.OciAccess(
-      type=cm.AccessType.OCI_REGISTRY,
+    type=ocm.ArtefactType.OCI_IMAGE,
+    relation=ocm.ResourceRelation.LOCAL,
+    access=ocm.OciAccess(
+      type=ocm.AccessType.OCI_REGISTRY,
       imageReference='${target_spec.image}' + ':' + effective_version,
     ),
     labels=${image_descriptor.resource_labels()}
@@ -177,16 +178,16 @@ name = helmchart.name
 target_ref_prefix = f'{helmchart.registry}/{name}'
 %>
 component_v2.resources.append(
-  cm.Resource(
+  ocm.Resource(
     name='${helmchart.name}',
     version=effective_version, # always inherited from component
     type='helmChart',
     extraIdentity={
       'type': 'helmChart', # allow images w/ same name
     },
-    relation=cm.ResourceRelation.LOCAL,
-    access=cm.OciAccess(
-      type=cm.AccessType.OCI_REGISTRY,
+    relation=ocm.ResourceRelation.LOCAL,
+    access=ocm.OciAccess(
+      type=ocm.AccessType.OCI_REGISTRY,
       imageReference=f'${target_ref_prefix}:{effective_version}',
     ),
   )
@@ -201,7 +202,7 @@ descriptor_out_dir = os.path.abspath('${job_step.output("component_descriptor_di
 
 v2_outfile = os.path.join(
   descriptor_out_dir,
-  component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2),
+  component_descriptor_fname(schema_version=ocm.SchemaVersion.V2),
 )
 
 descriptor_script = os.path.abspath(
@@ -214,7 +215,7 @@ if os.path.isfile(descriptor_script):
 
   # dump base_descriptor_v2 and pass it to descriptor script
   base_component_descriptor_fname = (
-    f'base_{component_descriptor_fname(schema_version=gci.componentmodel.SchemaVersion.V2)}'
+    f'base_{component_descriptor_fname(schema_version=ocm.SchemaVersion.V2)}'
   )
   base_descriptor_file_v2 = os.path.join(
     descriptor_out_dir,
@@ -272,7 +273,7 @@ if have_cd:
   if not os.path.isfile(v2_outfile):
     fail(f'no descriptor file was found at: {v2_outfile=}')
 
-  descriptor_v2 = cm.ComponentDescriptor.from_dict(
+  descriptor_v2 = ocm.ComponentDescriptor.from_dict(
     ci.util.parse_yaml_file(v2_outfile)
   )
   logger.info(f'found component-descriptor (v2) at {v2_outfile=}:\n')
@@ -284,7 +285,7 @@ else:
 % if descriptor_trait.upload is comp_descr_trait.UploadMode.LEGACY:
   % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
 if descriptor_v2 and ctx_repository_base_url:
-  ocm_repository = cm.OciOcmRepository(baseUrl=ctx_repository_base_url)
+  ocm_repository = ocm.OciOcmRepository(baseUrl=ctx_repository_base_url)
 
   if descriptor_v2.component.current_ocm_repo != ocm_repository:
     descriptor_v2.component.repositoryContexts.append(ocm_repository)
@@ -356,7 +357,7 @@ for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
   if retention_policy.dry_run:
    continue
   component_to_purge = component_descriptor_lookup(
-    cm.ComponentIdentity(
+    ocm.ComponentIdentity(
       name=component.name,
       version=component_id.version,
     )
@@ -395,9 +396,9 @@ for mapping in ocm_repository_mappings:
     raise ValueError(mapping)
 %>
 import oci.model as om
-import gci.componentmodel as cm
+import ocm
 import cnudie.util
-def ocm_repository_lookup(component: cm.ComponentIdentity, /):
+def ocm_repository_lookup(component: ocm.ComponentIdentity, /):
 % if not ocm_repository_mappings:
   return
 % endif

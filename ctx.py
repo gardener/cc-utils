@@ -47,9 +47,9 @@ class CtxCfg:
             return None
 
         import cnudie.util
-        import gci.componentmodel as cm
+        import ocm
 
-        def iter_ocm_repositories(component: cm.ComponentIdentity, /):
+        def iter_ocm_repositories(component: ocm.ComponentIdentity, /):
             for entry in self.ocm_repository_mappings:
                 if not entry.prefix:
                     yield entry.repository

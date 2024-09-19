@@ -6,7 +6,7 @@ import checkmarx.client
 import checkmarx.model as model
 import checkmarx.util
 import cnudie.iter
-import gci.componentmodel as cm
+import ocm
 import github.compliance.model as gcm
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,8 @@ class CheckmarxProject:
     def poll_and_retrieve_scan(
         self,
         scan_id: int,
-        component: cm.Component,
-        source: cm.Source,
+        component: ocm.Component,
+        source: ocm.Source,
         timeout_seconds: int,
     ) -> model.ScanResult:
 

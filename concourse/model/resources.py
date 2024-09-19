@@ -8,7 +8,7 @@ import typing
 
 import dacite
 
-import gci.componentmodel as cm
+import ocm
 
 from ci.util import not_none
 from concourse.client.model import (
@@ -228,7 +228,7 @@ REPO_ATTRS = (
     AttributeSpec.optional(
         name='source_labels',
         default=[],
-        type=typing.List[cm.Label],
+        type=typing.List[ocm.Label],
         doc='labels to add to the corresponding source declaration in base-component-descriptor'
     ),
     AttributeSpec.optional(
@@ -347,7 +347,7 @@ class RepositoryConfig(Resource):
     def source_labels(self):
         return [
             dacite.from_dict(
-                data_class=cm.Label,
+                data_class=ocm.Label,
                 data=label_dict,
             ) for label_dict
             in self.source_label_dicts()
@@ -407,6 +407,6 @@ class RepositoryConfig(Resource):
 
         try:
             for label in self.source_labels():
-                pass # source_labels converts into cm.Label
+                pass # source_labels converts into ocm.Label
         except dacite.DaciteError as e:
             raise ModelValidationError(f'Invalid {label=}') from e # pylint: disable=E0601
