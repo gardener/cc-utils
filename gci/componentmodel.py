@@ -10,6 +10,7 @@ import datetime
 import enum
 import functools
 import io
+import json
 import logging
 import os
 import typing
@@ -17,8 +18,22 @@ import urllib.parse
 
 import dacite
 import dateutil.parser
-import jsonschema
-import yaml
+
+# optional dependencies
+
+try:
+    import jsonschema
+    _have_jsonschema = True
+except ImportError:
+    _have_jsonschema = False
+    # validate-method will fail
+
+try:
+    import yaml
+    _have_yaml = True
+except ImportError:
+    _have_yaml = False
+    # we will output in JSON-format
 
 
 dc = dataclasses.dataclass
@@ -575,6 +590,8 @@ class Component(LabelMethodsMixin):
 @functools.lru_cache
 def _read_schema_file(schema_file_path: str):
     with open(schema_file_path) as f:
+        if not _have_yaml:
+            raise RuntimeError('yaml package not available')
         return yaml.safe_load(f)
 
 
@@ -597,6 +614,9 @@ class ComponentDescriptor:
         validation_mode: ValidationMode=ValidationMode.FAIL,
         json_schema_file_path: str = None,
     ):
+        if not _have_jsonschema:
+            raise RuntimeError('jsonschema package not available - validation cannot be done')
+
         validation_mode = ValidationMode(validation_mode)
         json_schema_file_path = json_schema_file_path or default_json_schema_path
         schema_dict = _read_schema_file(json_schema_file_path)
@@ -661,22 +681,43 @@ class ComponentDescriptor:
 
     def to_fobj(self, fileobj: io.BytesIO):
         raw_dict = dataclasses.asdict(self)
-        yaml.dump(
-            data=raw_dict,
-            stream=fileobj,
-            Dumper=EnumValueYamlDumper,
-        )
+        if _have_yaml:
+            yaml.dump(
+                data=raw_dict,
+                stream=fileobj,
+                Dumper=EnumValueYamlDumper,
+            )
+        else:
+            json.dump(
+                obj=raw_dict,
+                fp=fileobj,
+                cls=EnumJSONEncoder,
+            )
 
 
-class EnumValueYamlDumper(yaml.SafeDumper):
-    '''
-    a yaml.SafeDumper that will dump enum objects using their values
-    '''
-    def represent_data(self, data):
-        if isinstance(data, AccessDict):
+if _have_yaml:
+    class EnumValueYamlDumper(yaml.SafeDumper):
+        '''
+        a yaml.SafeDumper that will dump enum objects using their values
+        '''
+        def represent_data(self, data):
+            if isinstance(data, AccessDict):
+                # yaml dumper won't know how to parse objects of type `AccessDict`
+                # (altough it is just a wrapped dict) -> so convert it to a "real" dict
+                data = dict(data)
+            if isinstance(data, enum.Enum):
+                return self.represent_data(data.value)
+            return super().represent_data(data)
+
+
+class EnumJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, AccessDict):
             # yaml dumper won't know how to parse objects of type `AccessDict`
             # (altough it is just a wrapped dict) -> so convert it to a "real" dict
-            data = dict(data)
-        if isinstance(data, enum.Enum):
-            return self.represent_data(data.value)
-        return super().represent_data(data)
+            o = dict(o)
+        if isinstance(o, enum.Enum):
+            return o.value
+        elif isinstance(o, datetime.datetime):
+            return o.isoformat()
+        return super().default(o)
