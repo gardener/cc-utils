@@ -1,3 +1,10 @@
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# XXX DO NOT MODIFY THIS FILE
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# this file was renamed to `ocm/__init__.py`, and is kept for backwards-compatibility-reasons
+# and is subject to being removed
+
 import dataclasses
 import datetime
 import enum
@@ -65,7 +72,7 @@ AccessType._value2member_map_ |= {
 AccessTypeOrStr = typing.Union[AccessType, str]
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class Access:
     type: typing.Optional[AccessTypeOrStr] = AccessType.NONE
 
@@ -85,7 +92,7 @@ class AccessDict(dict):
         self.type = self.get('type')
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class LocalBlobGlobalAccess:
     digest: str
     mediaType: str
@@ -94,7 +101,7 @@ class LocalBlobGlobalAccess:
     type: str
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class LocalBlobAccess(Access):
     '''
     a blob that is accessible locally to the component-descriptor
@@ -109,13 +116,13 @@ class LocalBlobAccess(Access):
     globalAccess: typing.Optional[LocalBlobGlobalAccess | dict | None] = None
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class OciAccess(Access):
     type: AccessType = AccessType.OCI_REGISTRY
     imageReference: str
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class OciBlobAccess(OciAccess):
     type: AccessTypeOrStr = AccessType.OCI_BLOB
     mediaType: str
@@ -123,13 +130,13 @@ class OciBlobAccess(OciAccess):
     size: int
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class RelativeOciAccess(Access):
     reference: str
     type: AccessType = AccessType.RELATIVE_OCI_REFERENCE
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class GithubAccess(Access):
     repoUrl: str
     ref: typing.Optional[str] = None
@@ -160,7 +167,7 @@ class GithubAccess(Access):
         return self._normalise_and_parse_url().hostname
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class S3Access(Access):
     bucketName: str
     objectKey: str
@@ -290,7 +297,7 @@ class Signature:
     signature: SignatureSpec
 
 
-@dc(frozen=True)
+@dc
 class Metadata:
     schemaVersion: SchemaVersion = SchemaVersion.V2
 
@@ -417,7 +424,7 @@ class Artifact(LabelMethodsMixin):
         return identity
 
 
-@dc(frozen=True)
+@dc
 class ComponentReference(Artifact, LabelMethodsMixin):
     name: str
     componentName: str
@@ -427,7 +434,7 @@ class ComponentReference(Artifact, LabelMethodsMixin):
     labels: typing.List[Label] = dataclasses.field(default_factory=tuple)
 
 
-@dc(frozen=True)
+@dc
 class SourceReference(LabelMethodsMixin):
     identitySelector: dict[str, str]
     labels: list[Label] = dataclasses.field(default_factory=tuple)
@@ -466,12 +473,12 @@ class Resource(Artifact, LabelMethodsMixin):
             self.access = AccessDict(access)
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class OcmRepository:
     type: AccessTypeOrStr
 
 
-@dc(frozen=True, kw_only=True)
+@dc(kw_only=True)
 class OciOcmRepository(OcmRepository):
     baseUrl: str
     subPath: typing.Optional[str] = None
