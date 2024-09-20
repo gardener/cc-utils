@@ -486,12 +486,12 @@ class Resource(Artifact, LabelMethodsMixin):
             self.access = AccessDict(access)
 
 
-@dc(kw_only=True)
+@dc(kw_only=True, frozen=True)
 class OcmRepository:
     type: AccessTypeOrStr
 
 
-@dc(kw_only=True)
+@dc(kw_only=True, frozen=True)
 class OciOcmRepository(OcmRepository):
     baseUrl: str
     subPath: typing.Optional[str] = None
