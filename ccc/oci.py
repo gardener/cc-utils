@@ -7,7 +7,6 @@ import typing
 import requests
 
 import ci.util
-import ccc.concourse
 import ccc.elasticsearch
 import ctx
 import oci.auth as oa
