@@ -13,7 +13,7 @@ cachetools
 cryptography
 dacite
 deepmerge
-deprecated<2.0.0,>=1.2
+deprecated
 dockerfile-parse>=1.2
 docutils
 elasticsearch<8.0.0,>=7.13
@@ -52,7 +52,7 @@ ruamel.yaml==0.17.21
 semver
 slackclient<3.0.0
 sphinx_rtd_theme
-sseclient-py<2.0.0
+sseclient-py
 tabulate
 termcolor
 urllib3
