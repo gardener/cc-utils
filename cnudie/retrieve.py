@@ -81,7 +81,7 @@ def iter_ocm_repositories(
     component: str | ocm.ComponentIdentity | ocm.Component,
     /,
     *repository_cfgs: OcmRepositoryCfg,
-) -> collections.abc.Generator[OcmRepositoryLookup, None, None]:
+) -> collections.abc.Generator[ocm.OciOcmRepository | str, None, None]:
     for repository_cfg in repository_cfgs:
         if not repository_cfg:
             # convenience: ignore, e.g. None
@@ -384,7 +384,7 @@ def delivery_service_component_descriptor_lookup(
 
 def raw_component_descriptor_from_oci(
     component_id: ocm.ComponentIdentity,
-    ocm_repos: collections.abc.Iterable[OcmRepositoryLookup],
+    ocm_repos: collections.abc.Iterable[ocm.OciOcmRepository | str],
     oci_client: oc.Client=None,
     absent_ok: bool=False,
 ) -> bytes:
