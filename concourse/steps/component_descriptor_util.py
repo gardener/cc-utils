@@ -10,6 +10,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 def component_descriptor_fname(
     schema_version=ocm.SchemaVersion.V2,
 ):
+    schema_version = ocm.SchemaVersion(schema_version)
     if schema_version is ocm.SchemaVersion.V2:
       return 'component_descriptor_v2'
     else:
