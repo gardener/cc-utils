@@ -382,6 +382,85 @@ def delivery_service_component_descriptor_lookup(
     return lookup
 
 
+def raw_component_descriptor_from_oci(
+    component_id: ocm.ComponentIdentity,
+    ocm_repos: collections.abc.Iterable[OcmRepositoryLookup],
+    oci_client: oc.Client=None,
+    absent_ok: bool=False,
+) -> bytes:
+    if not oci_client:
+        import ccc.oci
+        if not (oci_client := ccc.oci.oci_client()):
+            raise ValueError('oci_client must not be empty')
+
+    for ocm_repo in ocm_repos:
+        if isinstance(ocm_repo, str):
+            ocm_repo = ocm.OciOcmRepository(
+                type=ocm.OciAccess,
+                baseUrl=ocm_repo,
+            )
+
+        if not isinstance(ocm_repo, ocm.OciOcmRepository):
+            raise NotImplementedError(ocm_repo)
+
+        target_ref = ci.util.urljoin(
+            ocm_repo.oci_ref,
+            'component-descriptors',
+            f'{component_id.name.lower()}:{component_id.version}', # oci-spec allows only lowercase
+        )
+
+        manifest = oci_client.manifest(
+            image_reference=target_ref,
+            absent_ok=True,
+        )
+
+        if manifest:
+            break
+    else:
+        manifest = None
+
+    if not manifest and absent_ok:
+        return None
+    elif not manifest:
+        raise om.OciImageNotFoundException
+
+    try:
+        cfg_dict = json.loads(
+            oci_client.blob(
+                image_reference=target_ref,
+                digest=manifest.config.digest,
+            ).text
+        )
+        cfg = dacite.from_dict(
+            data_class=gci.oci.ComponentDescriptorOciCfg,
+            data=cfg_dict,
+        )
+        layer_digest = cfg.componentDescriptorLayer.digest
+        layer_mimetype = cfg.componentDescriptorLayer.mediaType
+    except Exception as e:
+        logger.warning(
+            f'Failed to parse or retrieve component-descriptor-cfg: {e=}. '
+            'falling back to single-layer'
+        )
+
+        # by contract, there must be exactly one layer (tar w/ component-descriptor)
+        if not (layers_count := len(manifest.layers) == 1):
+            logger.warning(f'XXX unexpected amount of {layers_count=}')
+
+        layer_digest = manifest.layers[0].digest
+        layer_mimetype = manifest.layers[0].mediaType
+
+    if not layer_mimetype in gci.oci.component_descriptor_mimetypes:
+        logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
+        # XXX: check for non-tar-variant
+
+    return oci_client.blob(
+        image_reference=target_ref,
+        digest=layer_digest,
+        stream=False, # manifests are typically small - do not bother w/ streaming
+    ).content
+
+
 def oci_component_descriptor_lookup(
     ocm_repository_lookup: OcmRepositoryLookup=None,
     oci_client: oc.Client | collections.abc.Callable[[], oc.Client]=None,
@@ -412,7 +491,6 @@ def oci_component_descriptor_lookup(
         absent_ok=default_absent_ok,
     ):
         component_id = cnudie.util.to_component_id(component_id)
-        component_name = component_id.name.lower() # oci-spec allows only lowercase
 
         if isinstance(oci_client, collections.abc.Callable):
             local_oci_client = oci_client()
@@ -430,74 +508,15 @@ def oci_component_descriptor_lookup(
                 ocm_repository_lookup,
             )
 
-        for ocm_repo in ocm_repos:
-            if isinstance(ocm_repo, str):
-                ocm_repo = ocm.OciOcmRepository(
-                    type=ocm.OciAccess,
-                    baseUrl=ocm_repo,
-                )
-
-            if not isinstance(ocm_repo, ocm.OciOcmRepository):
-                raise NotImplementedError(ocm_repo)
-
-            target_ref = ci.util.urljoin(
-                ocm_repo.oci_ref,
-                'component-descriptors',
-                f'{component_name}:{component_id.version}',
-            )
-
-            manifest = local_oci_client.manifest(
-                image_reference=target_ref,
-                absent_ok=True,
-            )
-
-            if manifest:
-                break
-        else:
-            manifest = None
-
-        if not manifest and absent_ok:
-            return None
-        elif not manifest:
-            raise om.OciImageNotFoundException
-
-        try:
-            cfg_dict = json.loads(
-                local_oci_client.blob(
-                    image_reference=target_ref,
-                    digest=manifest.config.digest,
-                ).text
-            )
-            cfg = dacite.from_dict(
-                data_class=gci.oci.ComponentDescriptorOciCfg,
-                data=cfg_dict,
-            )
-            layer_digest = cfg.componentDescriptorLayer.digest
-            layer_mimetype = cfg.componentDescriptorLayer.mediaType
-        except Exception as e:
-            logger.warning(
-                f'Failed to parse or retrieve component-descriptor-cfg: {e=}. '
-                'falling back to single-layer'
-            )
-
-            # by contract, there must be exactly one layer (tar w/ component-descriptor)
-            if not (layers_count := len(manifest.layers) == 1):
-                logger.warning(f'XXX unexpected amount of {layers_count=}')
-
-            layer_digest = manifest.layers[0].digest
-            layer_mimetype = manifest.layers[0].mediaType
-
-        if not layer_mimetype in gci.oci.component_descriptor_mimetypes:
-            logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
-            # XXX: check for non-tar-variant
-
-        blob_res = local_oci_client.blob(
-            image_reference=target_ref,
-            digest=layer_digest,
-            stream=False, # manifests are typically small - do not bother w/ streaming
+        raw = raw_component_descriptor_from_oci(
+            component_id=component_id,
+            ocm_repos=ocm_repos,
+            oci_client=local_oci_client,
+            absent_ok=absent_ok,
         )
+
         # wrap in fobj
-        blob_fobj = io.BytesIO(blob_res.content)
+        blob_fobj = io.BytesIO(raw)
         component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
             fileobj=blob_fobj,
         )
