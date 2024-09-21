@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import shutil
+import tarfile
 import tempfile
 
 import requests
@@ -517,9 +518,13 @@ def oci_component_descriptor_lookup(
 
         # wrap in fobj
         blob_fobj = io.BytesIO(raw)
-        component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
-            fileobj=blob_fobj,
-        )
+        try:
+            component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
+                fileobj=blob_fobj,
+            )
+        except tarfile.ReadError as tre:
+            tre.add_note(f'{component_id=}')
+            raise tre
 
         return component_descriptor
 
