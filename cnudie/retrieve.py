@@ -515,6 +515,10 @@ def oci_component_descriptor_lookup(
             oci_client=local_oci_client,
             absent_ok=absent_ok,
         )
+        if not raw and absent_ok:
+            return
+        elif not raw and not absent_ok:
+            raise om.OciImageNotFoundException(component_id)
 
         # wrap in fobj
         blob_fobj = io.BytesIO(raw)
