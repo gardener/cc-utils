@@ -1,0 +1,401 @@
+name: Build and Test
+run-name: Building and testing
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  params:
+    runs-on: ubuntu-latest
+    outputs:
+      ocm_repository: ${{ steps.params.outputs.ocm_repository }}
+      oci_repository: ${{ steps.params.outputs.oci_repository }}
+      oci_platforms: ${{ steps.params.outputs.oci_platforms }}
+      gcp_project: ${{ steps.params.outputs.gcp_project }}
+      gcp_service_account: ${{ steps.params.outputs.service_account }}
+      workload_identity_provider: ${{ steps.params.outputs.idp }}
+    steps:
+      - name: params
+        id: params
+        run: |
+          repo_base=europe-docker.pkg.dev/gardener-project
+          snapshots_repo="${repo_base}/snapshots"
+          releases_repo="${repo_base}/releases"
+
+          # hardcode to "snapshots" for now
+          echo "ocm_repository=${snapshots_repo}" >> "${GITHUB_OUTPUT}"
+          echo "oci_repository=${snapshots_repo}" >> "${GITHUB_OUTPUT}"
+          echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
+
+          echo "gcp_project=gardener-project" >> "${GITHUB_OUTPUT}"
+          echo "service_account=ocm-ci-opensource@gardener-project.iam.gserviceaccount.com" \
+            >> "${GITHUB_OUTPUT}"
+          echo "idp=projects/694386720375/locations/global/workloadIdentityPools/github-actions/providers/github-actions-provider" \
+            >> "${GITHUB_OUTPUT}"
+
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      effective_version: ${{ steps.version.outputs.effective_version }}
+      repo_version: ${{ steps.version.outputs.repo_version }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: calculate-effective-version
+      id: version
+      run: |
+        src_version=$(.ci/read-version)
+        commit=${{ github.sha }}
+        echo "commit-digest: ${commit}"
+        major="$(echo ${src_version} | cut -d. -f1)"
+        minor="$(echo ${src_version} | cut -d. -f2)"
+        patch="$(echo ${src_version} | cut -d. -f3 | cut -d- -f1)"
+
+        effective_version=${major}.${minor}.${patch}-${commit}
+        echo "effective-version: ${effective_version}"
+        echo "effective_version=${effective_version}" > "${GITHUB_OUTPUT}"
+        echo "repo_version=${src_version}" >> "${GITHUB_OUTPUT}"
+
+  package:
+    runs-on: ubuntu-latest
+    environment: build
+    outputs:
+      ocm_resources: ${{ steps.package.outputs.ocm_resources }}
+    needs: version
+    container:
+      image: python:alpine
+    steps:
+    - name: Install git, setuptools, node (for upload-artifact)
+      run: |
+        apk add \
+          bash \
+          file \
+          git \
+          nodejs \
+          xz
+        pip3 install --root-user-action ignore \
+          setuptools \
+          pyyaml
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4 # required by upload-artifact / `act`
+      # see: https://github.com/nektos/act/issues/973
+    - name: create distribution package
+      id: package
+      run: |
+        set -eu
+        effective_version=${{ needs.version.outputs.effective_version }}
+        repo_version=${{ needs.version.outputs.repo_version }}
+        echo "effective-version: ${effective_version}"
+        echo "repo-version: ${repo_version}"
+        echo "${repo_version}" | .ci/write-version
+        pkg_dir="dist"
+        mkdir -p ${pkg_dir}
+        for path in \
+          setup.py \
+          setup.oci.py \
+          setup.whd.py \
+          cli/setup.py \
+        ; do
+         echo "building distribution package from ${path}"
+         python3 ${path} \
+            sdist \
+            bdist_wheel \
+            --dist-dir ${pkg_dir}
+        done
+        echo "Built packages"
+        ls "${pkg_dir}"
+        blobs_dir="${pkg_dir}/blobs.d"
+        mkdir ${blobs_dir}
+        resources_file=resources.yaml
+        for package in gardener-oci gardener-cicd-whd gardener-cicd-cli gardener-cicd-libs; do
+          path="$(echo $package | tr - _)-*"
+          prefix=dist
+          access_type='localBlob'
+          outf="${pkg_dir}/${package}.tar.gz"
+          tar cJf ${outf} -C ${pkg_dir} $(cd ${pkg_dir}; ls ${path})
+          mimetype=$(file -i ${outf} | cut -d: -f2 | cut -d' ' -f2-)
+          leng=$(stat -c"%s" ${outf})
+          digest="$(sha256sum ${outf} | cut -d' ' -f1)"
+          echo "\
+        - name: ${package}
+          version: ${effective_version}
+          type: ${mimetype}
+          relation: local
+          access:
+            type: localBlob
+            localReference: sha256:${digest}
+            size: ${leng}
+            mediaType: ${mimetype}" \
+          >> ${resources_file}
+          mv ${outf} ${blobs_dir}/${digest}
+        done
+        cp "${resources_file}" dist/ocm_resources.yaml
+        echo "ocm_resources=dist/ocm_resources.yaml" >> "${GITHUB_OUTPUT}"
+        find "${pkg_dir}"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: distribution-packages
+        path: dist/
+
+  component_descriptor:
+    runs-on: ubuntu-latest
+    container:
+      image: python:alpine
+    permissions:
+      contents: read
+      id-token: write
+    needs:
+      - version
+      - params
+      - package
+      - images
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve Distribution Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution-packages
+          path: /tmp/dist
+      - name: Google-Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          project_id: ${{ needs.params.outputs.gcp_project }}
+          service_account: ${{ needs.params.outputs.gcp_service_account }}
+          workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
+      - name: component-descriptor
+        run: |
+          set -eu
+          pip3 install --no-cache \
+            dacite \
+            deprecated \
+            pyaml \
+            python-dateutil \
+            requests \
+            www-authenticate \
+          &>/dev/null
+          python -c "import oci"
+          version=${{ needs.version.outputs.effective_version }}
+          ocm_repo=${{ needs.params.outputs.ocm_repository }}
+          echo "generating component-descriptor"
+          python3 -m ocm create \
+            --name github.com/${{ github.repository }} \
+            --version ${version} \
+            --ocm-repo ${ocm_repo} \
+            --provider sap-se \
+            > component-descriptor.yaml
+
+          echo "\
+          name: main-source
+          version: ${version}
+          type: git
+          labels:
+            - name: cloud.gardener/cicd/source
+              value:
+                repository-classification: main
+          access:
+            type: github
+            repoUrl: github.com/${{ github.repository }}
+            version: ${version}
+            commit: ${{ github.sha }}
+            ref: ${{ github.ref }}
+          " \
+          | python3 -m ocm append source \
+            --file component-descriptor.yaml
+
+          ocm_resources=${{ needs.package.outputs.ocm_resources }}
+          echo "ocm-resources-file: /tmp/${ocm_resources}"
+          cat "/tmp/${ocm_resources}" | \
+          python3 -m ocm append resource \
+            --file component-descriptor.yaml
+
+          echo "${{ needs.images.outputs.ocm_resources }}" | base64 -d > oci_ocm_resources.yaml
+
+          cat oci_ocm_resources.yaml | \
+          python3 -m ocm append resource \
+            --file component-descriptor.yaml
+
+          echo "component-descriptor to be uploaded:"
+          cat component-descriptor.yaml
+
+          # from google-auth
+          username=oauth2accesstoken
+          password=${{ steps.auth.outputs.access_token }}
+          token=$(echo -n ${username}:${password} | base64 -w0)
+          mkdir $HOME/.docker
+          docker_cfg=$HOME/.docker/config.json
+          registry_hostname=$(echo ${{ needs.params.outputs.ocm_repository }} | cut -d/ -f1)
+          cat << EOF > ${docker_cfg}
+          {
+            "auths": {
+              "${registry_hostname}": {
+                "auth": "${token}"
+              }
+            }
+          }
+          EOF
+
+          echo "uploading component-descriptor"
+          python -m ocm upload \
+            --file component-descriptor.yaml \
+            --blobs-dir /tmp/dist/blobs.d
+
+  lint:
+    runs-on: ubuntu-latest
+    needs:
+      - package
+    container:
+      image: python:alpine
+    steps:
+    - uses: actions/checkout@v4
+    - name: Retrieve Distribution Packages
+      uses: actions/download-artifact@v4
+      with:
+        name: distribution-packages
+        path: /tmp/dist
+    - name: lint
+      run: |
+        echo "install dependencies for python-packages"
+        apk add --no-cache $(cat gardener-cicd-libs.apk-packages)
+        echo "installing linters"
+        if ! pip3 install --upgrade --break-system-packages \
+          --find-links /tmp/dist \
+          gardener-cicd-libs \
+          gardener-cicd-cli \
+          gardener-oci \
+          bandit \
+          flake8 \
+          setuptools \
+          pylama \
+          pylint \
+          > /tmp/pip3-install.log; then
+          echo "error while trying to install packages:"
+          cat /tmp/pip3-install.log
+        fi
+
+        echo "running linters"
+        .ci/lint
+
+  run-unittests:
+    needs:
+      - package
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    container:
+      image: python:alpine
+    steps:
+    - uses: actions/checkout@v4
+    - name: Retrieve Distribution Packages
+      uses: actions/download-artifact@v4
+      with:
+        name: distribution-packages
+        path: /tmp/dist
+    - name: run-tests
+      run: |
+        set -eu
+        echo "install dependencies for python-packages"
+        apk add --no-cache $(cat gardener-cicd-libs.apk-packages)
+        echo "install packages"
+        if ! pip3 install --break-system-packages \
+          --find-links /tmp/dist \
+          gardener-cicd-libs \
+          gardener-cicd-cli \
+          gardener-oci \
+          pytest \
+          setuptools \
+            > /tmp/pip3-install.log; then
+          echo "error while trying to install packages:"
+          cat /tmp/pip3-install.log
+        fi
+
+        pip3 list
+
+        echo "running tests"
+        mkdir /tmp/fake-cfg.d
+        touch /tmp/fake-cfg.d/config_types.yaml
+        export CC_CONFIG_DIR=/tmp/fake-cfg.d
+        .ci/test
+
+  images:
+    name: Build OCI Images
+    needs:
+      - version
+      - package
+      - params
+    outputs:
+      oci_image_ref: ${{ steps.prepare.outputs.oci_image_ref }}
+      ocm_resources: ${{ steps.prepare.outputs.ocm_resources }}
+    runs-on: ubuntu-latest
+    environment: build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Docker-Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Google-Auth
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          project_id: ${{ needs.params.outputs.gcp_project }}
+          service_account: ${{ needs.params.outputs.gcp_service_account }}
+          workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
+      - name: docker-auth
+        id: docker-auth
+        uses: docker/login-action@v3
+        with:
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+          registry: europe-docker.pkg.dev
+      - name: Retrieve Distribution Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution-packages
+          path: /tmp/dist
+
+      - name: prepare build-filesystem
+        id: prepare
+        run: |
+          cp -r /tmp/dist .
+          ls -lta
+
+          oci_repo=${{ needs.params.outputs.oci_repository }}
+          image_tag=${{ needs.version.outputs.effective_version }}
+          image_ref=${oci_repo}/cicd/job-image:${image_tag}
+
+          echo "oci_image_ref=${image_ref}" >> ${GITHUB_OUTPUT}
+          cat << EOF > ocm_resources.yaml
+          name: job-image
+          version: ${image_tag}
+          type: ociImage
+          access:
+            type: ociRegistry
+            imageReference: ${image_ref}
+          relation: local
+          labels:
+            - name: cloud.gardener.cnudie/dso/scanning-hints/package-versions
+              value:
+                - name: containerd
+                  version: v1.6.15
+            - name: gardener.cloud/cve-categorisation
+              value:
+                authentication_enforced: true
+                availability_requirement: low
+                confidentiality_requirement: high
+                integrity_requirement: high
+                network_exposure: protected
+                user_interaction: gardener-operator
+          EOF
+          echo "ocm_resources=$(cat ocm_resources.yaml | base64 -w0)" >> ${GITHUB_OUTPUT}
+
+
+      - name: Build OCI Image
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          platforms: ${{ needs.params.outputs.oci_platforms }}
+          tags: ${{ steps.prepare.outputs.oci_image_ref }}
+          context: . # pass modified path rather than clean checkout
