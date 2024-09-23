@@ -696,6 +696,12 @@ if _have_yaml:
                 # yaml dumper won't know how to parse objects of type `AccessDict`
                 # (altough it is just a wrapped dict) -> so convert it to a "real" dict
                 data = dict(data)
+            try:
+                import gci.componentmodel as cm
+                if isinstance(data, cm.AccessDict):
+                    data = dict(data)
+            except ImportError:
+                pass
             if isinstance(data, enum.Enum):
                 return self.represent_data(data.value)
             return super().represent_data(data)
