@@ -223,18 +223,18 @@ def oci_artefact_reference(
         # workaround: fallback to (deprecated) gci.componentmodel
         try:
             import gci.componentmodel
+            if isinstance(component, gci.componentmodel.Component):
+                if not ocm_repository:
+                    ocm_repository = component.current_ocm_repo
+                    ocm_repository = ocm.OciOcmRepository(
+                        baseUrl=ocm_repository.baseUrl,
+                    )
+                component_name = component.name
+                component_version = component.version
+            else:
+                raise TypeError(type(component))
         except ImportError:
-            pass
-        if isinstance(component, gci.componentmodel.Component):
-            if not ocm_repository:
-                ocm_repository = component.current_ocm_repo
-                ocm_repository = ocm.OciOcmRepository(
-                    baseUrl=ocm_repository.baseUrl,
-                )
-            component_name = component.name
-            component_version = component.version
-
-        raise TypeError(type(component))
+            raise TypeError(type(component))
 
     if not ocm_repository:
         raise ValueError('ocm_repository must be given unless a Component is passed.')
