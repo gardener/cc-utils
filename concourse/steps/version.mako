@@ -42,6 +42,9 @@ elif version_operation in ('finalize', 'finalise'):
 elif version_operation in ('finalize-skip-patchlevel-zero', 'finalise-skip-patchlevel-zero'):
   version_operation_kwargs['operation'] = 'finalize_version'
   version_operation_kwargs['skip_patchlevel_zero'] = True
+elif version_operation in ('finalize-reduce-version-by-one', 'finalise-reduce-version-by-one'):
+  version_operation_kwargs['operation'] = 'finalize_version'
+  version_operation_kwargs['reduce_version_by_one'] = True
 elif version_operation == 'noop':
   version_operation_kwargs['operation'] = 'noop'
 elif version_operation == 'inject-timestamp':

@@ -75,6 +75,8 @@ class VersionTrait(Trait):
         'finalize',
         'finalise-skip-patchlevel-zero',
         'finalize-skip-patchlevel-zero',
+        'finalise-reduce-version-by-one',
+        'finalize-reduce-version-by-one',
         'inject-branch-name',
         'inject-commit-hash',
         'inject-commit-hash-nodash',

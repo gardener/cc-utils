@@ -293,7 +293,8 @@ def process_version(
     # as we usually use git commit hashes
     build_metadata_length: int=12,
     verbatim_version: str=None,
-    skip_patchlevel_zero=False,
+    skip_patchlevel_zero: bool=False,
+    reduce_version_by_one: bool=False,
 ):
     if operation in [SET_PRERELEASE,SET_PRERELEASE_AND_BUILD,APPEND_PRERELEASE] and not prerelease:
         raise ValueError('Prerelease must be given when replacing or appending.')
@@ -330,6 +331,22 @@ def process_version(
         if operation in [SET_BUILD_METADATA, SET_PRERELEASE_AND_BUILD]:
             parsed_version = parsed_version.replace(build=build_metadata[:build_metadata_length])
         processed_version = str(parsed_version)
+
+    if reduce_version_by_one:
+        # Note: This is not intended to be used to correctly determine the last released version
+        # (it will fail for example in case the last minor version also contained patch releases).
+        # Instead, it will only resolve the last version in the same "category", i.e. if current
+        # version is a patch, it will be resolved to the previous patch version, if current version
+        # is a minor release, it will be resolved to the previous minor release (with patch being
+        # 0), and if current version is a major release, it will be resolved to the previous major
+        # release with patch and minor version being 0.
+        parsed_version = parse_to_semver(processed_version)
+        if parsed_version.patch > 0:
+            processed_version = str(parsed_version.replace(patch=parsed_version.patch - 1))
+        elif parsed_version.minor > 0:
+            processed_version = str(parsed_version.replace(minor=parsed_version.minor - 1))
+        elif parsed_version.major > 0:
+            processed_version = str(parsed_version.replace(major=parsed_version.major - 1))
 
     if skip_patchlevel_zero:
         parsed_version = parse_to_semver(processed_version)
