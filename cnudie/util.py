@@ -34,7 +34,8 @@ def to_component_id(
     if isinstance(component, ocm.ComponentDescriptor) or hasattr(component, 'component'):
         component = component.component
         # fall through to next case
-    if isinstance(component, ocm.Component) or hasattr(component, 'name'):
+    if isinstance(component, ocm.Component) or hasattr(component, 'name') \
+        and not hasattr(component, 'componentName'):
         name = component.name
         version = component.version
     if isinstance(component, ocm.ComponentReference) or hasattr(component, 'componentName'):
