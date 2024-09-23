@@ -65,9 +65,9 @@ class SlackHelper:
             if error_code == 'markdown_conversion_failed_because_of_read_failed':
                 logger.warning(f'received {error_code} - retrying {retries}')
                 return self._post_with_retry(client=client, retries=retries-1, **kwargs)
-            elif error_status == 503: # Service Unavailable
+            elif error_status in (503, 504): # Service Unavailable, Gateway Timeout
                 logger.warning(
-                    f"Slack responded with 'Service Unavailable' (503) - retrying ({retries})"
+                    f"Slack responded with {error_status=} - retrying ({retries})"
                 )
             else:
                 raise sae # only retry for known sporadic err
