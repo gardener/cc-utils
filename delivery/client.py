@@ -357,7 +357,7 @@ class DeliveryServiceClient:
             method='PUT',
             headers=headers,
             data=data,
-            timeout=(4, 601),
+            timeout=None,
         )
 
         res.raise_for_status()
@@ -385,7 +385,7 @@ class DeliveryServiceClient:
             method='DELETE',
             headers=headers,
             data=data,
-            timeout=(4, 121),
+            timeout=None,
         )
 
         res.raise_for_status()
@@ -572,7 +572,7 @@ class DeliveryServiceClient:
             headers=headers,
             data=data,
             params=params,
-            timeout=(4, 121),
+            timeout=None,
         )
 
         res.raise_for_status()
