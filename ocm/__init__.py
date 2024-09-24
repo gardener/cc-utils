@@ -9,7 +9,11 @@ import os
 import typing
 import urllib.parse
 
-import dacite
+try:
+    import dacite
+    _have_dacite = True
+except ImportError:
+    _have_dacite = False
 
 # optional dependencies
 
@@ -636,6 +640,9 @@ class ComponentDescriptor:
             if isinstance(v, datetime.datetime):
                 return v
             return datetime.datetime.fromisoformat(v)
+
+        if not _have_dacite:
+            raise RuntimeError('not available without dacite')
 
         component_descriptor = dacite.from_dict(
             data_class=ComponentDescriptor,
