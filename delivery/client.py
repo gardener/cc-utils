@@ -311,6 +311,8 @@ class DeliveryServiceClient:
         greatest_version: str=None,
         ocm_repo: ocm.OcmRepository=None,
         version_filter: str | None=None,
+        start_date: datetime.date=None,
+        end_date: datetime.date=None,
     ):
         params = {
             'component_name': component_name,
@@ -324,6 +326,12 @@ class DeliveryServiceClient:
             params['ocm_repo_url'] = ocm_repo.oci_ref
         if version_filter is not None:
             params['version_filter'] = version_filter
+
+        if start_date:
+            params['start_date'] = start_date.isoformat()
+
+        if end_date:
+            params['end_date'] = end_date.isoformat()
 
         res = self.request(
             url=self._routes.greatest_component_versions(),
