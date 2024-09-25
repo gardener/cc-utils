@@ -2,46 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import enum
 import typing
 
 import ci.util
 from model.base import (
-    BasicCredentials,
     NamedModelElement,
     TokenCredentials,
 )
-
-
-class BDBAAuthScheme(enum.Enum):
-    BASIC_AUTH = 'basic_auth'
-    BEARER_TOKEN = 'bearer_token'
 
 
 class BDBAConfig(NamedModelElement):
     '''
     Not intended to be instantiated by users of this module
     '''
-
-    def auth_scheme(self) -> BDBAAuthScheme:
-        return BDBAAuthScheme(self.raw['credentials'].get('auth_scheme', 'basic_auth'))
-
-    def credentials(self) -> typing.Union[BasicCredentials, TokenCredentials]:
-        if (auth_scheme := self.auth_scheme()) is BDBAAuthScheme.BASIC_AUTH:
-            return BasicCredentials(
-                raw_dict={
-                    'password': self.raw['credentials']['password'],
-                    'username': self.raw['credentials']['username']
-                }
-            )
-        elif auth_scheme is BDBAAuthScheme.BEARER_TOKEN:
-            return TokenCredentials(
-                raw_dict={
-                    'token': self.raw['credentials']['token'],
-                }
-            )
-        else:
-            raise NotImplementedError(auth_scheme)
+    def credentials(self) -> TokenCredentials:
+        return TokenCredentials(
+            raw_dict={
+                'token': self.raw['credentials']['token'],
+            }
+        )
 
     def api_url(self) -> str:
         return self.raw.get('api_url')
