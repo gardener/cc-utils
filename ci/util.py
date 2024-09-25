@@ -25,7 +25,11 @@ except ImportError:
     _have_yamllint = False
 
 import deprecated
-import termcolor
+try:
+    import termcolor
+    _have_termcolor = True
+except ImportError:
+    _have_termcolor = False
 
 import ci.paths
 
@@ -169,7 +173,7 @@ def _verbose():
 def _print(msg, colour, outfh=sys.stdout):
     if not msg:
         return
-    if not outfh.isatty():
+    if not outfh.isatty() or not _have_termcolor:
         outfh.write(msg + '\n')
     else:
         outfh.write(termcolor.colored(msg, colour) + '\n')
