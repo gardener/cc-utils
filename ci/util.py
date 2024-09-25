@@ -16,8 +16,13 @@ import sys
 import typing
 import urllib.parse
 import yaml
-import yamllint
-import yamllint.config
+
+try:
+    import yamllint
+    import yamllint.config
+    _have_yamllint = True
+except ImportError:
+    _have_yamllint = False
 
 import deprecated
 import termcolor
@@ -38,6 +43,9 @@ class LintingError(Failure):
 
 class LintingResult:
     def __init__(self, problems):
+        if not _have_yamllint:
+            raise RuntimeError('need to install `yamllint` in order to use')
+
         problems_dict = collections.defaultdict(list)
         for p in problems:
             problems_dict[self._normalise_problem_level(p)].append(p)
@@ -236,6 +244,9 @@ def load_yaml(stream, lint=False, linter_config=None):
     @raises ValueError if YAML Bomb was (heuristically) detected.
     '''
     if lint:
+        if not _have_yamllint:
+            raise RuntimeError('need to install `yamllint` in order to use')
+
         # redefine stream, as yamllint will read() this, resulting in stream being empty
         # when parsing later
         stream = stream.read()
@@ -297,6 +308,9 @@ def _count_elements(value, count=0, max_elements_count=100000):
 
 
 def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
+    if not _have_yamllint:
+        raise RuntimeError('need to install yamllint in order to use')
+
     existing_file(path)
     logger.info(f'linting YAML file: {path}')
 
@@ -313,6 +327,8 @@ def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
 
 
 def _print_linting_findings(linting_result: LintingResult):
+    if not _have_yamllint:
+        raise RuntimeError('need to install yamllint in order to use')
     for level, problems in linting_result.problems():
         if level < yamllint.linter.PROBLEM_LEVELS['error']:
             for p in problems:
@@ -323,11 +339,15 @@ def _print_linting_findings(linting_result: LintingResult):
 
 
 def _lint_yaml(input, config):
+    if not _have_yamllint:
+        raise RuntimeError('need to install yamllint in order to use')
     cfg = yamllint.config.YamlLintConfig(yaml.dump(config))
     return LintingResult(yamllint.linter.run(input=input, conf=cfg))
 
 
 def lint_yaml(input, config={'extends': 'relaxed'}):
+    if not _have_yamllint:
+        raise RuntimeError('need to install yamllint in order to use')
 
     linting_result = _lint_yaml(input=input, config=config)
 
