@@ -4,7 +4,6 @@ import hashlib
 import json
 import typing
 
-import ccc.oci
 import cnudie.util
 import ocm
 import gci.oci
@@ -93,6 +92,10 @@ def upload_component_descriptor(
     oci_client: oci.client.Client=None,
 ):
     if not oci_client:
+        try:
+            import ccc.oci
+        except ImportError:
+            raise ValueError('must pass-in oci_client')
         oci_client = ccc.oci.oci_client()
 
     on_exist = UploadMode(on_exist)
