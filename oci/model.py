@@ -378,6 +378,9 @@ class OciPlatform:
         if not self.variant:
             del raw['variant']
 
+        if not self.features:
+            del raw['features']
+
         return raw
 
     def __eq__(self, other):
