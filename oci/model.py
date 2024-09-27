@@ -368,7 +368,7 @@ class OciPlatform:
     architecture: str
     os: str # could also be a dict (see spec)
     variant: str | None = None
-    features: list[str] | None = dataclasses.field(default_factory=list)
+    features: list[str] | None = None
 
     def as_dict(self) -> dict:
         # need custom serialisation, because some OCI registries do not like null-values

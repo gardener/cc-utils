@@ -100,7 +100,7 @@ def to_manifest_list_entry(image_ref_template: str, oci_client=oci_client):
       architecture=arch,
       os=os_id,
       variant=cfg_blob.get('variant', None),
-      features=cfg_blob.get('features', []),
+      features=cfg_blob.get('features', None),
     ),
   )
 
