@@ -1,5 +1,5 @@
+import collections.abc
 import dataclasses
-import typing
 
 import dacite
 
@@ -31,7 +31,7 @@ def from_manifest(
 
 
 def from_single_image(
-    image_reference: typing.Union[str, om.OciImageReference],
+    image_reference: str | om.OciImageReference,
     oci_client: oc.Client=None,
     base_platform: om.OciPlatform=None,
 ) -> om.OciPlatform:
@@ -55,7 +55,7 @@ def from_single_image(
 
 
 def single_platform_manifest(
-    image_reference: typing.Union[om.OciImageReference, str],
+    image_reference: om.OciImageReference | str,
     oci_client: oc.Client,
     platform: om.OciPlatform=None,
 ):
@@ -116,9 +116,9 @@ def single_platform_manifest(
 
 
 def iter_platforms(
-    image_reference: typing.Union[str, om.OciImageReference],
+    image_reference: str | om.OciImageReference,
     oci_client: oc.Client=None,
-) -> typing.Generator[tuple[om.OciImageReference, om.OciPlatform], None, None]:
+) -> collections.abc.Generator[tuple[om.OciImageReference, om.OciPlatform], None, None]:
     image_reference = om.OciImageReference.to_image_ref(image_reference)
 
     manifest = oci_client.manifest(

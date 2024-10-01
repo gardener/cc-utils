@@ -4,12 +4,12 @@ import dataclasses
 import datetime
 import enum
 import hashlib
+import io
 import json
 import logging
 import tempfile
 import threading
 import time
-import typing
 
 import dacite
 import dateutil.parser
@@ -122,7 +122,7 @@ class OauthTokenCache:
         netloc = parse_image_reference(image_reference=image_reference).netloc
         self.auth_methods[netloc] = auth_method
 
-    def auth_method(self, image_reference: str) -> typing.Optional[AuthMethod]:
+    def auth_method(self, image_reference: str) -> AuthMethod | None:
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
         netloc = image_reference.netloc
@@ -157,7 +157,7 @@ def _split_image_reference(image_reference: str):
 
 
 def base_api_url(
-    image_reference: typing.Union[str, om.OciImageReference],
+    image_reference: str | om.OciImageReference,
 ) -> str:
     image_reference = om.OciImageReference.to_image_ref(image_reference)
 
@@ -169,13 +169,13 @@ def base_api_url(
 class OciRoutes:
     def __init__(
         self,
-        base_api_url_lookup: typing.Callable[[str], str]=base_api_url,
+        base_api_url_lookup: collections.abc.Callable[[str], str]=base_api_url,
     ):
         self.base_api_url_lookup = base_api_url_lookup
 
     def artifact_base_url(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
     ) -> str:
         image_reference = om.OciImageReference.to_image_ref(image_reference)
 
@@ -212,7 +212,7 @@ class OciRoutes:
         })
         return self.uploads_url(image_reference=image_reference) + '?' + query
 
-    def blob_url(self, image_reference: typing.Union[str, om.OciImageReference], digest: str):
+    def blob_url(self, image_reference: str | om.OciImageReference, digest: str):
         if isinstance(image_reference, om.OciImageReference):
             image_reference = str(image_reference)
 
@@ -223,7 +223,7 @@ class OciRoutes:
 
     def manifest_url(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         tag_preprocessing_callback: collections.abc.Callable[[str], str]=None,
     ) -> str:
         image_reference = om.OciImageReference.to_image_ref(image_reference)
@@ -241,7 +241,7 @@ class OciRoutes:
         )
 
 
-def _scope(image_reference: typing.Union[str, om.OciImageReference], action: str):
+def _scope(image_reference: str | om.OciImageReference, action: str):
     image_reference = om.OciImageReference.to_image_ref(image_reference)
 
     image_name = image_reference.name
@@ -254,7 +254,7 @@ def _scope(image_reference: typing.Union[str, om.OciImageReference], action: str
 class Client:
     def __init__(
         self,
-        credentials_lookup: typing.Callable,
+        credentials_lookup: collections.abc.Callable,
         routes: OciRoutes=OciRoutes(),
         disable_tls_validation: bool=False,
         timeout_seconds: int=None,
@@ -292,7 +292,7 @@ class Client:
 
     def _authenticate(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         scope: str,
         remaining_retries: int=3,
     ):
@@ -400,7 +400,7 @@ class Client:
     def _request(
         self,
         url: str,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         scope: str,
         method: str='GET',
         headers: dict=None,
@@ -521,7 +521,7 @@ class Client:
 
     def manifest_raw(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         absent_ok: bool=False,
         accept: str=None,
     ):
@@ -557,10 +557,10 @@ class Client:
 
     def manifest(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         absent_ok: bool=False,
         accept: str=None,
-    ) -> typing.Union[om.OciImageManifest, om.OciImageManifestList]:
+    ) -> om.OciImageManifest | om.OciImageManifestList:
         '''
         returns the parsed OCI Manifest for the given image reference. If the optional `accept`
         argument is passed, the given value will be set as `Accept` HTTP Header when retrieving
@@ -656,7 +656,7 @@ class Client:
         image_reference: str,
         absent_ok=False,
         accept: str=None,
-    ) -> typing.Optional[om.OciBlobRef]:
+    ) -> om.OciBlobRef | None:
         '''
         issues an HTTP-HEAD request for the specified oci-artifact's manifest and returns
         the thus-retrieved metadata if it exists.
@@ -777,7 +777,7 @@ class Client:
 
     def put_manifest(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         manifest: bytes,
     ):
         image_reference = om.OciImageReference.to_image_ref(image_reference)
@@ -888,7 +888,7 @@ class Client:
 
     def blob(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         digest: str,
         stream=True,
         absent_ok=False,
@@ -915,7 +915,7 @@ class Client:
 
     def head_blob(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         digest: str,
         absent_ok=True,
     ):
@@ -943,10 +943,10 @@ class Client:
 
     def put_blob(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         digest: str,
         octets_count: int,
-        data: requests.models.Response | collections.abc.Generator | bytes | typing.IO,
+        data: requests.models.Response | collections.abc.Generator | bytes | io.IOBase,
         max_chunk=1024 * 1024 * 1, # 1 MiB
         mimetype: str='application/octet-stream',
     ):
@@ -967,7 +967,7 @@ class Client:
             return
 
         data_is_requests_resp = isinstance(data, requests.models.Response)
-        data_is_generator = isinstance(data, typing.Generator)
+        data_is_generator = isinstance(data, collections.abc.Generator)
         data_is_filelike = hasattr(data, 'read')
         data_is_bytes = isinstance(data, bytes)
 
@@ -1030,10 +1030,10 @@ class Client:
 
     def _put_blob_chunked(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         digest: str,
         octets_count: int,
-        data_iterator: typing.Iterator[bytes],
+        data_iterator: collections.abc.Iterator[bytes],
         chunk_size: int=1024 * 1024 * 16, # 16 MiB
         mimetype='application/octect-stream',
     ):
@@ -1114,7 +1114,7 @@ class Client:
 
     def _put_blob_single_post(
         self,
-        image_reference: typing.Union[str, om.OciImageReference],
+        image_reference: str | om.OciImageReference,
         digest: str,
         octets_count: int,
         data: bytes,

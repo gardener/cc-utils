@@ -357,8 +357,8 @@ def diff_labels(
 
 
 def diff_components(
-    left_components: tuple[ocm.Component],
-    right_components: tuple[ocm.Component],
+    left_components: collections.abc.Iterable[ocm.Component],
+    right_components: collections.abc.Iterable[ocm.Component],
     ignore_component_names=(),
 ) -> ComponentDiff:
     left_component_identities = {

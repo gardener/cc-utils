@@ -6,7 +6,6 @@ import dataclasses
 import datetime
 import hashlib
 import random
-import typing
 
 dc = dataclasses.dataclass
 
@@ -19,28 +18,26 @@ class DockerContainerCfg:
   AttachStderr: bool = False
   AttachStdin: bool = False
   AttachStdout: bool = False
-  Cmd: typing.Union[typing.List[str], str, None] = None
-  Entrypoint: typing.Union[typing.List[str], str, None] = None
+  Cmd: list[str] | str | None = None
+  Entrypoint: list[str] | str | None = None
   Domainname: str = ''
-  Env: typing.Optional[typing.List[str]] = (
+  Env: list[str] | None = (
       'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
   )
   Hostname: str = ''
-  Labels: typing.Optional[typing.Dict[str, str]] = dataclasses.field(
-      default_factory=dict,
-  )
-  OnBuild: typing.Optional[list[str]] = None
+  Labels: dict[str, str] | None = dataclasses.field(default_factory=dict)
+  OnBuild: list[str] | None = None
   OpenStdin: bool = False
   StdinOnce: bool = False
   Tty: bool = False
   User: str = ''
-  Volumes: typing.Optional[typing.List[str]] = None
+  Volumes: list[str] | None = None
   WorkingDir: str = ''
 
 
 @dc
 class Docker_Fs:
-    diff_ids: typing.List[str] = dataclasses.field(default_factory=list) # [layer-sha256-digests]
+    diff_ids: list[str] = dataclasses.field(default_factory=list) # [layer-sha256-digests]
     type: str = 'layers'
 
 
@@ -53,11 +50,11 @@ class DockerCfg:
   container: str # container-hash
   container_config: DockerContainerCfg
   created: str # iso8601-ts
-  rootfs: typing.Optional[Docker_Fs]
+  rootfs: Docker_Fs | None
 
   architecture: str = 'amd64'
   docker_version: str = '18.09.7'
-  history: typing.Tuple[dict] = ()
+  history: tuple[dict] = ()
   os: str = 'linux'
 
 

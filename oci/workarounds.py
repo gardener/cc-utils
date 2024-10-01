@@ -5,7 +5,6 @@ collection of workarounds required to deal w/ different OCI Registries' idiosync
 import dataclasses
 import hashlib
 import json
-import typing
 
 import oci.client as oc
 import oci.model as om
@@ -23,7 +22,7 @@ def _cfg_blob_non_empty_history_layers(cfg_blob: dict) -> list[dict]:
 
 def is_cfg_blob_sane(
     manifest: om.OciImageManifest,
-    cfg_blob: typing.Union[bytes, dict],
+    cfg_blob: bytes | dict,
 ) -> bool:
     if isinstance(cfg_blob, bytes) or isinstance(cfg_blob, str):
         cfg_blob = json.loads(cfg_blob)
@@ -40,8 +39,8 @@ def is_cfg_blob_sane(
 
 def sanitise_cfg_blob(
     manifest: om.OciImageManifest,
-    cfg_blob: typing.Union[bytes, dict],
-) -> typing.Union[bytes, dict]:
+    cfg_blob: bytes | dict,
+) -> bytes | dict:
     '''
     returns a sanitised form of the passed cfg-blob. If the passed cfg-blob was already considered
     "sane", the returned object is identical to the passed-in cfg_blob argument.
@@ -70,7 +69,7 @@ def sanitise_cfg_blob(
 
 
 def sanitise_image(
-    image_ref: typing.Union[str, om.OciImageReference],
+    image_ref: str | om.OciImageReference,
     oci_client: oc.Client,
 ):
     manifest = oci_client.manifest(image_reference=image_ref)

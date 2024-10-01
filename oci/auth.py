@@ -5,7 +5,6 @@ import enum
 import json
 import operator
 import os
-import typing
 
 import oci.util
 
@@ -68,7 +67,7 @@ class OciCredentials:
 class OciConfig:
     privileges: Privileges
     credentials: OciCredentials
-    url_prefixes: typing.Sequence[str] = dataclasses.field(default_factory=tuple)
+    url_prefixes: collections.abc.Sequence[str] = dataclasses.field(default_factory=tuple)
 
     def valid_for(self, image_reference: str, privileges: Privileges=Privileges.READONLY):
         if privileges and privileges > self.privileges:
@@ -105,7 +104,7 @@ credentials_lookup = collections.abc.Callable[[image_reference, Privileges, bool
 
 
 def mk_credentials_lookup(
-    cfgs: typing.Union[OciCredentials, typing.Sequence[OciCredentials]],
+    cfgs: OciCredentials | collections.abc.Sequence[OciCredentials],
 ) -> collections.abc.Callable[[image_reference, Privileges, bool], OciConfig]:
     '''
     returns a callable that can be queried for matching OciCredentials for requested

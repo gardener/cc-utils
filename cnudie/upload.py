@@ -1,8 +1,8 @@
+import collections.abc
 import dataclasses
 import enum
 import hashlib
 import json
-import typing
 
 import cnudie.util
 import ocm
@@ -71,7 +71,7 @@ def _iter_oci_blob_refs(
     component: ocm.Component,
     oci_client: oci.client.Client=None,
     oci_image_reference: om.OciImageReference=None,
-) -> typing.Generator[None, None, om.OciBlobRef]:
+) -> collections.abc.Generator[None, None, om.OciBlobRef]:
     for artefact in component.iter_artefacts():
         access = artefact.access
         if not isinstance(access, ocm.LocalBlobAccess):
@@ -87,8 +87,8 @@ def _iter_oci_blob_refs(
 
 def upload_component_descriptor(
     component_descriptor: ocm.ComponentDescriptor | ocm.Component,
-    on_exist:UploadMode|str=UploadMode.SKIP,
-    ocm_repository: ocm.OciOcmRepository | str = None,
+    on_exist: UploadMode | str=UploadMode.SKIP,
+    ocm_repository: ocm.OciOcmRepository | str=None,
     oci_client: oci.client.Client=None,
 ):
     if not oci_client:

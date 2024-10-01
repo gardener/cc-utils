@@ -1,6 +1,6 @@
+import collections.abc
 import dataclasses
 import logging
-import typing
 
 import ocm
 
@@ -38,28 +38,29 @@ class ValidationError:
         return f'{node_id_path}: {self.error}'
 
 
-def validate_resource_node(node: ci.ResourceNode) -> typing.Generator[ValidationError, None, None]:
+def validate_resource_node(
+    node: ci.ResourceNode,
+) -> ValidationError | None:
     resource = node.resource
     if resource.type != ocm.ArtefactType.OCI_IMAGE:
         return
 
-    resource.access: ocm.OciAccess
-    image_reference = resource.access.imageReference
+    access: ocm.OciAccess = resource.access
+    image_reference = access.imageReference
 
     try:
         image_reference = oci.model.OciImageReference.to_image_ref(image_reference)
         if not image_reference.has_tag:
-            yield ValidationError(
+            return ValidationError(
                 node=node,
                 error=f'Invalid ImageReference (missing tag): {image_reference}',
             )
-            return
     except ValueError:
-        yield ValidationError(
+        # cannot perform checks in image itself using invalid image-ref
+        return ValidationError(
             node=node,
             error=f'Invalid ImageReference: {image_reference}',
         )
-        return # cannot perform checks in image itself using invalid image-ref
 
     oci_client = ccc.oci.oci_client()
 
@@ -68,21 +69,22 @@ def validate_resource_node(node: ci.ResourceNode) -> typing.Generator[Validation
         absent_ok=True,
         accept=oci.model.MimeTypes.prefer_multiarch,
     ):
-        yield ValidationError(
+        return ValidationError(
             node=node,
             error=f'{image_reference=} does not exist',
         )
 
 
 def iter_violations(
-    nodes: typing.Iterable[ci.Node],
-) -> typing.Generator[ValidationError, None, None]:
+    nodes: collections.abc.Iterable[ci.Node],
+) -> collections.abc.Generator[ValidationError, None, None]:
     for node in nodes:
         if isinstance(node, ci.ComponentNode):
             continue # no validation, yet
         elif isinstance(node, ci.SourceNode):
             continue # no validation, yet
         elif isinstance(node, ci.ResourceNode):
-            yield from validate_resource_node(node=node)
+            if (validation_error := validate_resource_node(node=node)):
+                yield validation_error
         else:
             raise ValueError(node)

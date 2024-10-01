@@ -2,7 +2,6 @@ import collections.abc
 import functools
 import logging
 import traceback
-import typing
 
 import requests
 
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 @functools.lru_cache
 def oci_cfg_lookup(
     cfg_factory=None,
-) -> typing.Callable[[str, oa.Privileges, bool], oa.OciCredentials]:
+) -> collections.abc.Callable[[str, oa.Privileges, bool], oa.OciCredentials]:
     def find_credentials(
         image_reference: str,
         privileges: oa.Privileges=oa.Privileges.READONLY,
@@ -63,7 +62,7 @@ def oci_request_handler_requirements_fulfilled() -> bool:
 
 @functools.cache
 def oci_client(
-    credentials_lookup: typing.Callable=None,
+    credentials_lookup: collections.abc.Callable=None,
     install_logging_handler: bool=True,
     cfg_factory=None,
     http_connection_pool_size:int=16,

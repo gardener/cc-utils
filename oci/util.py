@@ -1,8 +1,8 @@
+import collections.abc
 import contextlib
 import io
 import queue
 import threading
-import typing
 
 
 def normalise_image_reference(image_reference: str):
@@ -78,7 +78,7 @@ class _TeeFilelikeProxy:
 
         return buf
 
-    def iter_contents(self) -> typing.Generator[bytes, None, None]:
+    def iter_contents(self) -> collections.abc.Generator[bytes, None, None]:
         while (buf := self._queue.get()):
             yield buf
 
@@ -86,7 +86,7 @@ class _TeeFilelikeProxy:
 @contextlib.contextmanager
 def tee_stream(
     fileobj: io.BytesIO,
-    tee_receiver: typing.Callable[[typing.Generator[bytes, None, None]], None],
+    tee_receiver: collections.abc.Callable[[collections.abc.Generator[bytes, None, None]], None],
 ):
     '''
     ctx-mgr creating a "tee" for a given stream that will yield read chunks to the given

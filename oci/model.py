@@ -324,7 +324,7 @@ class OciImageManifest:
             'annotations': self.annotations,
         }
 
-    def blobs(self) -> collections.abc.Sequence[OciBlobRef]:
+    def blobs(self) -> collections.abc.Generator[OciBlobRef, None, None]:
         yield self.config
         yield from self.layers
 
@@ -353,7 +353,7 @@ class OciImageManifestV1:
     schemaVersion: int = 1
     layers = None # to be initialised by factory-function
 
-    def blobs(self) -> collections.abc.Sequence[OciBlobRef]:
+    def blobs(self) -> collections.abc.Generator[OciBlobRef, None, None]:
         if not self.layers:
             raise ValueError('instance was not properly initialised')
 

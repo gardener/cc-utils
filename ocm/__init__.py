@@ -1,3 +1,4 @@
+import collections.abc
 import dataclasses
 import datetime
 import enum
@@ -6,7 +7,6 @@ import io
 import json
 import logging
 import os
-import typing
 import urllib.parse
 
 try:
@@ -79,12 +79,12 @@ AccessType._value2member_map_ |= {
     's3/v1': AccessType.S3,
 }
 
-AccessTypeOrStr = typing.Union[AccessType, str]
+AccessTypeOrStr = AccessType | str
 
 
 @dc(kw_only=True)
 class Access:
-    type: typing.Optional[AccessTypeOrStr] = AccessType.NONE
+    type: AccessTypeOrStr | None = AccessType.NONE
 
 
 class AccessDict(dict):
@@ -122,8 +122,8 @@ class LocalBlobAccess(Access):
     localReference: str
     size: int | None = None
     mediaType: str = 'application/data'
-    referenceName: typing.Optional[str] = None
-    globalAccess: typing.Optional[LocalBlobGlobalAccess | dict | None] = None
+    referenceName: str | None = None
+    globalAccess: LocalBlobGlobalAccess | dict | None = None
 
 
 @dc(kw_only=True)
@@ -149,8 +149,8 @@ class RelativeOciAccess(Access):
 @dc(kw_only=True)
 class GithubAccess(Access):
     repoUrl: str
-    ref: typing.Optional[str] = None
-    commit: typing.Optional[str] = None
+    ref: str | None = None
+    commit: str | None = None
     type: AccessTypeOrStr = AccessType.GITHUB
 
     def __post_init__(self):
@@ -180,7 +180,7 @@ class GithubAccess(Access):
 class S3Access(Access):
     bucketName: str
     objectKey: str
-    region: typing.Optional[str] = None
+    region: str | None = None
 
 
 class ArtefactType(enum.StrEnum):
@@ -214,7 +214,7 @@ class ResourceRelation(enum.StrEnum):
 @dc(frozen=True)
 class Label:
     name: str
-    value: typing.Union[str, int, float, bool, dict, list]
+    value: str | int | float | bool | dict | list
 
 
 _no_default = object()
@@ -241,7 +241,7 @@ class LabelMethodsMixin:
         self,
         label: Label,
         raise_if_present: bool = False,
-    ) -> typing.List[Label]:
+    ) -> list[Label]:
         if self.find_label(name=label.name) and raise_if_present:
             raise ValueError(f'label {label.name} is already present')
 
@@ -380,7 +380,7 @@ class Artifact(LabelMethodsMixin):
     '''
     base class for ComponentReference, Resource, Source
     '''
-    def identity(self, peers: typing.Sequence['Artifact']):
+    def identity(self, peers: collections.abc.Sequence['Artifact']):
         '''
         returns the identity-object for this artifact (component-ref, resource, or source).
 
@@ -438,9 +438,9 @@ class ComponentReference(Artifact, LabelMethodsMixin):
     name: str
     componentName: str
     version: str
-    digest: typing.Optional[DigestSpec] = None
-    extraIdentity: typing.Dict[str, str] = dataclasses.field(default_factory=dict)
-    labels: typing.List[Label] = dataclasses.field(default_factory=tuple)
+    digest: DigestSpec | None = None
+    extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
+    labels: list[Label] = dataclasses.field(default_factory=tuple)
 
 
 @dc
@@ -453,23 +453,23 @@ class SourceReference(LabelMethodsMixin):
 class Resource(Artifact, LabelMethodsMixin):
     name: str
     version: str
-    type: typing.Union[ArtefactType, str]
-    access: typing.Union[
+    type: ArtefactType | str
+    access: (
         # Order of types is important for deserialization. The first matching type will be taken,
         # i.e. keep generic accesses at the bottom of the list
-        GithubAccess,
-        LocalBlobAccess,
-        OciBlobAccess,
-        OciAccess,
-        RelativeOciAccess,
-        S3Access,
-        dict,
-        None,
-    ]
-    digest: typing.Optional[DigestSpec] = None
-    extraIdentity: typing.Dict[str, str] = dataclasses.field(default_factory=dict)
+        GithubAccess
+        | LocalBlobAccess
+        | OciBlobAccess
+        | OciAccess
+        | RelativeOciAccess
+        | S3Access
+        | dict
+        | None
+    )
+    digest: DigestSpec | None = None
+    extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
     relation: ResourceRelation = ResourceRelation.LOCAL
-    labels: typing.List[Label] = dataclasses.field(default_factory=tuple)
+    labels: list[Label] = dataclasses.field(default_factory=tuple)
     srcRefs: list[SourceReference] = dataclasses.field(default_factory=tuple)
 
     def __post_init__(self):
@@ -490,7 +490,7 @@ class OcmRepository:
 @dc(kw_only=True, frozen=True)
 class OciOcmRepository(OcmRepository):
     baseUrl: str
-    subPath: typing.Optional[str] = None
+    subPath: str | None = None
     type: AccessTypeOrStr = AccessType.OCI_REGISTRY
 
     @property
@@ -499,10 +499,8 @@ class OciOcmRepository(OcmRepository):
             return self.baseUrl
         return f'{self.baseUrl.rstrip("/")}/{self.subPath.lstrip("/")}'
 
-    def component_oci_ref(self, name: typing.Union[str, 'Component', 'ComponentIdentity'], /):
-        if isinstance(name, Component):
-            name = name.name
-        elif isinstance(name, ComponentIdentity):
+    def component_oci_ref(self, name, /):
+        if isinstance(name, (Component, ComponentIdentity)):
             name = name.name
 
         return '/'.join((
@@ -513,14 +511,10 @@ class OciOcmRepository(OcmRepository):
 
     def component_version_oci_ref(
         self,
-        name: typing.Union[str, 'Component', 'ComponentIdentity'],
+        name,
         version: str=None,
     ):
-        if isinstance(name, Component):
-            if not version:
-                version = name.version
-            name = name.name
-        elif isinstance(name, ComponentIdentity):
+        if isinstance(name, (Component, ComponentIdentity)):
             if not version:
                 version = name.version
             name = name.name
@@ -535,10 +529,10 @@ class OciOcmRepository(OcmRepository):
 class Source(Artifact, LabelMethodsMixin):
     name: str
     access: GithubAccess | dict
-    version: typing.Optional[str] = None  # introduce this backwards-compatible for now
-    extraIdentity: typing.Dict[str, str] = dataclasses.field(default_factory=dict)
-    type: typing.Union[ArtefactType, str] = ArtefactType.GIT
-    labels: typing.List[Label] = dataclasses.field(default_factory=list)
+    version: str | None = None  # introduce this backwards-compatible for now
+    extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
+    type: ArtefactType | str = ArtefactType.GIT
+    labels: list[Label] = dataclasses.field(default_factory=list)
 
     def __post_init__(self):
         if dataclasses.is_dataclass(access := self.access):
@@ -555,14 +549,14 @@ class Component(LabelMethodsMixin):
     name: str     # must be valid URL w/o schema
     version: str  # relaxed semver
 
-    repositoryContexts: typing.List[OciOcmRepository]
-    provider: typing.Union[str, dict]
+    repositoryContexts: list[OciOcmRepository]
+    provider: str | dict
 
-    sources: typing.List[Source]
-    componentReferences: typing.List[ComponentReference]
-    resources: typing.List[Resource]
+    sources: list[Source]
+    componentReferences: list[ComponentReference]
+    resources: list[Resource]
 
-    labels: typing.List[Label] = dataclasses.field(default_factory=list)
+    labels: list[Label] = dataclasses.field(default_factory=list)
 
     creationTime: str | None = None
 
@@ -575,7 +569,7 @@ class Component(LabelMethodsMixin):
     def identity(self):
         return ComponentIdentity(name=self.name, version=self.version)
 
-    def iter_artefacts(self) -> typing.Generator[None, None, Source | Resource]:
+    def iter_artefacts(self) -> collections.abc.Generator[Source | Resource, None, None]:
         if self.sources:
             yield from self.sources
         if self.resources:
@@ -601,7 +595,7 @@ def enum_or_string(v, enum_type: enum.Enum):
 class ComponentDescriptor:
     meta: Metadata
     component: Component
-    signatures: typing.List[Signature] = dataclasses.field(default_factory=list)
+    signatures: list[Signature] = dataclasses.field(default_factory=list)
 
     @staticmethod
     def validate(
@@ -653,13 +647,13 @@ class ComponentDescriptor:
                     ResourceRelation,
                 ],
                 type_hooks={
-                    typing.Union[AccessType, str]: functools.partial(
+                    AccessType | str: functools.partial(
                         enum_or_string, enum_type=AccessType
                     ),
-                    typing.Union[ArtefactType, str]: functools.partial(
+                    ArtefactType | str: functools.partial(
                         enum_or_string, enum_type=ArtefactType
                     ),
-                    typing.Union[ArtifactIdentity, str]: functools.partial(
+                    ArtifactIdentity | str: functools.partial(
                         enum_or_string, enum_type=ArtefactType
                     ),
                     AccessType: functools.partial(

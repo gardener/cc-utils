@@ -5,13 +5,13 @@ see:
     https://github.com/GoogleContainerTools/kaniko
 '''
 
+import collections.abc
 import contextlib
 import dataclasses
 import io
 import json
 import tarfile
 import threading
-import typing
 
 import dacite
 
@@ -21,13 +21,13 @@ import oci.model
 @dataclasses.dataclass
 class KanikoManifest:
   Config: str # <algorithm>:<digest>
-  RepoTags: typing.List[str]
-  Layers: typing.List[str]
+  RepoTags: list[str]
+  Layers: list[str]
 
 
 @dataclasses.dataclass
 class _KanikoBlob(io.BytesIO):
-  read_chunk: typing.Callable[[int, int], bytes] # see _KanikoImageReadCtx._read_chunk
+  read_chunk: collections.abc.Callable[[int, int], bytes] # see _KanikoImageReadCtx._read_chunk
   offset: int
   name: str
   size: int

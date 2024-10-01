@@ -1,6 +1,6 @@
+import collections.abc
 import logging
 import traceback
-import typing
 
 import ocm
 
@@ -20,7 +20,7 @@ def iter_componentversions_to_purge(
     policy: version.VersionRetentionPolicies,
     oci_client: oc.Client=None,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
-) -> typing.Generator[ocm.ComponentIdentity, None, None]:
+) -> collections.abc.Generator[ocm.ComponentIdentity, None, None]:
     oci_ref = cnudie.util.oci_ref(component=component)
     if isinstance(component, ocm.ComponentDescriptor):
         component = component.component

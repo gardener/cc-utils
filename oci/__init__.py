@@ -1,10 +1,11 @@
+import collections.abc
 import dataclasses
 import enum
 import hashlib
+import io
 import json
 import logging
 import tarfile
-import typing
 import zlib
 
 import dacite
@@ -63,15 +64,15 @@ class ReplicationMode(enum.Enum):
 
 
 def replicate_artifact(
-    src_image_reference: typing.Union[str, om.OciImageReference],
-    tgt_image_reference: typing.Union[str, om.OciImageReference],
+    src_image_reference: str | om.OciImageReference,
+    tgt_image_reference: str | om.OciImageReference,
     credentials_lookup: oa.credentials_lookup=None,
     routes: oc.OciRoutes=oc.OciRoutes(),
     oci_client: oc.Client=None,
     mode: ReplicationMode=ReplicationMode.REGISTRY_DEFAULTS,
-    platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
+    platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     annotations: dict[str, str]=None,
-) -> typing.Tuple[requests.Response, str, bytes]:
+) -> tuple[requests.Response, str, bytes]:
     '''
     replicate the given OCI Artifact from src_image_reference to tgt_image_reference.
 
@@ -423,7 +424,7 @@ def replicate_blobs(
     src_oci_manifest: om.OciImageManifest,
     tgt_ref: str,
     oci_client: oc.Client,
-    blob_overwrites: typing.Dict[om.OciBlobRef, typing.Union[bytes, typing.BinaryIO]],
+    blob_overwrites: dict[om.OciBlobRef, bytes | io.BytesIO],
 ) -> om.OciImageManifest:
     '''
     replicates blobs from given oci-image-ref to the specified target-ref, optionally replacing
@@ -493,7 +494,7 @@ def publish_container_image_from_kaniko_tarfile(
     image_tarfile_path: str,
     oci_client: oc.Client,
     image_reference: str,
-    additional_tags: typing.List[str]=(),
+    additional_tags: list[str]=(),
     manifest_mimetype: str=om.OCI_MANIFEST_SCHEMA_V2_MIME,
 ):
     image_reference = ou.normalise_image_reference(image_reference=image_reference)
@@ -533,7 +534,7 @@ def image_layers_as_tarfile_generator(
     chunk_size=tarfile.RECORDSIZE,
     include_config_blob=True,
     fallback_to_first_subimage_if_index=False,
-) -> typing.Generator[bytes, None, None]:
+) -> collections.abc.Generator[bytes, None, None]:
     '''
     returns a generator yielding a tar-archive with the passed oci-image's layer-blobs as
     members. This is somewhat similar to the result of a `docker save` with the notable difference
