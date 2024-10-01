@@ -24,6 +24,9 @@ def iter_componentversions_to_purge(
     if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
 
+    if not oci_client:
+        oci_client = ccc.oci.oci_client()
+
     for v in version.versions_to_purge(
         versions=oci_client.tags(oci_ref.ref_without_tag),
         reference_version=component.version,
