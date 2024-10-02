@@ -140,6 +140,10 @@ version_lookup = cnudie.retrieve.version_lookup(
 # we at most need to do this once
 os.environ['DOCKERD_STARTED'] = 'no'
 
+% if pullrequest_body_suffix:
+import textwrap
+% endif
+
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
@@ -186,7 +190,7 @@ for from_ref, to_version in determine_upgrade_prs(
         after_merge_callback='${after_merge_callback}',
 % endif
 % if pullrequest_body_suffix:
-        pullrequest_body_suffix='${pullrequest_body_suffix}',
+        pullrequest_body_suffix=textwrap.dedent('''${pullrequest_body_suffix}'''),
 % endif
 % if set_version_script_image:
         container_image='${set_version_script_image}',
