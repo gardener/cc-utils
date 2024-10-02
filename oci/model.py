@@ -7,7 +7,6 @@ import typing
 import urllib.parse
 
 import dacite
-import requests
 
 import oci.util
 
@@ -259,7 +258,7 @@ class OciManifestSchemaVersion(enum.Enum):
     V2 = 2
 
 
-class OciImageNotFoundException(requests.exceptions.HTTPError):
+class OciImageNotFoundException(Exception):
     pass
 
 
