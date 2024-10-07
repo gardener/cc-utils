@@ -167,6 +167,7 @@ jobs:
         run: |
           set -eu
           pip3 install --no-cache \
+            aiohttp \
             dacite \
             deprecated \
             pyaml \
