@@ -313,6 +313,7 @@ class DeliveryServiceClient:
         version_filter: str | None=None,
         start_date: datetime.date=None,
         end_date: datetime.date=None,
+        timeout: tuple[float, float]=(4.0, 121.0),
     ):
         params = {
             'component_name': component_name,
@@ -336,6 +337,7 @@ class DeliveryServiceClient:
         res = self.request(
             url=self._routes.greatest_component_versions(),
             params=params,
+            timeout=timeout,
         )
 
         res.raise_for_status()
