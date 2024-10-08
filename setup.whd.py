@@ -31,6 +31,8 @@ setuptools.setup(
     name='gardener-cicd-whd',
     version=version(),
     description='Gardener CI/CD Webhook Dispatcher',
+    long_description='Gardener CI/CD Webhook Dispatcher',
+    long_description_content_type='text/markdown',
     python_requires='>=3.11',
     py_modules=modules(),
     packages=['whd'],

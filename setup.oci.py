@@ -27,7 +27,9 @@ def version():
 setuptools.setup(
     name='gardener-oci',
     version=version(),
-    description='gardener OCI lib',
+    description='Gardener OCI lib',
+    long_description='Gardener OCI lib',
+    long_description_content_type='text/markdown',
     python_requires='>=3.10',
     py_modules=modules(),
     packages=['oci'],
