@@ -5,6 +5,7 @@ A client for Signing-Server
 import dataclasses
 import hashlib
 import io
+import logging
 import urllib.parse
 
 import cryptography.x509
@@ -14,6 +15,9 @@ import urllib3
 
 import ci.util
 import model.signing_server as ms
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -94,6 +98,7 @@ class SigningserverClient:
         content: str | bytes | io.IOBase,
         hash_algorithm='sha256',
         signing_algorithm: ms.SigningAlgorithm | str = ms.SigningAlgorithm.RSASSA_PSS,
+        remaining_retries: int=3,
     ):
         signing_algorithm = ms.SigningAlgorithm(signing_algorithm)
         url = ci.util.urljoin(
@@ -116,18 +121,29 @@ class SigningserverClient:
             kwargs['verify'] = False
             urllib3.disable_warnings()
 
-        resp = requests.post(
-            url=url,
-            headers={
-                'Accept': 'application/x-pem-file',
-            },
-            data=digest,
-            timeout=(4, 31),
-            cert=(self.cfg.client_certificate, self.cfg.client_certificate_key,),
-            **kwargs,
-        )
+        try:
+            resp = requests.post(
+                url=url,
+                headers={
+                    'Accept': 'application/x-pem-file',
+                },
+                data=digest,
+                timeout=(4, 31),
+                cert=(self.cfg.client_certificate, self.cfg.client_certificate_key,),
+                **kwargs,
+            )
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            if remaining_retries == 0:
+                raise
 
-        resp.raise_for_status()
+            logger.warning(f'caught http error, going to retry... ({remaining_retries=}); {e}')
+            return self.sign(
+                content=content,
+                hash_algorithm=hash_algorithm,
+                signing_algorithm=signing_algorithm,
+                remaining_retries=remaining_retries - 1,
+            )
 
         return SigningResponse(
             raw=resp.text,
