@@ -2,6 +2,15 @@ name: Build and Test
 run-name: Building and testing
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        required: false
+        type: boolean
+        default: false
+      release-to-pypi:
+        required: false
+        type: boolean
+        default: false
   push:
 
 jobs:
@@ -22,9 +31,18 @@ jobs:
           snapshots_repo="${repo_base}/snapshots"
           releases_repo="${repo_base}/releases"
 
-          # hardcode to "snapshots" for now
-          echo "ocm_repository=${snapshots_repo}" >> "${GITHUB_OUTPUT}"
-          echo "oci_repository=${snapshots_repo}" >> "${GITHUB_OUTPUT}"
+          if ${{ inputs.release || false }}; then
+            # "erroneously" still publish to snapshots for testing purporses
+            # XXX this is a debugging / testing artefact
+            ocm_repository=${releases_repo}
+            oci_repository=${releases_repo}
+          else
+            ocm_repository=${snapshots_repo}
+            oci_repository=${snapshots_repo}
+          fi
+
+          echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
+          echo "oci_repository=${oci_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
 
           echo "gcp_project=gardener-project" >> "${GITHUB_OUTPUT}"
@@ -37,7 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       effective_version: ${{ steps.version.outputs.effective_version }}
+      next_version: ${{ steps.version.outputs.next_version }}
       repo_version: ${{ steps.version.outputs.repo_version }}
+      setuptools_version: ${{ steps.version.outputs.setuptools_version }}
     steps:
     - uses: actions/checkout@v4
     - name: calculate-effective-version
@@ -50,10 +70,22 @@ jobs:
         minor="$(echo ${src_version} | cut -d. -f2)"
         patch="$(echo ${src_version} | cut -d. -f3 | cut -d- -f1)"
 
-        effective_version=${major}.${minor}.${patch}-${commit}
+        if ${{ inputs.release || false }}; then
+          effective_version=${major}.${minor}.${patch}
+          setuptools_version=${effective_version}
+          # hardcode to bumping "minor" for now
+          next_minor=$(( $minor + 1 ))
+          next_version="${major}.${next_minor}.${patch}-dev"
+          echo "next_version=${next_version}" >> "${GITHUB_OUTPUT}"
+          echo "next_version=${next_version}"
+        else
+          effective_version=${major}.${minor}.${patch}-${commit}
+          setuptools_version=${src_version}
+        fi
         echo "effective-version: ${effective_version}"
-        echo "effective_version=${effective_version}" > "${GITHUB_OUTPUT}"
+        echo "effective_version=${effective_version}" >> "${GITHUB_OUTPUT}"
         echo "repo_version=${src_version}" >> "${GITHUB_OUTPUT}"
+        echo "setuptools_version=${setuptools_version}" >> "${GITHUB_OUTPUT}"
 
   package:
     runs-on: ubuntu-latest
@@ -82,11 +114,9 @@ jobs:
       id: package
       run: |
         set -eu
-        effective_version=${{ needs.version.outputs.effective_version }}
-        repo_version=${{ needs.version.outputs.repo_version }}
-        echo "effective-version: ${effective_version}"
-        echo "repo-version: ${repo_version}"
-        echo "${repo_version}" | .ci/write-version
+        version=${{ needs.version.outputs.setuptools_version }}
+        echo "version: ${version}"
+        echo "${version}" | .ci/write-version
         pkg_dir="dist"
         mkdir -p ${pkg_dir}
         for path in \
@@ -117,7 +147,7 @@ jobs:
           digest="$(sha256sum ${outf} | cut -d' ' -f1)"
           echo "\
         - name: ${package}
-          version: ${effective_version}
+          version: ${version}
           type: ${mimetype}
           relation: local
           access:
@@ -137,18 +167,29 @@ jobs:
         path: dist/
 
   component_descriptor:
+    name: OCM + Release (only on manual triggering)
     runs-on: ubuntu-latest
     container:
       image: python:alpine
     permissions:
-      contents: read
+      contents: write
       id-token: write
     needs:
       - version
       - params
       - package
       - images
+      - lint
+      - unittests
+    outputs:
+      release_commit_digest: ${{  steps.releasecommit.commitdigest }}
+      ocm_repository: ${{ steps.params.outputs.ocm_repository }}
     steps:
+      - name: Install Packages
+        run: |
+          apk add --no-cache \
+            bash \
+            git
       - uses: actions/checkout@v4
       - name: Retrieve Distribution Packages
         uses: actions/download-artifact@v4
@@ -163,6 +204,32 @@ jobs:
           project_id: ${{ needs.params.outputs.gcp_project }}
           service_account: ${{ needs.params.outputs.gcp_service_account }}
           workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
+      - name: Create Release and Bump-Commits
+        id: releasecommit
+        if: ${{ inputs.release }}
+        run: |
+          echo "gha-creds*" >> .git/info/exclude
+          git config --global --add safe.directory /__w/cc-utils/cc-utils
+          git config user.name 'Gardener-CICD Bot'
+          git config user.email 'gardener.ci.user@gmail.com'
+          effective_version=${{ needs.version.outputs.effective_version }}
+          echo "${effective_version}" | .ci/write-version
+          git add .
+          git commit -m "Release ${effective_version}"
+          git show
+          commit_digest=$(git rev-parse @)
+          echo "release_commit_digest=${commit_digest}" >> "${GITHUB_OUTPUT}"
+          tgt_ref="refs/tags/${effective_version}"
+          echo "pushing release-commit ${commit_digest} to ${tgt_ref}"
+          git push origin "@:${tgt_ref}"
+          next_version=${{ needs.version.outputs.next_version }}
+          echo "next version: ${next_version}"
+          git reset --hard @~
+          echo "${next_version}" | .ci/write-version
+          git add .
+          git commit -m"Prepare next Dev-Cycle"
+          git pull --rebase
+          git push origin
       - name: component-descriptor
         run: |
           set -eu
@@ -184,8 +251,25 @@ jobs:
             --version ${version} \
             --ocm-repo ${ocm_repo} \
             --provider sap-se \
+            --label '{
+                "name": "cloud.gardener.cnudie/responsibles",
+                "value": [
+                  {
+                    "type": "githubTeam",
+                    "teamname": "gardener/ci-maintainers",
+                    "github_hostname": "github.com"
+                  }
+                ]
+            }' \
             > component-descriptor.yaml
 
+          if ${{ inputs.release || false }}; then
+            commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
+          else
+            commit_digest=${{ github.sha }}
+          fi
+
+          echo "adding main source"
           echo "\
           name: main-source
           version: ${version}
@@ -198,12 +282,13 @@ jobs:
             type: github
             repoUrl: github.com/${{ github.repository }}
             version: ${version}
-            commit: ${{ github.sha }}
+            commit: ${commit_digest}
             ref: ${{ github.ref }}
           " \
           | python3 -m ocm append source \
             --file component-descriptor.yaml
 
+          echo "adding resources"
           ocm_resources=${{ needs.package.outputs.ocm_resources }}
           echo "ocm-resources-file: /tmp/${ocm_resources}"
           cat "/tmp/${ocm_resources}" | \
@@ -277,7 +362,7 @@ jobs:
         echo "running linters"
         .ci/lint
 
-  run-unittests:
+  unittests:
     needs:
       - package
     permissions:
@@ -317,6 +402,35 @@ jobs:
         touch /tmp/fake-cfg.d/config_types.yaml
         export CC_CONFIG_DIR=/tmp/fake-cfg.d
         .ci/test
+
+  pypi:
+    if: ${{ inputs.release-to-pypi }}
+    runs-on: ubuntu-latest
+    name: Publish to PYPI
+    needs:
+      - version
+      - package
+      - params
+      - lint
+      - unittests
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Retrieve Distribution Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution-packages
+          path: /tmp/dist
+      - name: prepare build-filesystem
+        id: prepare
+        run: |
+          cp -r /tmp/dist .
+          ls -lta dist/
+          rm -rf dist/blobs.d dist/ocm_resources.yaml
+          ls -lta dist/
+      - name: publish to pypi
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   images:
     name: Build OCI Images
@@ -363,6 +477,10 @@ jobs:
           cp -r /tmp/dist .
           ls -lta
 
+          setuptools_version=${{ needs.version.outputs.setuptools_version }}
+          # workaround: set repository-version to setuptools-version so installation of
+          #             packages will succeed
+          echo "${setuptools_version}" | .ci/write-version
           oci_repo=${{ needs.params.outputs.oci_repository }}
           image_tag=${{ needs.version.outputs.effective_version }}
           image_ref=${oci_repo}/cicd/job-image:${image_tag}
@@ -391,7 +509,6 @@ jobs:
                 user_interaction: gardener-operator
           EOF
           echo "ocm_resources=$(cat ocm_resources.yaml | base64 -w0)" >> ${GITHUB_OUTPUT}
-
 
       - name: Build OCI Image
         uses: docker/build-push-action@v6
