@@ -23,14 +23,15 @@ except ImportError:
     _have_oci = False
 
 
-def _parse_yaml_or_json(path) -> dict:
-    with open(path) as f:
-        if _have_yaml:
-            raw = yaml.safe_load(f)
-        else:
-            raw = json.load(f)
+if _have_yaml:
+    _yaml_or_json_load = yaml.safe_load
+else:
+    _yaml_or_json_load = json.load
 
-    return raw
+
+def _parse_yaml_or_json(path) -> dict | list:
+    with open(path) as f:
+        return _yaml_or_json_load(f)
 
 
 def dump(component_descriptor: ocm.ComponentDescriptor, parsed):
@@ -53,6 +54,7 @@ def dump(component_descriptor: ocm.ComponentDescriptor, parsed):
             fp=outfh,
             cls=ocm.EnumJSONEncoder,
         )
+    outfh.flush()
 
 
 def create(parsed):
@@ -67,6 +69,19 @@ def create(parsed):
     else:
         ocm_repos = []
 
+    labels = []
+    for label in parsed.labels:
+        if os.path.exists(label):
+            label = _parse_yaml_or_json(label)
+        else:
+            label = _yaml_or_json_load(label)
+
+        label = ocm.Label(
+            name=label['name'],
+            value=label['value'],
+        )
+        labels.append(label)
+
     component_descriptor = ocm.ComponentDescriptor(
         meta=ocm.Metadata(),
         component=ocm.Component(
@@ -77,7 +92,7 @@ def create(parsed):
             componentReferences=[],
             sources=[],
             resources=[],
-            labels=[],
+            labels=labels,
             creationTime=now_ts,
         ),
         signatures=[],
@@ -190,6 +205,7 @@ def main():
     create_parser.add_argument('--version', default=None)
     create_parser.add_argument('--provider', default=None)
     create_parser.add_argument('--ocm-repo', default=None)
+    create_parser.add_argument('--label', dest='labels', action='append', default=[])
     create_parser.add_argument('--out', '-o', default='-')
     create_parser.set_defaults(callable=create)
 
