@@ -28,6 +28,8 @@ setuptools.setup(
     name='ocm-lib',
     version=version(),
     description='Open-Component-Model (OCM) language bindings',
+    long_description='Open-Component_model (OCM) language bindings',
+    long_description_content_type='text/markdown',
     python_requires='>=3.11',
     py_modules=modules(),
     packages=('ocm',),
