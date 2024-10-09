@@ -196,6 +196,11 @@ jobs:
         with:
           name: distribution-packages
           path: /tmp/dist
+      - name: Retrieve Linting Logs
+        uses: actions/download-artifact@v4
+        with:
+          name: linting-logs # targetpath: bandit.tar.gz
+
       - name: Google-Auth
         id: auth
         uses: google-github-actions/auth@v2
@@ -295,6 +300,35 @@ jobs:
           python3 -m ocm append resource \
             --file component-descriptor.yaml
 
+          echo "adding linting-evidence resource"
+          linting_evidence=bandit.tar.gz
+          linting_digest=$(sha256sum ${linting_evidence} | cut -d' ' -f1)
+          cp bandit.tar.gz /tmp/dist/blobs.d/${linting_digest}
+
+          cat << EOF > linting_evidence.ocm-resource
+          name: sast-linting-evidence
+          version: ${version}
+          type: application/gzip
+          relation: local
+          access:
+            type: localBlob
+            localReference: sha256:${linting_digest}
+            size: $(stat -c"%s" ${linting_evidence})
+          labels:
+            - name: gardener.cloud/purposes
+              value:
+                - lint
+                - sast
+                - pybandit
+            - name: gardener.cloud/comment
+              value: |
+                we use bandit (linter) for SAST scans
+                see: https://bandit.readthedocs.io/en/latest/
+          EOF
+          cat linting_evidence.ocm-resource | \
+          python3 -m ocm append resource \
+            --file component-descriptor.yaml
+
           echo "${{ needs.images.outputs.ocm_resources }}" | base64 -d > oci_ocm_resources.yaml
 
           cat oci_ocm_resources.yaml | \
@@ -360,7 +394,19 @@ jobs:
         fi
 
         echo "running linters"
-        .ci/lint
+        bandit_logfile=bandit.log
+        bandit_evidence=bandit.tar.gz
+
+        bandit_extra_args="-f txt -o ${bandit_logfile}" \
+          .ci/lint
+
+        # pass bandit.log + used cfg (pyproject.toml) as evidence
+        tar czf $bandit_evidence $bandit_logfile pyproject.toml
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: linting-logs
+        path: bandit.tar.gz
 
   unittests:
     needs:
