@@ -376,7 +376,11 @@ jobs:
     - name: lint
       run: |
         echo "install dependencies for python-packages"
-        apk add --no-cache $(cat gardener-cicd-libs.apk-packages)
+        if ! apk add --no-cache $(cat gardener-cicd-libs.apk-packages) >/tmp/apk.log; then
+          echo "error while trying to install apk-packages:"
+          cat /tmp/apk.log
+          exit 1
+        fi
         echo "installing linters"
         if ! pip3 install --upgrade --break-system-packages \
           --find-links /tmp/dist \
