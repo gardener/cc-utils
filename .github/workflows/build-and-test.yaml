@@ -117,13 +117,14 @@ jobs:
         version=${{ needs.version.outputs.setuptools_version }}
         echo "version: ${version}"
         echo "${version}" | .ci/write-version
-        pkg_dir="dist"
+        pkg_dir=dist
         mkdir -p ${pkg_dir}
+        pkg_dir="$(readlink -f dist)"
+        echo "pkgdir: ${pkg_dir}"
         for path in \
           setup.py \
           setup.oci.py \
           setup.whd.py \
-          cli/setup.py \
         ; do
          echo "building distribution package from ${path}"
          python3 ${path} \
@@ -131,6 +132,16 @@ jobs:
             bdist_wheel \
             --dist-dir ${pkg_dir}
         done
+
+        # special-case: cli-package (need to chdir in order to not confuse setuptools)
+        (
+          cd cli
+          python3 setup.py \
+            sdist \
+            bdist_wheel \
+            --dist-dir ${pkg_dir}
+        )
+
         echo "Built packages"
         ls "${pkg_dir}"
         blobs_dir="${pkg_dir}/blobs.d"
