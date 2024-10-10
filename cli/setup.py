@@ -11,11 +11,6 @@ def requirements():
 
 def modules():
     return []
-    return [
-        os.path.basename(os.path.splitext(module)[0]) for module in
-        os.scandir(path=own_dir)
-        if module.is_file() and module.name.endswith('.py')
-    ]
 
 
 def version():
