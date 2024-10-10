@@ -229,7 +229,7 @@ jobs:
           workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
       - name: Create Release and Bump-Commits
         id: releasecommit
-        if: ${{ needs.params.outputs.release == "true" }}
+        if: ${{ needs.params.outputs.release == true }}
         run: |
           echo "gha-creds*" >> .git/info/exclude
           git config --global --add safe.directory /__w/cc-utils/cc-utils
@@ -475,7 +475,7 @@ jobs:
         .ci/test
 
   pypi:
-    if: ${{ needs.params.outputs.release_to_pypi == "true" }}
+    if: ${{ needs.params.outputs.release_to_pypi == true }}
     runs-on: ubuntu-latest
     name: Publish to PYPI
     needs:
