@@ -212,6 +212,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: linting-logs # targetpath: bandit.tar.gz
+          path: /tmp/linting-logs
 
       - name: Google-Auth
         id: auth
@@ -313,9 +314,9 @@ jobs:
             --file component-descriptor.yaml
 
           echo "adding linting-evidence resource"
-          linting_evidence=bandit.tar.gz
+          linting_evidence=/tmp/linting-logs/bandit.tar.gz
           linting_digest=$(sha256sum ${linting_evidence} | cut -d' ' -f1)
-          cp bandit.tar.gz /tmp/dist/blobs.d/${linting_digest}
+          cp ${linting_evidence} /tmp/dist/blobs.d/${linting_digest}
 
           cat << EOF > linting_evidence.ocm-resource
           name: sast-linting-evidence
