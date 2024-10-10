@@ -9,10 +9,6 @@ def requirements():
     yield f'gardener-cicd-libs=={version()}'
 
 
-def modules():
-    return []
-
-
 def version():
     with open(os.path.join(own_dir, 'gardener_ci', 'VERSION')) as f:
         return f.read().strip()
@@ -31,8 +27,8 @@ setuptools.setup(
     long_description='Gardener CI/CD Command Line Interface',
     long_description_content_type='text/markdown',
     python_requires='>=3.11',
-    py_modules=modules(),
-    packages=setuptools.find_packages(),
+    py_modules=[],
+    packages=['gardener_ci'],
     package_data={
         'gardener_ci': ['VERSION'],
     },
