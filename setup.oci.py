@@ -39,4 +39,7 @@ setuptools.setup(
     install_requires=list(requirements()),
     entry_points={
     },
+    extras_require={
+        'async': ['aiohttp'],
+    },
 )

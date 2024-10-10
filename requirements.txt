@@ -2,6 +2,7 @@
 GitPython
 Mako<2.0.0
 Sphinx
+aiohttp
 aliyun-python-sdk-core
 aliyun-python-sdk-ecs
 aliyun-python-sdk-ram
