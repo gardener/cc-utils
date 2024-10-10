@@ -17,8 +17,6 @@ jobs:
   params:
     runs-on: ubuntu-latest
     outputs:
-      release: ${{ steps.params.outputs.release }}
-      release_to_pypi: ${{ steps.params.outputs.release_to_pypi }}
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
       oci_repository: ${{ steps.params.outputs.oci_repository }}
       oci_platforms: ${{ steps.params.outputs.oci_platforms }}
@@ -38,29 +36,14 @@ jobs:
             # XXX this is a debugging / testing artefact
             ocm_repository=${releases_repo}
             oci_repository=${releases_repo}
-            release=true
-            release_to_pypi=true
           else
             ocm_repository=${snapshots_repo}
             oci_repository=${snapshots_repo}
-            release=false
-            release_to_pypi=false
           fi
-
-          if ! ${release} && ${release_to_pypi}; then
-            echo "Error: release_to_pypi must only be done in conjunction with release"
-            exit 1
-          fi
-
-          echo "release: ${release}"
-          echo "release_to_pypi: ${release_to_pypi}"
 
           echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_repository=${oci_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
-
-          echo "release=${release}" >> "${GITHUB_OUTPUT}"
-          echo "release_to_pypi=${release_to_pypi}" >> "${GITHUB_OUTPUT}"
 
           echo "gcp_project=gardener-project" >> "${GITHUB_OUTPUT}"
           echo "service_account=ocm-ci-opensource@gardener-project.iam.gserviceaccount.com" \
@@ -229,7 +212,7 @@ jobs:
           workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
       - name: Create Release and Bump-Commits
         id: releasecommit
-        if: ${{ needs.params.outputs.release == true }}
+        if: ${{ inputs.release }}
         run: |
           echo "gha-creds*" >> .git/info/exclude
           git config --global --add safe.directory /__w/cc-utils/cc-utils
@@ -286,7 +269,7 @@ jobs:
             }' \
             > component-descriptor.yaml
 
-          if ${{ needs.params.outputs.release }}; then
+          if ${{ inputs.release || false }}; then
             commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
           else
             commit_digest=${{ github.sha }}
@@ -475,7 +458,7 @@ jobs:
         .ci/test
 
   pypi:
-    if: ${{ needs.params.outputs.release_to_pypi == true }}
+    if: ${{ inputs.release-to-pypi }}
     runs-on: ubuntu-latest
     name: Publish to PYPI
     needs:
