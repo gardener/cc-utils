@@ -36,7 +36,7 @@ def packages():
     # remove packages (distributed via separate distribution-packages)
     package_names.remove('whd')
     package_names.remove('oci')
-    package_names.remove('ocm') # todo: exempt once setup.ocm.py is instrumented
+    # package_names.remove('ocm') # todo: exempt once setup.ocm.py is instrumented
     return package_names
 
 
