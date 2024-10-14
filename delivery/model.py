@@ -13,7 +13,9 @@ def _parse_datetime_if_present(date: str):
     return dateutil.parser.isoparse(date)
 
 
-def _parse_date_if_present(date: str):
+def _parse_date_if_present(date: str | bool) -> datetime.date | bool | None:
+    if isinstance(date, bool):
+        return date
     if not date:
         return None
     return dateutil.parser.isoparse(date).date()
@@ -68,7 +70,7 @@ class OsReleaseInfo:
     name: str
     reached_eol: bool
     greatest_version: str | None = None
-    eol_date: datetime.date | None = None
+    eol_date: datetime.date | bool | None = None
 
     @property
     def parsed_version(self) -> awesomeversion.AwesomeVersion:
@@ -80,7 +82,7 @@ class OsReleaseInfo:
             data_class=OsReleaseInfo,
             data=raw,
             config=dacite.Config(
-                type_hooks={datetime.date | None: _parse_date_if_present},
+                type_hooks={datetime.date | bool | None: _parse_date_if_present},
             ),
         )
 
