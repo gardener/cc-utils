@@ -204,13 +204,14 @@ for mapping in helmchart_cfg.mappings:
   resource_name, ref_name = mapping.referenced_resource_and_attribute
   attrs_by_resource[resource_name][ref_name] = mapping.attribute
 %>
+mappings = []
 %  for resource_name, attribute_mappings in attrs_by_resource.items():
-mappings = {
+mappings.append({
   'resource': {'name': '${resource_name}'},
 %   for ref, attr in attribute_mappings.items():
   '${ref}': '${attr}',
 %   endfor
-}
+})
 %  endfor
 mapping_root = {
   'imageMapping': mappings,
