@@ -188,7 +188,7 @@ class ArtefactType(enum.StrEnum):
     GIT = 'git'
     OCI_IMAGE = 'ociImage'
     OCI_ARTEFACT = 'ociArtifact/v1'
-    HELM_CHART = 'helmChart/v1'
+    HELM_CHART = 'helmChart'
     BLOB = 'blob/v1'
     DIRECTORY_TREE = 'directoryTree'
 
@@ -202,7 +202,7 @@ ArtefactType._value2member_map_ |= {
     'git/v1': ArtefactType.GIT,
     'ociImage/v1': ArtefactType.OCI_IMAGE,
     'ociImage': ArtefactType.OCI_IMAGE,
-    'helmChart': ArtefactType.HELM_CHART,
+    'helmChart/v1': ArtefactType.HELM_CHART,
 }
 
 
