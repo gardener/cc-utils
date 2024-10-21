@@ -64,6 +64,36 @@ def iref():
     return image_ref
 
 
+def test_componentdiff_to_str(cid):
+    diff = cnudie.util.ComponentDiff(
+        cidentities_only_left=(cid(name='a', version='1.0.0'), cid(name='b', version='2.0.0')),
+        cidentities_only_right=(cid(name='c', version='3.0.0'),),  # added
+        cpairs_version_changed=[
+            (comp('d', '1.0.0'), comp('d', '2.0.0'))  # changed
+        ],
+        names_only_left={'a', 'b'},
+        names_only_right={'c'},
+        names_version_changed={'d'},
+    )
+    result = cnudie.util.format_component_diff(
+        component_diff=diff,
+        delivery_dashboard_url_view_diff=None,
+        delivery_dashboard_url=None,
+    )
+
+    max_length = 10
+    if len(result) > max_length:
+        truncated_result = result[:result.find('## Component Details:')]
+        truncated_result += '\n... [Component details omitted]\n'
+        body = truncated_result
+    else:
+        body = result
+
+    assert '### Added Components:' in body
+    assert '... [Component details omitted]' in body
+    assert '## Component Details:' not in body
+
+
 def test_iter_sorted():
     def cref(component: ocm.Component):
         return ocm.ComponentReference(

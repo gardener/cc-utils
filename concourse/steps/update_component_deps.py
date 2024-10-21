@@ -13,6 +13,7 @@ import github3.repos.repo
 import ccc.github
 import ci.util
 import cnudie.util
+import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
@@ -392,6 +393,7 @@ def create_upgrade_pr(
     merge_method: ucd.MergeMethod,
     version_lookup,
     component_descriptor_lookup,
+    delivery_dashboard_url: str=None,
     after_merge_callback=None,
     container_image:str=None,
     pullrequest_body_suffix: str=None,
@@ -409,6 +411,35 @@ def create_upgrade_pr(
         absent_ok=False,
     )
     from_component = from_component_descriptor.component
+
+    to_component_descriptor = component_descriptor_lookup(
+        ocm.ComponentIdentity(
+            name=to_ref.componentName,
+            version=to_version,
+        )
+    )
+
+    to_component = to_component_descriptor.component
+
+    bom_diff = cnudie.retrieve.component_diff(
+        from_component,
+        to_component
+    )
+
+    if delivery_dashboard_url:
+        delivery_dashboard_url_view_diff = (
+            f'{delivery_dashboard_url}/#/component?name={to_component.name}&view=diff'
+            f'&componentDiff={from_component.name}:{from_component.version}'
+            f':{to_component.name}:{to_component.version}'
+        )
+    else:
+        delivery_dashboard_url_view_diff = None
+
+    formatted_diff = cnudie.util.format_component_diff(
+        component_diff=bom_diff,
+        delivery_dashboard_url_view_diff=delivery_dashboard_url_view_diff,
+        delivery_dashboard_url=delivery_dashboard_url
+    )
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -503,19 +534,32 @@ def create_upgrade_pr(
             '\n\nRelease notes were shortened since they exceeded the maximum length allowed for a '
             'pull request body. The remaining release notes will be added as comments to this PR.'
         )
-        if max_pr_body_length < len(release_notes):
-            step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
+        additional_notes = []
+        # Split the formatted_diff if it exceeds max body length (line-by-line)
+        if len(formatted_diff) > max_pr_body_length:
+            truncated_diff = formatted_diff[:formatted_diff.find('## Component Details:')]
+            truncated_diff += '\n... [Component details omitted]\n'
+
+            pr_body = truncated_diff + max_body_length_exceeded_remark
+        else:
+            pr_body = formatted_diff
+
+        available_length = max_pr_body_length - len(pr_body)
+
+        if available_length < len(release_notes):
+            step_size = available_length - len(max_body_length_exceeded_remark)
             split_release_notes = [
-                release_notes[start:start+step_size]
+                release_notes[start:start + step_size]
                 for start in range(0, len(release_notes), step_size)
             ]
         else:
             split_release_notes = [release_notes]
 
-        if not (additional_notes := split_release_notes[1:]):
-            pr_body = split_release_notes[0]
+        if len(split_release_notes) > 1:
+            pr_body += max_body_length_exceeded_remark
+            additional_notes = split_release_notes
         else:
-            pr_body = split_release_notes[0] + max_body_length_exceeded_remark
+            pr_body += '\n\n' + split_release_notes[0]
     else:
         pr_body = ''
         additional_notes = []
