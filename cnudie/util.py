@@ -220,21 +220,7 @@ def oci_artefact_reference(
             raise TypeError("If a tuple is given as component, it must contain two strings.")
         component_name, component_version = component
     else:
-        # workaround: fallback to (deprecated) gci.componentmodel
-        try:
-            import gci.componentmodel
-            if isinstance(component, gci.componentmodel.Component):
-                if not ocm_repository:
-                    ocm_repository = component.current_ocm_repo
-                    ocm_repository = ocm.OciOcmRepository(
-                        baseUrl=ocm_repository.baseUrl,
-                    )
-                component_name = component.name
-                component_version = component.version
-            else:
-                raise TypeError(type(component))
-        except ImportError:
-            raise TypeError(type(component))
+        raise ValueError(component)
 
     if not ocm_repository:
         raise ValueError('ocm_repository must be given unless a Component is passed.')

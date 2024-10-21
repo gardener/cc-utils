@@ -108,13 +108,7 @@ def upload_component_descriptor(
         )
 
     component = component_descriptor.component
-
-    schema_version = component_descriptor.meta.schemaVersion
-    if isinstance(schema_version, enum.Enum):
-        # hack: convert from gci.componentmodel
-        schema_version = ocm.SchemaVersion(schema_version.value)
-    else:
-        schema_version = ocm.SchemaVersion(schema_version)
+    schema_version = ocm.SchemaVersion(component_descriptor.meta.schemaVersion)
 
     if not schema_version is ocm.SchemaVersion.V2:
         raise RuntimeError(f'unsupported component-descriptor-version: {schema_version=}')
