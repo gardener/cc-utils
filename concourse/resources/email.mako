@@ -16,7 +16,6 @@ from makoutil import indent_func
 
 concourse_cfg = cfg_set.concourse()
 node_cfg = concourse_cfg.worker_node_cfg
-platform = node_cfg.default_platform
 %>
 - task: '${job_step.name}.failed'
   config:
@@ -28,7 +27,7 @@ platform = node_cfg.default_platform
 % for key, value in env_vars.items():
       ${key}: ${value}
 % endfor
-    ${task_image_defaults(cfg_set.container_registry(), platform=platform, indent=4)}
+    ${task_image_defaults(cfg_set.container_registry(), indent=4)}
     run:
       path: /usr/bin/env
       args:

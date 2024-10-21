@@ -376,7 +376,6 @@ else:
 % else:
     ${task_image_defaults(
       registry_cfg=default_container_registry,
-      platform=job_step.platform,
       indent=4,
     )}
 % endif
