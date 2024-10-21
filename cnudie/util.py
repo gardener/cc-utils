@@ -1,6 +1,7 @@
 import collections.abc
 import dataclasses
 import graphlib
+import textwrap
 
 import ci.util
 import ocm
@@ -397,6 +398,142 @@ def diff_components(
         names_only_left=left_component_names,
         names_only_right=right_component_names,
         names_version_changed=names_version_changed,
+    )
+
+
+def format_component_diff(
+    component_diff: ComponentDiff,
+    delivery_dashboard_url_view_diff: str | None=None,
+    delivery_dashboard_url: str | None=None
+):
+    if delivery_dashboard_url_view_diff:
+        bom_diff_header = f'## <a href="{delivery_dashboard_url_view_diff}">BoM Diff</a>\n'
+    else:
+        bom_diff_header = '## BoM Diff\n'
+
+    added_components = [
+        f'\U00002795 {component.name} {component.version}'
+        for component in component_diff.cidentities_only_right
+        if component.name not in component_diff.names_version_changed
+    ]
+
+    removed_components = [
+        f'\U00002796 {component.name} {component.version}'
+        for component in component_diff.cidentities_only_left
+        if component.name not in component_diff.names_version_changed
+    ]
+
+    changed_components = [
+        f'\U00002699 {new_component.name}: {old_component.version} → {new_component.version}'
+        for old_component, new_component in component_diff.cpairs_version_changed
+    ]
+
+    summary_counts = textwrap.dedent(f'''\
+        Added components: {len(added_components)}
+        Changed components: {len(changed_components)}
+        Removed components: {len(removed_components)}\n
+    ''')
+
+    summary_details = []
+    if added_components:
+        summary_details.append('### Added Components:\n' + '\n'.join(added_components) + '\n')
+
+    if removed_components:
+        summary_details.append('### Removed Components:\n' + '\n'.join(removed_components) + '\n')
+
+    if changed_components:
+        summary_details.append('### Changed Components:\n' + '\n'.join(changed_components) + '\n')
+
+    component_details = []
+    for old_component, new_component in component_diff.cpairs_version_changed:
+        if delivery_dashboard_url:
+            component_link = (
+                f"<a href='{delivery_dashboard_url}/#/component?name={new_component.name}'>"
+                f'{new_component.name}</a>'
+            )
+        else:
+            component_link = new_component.name
+
+        component_header = (
+            f'<details><summary>\U00002699 {component_link}:'
+            f'{old_component.version} → {new_component.version}</summary>\n'
+        )
+
+        added_resources = []
+        removed_resources = []
+        changed_resources = []
+
+        # Group resources by name
+        old_resources_grouped = {}
+        new_resources_grouped = {}
+
+        for res in old_component.resources:
+            old_resources_grouped.setdefault(res.name, []).append(res)
+
+        for res in new_component.resources:
+            new_resources_grouped.setdefault(res.name, []).append(res)
+
+        # Process each resource in the new component
+        for res_name, new_res_list in new_resources_grouped.items():
+            old_res_list = old_resources_grouped.get(res_name, [])
+
+            if (
+                old_res_list
+                and sorted([res.version for res in old_res_list])
+                == sorted([res.version for res in new_res_list])
+            ):
+                # Skip resource as all versions are identical in both the old and new components
+                continue
+
+            if len(new_res_list) == 1 and len(old_res_list) == 1:
+                # Single occurrence in both -> Compare versions
+                new_res = new_res_list[0]
+                old_res = old_res_list[0]
+                if new_res.version != old_res.version:
+                    changed_resources.append(
+                        [f'\U0001F504 {res_name}', f'{old_res.version} → {new_res.version}']
+                    )
+            else:
+                # Multiple occurrences -> Display all versions for each resource name
+                if old_res_list:
+                    removed_resources.extend(
+                        [[f'\U00002796 {res_name}', res.version] for res in old_res_list]
+                    )
+                if new_res_list:
+                    added_resources.extend(
+                        [[f'\U00002795 {res_name}', res.version] for res in new_res_list]
+                    )
+
+        # Process resources that only exist in the old component
+        for res_name, old_res_list in old_resources_grouped.items():
+            if res_name not in new_resources_grouped:
+                removed_resources.extend(
+                    [[f'\U00002796 {res_name}', res.version] for res in old_res_list]
+                )
+
+        # Aggregate results for resources into `resources_data`
+        if not (added_resources or removed_resources or changed_resources):
+            resources_data = [['No resources added, removed, or changed', '']]
+        else:
+            resources_data = added_resources + removed_resources + changed_resources
+
+        #Import `tabulate` only when the function is called to avoid loading it during module import
+        import tabulate
+        # Generate HTML table with tabulate
+        resources_table = tabulate.tabulate(
+            tabular_data=resources_data,
+            headers=['Resource', 'Version Change'],
+            tablefmt='html'
+        )
+
+        component_details.append(component_header + resources_table + '\n</details>')
+
+    return (
+        bom_diff_header
+        + summary_counts
+        + '\n'.join(summary_details)
+        + '\n## Component Details:\n'
+        + '\n'.join(component_details)
     )
 
 

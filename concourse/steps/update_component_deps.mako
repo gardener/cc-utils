@@ -144,6 +144,10 @@ os.environ['DOCKERD_STARTED'] = 'no'
 import textwrap
 % endif
 
+cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
+delivery_endpoints_cfg = cfg_set.delivery_endpoints()
+delivery_dashboard_url = delivery_endpoints_cfg.dashboard_url()
+
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
     upstream_component_name=upstream_component_name,
@@ -183,6 +187,7 @@ for from_ref, to_version in determine_upgrade_prs(
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
         component_descriptor_lookup=ocm_lookup,
+        delivery_dashboard_url=delivery_dashboard_url,
         version_lookup=version_lookup,
         merge_policy=merge_policy,
         merge_method=merge_method,
