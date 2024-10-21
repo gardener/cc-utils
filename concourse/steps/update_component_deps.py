@@ -13,6 +13,7 @@ import github3.repos.repo
 import ccc.github
 import ci.util
 import cnudie.util
+import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
@@ -377,6 +378,125 @@ def _import_release_notes(
     return release_notes
 
 
+def format_bom_diff(component_diff, include_internal_links=False):
+    changed_components = []
+    added_components = []
+    removed_components = []
+    changed_versions = []
+
+    if (hasattr(component_diff, 'cidentities_only_left') and
+        hasattr(component_diff, 'cidentities_only_right')):
+        left_components = component_diff.cidentities_only_left
+        right_components = component_diff.cidentities_only_right
+
+        for component_identity in left_components:
+            matching_component = next((comp for comp in right_components
+                                       if comp.name == component_identity.name), None)
+            if matching_component:
+                if matching_component.version != component_identity.version:
+                    changed_versions.append(
+                        f'🔄 {component_identity.name}:'
+                        f'{component_identity.version} → {matching_component.version}'
+                    )
+            else:
+                removed_components.append(
+                    f"➖ {component_identity.name} (v{component_identity.version})"
+                )
+
+        for component_identity in right_components:
+            matching_component = next((comp for comp in left_components
+                                       if comp.name == component_identity.name), None)
+            if not matching_component:
+                added_components.append(
+                    f"➕ {component_identity.name} (v{component_identity.version})"
+                )
+
+    summary_details = []
+    if removed_components:
+        summary_details.append('### Removed Components:\n' + '\n'.join(removed_components) + '\n')
+    else:
+        summary_details.append('### Removed Components:\nNo components removed.\n')
+
+    if added_components:
+        summary_details.append('### Added Components:\n' + '\n'.join(added_components) + '\n')
+    else:
+        summary_details.append('### Added Components:\nNo components added.\n')
+
+    for old_component, new_component in component_diff.cpairs_version_changed:
+        component_name = f'{new_component.name}'
+        if include_internal_links:
+            component_link = (
+                f"<a href='https://delivery-dashboard.ci.gardener.cloud.sap/#/component?"
+                f"name={new_component.name}'>"
+                f"{component_name}</a>"
+            )
+        else:
+            component_link = component_name
+
+        component_header = (
+            f'<details><summary>⚙️ {component_link}:'
+            f'{old_component.version} → {new_component.version}</summary>\n')
+
+        resources_details = []
+        resources_details.append("<table>")
+        resources_details.append("<tr><th>Resource</th><th>Version Change</th></tr>")
+
+        unchanged_resources = []
+        added_resources = []
+        removed_resources = []
+        changed_resources = []
+
+        for new_resource in new_component.resources:
+            matching_old_resource = next(
+                (old_resource for old_resource in old_component.resources
+                if old_resource.name == new_resource.name), None
+            )
+
+            if matching_old_resource:
+                if matching_old_resource.version != new_resource.version:
+                    changed_resources.append(
+                        f'<tr><td>🔄 {new_resource.name}</td>'
+                        f'<td>{matching_old_resource.version} → {new_resource.version}</td></tr>'
+                    )
+                else:
+                    unchanged_resources.append(
+                        f'<tr><td>{new_resource.name}</td>'
+                        f'<td>{new_resource.version} (unchanged)</td></tr>'
+                    )
+            else:
+                added_resources.append(
+                    f'<tr><td>➕ {new_resource.name}</td>'
+                    f'<td>{new_resource.version} (added)</td></tr>'
+                )
+
+        for old_resource in old_component.resources:
+            if not any(new_resource.name == old_resource.name
+            for new_resource in new_component.resources):
+                removed_resources.append(
+                    f'<tr><td>➖ {old_resource.name}</td>'
+                    f'<td>{old_resource.version} (removed)</td></tr>'
+                )
+
+        resources_details.extend(unchanged_resources)
+        resources_details.extend(added_resources)
+        resources_details.extend(removed_resources)
+        resources_details.extend(changed_resources)
+
+        if (not added_resources and not removed_resources and
+            not changed_resources and not unchanged_resources):
+            resources_details.append("<tr><td colspan='2'>No changes</td></tr>")
+
+        resources_details.append("</table>")
+
+        component_details = component_header + "\n".join(resources_details) + "\n</details>"
+
+        changed_components.append(component_details)
+
+    bom_diff_str = ("\n".join(summary_details) + "\n## Component Details:\n" +
+                    "\n".join(changed_components))
+    return bom_diff_str
+
+
 def create_upgrade_pr(
     component: ocm.Component,
     from_ref: ocm.ComponentReference,
@@ -409,6 +529,22 @@ def create_upgrade_pr(
         absent_ok=False,
     )
     from_component = from_component_descriptor.component
+
+    to_component_descriptor = component_descriptor_lookup(
+        ocm.ComponentIdentity(
+            name=to_ref.componentName,
+            version=to_version,
+        )
+    )
+
+    to_component = to_component_descriptor.component
+
+    bom_diff = cnudie.retrieve.component_diff(
+        from_component,
+        to_component
+    )
+
+    formatted_diff = format_bom_diff(bom_diff, True)
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -503,7 +639,12 @@ def create_upgrade_pr(
             '\n\nRelease notes were shortened since they exceeded the maximum length allowed for a '
             'pull request body. The remaining release notes will be added as comments to this PR.'
         )
-        if max_pr_body_length < len(release_notes):
+
+        formatted_diff_length = len(f'## BoM Diff:\n{formatted_diff}\n\n')
+
+        available_length = max_pr_body_length - formatted_diff_length
+
+        if available_length < len(release_notes):
             step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
             split_release_notes = [
                 release_notes[start:start+step_size]
@@ -519,6 +660,12 @@ def create_upgrade_pr(
     else:
         pr_body = ''
         additional_notes = []
+
+    dashboard_url = (
+        f'https://delivery-dashboard.ci.gardener.cloud.sap/#/'
+        f'component?name={to_component.name}&view=diff'
+    )
+    pr_body = f'## <a href="{dashboard_url}">BoM Diff</a>:\n{formatted_diff}\n\n' + pr_body
 
     if pullrequest_body_suffix:
         pr_body += f'\n{pullrequest_body_suffix}'
