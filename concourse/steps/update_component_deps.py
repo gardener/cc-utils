@@ -6,6 +6,8 @@ import tempfile
 import time
 import traceback
 
+import tabulate
+
 import ocm
 import github3.exceptions
 import github3.repos.repo
@@ -16,6 +18,7 @@ import cnudie.util
 import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
+import ctx
 import dockerutil
 import dso.labels
 import github.util as gu
@@ -378,70 +381,116 @@ def _import_release_notes(
     return release_notes
 
 
-def format_bom_diff(component_diff, include_internal_links=False):
-    changed_components = []
+def format_bom_diff(
+    component_diff: cnudie.util.ComponentDiff,
+    to_component_name: str
+):
+    class ComponentChange:
+        def __init__(self, name, old_version=None, new_version=None, change_type=None):
+            self.name = name
+            self.old_version = old_version
+            self.new_version = new_version
+            self.change_type = change_type  # 'added', 'removed', 'changed'
+
+        def __str__(self):
+            if self.change_type == 'changed':
+                return f"\U00002699 {self.name}: {self.old_version} → {self.new_version}"
+            elif self.change_type == 'removed':
+                return f"\U00002796 {self.name} (v{self.old_version})"
+            elif self.change_type == 'added':
+                return f"\U00002795 {self.name} (v{self.new_version})"
+            return ""
+
+    cfg_factory = ctx.cfg_factory()
+    cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
+    delivery_endpoints_cfg = cfg_set.delivery_endpoints()
+
+    delivery_base_url = delivery_endpoints_cfg.dashboard_url()
+
+    if delivery_base_url:
+        dashboard_view_diff = f'{delivery_base_url}/#/component?name={to_component_name}&view=diff'
+        bom_diff_header = f'## <a href="{dashboard_view_diff}">BoM Diff</a>\n'
+    else:
+        bom_diff_header = '## BoM Diff\n'
+
     added_components = []
     removed_components = []
-    changed_versions = []
+    changed_components = []
 
-    if (hasattr(component_diff, 'cidentities_only_left') and
-        hasattr(component_diff, 'cidentities_only_right')):
-        left_components = component_diff.cidentities_only_left
-        right_components = component_diff.cidentities_only_right
+    left_components = component_diff.cidentities_only_left
+    right_components = component_diff.cidentities_only_right
 
-        for component_identity in left_components:
-            matching_component = next((comp for comp in right_components
-                                       if comp.name == component_identity.name), None)
-            if matching_component:
-                if matching_component.version != component_identity.version:
-                    changed_versions.append(
-                        f'🔄 {component_identity.name}:'
-                        f'{component_identity.version} → {matching_component.version}'
-                    )
-            else:
-                removed_components.append(
-                    f"➖ {component_identity.name} (v{component_identity.version})"
+    # Process removed and changed components
+    for component_identity in left_components:
+        matching_component = next(
+            (comp for comp in right_components if comp.name == component_identity.name), None
+        )
+        if matching_component:
+            if matching_component.version != component_identity.version:
+                changed_components.append(
+                    ComponentChange(
+                        name=component_identity.name,
+                        old_version=component_identity.version,
+                        new_version=matching_component.version,
+                        change_type='changed')
                 )
+        else:
+            removed_components.append(
+                ComponentChange(
+                    name=component_identity.name,
+                    old_version=component_identity.version,
+                    change_type='removed')
+            )
 
-        for component_identity in right_components:
-            matching_component = next((comp for comp in left_components
-                                       if comp.name == component_identity.name), None)
-            if not matching_component:
-                added_components.append(
-                    f"➕ {component_identity.name} (v{component_identity.version})"
-                )
+    # Process added components
+    for component_identity in right_components:
+        matching_component = next(
+            (comp for comp in left_components if comp.name == component_identity.name), None
+        )
+        if not matching_component:
+            added_components.append(
+                ComponentChange(
+                    name=component_identity.name,
+                    new_version=component_identity.version,
+                    change_type='added')
+            )
 
+    # Create summary
     summary_details = []
     if removed_components:
-        summary_details.append('### Removed Components:\n' + '\n'.join(removed_components) + '\n')
+        summary_details.append('### Removed Components:\n' + '\n'
+                               .join(str(c) for c in removed_components) + '\n')
     else:
         summary_details.append('### Removed Components:\nNo components removed.\n')
 
     if added_components:
-        summary_details.append('### Added Components:\n' + '\n'.join(added_components) + '\n')
+        summary_details.append('### Added Components:\n' + '\n'
+                               .join(str(c) for c in added_components) + '\n')
     else:
         summary_details.append('### Added Components:\nNo components added.\n')
 
+    if changed_components:
+        summary_details.append('### Changed Components:\n' + '\n'
+                               .join(str(c) for c in changed_components) + '\n')
+    else:
+        summary_details.append('### Changed Components:\nNo components changed.\n')
+
+    component_details = []
     for old_component, new_component in component_diff.cpairs_version_changed:
         component_name = f'{new_component.name}'
-        if include_internal_links:
+        if delivery_base_url:
             component_link = (
-                f"<a href='https://delivery-dashboard.ci.gardener.cloud.sap/#/component?"
-                f"name={new_component.name}'>"
+                f"<a href='{delivery_base_url}/#/component?name={new_component.name}'>"
                 f"{component_name}</a>"
             )
         else:
             component_link = component_name
 
         component_header = (
-            f'<details><summary>⚙️ {component_link}:'
+            f'<details><summary>\U00002699 {component_link}:'
             f'{old_component.version} → {new_component.version}</summary>\n')
 
-        resources_details = []
-        resources_details.append("<table>")
-        resources_details.append("<tr><th>Resource</th><th>Version Change</th></tr>")
-
-        unchanged_resources = []
+        # Sort resources into categories: added, removed and changed
         added_resources = []
         removed_resources = []
         changed_resources = []
@@ -449,51 +498,42 @@ def format_bom_diff(component_diff, include_internal_links=False):
         for new_resource in new_component.resources:
             matching_old_resource = next(
                 (old_resource for old_resource in old_component.resources
-                if old_resource.name == new_resource.name), None
+                 if old_resource.name == new_resource.name), None
             )
 
             if matching_old_resource:
                 if matching_old_resource.version != new_resource.version:
                     changed_resources.append(
-                        f'<tr><td>🔄 {new_resource.name}</td>'
-                        f'<td>{matching_old_resource.version} → {new_resource.version}</td></tr>'
-                    )
-                else:
-                    unchanged_resources.append(
-                        f'<tr><td>{new_resource.name}</td>'
-                        f'<td>{new_resource.version} (unchanged)</td></tr>'
-                    )
+                        [f"\U0001F504 {new_resource.name}",
+                         f'{matching_old_resource.version} → {new_resource.version}'])
             else:
                 added_resources.append(
-                    f'<tr><td>➕ {new_resource.name}</td>'
-                    f'<td>{new_resource.version} (added)</td></tr>'
-                )
+                    [f"\U00002795 {new_resource.name}",
+                     f'{new_resource.version} (added)'])
 
         for old_resource in old_component.resources:
             if not any(new_resource.name == old_resource.name
-            for new_resource in new_component.resources):
+                       for new_resource in new_component.resources):
                 removed_resources.append(
-                    f'<tr><td>➖ {old_resource.name}</td>'
-                    f'<td>{old_resource.version} (removed)</td></tr>'
-                )
+                    [f"\U00002796 {old_resource.name}",
+                     f'{old_resource.version} (removed)'])
 
-        resources_details.extend(unchanged_resources)
-        resources_details.extend(added_resources)
-        resources_details.extend(removed_resources)
-        resources_details.extend(changed_resources)
+        if not (added_resources or removed_resources or changed_resources):
+            resources_data = [['No resources added, removed or changed', '']]
+        else:
+            resources_data = added_resources + removed_resources + changed_resources
 
-        if (not added_resources and not removed_resources and
-            not changed_resources and not unchanged_resources):
-            resources_details.append("<tr><td colspan='2'>No changes</td></tr>")
+        # Create the table using tabulate, with html format
+        resources_table = tabulate.tabulate(
+            tabular_data=resources_data,
+            headers=["Resource", "Version Change"],
+            tablefmt="html"
+        )
 
-        resources_details.append("</table>")
+        component_details.append(component_header + resources_table + "\n</details>")
 
-        component_details = component_header + "\n".join(resources_details) + "\n</details>"
-
-        changed_components.append(component_details)
-
-    bom_diff_str = ("\n".join(summary_details) + "\n## Component Details:\n" +
-                    "\n".join(changed_components))
+    bom_diff_str = (bom_diff_header + "\n".join(summary_details) + "\n## Component Details:\n" +
+                    "\n".join(component_details))
     return bom_diff_str
 
 
