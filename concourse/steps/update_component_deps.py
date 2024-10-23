@@ -394,12 +394,12 @@ def format_bom_diff(
 
         def __str__(self):
             if self.change_type == 'changed':
-                return f"\U00002699 {self.name}: {self.old_version} → {self.new_version}"
+                return f'\U00002699 {self.name}: {self.old_version} → {self.new_version}'
             elif self.change_type == 'removed':
-                return f"\U00002796 {self.name} (v{self.old_version})"
+                return f'\U00002796 {self.name} (v{self.old_version})'
             elif self.change_type == 'added':
-                return f"\U00002795 {self.name} (v{self.new_version})"
-            return ""
+                return f'\U00002795 {self.name} (v{self.new_version})'
+            return ''
 
     cfg_factory = ctx.cfg_factory()
     cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
@@ -481,7 +481,7 @@ def format_bom_diff(
         if delivery_base_url:
             component_link = (
                 f"<a href='{delivery_base_url}/#/component?name={new_component.name}'>"
-                f"{component_name}</a>"
+                f'{component_name}</a>'
             )
         else:
             component_link = component_name
@@ -504,18 +504,18 @@ def format_bom_diff(
             if matching_old_resource:
                 if matching_old_resource.version != new_resource.version:
                     changed_resources.append(
-                        [f"\U0001F504 {new_resource.name}",
+                        [f'\U0001F504 {new_resource.name}',
                          f'{matching_old_resource.version} → {new_resource.version}'])
             else:
                 added_resources.append(
-                    [f"\U00002795 {new_resource.name}",
+                    [f'\U00002795 {new_resource.name}',
                      f'{new_resource.version} (added)'])
 
         for old_resource in old_component.resources:
             if not any(new_resource.name == old_resource.name
                        for new_resource in new_component.resources):
                 removed_resources.append(
-                    [f"\U00002796 {old_resource.name}",
+                    [f'\U00002796 {old_resource.name}',
                      f'{old_resource.version} (removed)'])
 
         if not (added_resources or removed_resources or changed_resources):
@@ -526,14 +526,14 @@ def format_bom_diff(
         # Create the table using tabulate, with html format
         resources_table = tabulate.tabulate(
             tabular_data=resources_data,
-            headers=["Resource", "Version Change"],
-            tablefmt="html"
+            headers=['Resource', 'Version Change'],
+            tablefmt='html'
         )
 
-        component_details.append(component_header + resources_table + "\n</details>")
+        component_details.append(component_header + resources_table + '\n</details>')
 
-    bom_diff_str = (bom_diff_header + "\n".join(summary_details) + "\n## Component Details:\n" +
-                    "\n".join(component_details))
+    bom_diff_str = (bom_diff_header + '\n'.join(summary_details) + '\n## Component Details:\n' +
+                    '\n'.join(component_details))
     return bom_diff_str
 
 
@@ -584,7 +584,10 @@ def create_upgrade_pr(
         to_component
     )
 
-    formatted_diff = format_bom_diff(bom_diff, True)
+    formatted_diff = format_bom_diff(
+        component_diff=bom_diff,
+        to_component_name=to_component.name
+    )
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -680,12 +683,21 @@ def create_upgrade_pr(
             'pull request body. The remaining release notes will be added as comments to this PR.'
         )
 
-        formatted_diff_length = len(f'## BoM Diff:\n{formatted_diff}\n\n')
+        if len(formatted_diff) > max_pr_body_length:
+            split_formatted_diff = [
+                formatted_diff[start:start+max_pr_body_length]
+                for start in range(0, len(formatted_diff), max_pr_body_length)
+            ]
+            pr_body = split_formatted_diff[0]
+            additional_notes = split_formatted_diff[1:]
+        else:
+            pr_body = formatted_diff
+            additional_notes = []
 
-        available_length = max_pr_body_length - formatted_diff_length
+        available_length = max_pr_body_length - len(pr_body)
 
         if available_length < len(release_notes):
-            step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
+            step_size = available_length - len(max_body_length_exceeded_remark)
             split_release_notes = [
                 release_notes[start:start+step_size]
                 for start in range(0, len(release_notes), step_size)
@@ -694,18 +706,16 @@ def create_upgrade_pr(
             split_release_notes = [release_notes]
 
         if not (additional_notes := split_release_notes[1:]):
-            pr_body = split_release_notes[0]
+            pr_body += '\n\n' + split_release_notes[0]
+        elif additional_notes:
+            pr_body += max_body_length_exceeded_remark
+            additional_notes += split_release_notes
         else:
-            pr_body = split_release_notes[0] + max_body_length_exceeded_remark
+            pr_body += split_release_notes[0] + max_body_length_exceeded_remark
+            additional_notes += split_release_notes[1:]
     else:
         pr_body = ''
         additional_notes = []
-
-    dashboard_url = (
-        f'https://delivery-dashboard.ci.gardener.cloud.sap/#/'
-        f'component?name={to_component.name}&view=diff'
-    )
-    pr_body = f'## <a href="{dashboard_url}">BoM Diff</a>:\n{formatted_diff}\n\n' + pr_body
 
     if pullrequest_body_suffix:
         pr_body += f'\n{pullrequest_body_suffix}'
