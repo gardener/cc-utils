@@ -134,6 +134,19 @@ class Asset:
     purposes: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
 
+    def __post_init__(self):
+        if self.purposes:
+            self.ocm_labels.append({
+                'name': 'gardener.cloud/purposes',
+                'value': self.purposes,
+            })
+
+        if self.comment:
+            self.ocm_labels.append({
+                'name': 'gardener.cloud/comment',
+                'value': self.comment,
+            })
+
 
 class FileAssetMode(enum.StrEnum):
     TAR = 'tar'
@@ -167,6 +180,12 @@ class BuildstepFileAsset(Asset):
     prefix: str | None = None
     mode: FileAssetMode = FileAssetMode.TAR
 
+    def __post_init__(self):
+        super().__post_init__()
+
+        if not self.name:
+            self.name = f'{self.step_name}-build-step-file'
+
 
 @dataclasses.dataclass(kw_only=True)
 class BuildstepLogAsset(Asset):
@@ -179,20 +198,10 @@ class BuildstepLogAsset(Asset):
     artefact_type = 'text/plain'
 
     def __post_init__(self):
+        super().__post_init__()
+
         if not self.name:
-            self.name = f'{self.step_name}-build-step'
-
-        if self.purposes:
-            self.ocm_labels.append({
-                'name': 'gardener.cloud/purposes',
-                'value': self.purposes,
-            })
-
-        if self.comment:
-            self.ocm_labels.append({
-                'name': 'gardener.cloud/comment',
-                'value': self.comment,
-            })
+            self.name = f'{self.step_name}-build-step-log'
 
 
 ATTRIBUTES = (
