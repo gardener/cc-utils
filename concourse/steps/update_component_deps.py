@@ -6,6 +6,8 @@ import tempfile
 import time
 import traceback
 
+import tabulate
+
 import ocm
 import github3.exceptions
 import github3.repos.repo
@@ -13,8 +15,10 @@ import github3.repos.repo
 import ccc.github
 import ci.util
 import cnudie.util
+import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
+import ctx
 import dockerutil
 import dso.labels
 import github.util as gu
@@ -377,6 +381,162 @@ def _import_release_notes(
     return release_notes
 
 
+def format_bom_diff(
+    component_diff: cnudie.util.ComponentDiff,
+    to_component_name: str
+):
+    class ComponentChange:
+        def __init__(self, name, old_version=None, new_version=None, change_type=None):
+            self.name = name
+            self.old_version = old_version
+            self.new_version = new_version
+            self.change_type = change_type  # 'added', 'removed', 'changed'
+
+        def __str__(self):
+            if self.change_type == 'changed':
+                return f'\U00002699 {self.name}: {self.old_version} → {self.new_version}'
+            elif self.change_type == 'removed':
+                return f'\U00002796 {self.name} (v{self.old_version})'
+            elif self.change_type == 'added':
+                return f'\U00002795 {self.name} (v{self.new_version})'
+            return ''
+
+    cfg_factory = ctx.cfg_factory()
+    cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
+    delivery_endpoints_cfg = cfg_set.delivery_endpoints()
+
+    delivery_base_url = delivery_endpoints_cfg.dashboard_url()
+
+    if delivery_base_url:
+        dashboard_view_diff = f'{delivery_base_url}/#/component?name={to_component_name}&view=diff'
+        bom_diff_header = f'## <a href="{dashboard_view_diff}">BoM Diff</a>\n'
+    else:
+        bom_diff_header = '## BoM Diff\n'
+
+    added_components = []
+    removed_components = []
+    changed_components = []
+
+    left_components = component_diff.cidentities_only_left
+    right_components = component_diff.cidentities_only_right
+
+    # Process removed and changed components
+    for component_identity in left_components:
+        matching_component = next(
+            (comp for comp in right_components if comp.name == component_identity.name), None
+        )
+        if matching_component:
+            if matching_component.version != component_identity.version:
+                changed_components.append(
+                    ComponentChange(
+                        name=component_identity.name,
+                        old_version=component_identity.version,
+                        new_version=matching_component.version,
+                        change_type='changed')
+                )
+        else:
+            removed_components.append(
+                ComponentChange(
+                    name=component_identity.name,
+                    old_version=component_identity.version,
+                    change_type='removed')
+            )
+
+    # Process added components
+    for component_identity in right_components:
+        matching_component = next(
+            (comp for comp in left_components if comp.name == component_identity.name), None
+        )
+        if not matching_component:
+            added_components.append(
+                ComponentChange(
+                    name=component_identity.name,
+                    new_version=component_identity.version,
+                    change_type='added')
+            )
+
+    # Create summary
+    summary_details = []
+    if removed_components:
+        summary_details.append('### Removed Components:\n' + '\n'
+                               .join(str(c) for c in removed_components) + '\n')
+    else:
+        summary_details.append('### Removed Components:\nNo components removed.\n')
+
+    if added_components:
+        summary_details.append('### Added Components:\n' + '\n'
+                               .join(str(c) for c in added_components) + '\n')
+    else:
+        summary_details.append('### Added Components:\nNo components added.\n')
+
+    if changed_components:
+        summary_details.append('### Changed Components:\n' + '\n'
+                               .join(str(c) for c in changed_components) + '\n')
+    else:
+        summary_details.append('### Changed Components:\nNo components changed.\n')
+
+    component_details = []
+    for old_component, new_component in component_diff.cpairs_version_changed:
+        component_name = f'{new_component.name}'
+        if delivery_base_url:
+            component_link = (
+                f"<a href='{delivery_base_url}/#/component?name={new_component.name}'>"
+                f'{component_name}</a>'
+            )
+        else:
+            component_link = component_name
+
+        component_header = (
+            f'<details><summary>\U00002699 {component_link}:'
+            f'{old_component.version} → {new_component.version}</summary>\n')
+
+        # Sort resources into categories: added, removed and changed
+        added_resources = []
+        removed_resources = []
+        changed_resources = []
+
+        for new_resource in new_component.resources:
+            matching_old_resource = next(
+                (old_resource for old_resource in old_component.resources
+                 if old_resource.name == new_resource.name), None
+            )
+
+            if matching_old_resource:
+                if matching_old_resource.version != new_resource.version:
+                    changed_resources.append(
+                        [f'\U0001F504 {new_resource.name}',
+                         f'{matching_old_resource.version} → {new_resource.version}'])
+            else:
+                added_resources.append(
+                    [f'\U00002795 {new_resource.name}',
+                     f'{new_resource.version} (added)'])
+
+        for old_resource in old_component.resources:
+            if not any(new_resource.name == old_resource.name
+                       for new_resource in new_component.resources):
+                removed_resources.append(
+                    [f'\U00002796 {old_resource.name}',
+                     f'{old_resource.version} (removed)'])
+
+        if not (added_resources or removed_resources or changed_resources):
+            resources_data = [['No resources added, removed or changed', '']]
+        else:
+            resources_data = added_resources + removed_resources + changed_resources
+
+        # Create the table using tabulate, with html format
+        resources_table = tabulate.tabulate(
+            tabular_data=resources_data,
+            headers=['Resource', 'Version Change'],
+            tablefmt='html'
+        )
+
+        component_details.append(component_header + resources_table + '\n</details>')
+
+    bom_diff_str = (bom_diff_header + '\n'.join(summary_details) + '\n## Component Details:\n' +
+                    '\n'.join(component_details))
+    return bom_diff_str
+
+
 def create_upgrade_pr(
     component: ocm.Component,
     from_ref: ocm.ComponentReference,
@@ -409,6 +569,25 @@ def create_upgrade_pr(
         absent_ok=False,
     )
     from_component = from_component_descriptor.component
+
+    to_component_descriptor = component_descriptor_lookup(
+        ocm.ComponentIdentity(
+            name=to_ref.componentName,
+            version=to_version,
+        )
+    )
+
+    to_component = to_component_descriptor.component
+
+    bom_diff = cnudie.retrieve.component_diff(
+        from_component,
+        to_component
+    )
+
+    formatted_diff = format_bom_diff(
+        component_diff=bom_diff,
+        to_component_name=to_component.name
+    )
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -503,8 +682,22 @@ def create_upgrade_pr(
             '\n\nRelease notes were shortened since they exceeded the maximum length allowed for a '
             'pull request body. The remaining release notes will be added as comments to this PR.'
         )
-        if max_pr_body_length < len(release_notes):
-            step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
+
+        if len(formatted_diff) > max_pr_body_length:
+            split_formatted_diff = [
+                formatted_diff[start:start+max_pr_body_length]
+                for start in range(0, len(formatted_diff), max_pr_body_length)
+            ]
+            pr_body = split_formatted_diff[0]
+            additional_notes = split_formatted_diff[1:]
+        else:
+            pr_body = formatted_diff
+            additional_notes = []
+
+        available_length = max_pr_body_length - len(pr_body)
+
+        if available_length < len(release_notes):
+            step_size = available_length - len(max_body_length_exceeded_remark)
             split_release_notes = [
                 release_notes[start:start+step_size]
                 for start in range(0, len(release_notes), step_size)
@@ -513,9 +706,13 @@ def create_upgrade_pr(
             split_release_notes = [release_notes]
 
         if not (additional_notes := split_release_notes[1:]):
-            pr_body = split_release_notes[0]
+            pr_body += '\n\n' + split_release_notes[0]
+        elif additional_notes:
+            pr_body += max_body_length_exceeded_remark
+            additional_notes += split_release_notes
         else:
-            pr_body = split_release_notes[0] + max_body_length_exceeded_remark
+            pr_body += split_release_notes[0] + max_body_length_exceeded_remark
+            additional_notes += split_release_notes[1:]
     else:
         pr_body = ''
         additional_notes = []
