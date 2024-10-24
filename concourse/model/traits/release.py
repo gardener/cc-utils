@@ -131,6 +131,7 @@ class Asset:
     name: str = None
     step_name: str
     artefact_type: str = 'application/data'
+    artefact_extra_id: dict[str, str] = dataclasses.field(default_factory=dict)
     purposes: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
 

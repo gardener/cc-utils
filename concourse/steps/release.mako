@@ -246,6 +246,7 @@ component.resources.append(
       localReference=digest,
       size=leng,
     ),
+    extraIdentity=${asset.artefact_extra_id},
     labels=${asset.ocm_labels},
     srcRefs=[{
       'identitySelector': main_source_ref,
@@ -311,6 +312,7 @@ component.resources.append(
       localReference=digest,
       size=leng,
     ),
+    extraIdentity=${asset.artefact_extra_id},
     labels=${asset.ocm_labels},
   ),
 )
