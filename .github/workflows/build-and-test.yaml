@@ -32,8 +32,6 @@ jobs:
           releases_repo="${repo_base}/releases"
 
           if ${{ inputs.release || false }}; then
-            # "erroneously" still publish to snapshots for testing purporses
-            # XXX this is a debugging / testing artefact
             ocm_repository=${releases_repo}
             oci_repository=${releases_repo}
           else
