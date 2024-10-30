@@ -193,6 +193,7 @@ jobs:
       - images
       - lint
       - unittests
+      - documentation
     outputs:
       release_commit_digest: ${{  steps.releasecommit.commitdigest }}
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
@@ -214,6 +215,11 @@ jobs:
         with:
           name: linting-logs # targetpath: bandit.tar.gz
           path: /tmp/linting-logs
+      - name: Retrieve Documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: /tmp/documentation-out.d
 
       - name: Google-Auth
         id: auth
@@ -253,6 +259,9 @@ jobs:
         if: ${{ inputs.release }}
         run: |
           release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
+          ls /tmp/
+          ls /tmp/documentation-out.d
+          ls /tmp/documentation-out.d/*
       - name: component-descriptor
         run: |
           set -eu
@@ -588,3 +597,30 @@ jobs:
           platforms: ${{ needs.params.outputs.oci_platforms }}
           tags: ${{ steps.prepare.outputs.oci_image_ref }}
           context: . # pass modified path rather than clean checkout
+
+  documentation:
+    name: Generate Documentation
+    needs:
+      - images
+      - params
+    runs-on: ubuntu-latest
+    environment: build
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Docker-Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Generate Documentation
+      run: |
+        image_ref=${{ needs.images.outputs.oci_image_ref }}
+        mkdir documentation-out.d
+        docker run -v$PWD:/src \
+          -e GH_PAGES_PATH=/src/documentation-out.d \
+          ${image_ref} \
+          /src/.ci/generate_documentation
+        ls documentation-out.d
+    - uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: documentation-out.d
