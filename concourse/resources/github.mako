@@ -128,8 +128,10 @@ credentials = github_cfg.credentials()
     skip_ssl_verification: ${disable_tls_validation}
     access_token: ${credentials.auth_token()}
     no_ssl_verify: ${disable_tls_validation}
+% if credentials.private_key():
     private_key: |
       ${indent_func(6)(credentials.private_key()).strip()}
+% endif
     username: '${credentials.username()}'
     password: '${credentials.passwd()}'
 % if require_label:
