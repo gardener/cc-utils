@@ -377,17 +377,10 @@ jobs:
           python -m ocm upload \
             --file component-descriptor.yaml \
             --blobs-dir /tmp/dist/blobs.d
-      - name: Generate and publish Documentation
-        if: ${{ inputs.release || true }}
+      - name: Publish Documentation
+        if: ${{ inputs.release }}
         run: |
           release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
-          echo "gha-creds*" >> .git/info/exclude
-          git config --global --add safe.directory /__w/cc-utils/cc-utils
-          git config user.name 'Gardener-CICD Bot'
-          git config user.email 'gardener.ci.user@gmail.com'
-          ls /tmp/
-          ls /tmp/documentation-out.d
-          ls /tmp/documentation-out.d/*
           git fetch origin gh-pages
           git checkout gh-pages
           git clean -dfx
@@ -618,7 +611,6 @@ jobs:
     name: Generate Documentation
     needs:
       - images
-      - params
     runs-on: ubuntu-latest
     environment: build
     permissions:
