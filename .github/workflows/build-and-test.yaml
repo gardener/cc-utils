@@ -255,31 +255,6 @@ jobs:
           git commit -m"Prepare next Dev-Cycle"
           git pull --rebase
           git push origin
-      - name: Generate and publish Documentation
-        if: ${{ inputs.release || true }}
-        run: |
-          release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
-          echo "gha-creds*" >> .git/info/exclude
-          git config --global --add safe.directory /__w/cc-utils/cc-utils
-          git config user.name 'Gardener-CICD Bot'
-          git config user.email 'gardener.ci.user@gmail.com'
-          ls /tmp/
-          ls /tmp/documentation-out.d
-          ls /tmp/documentation-out.d/*
-          git fetch origin gh-pages
-          git checkout gh-pages
-          git clean -dfx
-          git status
-          echo "let's hope our worktree is clean"
-          tar c -C /tmp/documentation-out.d . | tar x -C.
-          git status
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "no changes in documentation - no need to update documentation"
-            exit 0
-          fi
-          git add -A
-          git commit -m "update documentation"
-          git push origin refs/heads/gh-pages
       - name: component-descriptor
         run: |
           set -eu
@@ -404,6 +379,31 @@ jobs:
           python -m ocm upload \
             --file component-descriptor.yaml \
             --blobs-dir /tmp/dist/blobs.d
+      - name: Generate and publish Documentation
+        if: ${{ inputs.release || true }}
+        run: |
+          release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
+          echo "gha-creds*" >> .git/info/exclude
+          git config --global --add safe.directory /__w/cc-utils/cc-utils
+          git config user.name 'Gardener-CICD Bot'
+          git config user.email 'gardener.ci.user@gmail.com'
+          ls /tmp/
+          ls /tmp/documentation-out.d
+          ls /tmp/documentation-out.d/*
+          git fetch origin gh-pages
+          git checkout gh-pages
+          git clean -dfx
+          git status
+          echo "let's hope our worktree is clean"
+          tar c -C /tmp/documentation-out.d . | tar x -C.
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no changes in documentation - no need to update documentation"
+            exit 0
+          fi
+          git add -A
+          git commit -m "update documentation"
+          git push origin refs/heads/gh-pages
 
   lint:
     runs-on: ubuntu-latest
