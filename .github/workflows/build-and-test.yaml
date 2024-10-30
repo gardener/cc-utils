@@ -29,7 +29,7 @@ jobs:
         run: |
           repo_base=europe-docker.pkg.dev/gardener-project
           snapshots_repo="${repo_base}/snapshots"
-          releases_repo="${repo_base}/releases"
+          releases_repo="${repo_base}/snapshots"
 
           if ${{ inputs.release || false }}; then
             # "erroneously" still publish to snapshots for testing purporses
