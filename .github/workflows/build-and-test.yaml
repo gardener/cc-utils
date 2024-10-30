@@ -262,6 +262,20 @@ jobs:
           ls /tmp/
           ls /tmp/documentation-out.d
           ls /tmp/documentation-out.d/*
+          git fetch origin gh-pages
+          git checkout gh-pages
+          git clean -dfx
+          git status
+          echo "let's hope our worktree is clean"
+          tar c -C /tmp/documentation-out.d . | tar x -C.
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no changes in documentation - no need to update documentation"
+            exit 0
+          fi
+          git add -A
+          git commit -m "update documentation"
+          git push origin refs/heads/gh-pages
       - name: component-descriptor
         run: |
           set -eu
