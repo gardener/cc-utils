@@ -259,6 +259,10 @@ jobs:
         if: ${{ inputs.release || true }}
         run: |
           release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
+          echo "gha-creds*" >> .git/info/exclude
+          git config --global --add safe.directory /__w/cc-utils/cc-utils
+          git config user.name 'Gardener-CICD Bot'
+          git config user.email 'gardener.ci.user@gmail.com'
           ls /tmp/
           ls /tmp/documentation-out.d
           ls /tmp/documentation-out.d/*
