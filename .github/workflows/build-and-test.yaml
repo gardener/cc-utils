@@ -256,7 +256,7 @@ jobs:
           git pull --rebase
           git push origin
       - name: Generate and publish Documentation
-        if: ${{ inputs.release }}
+        if: ${{ inputs.release || true }}
         run: |
           release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
           ls /tmp/
