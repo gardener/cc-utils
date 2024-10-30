@@ -59,8 +59,10 @@ if (overwrite_preferred_protocol := repo_cfg.preferred_protocol()):
     disable_ci_skip: ${repo_cfg.disable_ci_skip()}
     skip_ssl_verification: ${disable_tls_validation}
     no_ssl_verify: ${disable_tls_validation}
+% if credentials.private_key():
     private_key: |
       ${indent_func(6)(credentials.private_key()).strip()}
+% endif
     username: '${credentials.username()}'
     password: '${token_or_passwd}'
     git_config:
