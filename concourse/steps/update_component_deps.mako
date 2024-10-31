@@ -145,8 +145,12 @@ import textwrap
 % endif
 
 cfg_set = cfg_factory.cfg_set(ci.util.current_config_set_name())
-delivery_endpoints_cfg = cfg_set.delivery_endpoints()
-delivery_dashboard_url = delivery_endpoints_cfg.dashboard_url()
+
+if list(cfg_set._cfg_elements('delivery_endpoints')):
+    delivery_endpoints_cfg = cfg_set.delivery_endpoints()
+    delivery_dashboard_url = delivery_endpoints_cfg.dashboard_url()
+else:
+    delivery_dashboard_url = None
 
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
