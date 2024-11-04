@@ -20,9 +20,6 @@ jobs:
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
       oci_repository: ${{ steps.params.outputs.oci_repository }}
       oci_platforms: ${{ steps.params.outputs.oci_platforms }}
-      gcp_project: ${{ steps.params.outputs.gcp_project }}
-      gcp_service_account: ${{ steps.params.outputs.service_account }}
-      workload_identity_provider: ${{ steps.params.outputs.idp }}
     steps:
       - name: params
         id: params
@@ -42,12 +39,6 @@ jobs:
           echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_repository=${oci_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
-
-          echo "gcp_project=gardener-project" >> "${GITHUB_OUTPUT}"
-          echo "service_account=ocm-ci-opensource@gardener-project.iam.gserviceaccount.com" \
-            >> "${GITHUB_OUTPUT}"
-          echo "idp=projects/694386720375/locations/global/workloadIdentityPools/github-actions/providers/github-actions-provider" \
-            >> "${GITHUB_OUTPUT}"
 
   version:
     runs-on: ubuntu-latest
@@ -219,14 +210,6 @@ jobs:
           name: documentation
           path: /tmp/documentation-out.d
 
-      - name: Google-Auth
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          token_format: access_token
-          project_id: ${{ needs.params.outputs.gcp_project }}
-          service_account: ${{ needs.params.outputs.gcp_service_account }}
-          workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
       - name: Create Release and Bump-Commits
         id: releasecommit
         if: ${{ inputs.release }}
@@ -253,6 +236,9 @@ jobs:
           git commit -m"Prepare next Dev-Cycle"
           git pull --rebase
           git push origin
+      - name: GAR-Auth
+        id: auth
+        uses: ./.github/actions/gar-auth
       - name: component-descriptor
         run: |
           set -eu
@@ -355,23 +341,6 @@ jobs:
 
           echo "component-descriptor to be uploaded:"
           cat component-descriptor.yaml
-
-          # from google-auth
-          username=oauth2accesstoken
-          password=${{ steps.auth.outputs.access_token }}
-          token=$(echo -n ${username}:${password} | base64 -w0)
-          mkdir $HOME/.docker
-          docker_cfg=$HOME/.docker/config.json
-          registry_hostname=$(echo ${{ needs.params.outputs.ocm_repository }} | cut -d/ -f1)
-          cat << EOF > ${docker_cfg}
-          {
-            "auths": {
-              "${registry_hostname}": {
-                "auth": "${token}"
-              }
-            }
-          }
-          EOF
 
           echo "uploading component-descriptor"
           python -m ocm upload \
@@ -539,21 +508,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup Docker-Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Google-Auth
+      - name: GAR-Auth
         id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          token_format: access_token
-          project_id: ${{ needs.params.outputs.gcp_project }}
-          service_account: ${{ needs.params.outputs.gcp_service_account }}
-          workload_identity_provider: ${{ needs.params.outputs.workload_identity_provider }}
-      - name: docker-auth
-        id: docker-auth
-        uses: docker/login-action@v3
-        with:
-          username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.access_token }}
-          registry: europe-docker.pkg.dev
+        uses: ./.github/actions/gar-auth
       - name: Retrieve Distribution Packages
         uses: actions/download-artifact@v4
         with:
