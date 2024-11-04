@@ -1,0 +1,70 @@
+name: Authenticate against GAR
+description: |
+  Authenticates against GCP using OIDC. This action defines a default Service-Account with read-
+  and write-access for Google Artifact Registries from `gardener-project` as identity.
+
+  For convenience, it will generate a docker-cfg (`$HOME/.docker/config.json`) for subsequent steps.
+  This is equivalent to running `docker login`.
+inputs:
+  gcp_service_account:
+    description: The Service-Account to impersonate
+    required: false
+    default: ci-opensource-operator@gardener-project.iam.gserviceaccount.com
+  workload_identity_provider:
+    description: |
+      GCP Workload Identity Provider. The default value exclusively allows GitHub-Actions from
+      github.com/gardener (no forks).
+    required: false
+    default: projects/694386720375/locations/global/workloadIdentityPools/github-actions/providers/github-actions-provider
+  gcp_project:
+    description: The GCP Project to authenticate against
+    required: false
+    default: gardener-project
+  gar_hostname:
+    description: |
+      The hostname of the GAR (for generating docker-cfg). For convenience, it is also
+      okay to pass a full image-reference (in which case hostname is parsed from parsed value).
+      Note that no special-handling for docker-hub (e.g. `alpine` ->
+      registry-1.docker.io/library/alpine:latest) is done.
+    required: false
+    default: europe-docker.pkg.dev
+outputs:
+  access_token:
+    description: The obtained access-token
+    value: ${{ steps.export.outputs.access_token }}
+  docker_cfg:
+    description: A $HOME/.docker/config.json containing the token (for convenience)
+runs:
+  using: composite
+  steps:
+    - name: Authenticate
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        token_format: access_token
+        project_id: ${{ inputs.gcp_project }}
+        service_account: ${{ inputs.gcp_service_account }}
+        workload_identity_provider: ${{ inputs.workload_identity_provider }}
+    - name: Export Access-Token
+      id: export
+      shell: bash
+      run: |
+        username=oauth2accesstoken
+        password=${{ steps.auth.outputs.access_token }}
+        token=$(echo -n ${username}:${password} | base64 -w0)
+        mkdir -p $HOME/.docker
+        docker_cfg_path="${HOME}/.docker/config.json"
+        host=$(echo ${{ inputs.gar_hostname }} | cut -d/ -f1)
+        cat << EOF > ${docker_cfg_path}
+        {
+          "auths": {
+            "${host}": {
+              "auth": "${token}"
+            }
+          }
+        }
+        EOF
+        docker_cfg="$(cat "${docker_cfg_path}" | tr -d "\n")"
+
+        echo "docker_cfg=${docker_cfg}" >> ${GITHUB_OUTPUT}
+        echo "access_token=${token}" >> ${GITHUB_OUTPUT}
