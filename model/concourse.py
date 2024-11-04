@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
 import dataclasses
 from enum import Enum
 import typing
@@ -385,6 +386,12 @@ def secret_name_from_team(team_name: str, key_generation: int) -> str:
         return f'{cfg_name_from_team(team_name)}-{key_generation}'
 
 
+@dataclasses.dataclass(frozen=True)
+class TrustedTeams:
+    github_hostname: str
+    teams: list[str]
+
+
 class JobMapping(NamedModelElement):
     def team_name(self) -> str:
         # todo: use `name` attr for that (thus enforce unique mappings)
@@ -455,11 +462,31 @@ class JobMapping(NamedModelElement):
         '''
         return self.raw.get('expose_pipelines', True)
 
-    def trusted_teams(self) -> typing.Iterable[str]:
+    def trusted_teams(self) -> collections.abc.Iterable[TrustedTeams]:
         '''Pull requests created/synchronized by members of this team will automatically have
         the required label set by the webhook-dispatcher
         '''
-        return self.raw.get('trusted_teams', [])
+        return [
+            dacite.from_dict(
+                data_class=TrustedTeams,
+                data=trusted_teams_raw,
+            )
+            for trusted_teams_raw in self.raw.get('trusted_teams', [])
+        ]
+
+    def trusted_teams_for_github_hostname(
+        self,
+        github_hostname: str,
+        absent_ok: bool=True,
+    ) -> TrustedTeams | None:
+        for trusted_teams in self.trusted_teams():
+            if trusted_teams.github_hostname == github_hostname:
+                return trusted_teams
+
+        if not absent_ok:
+            raise ValueError(f'no trusted team for {github_hostname=}')
+
+        return None
 
     def compliance_reporting_repo_url(self) -> str:
         '''Target repo for compliance issues based on cfg policy violations.
