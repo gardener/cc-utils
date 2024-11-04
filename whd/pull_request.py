@@ -1,3 +1,4 @@
+import collections.abc
 import datetime
 import functools
 import logging
@@ -265,13 +266,40 @@ def _should_label(
     github_helper: GitHubRepositoryHelper,
     sender_login: str,
     owner: str,
+    github_hostname: str,
 ) -> bool:
-    trusted_teams = job_mapping.trusted_teams()
+
+    def iter_trusted_teams_for_hostname(
+        trusted_teams: collections.abc.Iterable[str],
+        hostname: str,
+    ) -> collections.abc.Generator[str, None, None]:
+        for trusted_team in trusted_teams:
+            parts = trusted_team.split('/')
+
+            if len(parts) == 2:
+                yield trusted_team
+                continue
+
+            elif len(parts) == 3:
+                host, org, team = parts
+                if not host == hostname:
+                    continue
+
+                yield f'{org}/{team}'
+
+            else:
+                raise ValueError('team must either be <hostname>/<org>/<team> or <org>/<team>')
+
+    trusted_teams = list(iter_trusted_teams_for_hostname(
+        trusted_teams=job_mapping.trusted_teams(),
+        hostname=github_hostname,
+    ))
+
     if trusted_teams:
         if (
             any(
-                github_helper.is_team_member(team_name=t, user_login=sender_login)
-                for t in trusted_teams
+                github_helper.is_team_member(team_name=team, user_login=sender_login)
+                for team in trusted_teams
             )
         ):
             return True
@@ -312,7 +340,13 @@ def set_pr_labels(
     )
 
     if pr_event.action() is PullRequestAction.OPENED:
-        if _should_label(job_mapping, github_helper, sender_login, owner):
+        if _should_label(
+            job_mapping=job_mapping,
+            github_helper=github_helper,
+            sender_login=sender_login,
+            owner=owner,
+            github_hostname=pr_event.hostname(),
+        ):
             logger.info(
                 f"New pull request by trusted member '{sender_login}' in "
                 f"'{repository_path}' found. Setting required labels '{required_labels}'."
@@ -335,7 +369,13 @@ def set_pr_labels(
             )
             return False
     elif pr_event.action() is PullRequestAction.SYNCHRONIZE:
-        if _should_label(job_mapping, github_helper, sender_login, owner):
+        if _should_label(
+            job_mapping=job_mapping,
+            github_helper=github_helper,
+            sender_login=sender_login,
+            owner=owner,
+            github_hostname=pr_event.hostname(),
+        ):
             logger.info(
                 f"Update to pull request #{pr_number} by trusted member '{sender_login}' "
                 f" in '{repository_path}' found. "
