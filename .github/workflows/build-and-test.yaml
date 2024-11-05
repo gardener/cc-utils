@@ -113,6 +113,7 @@ jobs:
         for path in \
           setup.py \
           setup.oci.py \
+          setup.ocm.py \
           setup.whd.py \
         ; do
          echo "building distribution package from ${path}"
@@ -137,7 +138,13 @@ jobs:
         blobs_dir="${pkg_dir}/blobs.d"
         mkdir ${blobs_dir}
         resources_file=resources.yaml
-        for package in gardener-oci gardener-cicd-whd gardener-cicd-cli gardener-cicd-libs; do
+        for package in \
+          gardener-oci \
+          gardener-cicd-whd \
+          gardener-cicd-cli \
+          gardener-cicd-libs \
+          ocm-lib \
+          ; do
           path="$(echo $package | tr - _)-*"
           prefix=dist
           access_type='localBlob'
