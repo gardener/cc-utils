@@ -6,6 +6,7 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 
 def requirements():
     yield 'gardener-oci>=' + version()
+    yield 'ocm-lib>=' + version()
 
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
         for line in f.readlines():
@@ -36,7 +37,7 @@ def packages():
     # remove packages (distributed via separate distribution-packages)
     package_names.remove('whd')
     package_names.remove('oci')
-    # package_names.remove('ocm') # todo: exempt once setup.ocm.py is instrumented
+    package_names.remove('ocm')
     return package_names
 
 
