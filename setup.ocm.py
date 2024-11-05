@@ -14,11 +14,6 @@ def requirements():
             yield line
 
 
-def modules():
-    return [
-    ]
-
-
 def version():
     with open(os.path.join(own_dir, 'ocm', 'VERSION')) as f:
         return f.read().strip()
@@ -31,12 +26,16 @@ setuptools.setup(
     long_description='Open-Component_model (OCM) language bindings',
     long_description_content_type='text/markdown',
     python_requires='>=3.11',
-    py_modules=modules(),
+    py_modules=(),
     packages=('ocm',),
     package_data={
         'ocm': ('VERSION',),
     },
     install_requires=list(requirements()),
     entry_points={
+        'console_scripts': [
+            # avoid conflict w/ "ocm-cli" (github.com/open-component-model/ocm)
+            'gardener-ocm = ocm.__main__:main'
+        ],
     },
 )
