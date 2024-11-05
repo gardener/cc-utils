@@ -422,8 +422,9 @@ def create_upgrade_pr(
     to_component = to_component_descriptor.component
 
     bom_diff = cnudie.retrieve.component_diff(
-        from_component,
-        to_component
+        left_component=from_component,
+        right_component=to_component,
+        component_descriptor_lookup=component_descriptor_lookup,
     )
 
     if delivery_dashboard_url:
