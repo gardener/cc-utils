@@ -37,7 +37,6 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'gardener-ci = gardener_ci.cli_gen:main',
-            'cli.py = gardener_ci.cli_gen:main', # XXX backwards-compatibilty - rm this
             'yaml2json = gardener_ci.yaml2json:main'
         ],
     },
