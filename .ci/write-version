@@ -7,6 +7,7 @@ versionfiles=(
   VERSION
   ci/VERSION
   oci/VERSION
+  ocm/VERSION
   whd/VERSION
   cli/gardener_ci/VERSION
   concourse/resources/LAST_RELEASED_TAG
