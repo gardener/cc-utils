@@ -9,7 +9,7 @@ inputs:
   gcp_service_account:
     description: The Service-Account to impersonate
     required: false
-    default: ocm-ci-opensource@gardener-project.iam.gserviceaccount.com
+    default: ci-opensource-operator@gardener-project.iam.gserviceaccount.com
   workload_identity_provider:
     description: |
       GCP Workload Identity Provider. The default value exclusively allows GitHub-Actions from
