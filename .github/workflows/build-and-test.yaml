@@ -364,6 +364,7 @@ jobs:
           git add -A
           git commit -m "update documentation"
           git push origin refs/heads/gh-pages
+          git checkout master # needed for post-gar
 
   lint:
     runs-on: ubuntu-latest
