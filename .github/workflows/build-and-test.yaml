@@ -139,11 +139,11 @@ jobs:
         mkdir ${blobs_dir}
         resources_file=resources.yaml
         for package in \
-          gardener-oci \
           gardener-cicd-whd \
           gardener-cicd-cli \
           gardener-cicd-libs \
-          ocm-lib \
+          gardener-oci \
+          gardener-ocm \
           ; do
           path="$(echo $package | tr - _)-*"
           prefix=dist
@@ -403,6 +403,7 @@ jobs:
           gardener-cicd-libs \
           gardener-cicd-cli \
           gardener-oci \
+          gardener-ocm \
           bandit \
           flake8 \
           setuptools \
@@ -454,6 +455,7 @@ jobs:
           gardener-cicd-libs \
           gardener-cicd-cli \
           gardener-oci \
+          gardener-ocm \
           pytest \
           setuptools \
             > /tmp/pip3-install.log; then
