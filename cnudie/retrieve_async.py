@@ -38,6 +38,25 @@ VersionLookupByComponent = collections.abc.Callable[
 ]
 
 
+class WriteBack:
+    '''
+    Wraps an async writeback function which can be used to fill the lookup in case the required
+    component descriptor was not found.
+    '''
+    def __init__(
+        self,
+        writeback: collections.abc.Callable[[ocm.ComponentIdentity, ocm.ComponentDescriptor], None],
+    ):
+        self.writeback = writeback
+
+    async def __call__(
+        self,
+        component_id: ocm.ComponentIdentity,
+        component_descriptor: ocm.ComponentDescriptor,
+    ):
+        await self.writeback(component_id, component_descriptor)
+
+
 def in_memory_cache_component_descriptor_lookup(
     cache_ctor: cachetools.Cache=cachetools.LRUCache,
     ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=None,
@@ -58,7 +77,7 @@ def in_memory_cache_component_descriptor_lookup(
     cache_kwargs['maxsize'] = cache_kwargs.get('maxsize', 2048)
     cache = cache_ctor(**cache_kwargs)
 
-    def writeback(
+    async def writeback(
         component_id: ocm.ComponentIdentity,
         component_descriptor: ocm.ComponentDescriptor,
     ):
@@ -67,7 +86,7 @@ def in_memory_cache_component_descriptor_lookup(
         else:
             raise ValueError(ocm_repo)
 
-    _writeback = cnudie.retrieve.WriteBack(writeback)
+    _writeback = WriteBack(writeback)
 
     async def lookup(
         component_id: cnudie.util.ComponentId,
@@ -120,7 +139,7 @@ def file_system_cache_component_descriptor_lookup(
     if not cache_dir:
         raise ValueError(cache_dir)
 
-    def writeback(
+    async def writeback(
         component_id: ocm.ComponentIdentity,
         component_descriptor: ocm.ComponentDescriptor,
     ):
@@ -151,7 +170,7 @@ def file_system_cache_component_descriptor_lookup(
             os.unlink(f.name)
             raise
 
-    _writeback = cnudie.retrieve.WriteBack(writeback)
+    _writeback = WriteBack(writeback)
 
     async def lookup(
         component_id: cnudie.util.ComponentId,
@@ -559,10 +578,10 @@ def composite_component_descriptor_lookup(
                 logger.warning(f'caught error {he} in {lookup=}, will try next lookup if any')
 
             if isinstance(res, ocm.ComponentDescriptor):
-                for wb in writebacks: wb(component_id, res)
+                for wb in writebacks: await wb(component_id, res)
                 return res
             elif res is None: continue
-            elif isinstance(res, cnudie.retrieve.WriteBack): writebacks.append(res)
+            elif isinstance(res, WriteBack): writebacks.append(res)
 
         # component descriptor not found in lookup
         if absent_ok:
