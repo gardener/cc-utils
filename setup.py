@@ -6,7 +6,7 @@ own_dir = os.path.abspath(os.path.dirname(__file__))
 
 def requirements():
     yield 'gardener-oci>=' + version()
-    yield 'ocm-lib>=' + version()
+    yield 'gardener-ocm>=' + version()
 
     with open(os.path.join(own_dir, 'requirements.txt')) as f:
         for line in f.readlines():

@@ -20,7 +20,7 @@ def version():
 
 
 setuptools.setup(
-    name='ocm-lib',
+    name='gardener-ocm', # todo: switch to `ocm-lib` once we have support for different versions
     version=version(),
     description='Open-Component-Model (OCM) language bindings',
     long_description='Open-Component_model (OCM) language bindings',
