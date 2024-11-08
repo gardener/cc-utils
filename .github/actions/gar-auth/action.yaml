@@ -34,6 +34,7 @@ outputs:
     value: ${{ steps.export.outputs.access_token }}
   docker_cfg:
     description: A $HOME/.docker/config.json containing the token (for convenience)
+    value: ${{ steps.export.outputs.docker_cfg }}
 runs:
   using: composite
   steps:
