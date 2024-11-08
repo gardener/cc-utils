@@ -340,9 +340,8 @@ jobs:
           python3 -m ocm append resource \
             --file component-descriptor.yaml
 
-          echo "${{ needs.images.outputs.ocm_resources }}" | base64 -d > oci_ocm_resources.yaml
-
-          cat oci_ocm_resources.yaml | \
+          echo "adding image-resource"
+          echo "${{ needs.images.outputs.ocm_resources }} " | \
           python3 -m ocm append resource \
             --file component-descriptor.yaml
 
@@ -507,8 +506,8 @@ jobs:
       - package
       - params
     outputs:
-      oci_image_ref: ${{ steps.prepare.outputs.oci_image_ref }}
-      ocm_resources: ${{ steps.prepare.outputs.ocm_resources }}
+      oci_image_ref: ${{ steps.image-build.outputs.image_reference }}
+      ocm_resources: ${{ steps.image-build.outputs.ocm_resource }}
     runs-on: ubuntu-latest
     environment: build
     permissions:
@@ -516,11 +515,6 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Docker-Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: GAR-Auth
-        id: auth
-        uses: ./.github/actions/gar-auth
       - name: Retrieve Distribution Packages
         uses: actions/download-artifact@v4
         with:
@@ -537,20 +531,16 @@ jobs:
           # workaround: set repository-version to setuptools-version so installation of
           #             packages will succeed
           echo "${setuptools_version}" | .ci/write-version
-          oci_repo=${{ needs.params.outputs.oci_repository }}
-          image_tag=${{ needs.version.outputs.effective_version }}
-          image_ref=${oci_repo}/cicd/job-image:${image_tag}
-
-          echo "oci_image_ref=${image_ref}" >> ${GITHUB_OUTPUT}
-          cat << EOF > ocm_resources.yaml
+      - name: Build OCI Image (using ocm-oci-build-action)
+        uses: ./.github/actions/ocm-oci-build
+        id: image-build
+        with:
           name: job-image
-          version: ${image_tag}
-          type: ociImage
-          access:
-            type: ociRegistry
-            imageReference: ${image_ref}
-          relation: local
-          labels:
+          repository: ${{ needs.params.outputs.oci_repository }}/cicd/job-image
+          version: ${{ needs.version.outputs.effective_version }}
+          oci_platforms: ${{ needs.params.outputs.oci_platforms }}
+          context: . # pass modified path rather than clean checkout
+          ocm_labels: |
             - name: cloud.gardener.cnudie/dso/scanning-hints/package-versions
               value:
                 - name: containerd
@@ -563,16 +553,6 @@ jobs:
                 integrity_requirement: high
                 network_exposure: protected
                 user_interaction: gardener-operator
-          EOF
-          echo "ocm_resources=$(cat ocm_resources.yaml | base64 -w0)" >> ${GITHUB_OUTPUT}
-
-      - name: Build OCI Image
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          platforms: ${{ needs.params.outputs.oci_platforms }}
-          tags: ${{ steps.prepare.outputs.oci_image_ref }}
-          context: . # pass modified path rather than clean checkout
 
   documentation:
     name: Generate Documentation

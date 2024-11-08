@@ -1,0 +1,132 @@
+name: Build and Push OCI-Image / OCM-Resource
+description: |
+  Builds an OCI Image using `docker/build-push-action@v6`, and exposes a (customisable)
+  OCM Resource fragment as output (for being added to OCM Component-Descriptor).
+  For convenience, the action tries to authenticate against target-OCI-Registry using
+  github.com/gardener/cc-utils/.github/actions/gar-auth.
+inputs:
+  name:
+    description: |
+      resource-name (used in OCM Resource Fragment; must be unique within component)
+    required: true
+  repository:
+    description: |
+      OCI Repository to push to (including registry, but excluding tag)
+      For example: `europe-docker.pkg.dev/gardener-project/snapshots/my-image`
+    required: true
+  version:
+    description: |
+      Used for both image-tag, and OCM Resource fragment.
+    required: true
+  extra-tags:
+    description: |
+      An optional list of additional image-tags (for example: latest)
+    required: false
+  ocm_labels:
+    description: |
+      An optional list of OCM Labels to add into OCM Resource fragment.
+    required: false
+  target:
+    description: |
+      docker-build target (similar to `docker build --target`)
+    required: no
+    default: null
+  oci_platforms:
+    description: |
+      OCI Platforms to build (comma-separated)
+    required: false
+    default: linux/amd64
+  dockerfile:
+    description: |
+      path to dockerfile to use; relative to `context`
+    required: false
+    default: Dockerfile
+  context:
+    description: |
+      passed to build-push-action's `context`
+      see:
+        -  https://github.com/docker/build-push-action#git-context
+        -  https://github.com/docker/build-push-action#path-context
+    required: false
+outputs:
+  ocm_resource:
+    description: |
+      The OCM Resource fragment
+    value: ${{ steps.export.outputs.ocm_resource }}
+  image_reference:
+    description: |
+      The (default) target-image-reference
+    value: ${{ steps.preprocess.outputs.image_reference }}
+  tags:
+    description: |
+      All push-targets (image-reference + extra-tags)
+    value: ${{ steps.preprocess.outputs.tags }}
+
+runs:
+  using: composite
+  steps:
+    - name: GAR-Auth
+      id: auth
+      uses: gardener/cc-utils/.github/actions/gar-auth@master
+    - name: Preprocess Parameters
+      shell: bash
+      id: preprocess
+      run: |
+        echo preparing..
+        image_reference=${{ inputs.repository }}:${{ inputs.version }}
+        echo "image_reference=${image_reference}" >> "${GITHUB_OUTPUT}"
+        tags="${image_reference}"
+        if [ "${{ inputs.extra-tags || false }}" != 'false' ] ; then
+          for tag in $(echo -n ${{ inputs.extra-tags }}); do
+            tags="${tags},${{ inputs.repository }}:$tag"
+          done
+        fi
+        echo "tags=${tags}" >> "${GITHUB_OUTPUT}"
+    - uses: docker/setup-buildx-action@v3
+    - name: Build and Push
+      id: build
+      uses: docker/build-push-action@v6
+      with:
+        push: true
+        platforms: ${{ inputs.oci_platforms }}
+        tags: ${{ steps.preprocess.outputs.tags }}
+        context: ${{ inputs.context }}
+        target: ${{ inputs.target }}
+        file: ${{ inputs.dockerfile }}
+    - name: Write OCM Resource fragment
+      shell: bash
+      id: export
+      run: |
+        r=ocm-resource.yaml
+        cat << EOF > $r
+        name: ${{ inputs.name }}
+        version: ${{ inputs.version }}
+        type: ociImage
+        relation: local
+        access:
+          type: ociRegistry
+          imageReference: ${{ steps.preprocess.outputs.image_reference }}
+        EOF
+        labels="${{ inputs.ocm_labels }}"
+        if [ -n "${labels}" ]; then
+          echo -e "labels:\n${labels}" >> $r
+        fi
+
+        (
+          echo 'ocm_resource<<EOF'
+          cat $r
+          echo EOF
+        ) >> "${GITHUB_OUTPUT}"
+
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        ## OCI Image Build Summary
+        target oci image-ref: \`${{ steps.preprocess.outputs.image_reference }}\`
+        tags: \`${{ steps.preprocess.outputs.tags }}\`
+        oci platforms: \`${{ inputs.oci_platforms }}\`
+        image-digest: \`${{ steps.build.outputs.digest }}\`
+
+        *OCM Resource Fragment*
+        \`\`\`
+        $(cat ${GITHUB_OUTPUT})
+        \`\`\`
+        EOF
