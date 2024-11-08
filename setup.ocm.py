@@ -29,7 +29,10 @@ setuptools.setup(
     py_modules=(),
     packages=('ocm',),
     package_data={
-        'ocm': ('VERSION',),
+        'ocm': (
+            'VERSION',
+            'ocm-component-descriptor-schema.yaml',
+        ),
     },
     install_requires=list(requirements()),
     entry_points={
