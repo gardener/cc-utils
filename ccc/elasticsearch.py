@@ -130,7 +130,7 @@ class ElasticSearchClient:
             return self._api.index(
                 index=index,
                 doc_type='_doc',
-                body=body,
+                document=body,
                 *args,
                 **kwargs,
             )
