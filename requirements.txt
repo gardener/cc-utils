@@ -16,7 +16,7 @@ deepmerge
 deprecated
 dockerfile-parse>=1.2
 docutils
-elasticsearch<8.0.0,>=7.13
+elasticsearch
 ensure
 flake8
 gardener-oci
