@@ -120,6 +120,12 @@ class DeliveryServiceRoutes:
             'metadata',
         )
 
+    def cache(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'cache',
+        )
+
 
 class DeliveryServiceClient:
     def __init__(
@@ -715,6 +721,32 @@ class DeliveryServiceClient:
             if artefact_version and artefact_id.artefact_version != artefact_version:
                 continue
             yield metadata
+
+    def mark_cache_for_deletion(
+        self,
+        id: str | None=None,
+        descriptor: dict | None=None,
+        delete_after: datetime.datetime | None=None,
+    ):
+        if not id and not descriptor:
+            raise ValueError('either `id` or `descriptor` must be specified')
+
+        params = dict()
+
+        if id:
+            params['id'] = id
+
+        if delete_after:
+            params['deleteAfter'] = delete_after.isoformat()
+
+        res = self.request(
+            url=self._routes.cache(),
+            method='DELETE',
+            params=params,
+            json=descriptor,
+        )
+
+        res.raise_for_status()
 
 
 def _normalise_github_hostname(github_url: str):
