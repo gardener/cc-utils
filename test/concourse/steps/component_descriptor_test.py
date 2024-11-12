@@ -25,6 +25,8 @@ class ComponentDescriptorStepTest(unittest.TestCase):
             variant_name='don\'t_care',
             raw_dict={
                 'component_name': 'github.com/org/repo_name',
+                'upload': 'no-upload',
+                'ocm_repository': 'fake/ocm-repository',
             },
         )
         self.component_descriptor_transformer = self.component_descriptor_trait.transformer()

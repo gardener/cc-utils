@@ -33,7 +33,7 @@ def base_component_descriptor_v2(
     component_labels: list[ocm.Label],
     effective_version: str,
     source_labels: tuple,
-    ctx_repository_base_url: str,
+    ocm_repository_url: str,
     commit: str,
     repo_url: str,
 ):
@@ -80,7 +80,7 @@ def base_component_descriptor_v2(
         version=effective_version,
         repositoryContexts=[
           ocm.OciOcmRepository(
-            baseUrl=ctx_repository_base_url,
+            baseUrl=ocm_repository_url,
             type=ocm.AccessType.OCI_REGISTRY,
           )
         ],
