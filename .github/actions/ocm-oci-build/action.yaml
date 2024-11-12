@@ -26,6 +26,10 @@ inputs:
     description: |
       An optional list of OCM Labels to add into OCM Resource fragment.
     required: false
+  ocm_extra_identity:
+    description: |
+      Optional extra_identity to add into OCM Resource fragment.
+    required: false
   target:
     description: |
       docker-build target (similar to `docker build --target`)
@@ -110,6 +114,12 @@ runs:
         labels="${{ inputs.ocm_labels }}"
         if [ -n "${labels}" ]; then
           echo -e "labels:\n${labels}" >> $r
+        fi
+        extra_identity="${{ inputs.ocm_extra_identity || false}}"
+        if [ "${extra_identity}" != 'false' ]; then
+          echo "extraIdentity:" >> $r
+          # indent extra-identity (assuming it is yaml)
+          echo "${extra_identity}" | sed 's/^/  /g' >> $r
         fi
 
         (
