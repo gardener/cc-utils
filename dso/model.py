@@ -28,6 +28,14 @@ class Datasource:
     CC_UTILS = 'cc-utils'
     DIKI = 'diki'
 
+    @staticmethod
+    def has_scan_info(datasource: str) -> bool:
+        return datasource not in (
+            Datasource.ARTEFACT_ENUMERATOR,
+            Datasource.CHECKMARX,
+            Datasource.CC_UTILS,
+        )
+
 
 def normalise_artefact_extra_id(
     artefact_extra_id: dict[str, str],
@@ -147,6 +155,17 @@ class Datatype:
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
+
+    @staticmethod
+    def datatype_to_datasource(datatype: str) -> str:
+        return {
+            Datatype.LICENSE: Datasource.BDBA,
+            Datatype.VULNERABILITY: Datasource.BDBA,
+            Datatype.OS_IDS: Datasource.CC_UTILS,
+            Datatype.CODECHECKS_AGGREGATED: Datasource.CHECKMARX,
+            Datatype.MALWARE_FINDING: Datasource.CLAMAV,
+            Datatype.DIKI_FINDING: Datasource.DIKI,
+        }[datatype]
 
 
 @dataclasses.dataclass(frozen=True)
