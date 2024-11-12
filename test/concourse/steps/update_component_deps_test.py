@@ -1,5 +1,3 @@
-import ocm
-
 import pytest
 
 import test_utils
@@ -31,10 +29,6 @@ def job_variant():
         raw_dict={
             'component_name': 'github.com/org/repo_name',
         },
-    )
-
-    component_descriptor_trait.ctx_repository = lambda: ocm.OciOcmRepository(
-        baseUrl='dummy-base-url',
     )
 
     main_repo = test_utils.repository()

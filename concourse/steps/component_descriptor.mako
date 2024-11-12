@@ -20,7 +20,10 @@ main_repo = job_variant.main_repository()
 main_repo_labels = main_repo.source_labels()
 main_repo_path_env_var = main_repo.logical_name().replace('-', '_').upper() + '_PATH'
 other_repos = [r for r in job_variant.repositories() if not r.is_main_repo()]
-ctx_repository_base_url = descriptor_trait.ctx_repository_base_url() or ''
+if descriptor_trait.ocm_repository:
+  ocm_repository_url = descriptor_trait.ocm_repository.oci_ref
+else:
+  ocm_repository_url = None
 retention_policy = descriptor_trait.retention_policy()
 ocm_repository_mappings = descriptor_trait.ocm_repository_mappings()
 
@@ -87,7 +90,7 @@ with open(version_file_path) as f:
 component_name = '${descriptor_trait.component_name()}'
 component_labels = ${descriptor_trait.component_labels()}
 component_name_v2 = component_name.lower() # OCI demands lowercase
-ctx_repository_base_url = '${ctx_repository_base_url}'
+ocm_repository_url = '${ocm_repository_url}'
 
 ${ocm_repository_lookup(ocm_repository_mappings)}
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
@@ -108,7 +111,7 @@ base_descriptor_v2 = base_component_descriptor_v2(
     component_labels=component_labels,
     effective_version=effective_version,
     source_labels=${[dataclasses.asdict(label) for label in main_repo_labels]},
-    ctx_repository_base_url=ctx_repository_base_url,
+    ocm_repository_url=ocm_repository_url,
     commit=commit_hash,
     repo_url=main_repo_url,
 )
@@ -232,7 +235,7 @@ if os.path.isfile(descriptor_script):
   subproc_env['COMPONENT_NAME'] = component_name
   subproc_env['COMPONENT_VERSION'] = effective_version
   subproc_env['EFFECTIVE_VERSION'] = effective_version
-  subproc_env['CURRENT_COMPONENT_REPOSITORY'] = ctx_repository_base_url
+  subproc_env['CURRENT_COMPONENT_REPOSITORY'] = ocm_repository_url
 
   # pass predefined command to add dependencies for convenience purposes
   add_dependencies_cmd = ' '.join((
@@ -284,8 +287,8 @@ else:
 
 % if descriptor_trait.upload is comp_descr_trait.UploadMode.LEGACY:
   % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
-if descriptor_v2 and ctx_repository_base_url:
-  ocm_repository = ocm.OciOcmRepository(baseUrl=ctx_repository_base_url)
+if descriptor_v2 and ocm_repository_url:
+  ocm_repository = ocm.OciOcmRepository(baseUrl=ocm_repository_url)
 
   if descriptor_v2.component.current_ocm_repo != ocm_repository:
     descriptor_v2.component.repositoryContexts.append(ocm_repository)

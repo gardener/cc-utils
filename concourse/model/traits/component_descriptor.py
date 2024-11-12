@@ -150,24 +150,6 @@ ATTRIBUTES = (
         default=['ignore-me'],
         doc='obsolete',
     ),
-    AttributeSpec.deprecated(
-        name='ctx_repository_base_url',
-        type=str,
-        default=None, # if not explicitly configured, will be injected from cicd-default
-        doc='''
-            the component descriptor context repository base_url (for component descriptor v2).
-            If not configured, the CICD-landscape's default ctx will be used.
-        '''
-    ),
-    AttributeSpec.deprecated(
-        name='ctx_repository',
-        type=str,
-        default=None, # if not explicitly configured, will be injected from cicd-default
-        doc='''
-            the component descriptor context repository cfg name (for component descriptor v2).
-            If not configured, the CICD-landscape's default ctx will be used.
-        '''
-    ),
     AttributeSpec.optional(
         name='ocm_repository',
         type=str,
@@ -297,51 +279,45 @@ class ComponentDescriptorTrait(Trait):
 
     @property
     def ocm_repository(self) -> ocm.OciOcmRepository:
-        ocm_repo = self.raw.get('ocm_repository') or self.raw.get('ctx_repository')
+        ocm_repo = self.raw.get('ocm_repository')
+
+        # ocm_repo might be:
+        # - a ocm-repository-url (type: str)
+        # - a OCM Repository (type: dict / gcm.OcmRepository
+
         # XXX hack for unittests
         if not self.cfg_set:
             return None
 
-        # ocm_repo might be:
-        # - a cfg-element-name (type: CtxRepositoryCfg)
-        # - a ocm-repository-url (type: str)
-        # - a OCM Repository (type: dict / gcm.OcmRepository
-
         if ocm_repo:
-            try:
-                ctx_repo_cfg = self.cfg_set.ctx_repository(ocm_repo)
-            except model.base.ConfigElementNotFoundError:
-                # assume it is a ocm-repository-url
-                return ocm.OciOcmRepository(
-                    baseUrl=ocm_repo,
-                )
-        else:
-            ctx_repo_cfg = self.cfg_set.ctx_repository()
+            # XXX ocm_repo used to also be interpreted as a cfg-element-name
+            # -> heuristically check it is a URL by checking for presence of `/` characters
+            # (which is both not common / allowed for cfg-element-names)
+            # -> remove this check again e.g. after 2025-01-01
+            if not '/' in ocm_repo:
+                raise ValueError(f'unexpected {ocm_repo=} - expected a URL rather than cfg-name')
 
+            return ocm.OciOcmRepository(
+                baseUrl=ocm_repo,
+            )
+
+        # todo: configure all pipelines (make ocm_repository a mandatory attribute)
+        ctx_repo_cfg = self.cfg_set.ctx_repository()
         ctx_repo_cfg: model.ctx_repository.CtxRepositoryCfg
 
         return ocm.OciOcmRepository(
             baseUrl=ctx_repo_cfg.base_url(),
         )
 
-    def ctx_repository_base_url(self):
-        ctx_repo = self.ocm_repository
-        # XXX hack for unittsts
-        if ctx_repo is None:
-            return None
-
-        # use default ctx_repository_base_url, if not explicitly configured
-        if not (base_url := self.raw.get('ctx_repository_base_url')):
-            return ctx_repo.baseUrl
-        else:
-            # XXX warn or even forbid, at least if different from ctx-repo-cfg?
-            return base_url
-
     def component_labels(self):
         return self.raw['component_labels']
 
     def ocm_repository_mappings(self) -> list[OcmRepositoryMappingEntry]:
-        ocm_repository_url = self.ctx_repository_base_url()
+        if self.ocm_repository:
+            ocm_repository_url = self.ocm_repository.baseUrl
+        else:
+            ocm_repository_url = None
+
         ocm_repository_mappings: list[dict] = self.raw['ocm_repository_mappings']
 
         if not ocm_repository_url and not ocm_repository_mappings:
@@ -383,7 +359,11 @@ class ComponentDescriptorTrait(Trait):
     def validate(self):
         super().validate()
 
-        ocm_repository_url = self.ctx_repository_base_url()
+        if self.ocm_repository:
+            ocm_repository_url = self.ocm_repository.oci_ref
+        else:
+            ocm_repository_url = None
+
         ocm_repository_mappings: list[dict] = self.raw['ocm_repository_mappings']
         if not ocm_repository_url and ocm_repository_mappings:
             raise ModelValidationError(
