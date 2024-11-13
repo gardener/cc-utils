@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 ComponentDescriptorLookupById = collections.abc.Callable[
-    [cnudie.util.ComponentId, ocm.OcmRepository],
+    [cnudie.util.ComponentId, oca.OcmRepositoryLookup],
     collections.abc.Awaitable[ocm.ComponentDescriptor],
 ]
 
