@@ -38,7 +38,7 @@ class CtxCfg:
     delivery_cfg_name: str | None = None
     github_repo_mappings: tuple[GithubRepoMapping, ...] = ()
     cache_dir: str | None = None # used (e.g.) for caching component-descriptors
-    ocm_repo_base_url: str | None = None # fka ctx_repo_url
+    ocm_repo_base_url: str | None = None
     ocm_repository_mappings: list | None = None
 
     @property

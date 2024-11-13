@@ -13,7 +13,6 @@ async def iter(
     prune_unique: bool=True,
     node_filter: collections.abc.Callable[[cnudie.iter.Node], bool]=None,
     ocm_repo: ocm.OcmRepository | str=None,
-    ctx_repo: ocm.OcmRepository | str=None, # deprecated, use `ocm_repo` instead
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
 ) -> collections.abc.AsyncGenerator[cnudie.iter.Node, None, None]:
@@ -32,16 +31,12 @@ async def iter(
     @param prune_unique: if true, redundant component-versions will only be traversed once
     @param node_filter:  use to filter emitted nodes (see Filter for predefined filters)
     @param ocm_repo:     optional OCM Repository to be used to override in the lookup
-    @param ctx_repo:     deprecated, use `ocm_repo` instead
     @param component_filter: use to exclude components (and their references) from the iterator;
                              thereby `True` means the component should be filtered out
     @param reftype_filter: use to exclude components (and their references) from the iterator if
                            they are of a certain reference type; thereby `True` means the component
                            should be filtered out
     '''
-    if not ocm_repo and ctx_repo:
-        ocm_repo = ctx_repo
-
     if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
 

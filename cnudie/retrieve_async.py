@@ -90,18 +90,14 @@ def in_memory_cache_component_descriptor_lookup(
 
     async def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: ocm.OcmRepository | str=None,
         ocm_repository_lookup=ocm_repository_lookup,
     ):
         component_id = cnudie.util.to_component_id(component_id)
 
-        if ctx_repo:
-            ocm_repos = (ctx_repo,)
-        else:
-            ocm_repos = cnudie.retrieve.iter_ocm_repositories(
-                component_id,
-                ocm_repository_lookup,
-            )
+        ocm_repos = cnudie.retrieve.iter_ocm_repositories(
+            component_id,
+            ocm_repository_lookup,
+        )
 
         for ocm_repo in ocm_repos:
             if isinstance(ocm_repo, str):
@@ -174,18 +170,14 @@ def file_system_cache_component_descriptor_lookup(
 
     async def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: ocm.OcmRepository | str=None,
         ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
     ):
         component_id = cnudie.util.to_component_id(component_id)
 
-        if ctx_repo:
-            ocm_repos = (ctx_repo, )
-        else:
-            ocm_repos = cnudie.retrieve.iter_ocm_repositories(
-                component_id,
-                ocm_repository_lookup,
-            )
+        ocm_repos = cnudie.retrieve.iter_ocm_repositories(
+            component_id,
+            ocm_repository_lookup,
+        )
 
         for ocm_repo in ocm_repos:
             if not ocm_repo:
@@ -254,20 +246,16 @@ def delivery_service_component_descriptor_lookup(
 
     async def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: ocm.OcmRepository | str=None,
         ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
         ignore_errors: tuple[Exception]=default_ignore_errors,
     ):
         component_id = cnudie.util.to_component_id(component_id)
 
-        if ctx_repo:
-            ocm_repos = (ctx_repo, )
-        else:
-            ocm_repos = cnudie.retrieve.iter_ocm_repositories(
-                component_id,
-                ocm_repository_lookup,
-            )
+        ocm_repos = cnudie.retrieve.iter_ocm_repositories(
+            component_id,
+            ocm_repository_lookup,
+        )
 
         # if component descriptor is not found in `ocm_repos`, fallback to default ocm repo mapping
         # defined in delivery service (i.e. specify no ocm repository)
@@ -417,7 +405,6 @@ def oci_component_descriptor_lookup(
 
     async def lookup(
         component_id: cnudie.util.ComponentId,
-        ctx_repo: ocm.OcmRepository | str=None,
         ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
@@ -428,16 +415,13 @@ def oci_component_descriptor_lookup(
         else:
             local_oci_client = oci_client
 
-        if ctx_repo:
-            ocm_repos = (ctx_repo,)
-        else:
-            if not ocm_repository_lookup:
-                raise ValueError('either ctx_repo, or ocm_repository_lookup must be passed')
+        if not ocm_repository_lookup:
+            raise ValueError('ocm_repository_lookup must be passed')
 
-            ocm_repos = cnudie.retrieve.iter_ocm_repositories(
-                component_id,
-                ocm_repository_lookup,
-            )
+        ocm_repos = cnudie.retrieve.iter_ocm_repositories(
+            component_id,
+            ocm_repository_lookup,
+        )
 
         raw = await raw_component_descriptor_from_oci(
             component_id=component_id,
@@ -478,19 +462,15 @@ def version_lookup(
 
     async def lookup(
         component_id: cnudie.util.ComponentName,
-        ctx_repo: ocm.OcmRepository | str=None,
         ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
     ):
         component_name = cnudie.util.to_component_name(component_id)
 
-        if ctx_repo:
-            ocm_repos = (ctx_repo, )
-        else:
-            ocm_repos = cnudie.retrieve.iter_ocm_repositories(
-                component_name,
-                ocm_repository_lookup,
-            )
+        ocm_repos = cnudie.retrieve.iter_ocm_repositories(
+            component_name,
+            ocm_repository_lookup,
+        )
 
         versions = set()
         for ocm_repo in ocm_repos:
@@ -505,7 +485,7 @@ def version_lookup(
             try:
                 for version_tag in await component_versions(
                     component_name=component_name,
-                    ctx_repo=ocm_repo,
+                    ocm_repo=ocm_repo,
                     oci_client=oci_client,
                 ):
                     versions.add(version_tag)
@@ -550,7 +530,7 @@ def composite_component_descriptor_lookup(
     async def lookup(
         component_id: cnudie.util.ComponentId,
         /,
-        ctx_repo: ocm.OciOcmRepository | str=None,
+        ocm_repo: ocm.OciOcmRepository | str=None,
         ocm_repository_lookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
@@ -560,13 +540,10 @@ def composite_component_descriptor_lookup(
         for lookup in lookups:
             res = None
             try:
-                if ctx_repo:
-                    res = await lookup(
-                        component_id,
-                        ctx_repo=ctx_repo,
-                    )
-                else:
-                    res = await lookup(component_id)
+                res = await lookup(
+                    component_id,
+                    ocm_repository_lookup=ocm_repository_lookup,
+                )
             except om.OciImageNotFoundException:
                 pass
             except dacite.DaciteError as ce:
@@ -587,15 +564,7 @@ def composite_component_descriptor_lookup(
         if absent_ok:
             return
 
-        if isinstance(ctx_repo, str):
-            ctx_repo = ocm.OciOcmRepository(
-                type=ocm.OciAccess,
-                baseUrl=ctx_repo,
-            )
-
-        if ctx_repo:
-            error = ctx_repo.component_version_oci_ref(component_id)
-        elif ocm_repository_lookup:
+        if ocm_repository_lookup:
             def to_repo_url(ocm_repo):
                 if isinstance(ocm_repo, str):
                     return ocm_repo
@@ -738,17 +707,17 @@ async def component_diff(
 
 async def component_versions(
     component_name: str,
-    ctx_repo: ocm.OcmRepository,
+    ocm_repo: ocm.OcmRepository,
     oci_client: oca.Client=None,
 ) -> collections.abc.Sequence[str]:
-    if not isinstance(ctx_repo, ocm.OciOcmRepository):
-        raise NotImplementedError(ctx_repo)
+    if not isinstance(ocm_repo, ocm.OciOcmRepository):
+        raise NotImplementedError(ocm_repo)
 
     if not oci_client:
         import ccc.oci
         oci_client = ccc.oci.oci_client_async()
 
-    ctx_repo: ocm.OciOcmRepository
-    oci_ref = ctx_repo.component_oci_ref(component_name)
+    ocm_repo: ocm.OciOcmRepository
+    oci_ref = ocm_repo.component_oci_ref(component_name)
 
     return await oci_client.tags(image_reference=oci_ref)

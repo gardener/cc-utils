@@ -283,7 +283,6 @@ class DeliveryServiceClient:
         self,
         name: str,
         version: str,
-        ctx_repo_url: str=None,
         ocm_repo_url: str=None,
         version_filter: str | None=None,
         validation_mode: ocm.ValidationMode | None=None,
@@ -292,7 +291,6 @@ class DeliveryServiceClient:
             'component_name': name,
             'version': version,
         }
-        ocm_repo_url = ocm_repo_url or ctx_repo_url
         if ocm_repo_url:
             params['ocm_repo_url'] = ocm_repo_url
         if version_filter is not None:
@@ -410,7 +408,6 @@ class DeliveryServiceClient:
         self,
         name: str=None,
         version: str=None,
-        ctx_repo_url: str=None,
         ocm_repo_url: str=None,
         version_filter: str | None=None,
         component: ocm.Component | ocm.ComponentDescriptor=None,
@@ -433,7 +430,7 @@ class DeliveryServiceClient:
         ]
         '''
 
-        if any((name, version, ocm_repo_url, ctx_repo_url)):
+        if any((name, version, ocm_repo_url)):
             if not all((name, version)):
                 raise ValueError('either all or none of name and version must be set')
             elif component:
@@ -450,8 +447,8 @@ class DeliveryServiceClient:
             'component_name': name,
             'version': version,
         }
-        if ocm_repo_url or ctx_repo_url:
-            params['ocm_repo_url'] = ocm_repo_url or ctx_repo_url
+        if ocm_repo_url:
+            params['ocm_repo_url'] = ocm_repo_url
         if version_filter is not None:
             params['version_filter'] = version_filter
 

@@ -226,13 +226,13 @@ def oci_artefact_reference(
     if not ocm_repository:
         raise ValueError('ocm_repository must be given unless a Component is passed.')
     elif isinstance(ocm_repository, str):
-        repo_ctx = ocm.OciOcmRepository(baseUrl=ocm_repository)
+        ocm_repository = ocm.OciOcmRepository(baseUrl=ocm_repository)
     elif isinstance(ocm_repository, ocm.OciOcmRepository):
-        repo_ctx = ocm_repository
+        ocm_repository = ocm_repository
     else:
         raise TypeError(type(ocm_repository))
 
-    return repo_ctx.component_version_oci_ref(
+    return ocm_repository.component_version_oci_ref(
         name=component_name,
         version=component_version,
     )
@@ -252,9 +252,9 @@ def target_oci_ref(
     component_name = normalise_component_name(component_name)
     component_version = component_ref.version
 
-    last_ctx_repo = component.current_ocm_repo
+    last_ocm_repo = component.current_ocm_repo
 
-    return last_ctx_repo.component_version_oci_ref(
+    return last_ocm_repo.component_version_oci_ref(
         name=component_name,
         version=component_version,
     )
