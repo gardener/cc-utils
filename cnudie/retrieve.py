@@ -27,11 +27,6 @@ logger = logging.getLogger(__name__)
 
 ComponentName = str | tuple[str, str] | ocm.Component | ocm.ComponentIdentity
 
-ComponentDescriptorLookupById = collections.abc.Callable[
-    [ocm.ComponentIdentity, ocm.OcmRepository],
-    ocm.ComponentDescriptor
-]
-
 VersionLookupByComponent = collections.abc.Callable[
     [ComponentName, ocm.OcmRepository],
     collections.abc.Sequence[str]
@@ -50,6 +45,11 @@ OcmRepositoryCfg = str | collections.abc.Iterable[str]
 OcmRepositoryLookup = collections.abc.Callable[
     [ComponentName],
     collections.abc.Generator[ocm.OciOcmRepository | str, None, None],
+]
+
+ComponentDescriptorLookupById = collections.abc.Callable[
+    [ocm.ComponentIdentity, OcmRepositoryLookup],
+    ocm.ComponentDescriptor
 ]
 
 
