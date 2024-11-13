@@ -693,7 +693,7 @@ def process_images(
             src_name=component.name,
             src_version=component.version,
             patched_component_descriptor=component_descriptor,
-            src_ctx_repo=orig_ocm_repo,
+            src_ocm_repo=orig_ocm_repo,
         )
 
     # retrieve component descriptor from the target registry as local descriptor might not contain

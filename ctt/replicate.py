@@ -22,13 +22,13 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     src_name: str,
     src_version: str,
     patched_component_descriptor: ocm.ComponentDescriptor,
-    src_ctx_repo: ocm.OciOcmRepository,
+    src_ocm_repo: ocm.OciOcmRepository,
 ):
-    if isinstance(src_ctx_repo, str):
-        src_ctx_repo = ocm.OciOcmRepository(baseUrl=src_ctx_repo)
+    if isinstance(src_ocm_repo, str):
+        src_ocm_repo = ocm.OciOcmRepository(baseUrl=src_ocm_repo)
 
-    if not isinstance(src_ctx_repo, ocm.OciOcmRepository):
-        raise NotImplementedError(src_ctx_repo)
+    if not isinstance(src_ocm_repo, ocm.OciOcmRepository):
+        raise NotImplementedError(src_ocm_repo)
 
     client = ccc.oci.oci_client()
 
@@ -40,7 +40,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         # do not overwrite existing component-descriptors
         return
 
-    src_ref = src_ctx_repo.component_version_oci_ref(
+    src_ref = src_ocm_repo.component_version_oci_ref(
         name=src_name,
         version=src_version,
     )
