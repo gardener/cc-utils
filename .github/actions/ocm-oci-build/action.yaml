@@ -4,6 +4,19 @@ description: |
   OCM Resource fragment as output (for being added to OCM Component-Descriptor).
   For convenience, the action tries to authenticate against target-OCI-Registry using
   github.com/gardener/cc-utils/.github/actions/gar-auth.
+
+  *Caveat for "matrix-builds"*
+
+  As outlined [here](https://github.com/orgs/community/discussions/17245), consuming outputs
+  (such as ocm-fragments in case of this action) is not possible without clunky workarounds.
+  Hence, this action will - in addition to writing to `ocm_resource` - also expose
+  ocm-source-fragments using `actions/upload-artifact@v4`, using the following target:
+  `ocm-oci-build_oci-image_{name}` (name being this action's `name`). The OCM-Resource-fragment
+  will be named `ocm_resources.yaml`.
+
+  This naming will avoid collisions, iff `name`-attrs are unique (as mandated within one single
+  component-descriptor). It is thus assumed that - within using workflows - only one
+  component-descriptor is targeted.
 inputs:
   name:
     description: |
@@ -101,7 +114,7 @@ runs:
       shell: bash
       id: export
       run: |
-        r=ocm-resource.yaml
+        r=ocm-resources.yaml
         cat << EOF > $r
         name: ${{ inputs.name }}
         version: ${{ inputs.version }}
@@ -140,3 +153,8 @@ runs:
         $(cat ${GITHUB_OUTPUT})
         \`\`\`
         EOF
+    - name: Upload OCM Resource fragment
+      uses: actions/upload-artifact@v4
+      with:
+        name: ocm-oci-build_oci-image_${{ inputs.name }}
+        path: ocm-resources.yaml
