@@ -114,13 +114,6 @@ class ElasticSearchClient:
     ):
         ci.util.check_type(index, str)
         ci.util.check_type(body, dict)
-        if 'doc_type' in kwargs:
-            raise ValueError(
-                '''
-                doc_type attribute has been deprecated - see:
-                https://www.elastic.co/guide/en/elasticsearch/reference/6.0/removal-of-types.html
-                '''
-            )
 
         if inject_metadata and _metadata_dict():
             md = _metadata_dict()
@@ -129,7 +122,6 @@ class ElasticSearchClient:
         try:
             return self._api.index(
                 index=index,
-                doc_type='_doc',
                 document=body,
                 *args,
                 **kwargs,
