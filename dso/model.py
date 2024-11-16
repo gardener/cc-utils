@@ -51,7 +51,7 @@ def normalise_artefact_extra_id(
     return '_'.join([':'.join(values) for values in s])
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class LocalArtefactId:
     artefact_name: str | None
     artefact_type: str | None
@@ -95,7 +95,7 @@ def is_ocm_artefact(artefact_kind: ArtefactKind) -> bool:
     return artefact_kind in (ArtefactKind.RESOURCE, ArtefactKind.SOURCE)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class ComponentArtefactId:
     component_name: str | None
     component_version: str | None
@@ -447,7 +447,7 @@ class ComplianceSnapshot:
             self.state.remove(state)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class ArtefactMetadata:
     '''
     Model class to interact with entries of the delivery-db. In the first place, these entries are
