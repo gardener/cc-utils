@@ -40,19 +40,13 @@ class Datasource:
 
 def normalise_artefact_extra_id(
     artefact_extra_id: dict[str, str],
-    artefact_version: str=None,
 ) -> str:
     '''
-    generate stable representation of `artefact_extra_id` and remove `version` key if
-    the specified version is identical to the given artefact version
+    generate stable representation of `artefact_extra_id`
 
     sorted by key in alphabetical order and concatinated following pattern:
     key1:value1_key2:value2_ ...
     '''
-    if (version := artefact_extra_id.get('version')) and version == artefact_version:
-        artefact_extra_id = artefact_extra_id.copy()
-        del artefact_extra_id['version']
-
     s = sorted(artefact_extra_id.items(), key=lambda items: items[0])
     return '_'.join([':'.join(values) for values in s])
 
@@ -64,14 +58,8 @@ class LocalArtefactId:
     artefact_version: str | None = None
     artefact_extra_id: dict = dataclasses.field(default_factory=dict)
 
-    def normalised_artefact_extra_id(
-        self,
-        remove_duplicate_version: bool=False,
-    ) -> str:
-        return normalise_artefact_extra_id(
-            artefact_extra_id=self.artefact_extra_id,
-            artefact_version=self.artefact_version if remove_duplicate_version else None,
-        )
+    def normalised_artefact_extra_id(self) -> str:
+        return normalise_artefact_extra_id(self.artefact_extra_id)
 
     def as_frozenset(self) -> frozenset[str]:
         return frozenset((
