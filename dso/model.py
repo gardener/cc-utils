@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import enum
+import typing
 
 import dacite
 import dateutil.parser
@@ -72,6 +73,28 @@ class LocalArtefactId:
             artefact_version=self.artefact_version if remove_duplicate_version else None,
         )
 
+    def as_frozenset(self) -> frozenset[str]:
+        return frozenset((
+            self.artefact_name,
+            self.artefact_type,
+            self.artefact_version,
+            self.normalised_artefact_extra_id(),
+        ))
+
+    def __hash__(self) -> int:
+        return hash(self.as_frozenset())
+
+    def __eq__(self, other: typing.Self) -> bool:
+        if not type(self) == type(other):
+            return False
+        return self.as_frozenset() == other.as_frozenset()
+
+    def __str__(self) -> str:
+        return (
+            f'{self.artefact_name}:{self.artefact_version} '
+            f'({self.artefact_type=}, {self.artefact_extra_id=})'
+        )
+
 
 class ArtefactKind(enum.StrEnum):
     ARTEFACT = 'artefact'
@@ -90,7 +113,7 @@ class ComponentArtefactId:
     component_version: str | None
     artefact: LocalArtefactId | None
     artefact_kind: ArtefactKind = ArtefactKind.ARTEFACT
-    references: list['ComponentArtefactId'] = dataclasses.field(default_factory=list)
+    references: list[typing.Self] = dataclasses.field(default_factory=list)
 
     def as_frozenset(self) -> frozenset[str]:
         props = (
@@ -101,20 +124,23 @@ class ComponentArtefactId:
         )
 
         if self.artefact:
-            props += (
-                self.artefact.artefact_name,
-                self.artefact.artefact_version,
-                self.artefact.artefact_type,
-                # frozenset(self.artefact.artefact_extra_id.items()),
-            )
+            props += (self.artefact.as_frozenset(),)
 
         return frozenset(props)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.as_frozenset())
 
-    def __eq__(self, other: 'ComponentArtefactId'):
+    def __eq__(self, other: typing.Self) -> bool:
+        if not type(self) == type(other):
+            return False
         return self.as_frozenset() == other.as_frozenset()
+
+    def __str__(self) -> str:
+        return (
+            f'{self.component_name}:{self.component_version} '
+            f'({self.artefact_kind=}, {self.artefact=})'
+        )
 
 
 def component_artefact_id_from_ocm(
