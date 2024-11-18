@@ -53,8 +53,8 @@ def normalise_artefact_extra_id(
 
 @dataclasses.dataclass
 class LocalArtefactId:
-    artefact_name: str | None
-    artefact_type: str | None
+    artefact_name: str | None = None
+    artefact_type: str | None = None
     artefact_version: str | None = None
     artefact_extra_id: dict = dataclasses.field(default_factory=dict)
 
@@ -97,10 +97,10 @@ def is_ocm_artefact(artefact_kind: ArtefactKind) -> bool:
 
 @dataclasses.dataclass
 class ComponentArtefactId:
-    component_name: str | None
-    component_version: str | None
-    artefact: LocalArtefactId | None
-    artefact_kind: ArtefactKind = ArtefactKind.ARTEFACT
+    component_name: str | None = None
+    component_version: str | None = None
+    artefact: LocalArtefactId | None = None
+    artefact_kind: ArtefactKind | None = None
     references: list[typing.Self] = dataclasses.field(default_factory=list)
 
     def as_frozenset(self) -> frozenset[str]:
