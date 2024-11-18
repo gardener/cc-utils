@@ -58,6 +58,7 @@ class LocalArtefactId:
     artefact_version: str | None = None
     artefact_extra_id: dict = dataclasses.field(default_factory=dict)
 
+    @property
     def normalised_artefact_extra_id(self) -> str:
         return normalise_artefact_extra_id(self.artefact_extra_id)
 
@@ -66,7 +67,7 @@ class LocalArtefactId:
             self.artefact_name,
             self.artefact_type,
             self.artefact_version,
-            self.normalised_artefact_extra_id(),
+            self.normalised_artefact_extra_id,
         ))
 
     def __hash__(self) -> int:
