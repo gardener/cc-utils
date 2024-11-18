@@ -33,7 +33,8 @@ class Node:
 
 @dataclasses.dataclass
 class ComponentNode(Node):
-    pass
+    def __str__(self) -> str:
+        return f'{self.component.name}:{self.component.version}'
 
 
 class ArtefactNode:
@@ -63,10 +64,22 @@ class ArtefactNode:
 class ResourceNode(Node, ArtefactNode):
     resource: ocm.Resource
 
+    def __str__(self) -> str:
+        return (
+            f'{self.component.name}:{self.component.version} - '
+            f'{self.resource.name}:{self.resource.version} ({self.resource.extraIdentity=})'
+        )
+
 
 @dataclasses.dataclass
 class SourceNode(Node, ArtefactNode):
     source: ocm.Source
+
+    def __str__(self) -> str:
+        return (
+            f'{self.component.name}:{self.component.version} - '
+            f'{self.source.name}:{self.source.version} ({self.source.extraIdentity=})'
+        )
 
 
 class Filter:
