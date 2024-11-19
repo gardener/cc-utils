@@ -27,6 +27,7 @@ class Datasource:
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
+    DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
 
     @staticmethod
@@ -51,6 +52,9 @@ class Datasource:
             ),
             Datasource.CC_UTILS: (
                 Datatype.OS_IDS,
+            ),
+            Datasource.DELIVERY_DASHBOARD: (
+                Datatype.RESCORING,
             ),
             Datasource.DIKI: (
                 Datatype.ARTEFACT_SCAN_INFO,
