@@ -262,7 +262,7 @@ class OciImageNotFoundException(Exception):
     pass
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class OciBlobRef:
     digest: str
     mediaType: str
@@ -395,7 +395,7 @@ class OciPlatform:
         return True
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class OciImageManifestListEntry(OciBlobRef):
     artifactType: str | None = None
     data: str | None = None
