@@ -1,4 +1,5 @@
 dacite
 jsonschema
+gardener-oci
 python-dateutil
 PyYaml
