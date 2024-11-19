@@ -1,3 +1,10 @@
+'''
+model-classes and utils for interaction with OCM-Component-Descriptors persisted in OCI Registries
+
+Note: None of the Symbols defined in this module is intended as a stable API
+      -> expect incompatible changes w/o prior notice
+'''
+
 import dataclasses
 import io
 import logging
