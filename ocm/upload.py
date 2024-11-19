@@ -1,3 +1,10 @@
+'''
+functionality for uploading OCM-Component-Descriptors to OCI Registries.
+
+Note: None of the Symbols defined in this module is intended as a stable API
+      -> expect incompatible changes w/o prior notice
+'''
+
 import collections.abc
 import dataclasses
 import enum

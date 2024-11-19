@@ -96,7 +96,6 @@ import ccc.oci
 import ci.util
 import cnudie.iter
 import cnudie.retrieve
-import cnudie.upload
 import cnudie.util
 import cnudie.validate
 import concourse.steps.component_descriptor_util as cdu
@@ -105,6 +104,7 @@ import concourse.model.traits.version
 import concourse.model.traits.release
 import concourse.util
 import ocm
+import ocm.upload
 import github.util
 import gitutil
 
@@ -424,7 +424,7 @@ for validation_error in cnudie.validate.iter_violations(nodes=nodes):
 
 tgt_ref = cnudie.util.target_oci_ref(component=component)
 logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
-uploaded_oci_manifest_bytes = cnudie.upload.upload_component_descriptor(
+uploaded_oci_manifest_bytes = ocm.upload.upload_component_descriptor(
   component_descriptor=component_descriptor,
   oci_client=oci_client,
 )

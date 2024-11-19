@@ -63,10 +63,9 @@ import yaml
 import ccc.oci
 import cnudie.purge
 import cnudie.retrieve
-import cnudie.upload
 import cnudie.util
 import ocm
-import ocm
+import ocm.upload
 import oci.auth as oa
 import version
 # required for deserializing labels
@@ -297,7 +296,7 @@ if descriptor_v2 and ocm_repository_url:
 
   target_ref = cnudie.util.oci_artefact_reference(descriptor_v2.component)
 
-  cnudie.upload.upload_component_descriptor(
+  ocm.upload.upload_component_descriptor(
     component_descriptor=descriptor_v2,
     ocm_repository=ocm_repository,
     oci_client=oci_client,

@@ -181,9 +181,9 @@ def upload(parsed):
                 data=f,
             )
 
-    import cnudie.upload
+    import ocm.upload
     print(f'Uploading OCM Component-Descriptor to: {oci_target_ref=}')
-    cnudie.upload.upload_component_descriptor(
+    ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
         oci_client=oci_client,
     )
