@@ -30,12 +30,37 @@ class Datasource:
     DIKI = 'diki'
 
     @staticmethod
+    def datasource_to_datatypes(datasource: str) -> tuple[str]:
+        return {
+            Datasource.ARTEFACT_ENUMERATOR: (
+                Datatype.COMPLIANCE_SNAPSHOTS,
+            ),
+            Datasource.BDBA: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.VULNERABILITY,
+                Datatype.LICENSE,
+                Datatype.STRUCTURE_INFO,
+                Datatype.RESCORING,
+            ),
+            Datasource.CHECKMARX: (
+                Datatype.CODECHECKS_AGGREGATED,
+            ),
+            Datasource.CLAMAV: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.MALWARE_FINDING,
+            ),
+            Datasource.CC_UTILS: (
+                Datatype.OS_IDS,
+            ),
+            Datasource.DIKI: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.DIKI_FINDING,
+            ),
+        }[datasource]
+
+    @staticmethod
     def has_scan_info(datasource: str) -> bool:
-        return datasource not in (
-            Datasource.ARTEFACT_ENUMERATOR,
-            Datasource.CHECKMARX,
-            Datasource.CC_UTILS,
-        )
+        return Datatype.ARTEFACT_SCAN_INFO in Datasource.datasource_to_datatypes(datasource)
 
 
 def normalise_artefact_extra_id(
