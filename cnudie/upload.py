@@ -87,17 +87,10 @@ def _iter_oci_blob_refs(
 
 def upload_component_descriptor(
     component_descriptor: ocm.ComponentDescriptor | ocm.Component,
+    oci_client: oci.client.Client,
     on_exist: UploadMode | str=UploadMode.SKIP,
     ocm_repository: ocm.OciOcmRepository | str=None,
-    oci_client: oci.client.Client=None,
 ):
-    if not oci_client:
-        try:
-            import ccc.oci
-        except ImportError:
-            raise ValueError('must pass-in oci_client')
-        oci_client = ccc.oci.oci_client()
-
     on_exist = UploadMode(on_exist)
 
     if isinstance(component_descriptor, ocm.Component):
