@@ -70,6 +70,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         componentDescriptorLayer=ocm.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
             size=cd_octets,
+            mediaType=ocm.oci.component_descriptor_mimetype,
         ),
     )
     cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
