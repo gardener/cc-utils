@@ -4,7 +4,6 @@ import enum
 import hashlib
 import json
 
-import cnudie.util
 import ocm
 import ocm.oci
 import oci.client
@@ -116,8 +115,10 @@ def upload_component_descriptor(
 
         if not component.current_ocm_repo == ocm_repository:
             component.repositoryContexts.append(ocm_repository)
+    else:
+        ocm_repository = component.current_ocm_repo
 
-    target_ref = cnudie.util.oci_artefact_reference(component)
+    target_ref = ocm_repository.component_version_oci_ref(component)
 
     if on_exist in (UploadMode.SKIP, UploadMode.FAIL):
         # check whether manifest exists (head_manifest does not return None)
