@@ -15,7 +15,7 @@ import yaml
 import cachetools
 import dacite
 import ocm
-import gci.oci
+import ocm.oci
 
 import ci.util
 import cnudie.retrieve
@@ -351,7 +351,7 @@ async def raw_component_descriptor_from_oci(
             content_type='application/octet-stream'
         )
         cfg = dacite.from_dict(
-            data_class=gci.oci.ComponentDescriptorOciCfg,
+            data_class=ocm.oci.ComponentDescriptorOciCfg,
             data=cfg_dict,
         )
         layer_digest = cfg.componentDescriptorLayer.digest
@@ -369,7 +369,7 @@ async def raw_component_descriptor_from_oci(
         layer_digest = manifest.layers[0].digest
         layer_mimetype = manifest.layers[0].mediaType
 
-    if not layer_mimetype in gci.oci.component_descriptor_mimetypes:
+    if not layer_mimetype in ocm.oci.component_descriptor_mimetypes:
         logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
         # XXX: check for non-tar-variant
 
@@ -437,7 +437,7 @@ def oci_component_descriptor_lookup(
         # wrap in fobj
         blob_fobj = io.BytesIO(raw)
         try:
-            component_descriptor = gci.oci.component_descriptor_from_tarfileobj(
+            component_descriptor = ocm.oci.component_descriptor_from_tarfileobj(
                 fileobj=blob_fobj,
             )
         except tarfile.ReadError as tre:

@@ -6,7 +6,7 @@ import json
 
 import cnudie.util
 import ocm
-import gci.oci
+import ocm.oci
 import oci.client
 import oci.model as om
 
@@ -140,7 +140,7 @@ def upload_component_descriptor(
     else:
         raise NotImplementedError(on_exist)
 
-    raw_fobj = gci.oci.component_descriptor_to_tarfileobj(component_descriptor)
+    raw_fobj = ocm.oci.component_descriptor_to_tarfileobj(component_descriptor)
     cd_digest = hashlib.sha256()
     while (chunk := raw_fobj.read(4096)):
         cd_digest.update(chunk)
@@ -157,8 +157,8 @@ def upload_component_descriptor(
         data=raw_fobj,
     )
 
-    cfg = gci.oci.ComponentDescriptorOciCfg(
-        componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
+    cfg = ocm.oci.ComponentDescriptorOciCfg(
+        componentDescriptorLayer=ocm.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
             size=cd_octets,
         )
@@ -185,12 +185,12 @@ def upload_component_descriptor(
     }
 
     manifest = om.OciImageManifest(
-        config=gci.oci.ComponentDescriptorOciCfgBlobRef(
+        config=ocm.oci.ComponentDescriptorOciCfgBlobRef(
             digest=cfg_digest_with_alg,
             size=cfg_octets,
         ),
         layers=[
-            gci.oci.ComponentDescriptorOciBlobRef(
+            ocm.oci.ComponentDescriptorOciBlobRef(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
             ),

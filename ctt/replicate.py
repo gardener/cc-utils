@@ -8,11 +8,10 @@ import hashlib
 import json
 import logging
 
-import gci.oci
-
 import ccc.oci
-import ocm
 import oci
+import ocm
+import ocm.oci
 import oci.model as om
 
 logger = logging.getLogger(__name__)
@@ -49,7 +48,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         image_reference=src_ref,
     )
 
-    raw_fobj = gci.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
+    raw_fobj = ocm.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
 
     cd_digest = hashlib.sha256()
     while (chunk := raw_fobj.read(4096)):
@@ -67,8 +66,8 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     )
 
     # config OciBlobRef
-    cfg = gci.oci.ComponentDescriptorOciCfg(
-        componentDescriptorLayer=gci.oci.ComponentDescriptorOciBlobRef(
+    cfg = ocm.oci.ComponentDescriptorOciCfg(
+        componentDescriptorLayer=ocm.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
             size=cd_octets,
         ),
