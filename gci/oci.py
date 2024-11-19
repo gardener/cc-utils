@@ -106,34 +106,3 @@ def component_descriptor_from_tarfileobj(
           raise ValueError('Component Descriptor appears to be empty')
 
         return ocm.ComponentDescriptor.from_dict(raw_dict)
-
-
-def image_ref_with_digest(
-    image_reference: str | oci.model.OciImageReference,
-    digest: ocm.DigestSpec=None,
-    oci_client: oci.client.Client=None,
-) -> oci.model.OciImageReference:
-    image_reference = oci.model.OciImageReference.to_image_ref(
-        image_reference=image_reference,
-    )
-
-    if image_reference.has_digest_tag:
-        return image_reference
-
-    if not (digest and digest.value):
-        if not oci_client:
-            import ccc.oci # late import to avoid cyclic imports
-            oci_client = ccc.oci.oci_client()
-
-        digest = ocm.DigestSpec(
-            hashAlgorithm=None,
-            normalisationAlgorithm=None,
-            value=hashlib.sha256(oci_client.manifest_raw(
-                image_reference=image_reference,
-                accept=oci.model.MimeTypes.prefer_multiarch,
-            ).content).hexdigest(),
-        )
-
-    return oci.model.OciImageReference.to_image_ref(
-        image_reference=image_reference.with_tag(tag=digest.oci_tag),
-    )
