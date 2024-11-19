@@ -286,8 +286,11 @@ def upload(
 
     print(f'will upload to: {target_ref=}')
 
+    oci_client = ccc.oci.oci_client()
+
     cnudie.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
+        oci_client=oci_client,
     )
 
 

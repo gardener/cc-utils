@@ -426,6 +426,7 @@ tgt_ref = cnudie.util.target_oci_ref(component=component)
 logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
 uploaded_oci_manifest_bytes = cnudie.upload.upload_component_descriptor(
   component_descriptor=component_descriptor,
+  oci_client=oci_client,
 )
 try:
   print(f'{uploaded_oci_manifest_bytes=}')

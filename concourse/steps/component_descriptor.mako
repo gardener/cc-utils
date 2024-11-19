@@ -285,6 +285,8 @@ else:
   print(f'XXX: did not find a component-descriptor at {v2_outfile=}')
   exit(1)
 
+oci_client = ccc.oci.oci_client()
+
 % if descriptor_trait.upload is comp_descr_trait.UploadMode.LEGACY:
   % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):
 if descriptor_v2 and ocm_repository_url:
@@ -298,6 +300,7 @@ if descriptor_v2 and ocm_repository_url:
   cnudie.upload.upload_component_descriptor(
     component_descriptor=descriptor_v2,
     ocm_repository=ocm_repository,
+    oci_client=oci_client,
   )
   logger.info(f'uploaded component-descriptor to {target_ref}')
   % endif
@@ -344,7 +347,6 @@ else:
 
 logger.info('the following versions were identified for being purged')
 component = descriptor_v2.component
-oci_client = ccc.oci.oci_client()
 
 
 for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
