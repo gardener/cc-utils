@@ -1,5 +1,4 @@
 import dataclasses
-import hashlib
 import io
 import logging
 import os
@@ -8,7 +7,6 @@ import typing
 import yaml
 
 import ocm
-import oci.client
 import oci.model
 
 logger = logging.getLogger(__name__)
@@ -29,29 +27,12 @@ dc = dataclasses.dataclass
 
 
 @dc
-class OciBlobRef:
-    '''
-    a single OCI registry layer reference as used in OCI Image Manifests
-    '''
-    digest: str
-    size: int
-    mediaType: str
-    annotations: typing.Optional[typing.Dict] = None
-
-    def as_dict(self) -> dict:
-        raw = dataclasses.asdict(self)
-        # fields that are None should not be included in the output
-        raw = {k:v for k,v in raw.items() if v is not None}
-        return raw
-
-
-@dc
-class ComponentDescriptorOciCfgBlobRef(OciBlobRef):
+class ComponentDescriptorOciCfgBlobRef(oci.model.OciBlobRef):
     mediaType: str = component_descriptor_cfg_mimetype
 
 
 @dc
-class ComponentDescriptorOciBlobRef(OciBlobRef):
+class ComponentDescriptorOciBlobRef(oci.model.OciBlobRef):
     mediaType: str = component_descriptor_mimetype
 
 
