@@ -6,6 +6,7 @@ import os
 import sys
 
 import ocm
+import ocm.upload
 
 
 try:
@@ -181,7 +182,6 @@ def upload(parsed):
                 data=f,
             )
 
-    import ocm.upload
     print(f'Uploading OCM Component-Descriptor to: {oci_target_ref=}')
     ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
