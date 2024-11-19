@@ -63,9 +63,6 @@ setuptools.setup(
             'resources/*.mako',
             '*.mako',
         ],
-        'gci':[
-            'ocm-component-descriptor-schema.yaml',
-        ],
         'ocm':[
             'ocm-component-descriptor-schema.yaml',
         ],

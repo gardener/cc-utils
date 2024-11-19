@@ -18,7 +18,7 @@ import dacite
 import yaml
 
 import ocm
-import gci.oci as goci
+import ocm.oci
 
 import ccc.oci
 import ci.util
@@ -62,8 +62,8 @@ def edit(
     logger.info(f'retrieving {oci_ref} oci--manifest')
     manifest = oci_client.manifest(oci_ref)
 
-    oci_cfg: goci.ComponentDescriptorOciCfg = dacite.from_dict(
-        data_class=goci.ComponentDescriptorOciCfg,
+    oci_cfg: ocm.oci.ComponentDescriptorOciCfg = dacite.from_dict(
+        data_class=ocm.oci.ComponentDescriptorOciCfg,
         data=json.loads(
             oci_client.blob(oci_ref, manifest.config.digest).text,
         )
@@ -134,7 +134,7 @@ def edit(
         if not l.digest == oci_cfg.componentDescriptorLayer.digest
     ] + [oci.model.OciBlobRef(
         digest=content_digest,
-        mediaType=goci.component_descriptor_mimetype,
+        mediaType=ocm.oci.component_descriptor_mimetype,
         size=tf_len,
     )]
 
@@ -396,7 +396,7 @@ def traverse(
 def validate(component_descriptor: str):
     schema_file = os.path.join(
         repo_root,
-        'gci',
+        'ocm',
         'ocm-component-descriptor-schema.yaml',
     )
     with open(schema_file) as f:
