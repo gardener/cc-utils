@@ -19,12 +19,12 @@ import yaml
 
 import ocm
 import ocm.oci
+import ocm.upload
 
 import ccc.oci
 import ci.util
 import cnudie.iter
 import cnudie.retrieve
-import cnudie.upload
 import ctx
 import tarutil
 import oci
@@ -288,7 +288,7 @@ def upload(
 
     oci_client = ccc.oci.oci_client()
 
-    cnudie.upload.upload_component_descriptor(
+    ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
         oci_client=oci_client,
     )

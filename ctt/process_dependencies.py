@@ -19,7 +19,6 @@ import ci.util
 import ctt.replicate
 import cnudie.iter
 import cnudie.retrieve
-import cnudie.upload
 import container.util
 import dso.labels
 import ocm
