@@ -262,7 +262,7 @@ class OciImageNotFoundException(Exception):
     pass
 
 
-@dataclasses.dataclass
+@dataclasses.dataclass(kw_only=True)
 class OciBlobRef:
     digest: str
     mediaType: str
