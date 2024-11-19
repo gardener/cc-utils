@@ -162,6 +162,7 @@ def upload_component_descriptor(
         componentDescriptorLayer=ocm.oci.ComponentDescriptorOciBlobRef(
             digest=cd_digest_with_alg,
             size=cd_octets,
+            mediaType=ocm.oci.component_descriptor_mimetype,
         )
     )
     cfg_raw = json.dumps(dataclasses.asdict(cfg)).encode('utf-8')
@@ -189,11 +190,13 @@ def upload_component_descriptor(
         config=ocm.oci.ComponentDescriptorOciCfgBlobRef(
             digest=cfg_digest_with_alg,
             size=cfg_octets,
+            mediaType=ocm.oci.component_descriptor_cfg_mimetype,
         ),
         layers=[
             ocm.oci.ComponentDescriptorOciBlobRef(
                 digest=cd_digest_with_alg,
                 size=cd_octets,
+                mediaType=ocm.oci.component_descriptor_mimetype,
             ),
         ] + list(local_blob_layers),
     )
