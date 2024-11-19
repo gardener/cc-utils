@@ -11,8 +11,8 @@ description: |
   (such as ocm-fragments in case of this action) is not possible without clunky workarounds.
   Hence, this action will - in addition to writing to `ocm_resource` - also expose
   ocm-source-fragments using `actions/upload-artifact@v4`, using the following target:
-  `ocm-oci-build_oci-image_{name}` (name being this action's `name`). The OCM-Resource-fragment
-  will be named `ocm_resources.yaml`.
+  `ocm-oci-build_oci-image_{name}` (name being this action's `name` input value).
+  The OCM-Resource-fragment will be named `ocm_resources.yaml`.
 
   This naming will avoid collisions, iff `name`-attrs are unique (as mandated within one single
   component-descriptor). It is thus assumed that - within using workflows - only one
