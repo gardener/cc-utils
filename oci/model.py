@@ -155,12 +155,15 @@ class OciImageReference:
 
     @property
     @functools.cache
-    def with_symbolical_tag(self) -> str:
+    def with_symbolical_tag(self) -> 'OciImageReference':
         if not (self.has_symbolical_tag or self.has_mixed_tag):
             raise ValueError(f'does not contain a symbolical tag: {str(self)=}')
 
         p = self.urlparsed
-        return p.netloc + p.path.rsplit('@', 1)[0]
+        return OciImageReference(
+            image_reference=p.netloc + p.path.rsplit('@', 1)[0],
+            normalise=self._normalise,
+        )
 
     @property
     @functools.cache
@@ -225,10 +228,13 @@ class OciImageReference:
             return urllib.parse.urlparse(f'https://{img_ref}')
         return urllib.parse.urlparse(img_ref)
 
-    def with_tag(self, tag: str) -> str:
+    def with_tag(self, tag: str) -> 'OciImageReference':
         if 'sha256' in tag and not '@' in tag:
             return f'{self.ref_without_tag}@{tag}'
-        return f'{self.ref_without_tag}:{tag}'
+        return OciImageReference(
+            image_reference=f'{self.ref_without_tag}:{tag}',
+            normalise=self._normalise,
+        )
 
     def __str__(self) -> str:
         if self._normalise:
