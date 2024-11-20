@@ -230,9 +230,12 @@ class OciImageReference:
 
     def with_tag(self, tag: str) -> 'OciImageReference':
         if 'sha256' in tag and not '@' in tag:
-            return f'{self.ref_without_tag}@{tag}'
+            image_ref = f'{self.ref_without_tag}@{tag}'
+        else:
+            image_ref = f'{self.ref_without_tag}:{tag}'
+
         return OciImageReference(
-            image_reference=f'{self.ref_without_tag}:{tag}',
+            image_reference=image_ref,
             normalise=self._normalise,
         )
 
