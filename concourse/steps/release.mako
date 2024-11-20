@@ -196,8 +196,8 @@ component.resources.append(
 % endfor
 % endif
 
-% if assets:
 oci_client = ccc.oci.oci_client()
+% if assets:
 component_descriptor_target_ref = cnudie.util.target_oci_ref(component=component)
 concourse_client = ccc.concourse.client_from_env()
 current_build = concourse.util.find_own_running_build()
