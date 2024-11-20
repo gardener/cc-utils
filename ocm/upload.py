@@ -11,10 +11,10 @@ import enum
 import hashlib
 import json
 
-import ocm
-import ocm.oci
 import oci.client
 import oci.model as om
+import ocm
+import ocm.oci
 
 
 class UploadMode(enum.StrEnum):

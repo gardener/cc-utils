@@ -10,9 +10,9 @@ import logging
 
 import ccc.oci
 import oci
+import oci.model as om
 import ocm
 import ocm.oci
-import oci.model as om
 
 logger = logging.getLogger(__name__)
 
