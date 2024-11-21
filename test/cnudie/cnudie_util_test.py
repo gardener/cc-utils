@@ -75,23 +75,27 @@ def test_componentdiff_to_str(cid):
         names_only_right={'c'},
         names_version_changed={'d'},
     )
-    result = cnudie.util.format_component_diff(
+    formatted_diff = cnudie.util.format_component_diff(
         component_diff=diff,
         delivery_dashboard_url_view_diff=None,
         delivery_dashboard_url=None,
     )
 
-    max_length = 10
-    if len(result) > max_length:
-        truncated_result = result[:result.find('## Component Details:')]
-        truncated_result += '\n... [Component details omitted]\n'
-        body = truncated_result
-    else:
-        body = result
+    release_notes = 'Release Notes\n' + 'A' * 500
 
-    assert '### Added Components:' in body
-    assert '... [Component details omitted]' in body
-    assert '## Component Details:' not in body
+    max_pr_body_length = 100
+
+    additional_notes = []
+    pr_body = release_notes
+
+    if len(formatted_diff) <= max_pr_body_length - len(pr_body):
+        pr_body += '\n\n' + formatted_diff
+    else:
+        additional_notes.append(formatted_diff)
+
+    assert len(pr_body) > max_pr_body_length, 'PR body exceeds the maximum allowed length'
+    assert len(additional_notes) > 0, 'additional notes should contain truncated content'
+    assert formatted_diff in additional_notes, 'diff should be in additional notes if truncated'
 
 
 def test_iter_sorted():
