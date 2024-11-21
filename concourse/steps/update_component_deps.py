@@ -373,7 +373,7 @@ def _import_release_notes(
     )
 
     if not release_notes:
-        release_notes = pull_request_util.retrieve_pr_template_text()
+        release_notes = ''
 
     return release_notes
 
@@ -540,20 +540,9 @@ def create_upgrade_pr(
         additional_notes = []
 
         pr_body = ''
-        if include_bom_diff:
-            # Split the formatted_diff if it exceeds max body length (line-by-line)
-            if len(formatted_diff) > max_pr_body_length:
-                truncated_diff = formatted_diff[:formatted_diff.find('## Component Details:')]
-                truncated_diff += '\n... [Component details omitted]\n'
 
-                pr_body = truncated_diff + max_body_length_exceeded_remark
-            else:
-                pr_body = formatted_diff
-
-        available_length = max_pr_body_length - len(pr_body)
-
-        if available_length < len(release_notes):
-            step_size = available_length - len(max_body_length_exceeded_remark)
+        if len(release_notes) > max_pr_body_length:
+            step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
             split_release_notes = [
                 release_notes[start:start + step_size]
                 for start in range(0, len(release_notes), step_size)
@@ -562,10 +551,22 @@ def create_upgrade_pr(
             split_release_notes = [release_notes]
 
         if len(split_release_notes) > 1:
-            pr_body += max_body_length_exceeded_remark
-            additional_notes = split_release_notes
+            pr_body += split_release_notes[0] + max_body_length_exceeded_remark
+            additional_notes = split_release_notes[1:]
         else:
-            pr_body += '\n\n' + split_release_notes[0]
+            pr_body += split_release_notes[0]
+
+        if include_bom_diff:
+            if len(formatted_diff) <= max_pr_body_length - len(pr_body):
+                pr_body += '\n\n' + formatted_diff
+            else:
+                if len(formatted_diff) < max_pr_body_length:
+                    additional_notes.append(formatted_diff)
+                else:
+                    component_details_start = formatted_diff.find('## Component Details:')
+                    additional_notes.append(formatted_diff[:component_details_start])
+                    additional_notes.append(formatted_diff[component_details_start:])
+
     else:
         pr_body = ''
         additional_notes = []
