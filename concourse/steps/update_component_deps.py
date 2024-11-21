@@ -397,6 +397,7 @@ def create_upgrade_pr(
     after_merge_callback=None,
     container_image:str=None,
     pullrequest_body_suffix: str=None,
+    include_bom_diff: bool=True,
 ) -> gu.UpgradePullRequest:
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
@@ -421,12 +422,6 @@ def create_upgrade_pr(
 
     to_component = to_component_descriptor.component
 
-    bom_diff = cnudie.retrieve.component_diff(
-        left_component=from_component,
-        right_component=to_component,
-        component_descriptor_lookup=component_descriptor_lookup,
-    )
-
     if delivery_dashboard_url:
         delivery_dashboard_url_view_diff = (
             f'{delivery_dashboard_url}/#/component?name={to_component.name}&view=diff'
@@ -436,11 +431,18 @@ def create_upgrade_pr(
     else:
         delivery_dashboard_url_view_diff = None
 
-    formatted_diff = cnudie.util.format_component_diff(
-        component_diff=bom_diff,
-        delivery_dashboard_url_view_diff=delivery_dashboard_url_view_diff,
-        delivery_dashboard_url=delivery_dashboard_url
-    )
+    if include_bom_diff:
+        bom_diff = cnudie.retrieve.component_diff(
+            left_component=from_component,
+            right_component=to_component,
+            component_descriptor_lookup=component_descriptor_lookup,
+        )
+
+        formatted_diff = cnudie.util.format_component_diff(
+            component_diff=bom_diff,
+            delivery_dashboard_url_view_diff=delivery_dashboard_url_view_diff,
+            delivery_dashboard_url=delivery_dashboard_url
+        )
 
     # prepare env for upgrade script and after-merge-callback
     cmd_env = os.environ.copy()
@@ -536,14 +538,17 @@ def create_upgrade_pr(
             'pull request body. The remaining release notes will be added as comments to this PR.'
         )
         additional_notes = []
-        # Split the formatted_diff if it exceeds max body length (line-by-line)
-        if len(formatted_diff) > max_pr_body_length:
-            truncated_diff = formatted_diff[:formatted_diff.find('## Component Details:')]
-            truncated_diff += '\n... [Component details omitted]\n'
 
-            pr_body = truncated_diff + max_body_length_exceeded_remark
-        else:
-            pr_body = formatted_diff
+        pr_body = ''
+        if include_bom_diff:
+            # Split the formatted_diff if it exceeds max body length (line-by-line)
+            if len(formatted_diff) > max_pr_body_length:
+                truncated_diff = formatted_diff[:formatted_diff.find('## Component Details:')]
+                truncated_diff += '\n... [Component details omitted]\n'
+
+                pr_body = truncated_diff + max_body_length_exceeded_remark
+            else:
+                pr_body = formatted_diff
 
         available_length = max_pr_body_length - len(pr_body)
 

@@ -161,6 +161,12 @@ ATTRIBUTES = (
         doc='optional suffix to be appended to created upgrade-pullrequest-bodies',
         type=str,
     ),
+    AttributeSpec.optional(
+        name='include_bom_diff',
+        default=True,
+        doc='toggle whether component diff should be included in PR text',
+        type=bool,
+    ),
 )
 
 
@@ -225,6 +231,10 @@ class UpdateComponentDependenciesTrait(Trait):
     @property
     def pullrequest_body_suffix(self) -> str | None:
         return self.raw.get('pullrequest_body_suffix', None)
+
+    @property
+    def include_bom_diff(self) -> bool:
+        return self.raw.get('include_bom_diff', True)
 
     def transformer(self):
         return UpdateComponentDependenciesTraitTransformer(trait=self)

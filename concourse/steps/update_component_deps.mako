@@ -22,6 +22,7 @@ after_merge_callback = update_component_deps_trait.after_merge_callback()
 upstream_update_policy = update_component_deps_trait.upstream_update_policy()
 ignore_prerelease_versions=update_component_deps_trait.ignore_prerelease_versions()
 pullrequest_body_suffix = update_component_deps_trait.pullrequest_body_suffix
+include_bom_diff = update_component_deps_trait.include_bom_diff
 component_descriptor_trait = job_variant.trait('component_descriptor')
 ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
@@ -195,6 +196,7 @@ for from_ref, to_version in determine_upgrade_prs(
         version_lookup=version_lookup,
         merge_policy=merge_policy,
         merge_method=merge_method,
+        include_bom_diff=${include_bom_diff},
 % if after_merge_callback:
         after_merge_callback='${after_merge_callback}',
 % endif
