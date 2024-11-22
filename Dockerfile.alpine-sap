@@ -1,14 +1,17 @@
 FROM alpine:3
 
-# makes debugging easier
-COPY ALPINE_SAP_VERSION /ALPINE_SAP_VERSION
-
-RUN apk add --no-cache ca-certificates
-
-ADD http://aia.pki.co.sap.com/aia/SAP%20Global%20Root%20CA.crt \
-    /usr/local/share/ca-certificates/SAP_Global_Root_CA.crt
-ADD http://aia.pki.co.sap.com/aia/SAPNetCA_G2.crt \
-    /usr/local/share/ca-certificates/SAPNetCA_G2.crt
-ADD http://aia.pki.co.sap.com/aia/SAPNetCA_G2_2.crt \
-    /usr/local/share/ca-certificates/SAPNetCA_G2_2.crt
-RUN update-ca-certificates
+RUN --mount=type=bind,source=ALPINE_SAP_VERSION,target=/ALPINE_SAP_VERSION \
+    apk add --no-cache \
+    ca-certificates \
+    curl \
+    python3 \
+    py3-pip \
+&& curl http://aia.pki.co.sap.com/aia/SAP%20Global%20Root%20CA.crt -o \
+    /usr/local/share/ca-certificates/SAP_Global_Root_CA.crt \
+&& curl http://aia.pki.co.sap.com/aia/SAPNetCA_G2.crt -o \
+    /usr/local/share/ca-certificates/SAPNetCA_G2.crt \
+&& curl http://aia.pki.co.sap.com/aia/SAPNetCA_G2_2.crt -o \
+    /usr/local/share/ca-certificates/SAPNetCA_G2_2.crt \
+&& update-ca-certificates \
+&& mkdir -p $HOME/.config/pip \
+&& echo -e "[global]\nbreak-system-packages = true" >> $HOME/.config/pip/pip.conf
