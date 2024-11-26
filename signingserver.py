@@ -6,6 +6,7 @@ import dataclasses
 import hashlib
 import io
 import logging
+import re
 import urllib.parse
 
 import cryptography.x509
@@ -156,3 +157,52 @@ class SigningserverClient:
             raw=resp.text,
             signing_algorithm=signing_algorithm,
         )
+
+
+@dataclasses.dataclass
+class DistinguishedName:
+    country: str | None = None
+    state: str | None = None
+    locality: str | None = None
+    organization: str | None = None
+    organizational_unit: str | None = None
+    common_name: str | None = None
+
+    @staticmethod
+    def from_dict(distinguished_name: dict[str, str]) -> 'DistinguishedName':
+        for key in distinguished_name.keys():
+            allowed_attributes = ['C', 'ST', 'L', 'O', 'OU', 'CN']
+            if key not in allowed_attributes:
+                raise ValueError(
+                    f'"{key}" is not valid as distinguished name ({allowed_attributes=})'
+                )
+
+        return DistinguishedName(
+            country=distinguished_name.get('C'),
+            state=distinguished_name.get('ST'),
+            locality=distinguished_name.get('L'),
+            organization=distinguished_name.get('O'),
+            organizational_unit=distinguished_name.get('OU'),
+            common_name=distinguished_name.get('CN'),
+        )
+
+    @staticmethod
+    def parse(name: str) -> 'DistinguishedName':
+        name = name.strip()
+
+        if not name:
+            raise ValueError(f'{name=} must not be empty')
+
+        # regexes taken from https://github.com/open-component-model/ocm/blob/1b31de5579a0cc3dd49adba3a1df8ca1a7e7bb35/api/tech/signing/signutils/names.go#L17 # noqa: E501
+        isDNRegex = r'^[^=]+=[^/;,+]+([/;,+][^=]+=[^/;,+]+)*$'
+        dnGroupsRegex = r'[/;,+]([^=]+)=([^/;,+]+)'
+
+        if not re.match(isDNRegex, name):
+            # name does not match general DN regex -> interpret as common name by default
+            return DistinguishedName(common_name=name)
+
+        distinguished_name = {}
+        for match in re.findall(dnGroupsRegex, f'+{name}'):
+            distinguished_name[match[0].strip()] = match[1].strip()
+
+        return DistinguishedName.from_dict(distinguished_name)
