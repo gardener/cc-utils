@@ -502,6 +502,7 @@ def osinfo(
             routes=delivery.client.DeliveryServiceRoutes(
                 base_url=delivery_cfg.base_url(),
             ),
+            cfg_factory=cfg_factory,
         )
     else:
         delivery_client = None

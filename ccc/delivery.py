@@ -49,7 +49,10 @@ def default_client_if_available(
     routes = delivery.client.DeliveryServiceRoutes(
         base_url=delivery_endpoints.base_url(),
     )
-    return delivery.client.DeliveryServiceClient(routes=routes)
+    return delivery.client.DeliveryServiceClient(
+        routes=routes,
+        cfg_factory=cfg_factory,
+    )
 
 
 def client(
@@ -69,7 +72,10 @@ def client(
         base_url=delivery_endpoints.base_url(),
     )
 
-    return delivery.client.DeliveryServiceClient(routes=routes)
+    return delivery.client.DeliveryServiceClient(
+        routes=routes,
+        cfg_factory=cfg_factory,
+    )
 
 
 def endpoints(cfg_set=None):
