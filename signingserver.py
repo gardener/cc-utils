@@ -95,11 +95,15 @@ class SigningserverClient:
 
     def sign(
         self,
-        content: str | bytes | io.IOBase,
+        content: str | bytes | io.IOBase=None,
+        digest: str | bytes=None,
         hash_algorithm='sha256',
         signing_algorithm: ms.SigningAlgorithm | str = ms.SigningAlgorithm.RSASSA_PSS,
         remaining_retries: int=3,
     ):
+        if not (bool(content) ^ bool(digest)):
+            raise ValueError('exactly one of `content` or `digest` must be passed')
+
         signing_algorithm = ms.SigningAlgorithm(signing_algorithm)
         url = ci.util.urljoin(
             self.cfg.base_url,
@@ -107,11 +111,14 @@ class SigningserverClient:
             signing_algorithm,
         ) + '?' + urllib.parse.urlencode({'hashAlgorithm': hash_algorithm})
 
-        hasher = getattr(hashlib, hash_algorithm, None)
-        if not hasher:
-            raise ValueError(hash_algorithm)
+        if content:
+            hasher = getattr(hashlib, hash_algorithm, None)
+            if not hasher:
+                raise ValueError(hash_algorithm)
 
-        digest = hasher(content).digest()
+            digest = hasher(content).digest()
+        elif isinstance(digest, str):
+            digest = bytes.fromhex(digest)
 
         kwargs = {}
         if self.cfg.server_certificate_ca:
