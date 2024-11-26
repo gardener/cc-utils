@@ -128,7 +128,7 @@ def _sprints(
 def target_sprints(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
     latest_processing_date: datetime.date,
-    sprints_count: int=1,
+    sprints_count: int=-1,
 ) -> tuple[dm.Sprint]:
     sprints = _sprints(
         delivery_svc_client=delivery_svc_client,
@@ -137,7 +137,7 @@ def target_sprints(
 
     targets_sprints = []
     for sprint in sprints:
-        if len(targets_sprints) == sprints_count:
+        if sprints_count > 0 and len(targets_sprints) == sprints_count:
             # found enough sprints -> early exiting
             break
 
