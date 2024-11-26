@@ -10,6 +10,7 @@ import yaml
 import ci.util
 import cnudie.util
 import cnudie.retrieve
+import cnudie.migrate
 import version
 
 import ocm
@@ -37,6 +38,7 @@ def base_component_descriptor_v2(
     repo_url: str,
 ):
     import datetime
+    import cnudie.migrate
     import ocm
     import version as version_util
     parsed_version = version_util.parse_to_semver(effective_version)
@@ -56,9 +58,12 @@ def base_component_descriptor_v2(
     # logical names must not contain slashes or dots
     logical_name = component_name_v2.replace('/', '_').replace('.', '_')
 
-    provider = {
-        'name': 'SAP SE',
-    }
+    if cnudie.migrate.emit_compatible_to_cnudie_v2:
+        provider = 'internal'
+    else:
+        provider = {
+            'name': 'SAP SE',
+        }
 
     component_labels = list(component_labels)
     component_labels.append(
