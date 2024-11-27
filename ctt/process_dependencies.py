@@ -403,7 +403,7 @@ def process_upload_request(
     logging.info(f'{oci_manifest_annotations=}')
 
     try:
-        _, _, raw_manifest = container.util.filter_image(
+        _, patched_tgt_ref, raw_manifest = container.util.filter_image(
             source_ref=src_ref,
             target_ref=tgt_ref,
             remove_files=upload_request.remove_files,
@@ -419,7 +419,10 @@ def process_upload_request(
         e.add_note(f'filter_image: {src_ref=} -> {tgt_ref=}')
         raise e
 
-    logger.info(f'finished processing {src_ref} -> {tgt_ref=}')
+    if tgt_ref != patched_tgt_ref:
+        logger.info(f'finished processing {src_ref} -> {patched_tgt_ref=} (initial {tgt_ref=})')
+    else:
+        logger.info(f'finished processing {src_ref} -> {tgt_ref=}')
 
     manifest_digest = hashlib.sha256(raw_manifest).hexdigest()
     uploaded_image_refs_to_digests[tgt_ref] = f'sha256:{manifest_digest}'
