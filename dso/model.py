@@ -22,6 +22,20 @@ def _as_key(
     return separator.join(absent_indicator if arg is None else arg for arg in args)
 
 
+class SastStatus(enum.StrEnum):
+    NO_LINTER = 'no-linter'
+
+
+class SastSubType(enum.StrEnum):
+    LOCAL_LINTING = 'local-linting'
+    CENTRAL_LINTING = 'central-linting'
+
+
+@dataclasses.dataclass
+class MatchCondition:
+    component_name: str
+
+
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
@@ -33,6 +47,7 @@ class ScanArtifact:
 class Datasource:
     ARTEFACT_ENUMERATOR = 'artefact-enumerator'
     BDBA = 'bdba'
+    SAST_LINT_CHECK = 'sast-lint-check'
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
@@ -51,6 +66,11 @@ class Datasource:
                 Datatype.VULNERABILITY,
                 Datatype.LICENSE,
                 Datatype.STRUCTURE_INFO,
+                Datatype.RESCORING,
+            ),
+            Datasource.SAST_LINT_CHECK: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.SAST_FINDING,
                 Datatype.RESCORING,
             ),
             Datasource.CHECKMARX: (
@@ -214,6 +234,7 @@ class Datatype:
     LICENSE = 'finding/license'
     VULNERABILITY = 'finding/vulnerability'
     MALWARE_FINDING = 'finding/malware'
+    SAST_FINDING = 'finding/sast'
     DIKI_FINDING = 'finding/diki'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     OS_IDS = 'os_ids'
@@ -234,6 +255,7 @@ class Datatype:
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.CRYPTO_ASSET: Datasource.CRYPTO,
             Datatype.FIPS_FINDING: Datasource.CRYPTO,
+            Datatype.SAST_FINDING: Datasource.SAST_LINT_CHECK,
         }[datatype]
 
 
@@ -378,6 +400,16 @@ class ClamAVMalwareFinding(Finding):
     @property
     def key(self) -> str:
         return self.finding.key
+
+
+@dataclasses.dataclass(frozen=True)
+class SastFinding(Finding):
+    sast_status: SastStatus
+    sub_type: SastSubType
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.sast_status, self.sub_type)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -533,6 +565,7 @@ class CustomRescoring:
         | RescoringLicenseFinding
         | MalwareFindingDetails
         | CryptoAsset
+        | SastFinding
     )
     referenced_type: str
     severity: str
@@ -626,6 +659,7 @@ class ArtefactMetadata:
         | LicenseFinding
         | VulnerabilityFinding
         | ClamAVMalwareFinding
+        | SastFinding
         | DikiFinding
         | CodecheckSummary
         | OsID
@@ -652,6 +686,9 @@ class ArtefactMetadata:
                     ComplianceSnapshotStatuses,
                     MetaRescoringRules,
                     AssetTypes,
+                    SastSubType,
+                    SastStatus,
+                    MatchCondition
                 ],
                 strict=True,
             ),
