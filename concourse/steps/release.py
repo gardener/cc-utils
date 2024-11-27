@@ -416,30 +416,25 @@ def github_release(
         )
 
 
-def upload_github_release_asset(
-    github_helper: GitHubRepositoryHelper,
-    github_release_tag: str,
+def upload_component_descriptor_as_release_asset(
+    github_release,
     component,
 ):
-    # upload copy as release-asset
-    release_tag_name = github_release_tag.removeprefix('refs/tags/')
+    component_descriptor = ocm.ComponentDescriptor(
+        component=component,
+        meta=ocm.Metadata(),
+        signatures=[],
+    )
+
+    descriptor_str = yaml.dump(
+        data=dataclasses.asdict(component_descriptor),
+        Dumper=ocm.EnumValueYamlDumper,
+    )
+
+    normalized_component_name = component.name.replace('/', '_')
+    asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
     try:
-        release = github_helper.repository.release_from_tag(release_tag_name)
-
-        component_descriptor = ocm.ComponentDescriptor(
-            component=component,
-            meta=ocm.Metadata(),
-            signatures=[],
-        )
-
-        descriptor_str = yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
-        )
-
-        normalized_component_name = component.name.replace('/', '_')
-        asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
-        release.upload_asset(
+        github_release.upload_asset(
             content_type='application/x-yaml',
             name=asset_name,
             asset=descriptor_str.encode('utf-8'),
