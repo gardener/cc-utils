@@ -113,8 +113,18 @@ def filter_image(
         manifest.manifests = patched_manifests
         manifest_dict = manifest.as_dict()
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
+
+        if target_ref.has_digest_tag:
+            # we need to recalculate digest since it may have changed due to filtering
+            manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+
+            if target_ref.has_mixed_tag:
+                target_ref = f'{target_ref.with_symbolical_tag}@sha256:{manifest_digest}'
+            else:
+                target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
+
         res = oci_client.put_manifest(
-            image_reference=str(target_ref),
+            image_reference=target_ref,
             manifest=manifest_raw,
         )
 
@@ -156,6 +166,15 @@ def filter_image(
         manifest_list_bytes = json.dumps(
             manifest_list.as_dict(),
         ).encode('utf-8')
+
+        if target_ref.has_digest_tag:
+            # we need to recalculate digest since it may have changed due to filtering
+            manifest_digest = hashlib.sha256(manifest_list_bytes).hexdigest()
+
+            if target_ref.has_mixed_tag:
+                target_ref = f'{target_ref.with_symbolical_tag}@sha256:{manifest_digest}'
+            else:
+                target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
 
         res = oci_client.put_manifest(
             image_reference=target_ref,
