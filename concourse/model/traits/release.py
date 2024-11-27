@@ -112,6 +112,7 @@ class Asset:
     - step_name: pipelinestep-name of data-source
     - comment: unused
     - type: asset-type - overwritten by subclasses
+    - github_asset_name: name to use for github asset (must be unique per release)
 
     Purpose-labels will be added as OCM-Label `gardener.cloud/purposes`.
     They are used to identify (in a machine-readable manner) the purpose / semantics
@@ -134,6 +135,7 @@ class Asset:
     artefact_extra_id: dict[str, str] = dataclasses.field(default_factory=dict)
     purposes: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
+    github_asset_name: str | None = None
 
     def __post_init__(self):
         if self.purposes:

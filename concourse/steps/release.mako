@@ -82,6 +82,12 @@ else:
 mergeback_commit_msg_prefix = release_trait.merge_release_to_default_branch_commit_message_prefix()
 
 assets = release_trait.assets
+
+def github_asset_name(asset):
+  if asset.github_asset_name:
+    return asset.github_asset_name
+
+  return asset.name + '-'.join(asset.artefact_extra_id.values())
 %>
 import glob
 import hashlib
@@ -203,6 +209,14 @@ concourse_client = ccc.concourse.client_from_env()
 current_build = concourse.util.find_own_running_build()
 build_plan = current_build.plan()
 
+## keep redundant copies of asset-files in order to also upload them as github-release-assets later
+## each entry has the following attributes:
+## - fh # either filelike-object or path to a file; filelike-objects are reset to first byte to read
+## - name # github-asset-name
+## - mimetype
+## assuming buildlogs are typically not of interest for gh-releases, hardcode to omit those
+github_assets = []
+
 main_source = cnudie.util.main_source(component)
 main_source_ref = {
   'name': main_source.name,
@@ -316,6 +330,13 @@ component.resources.append(
     labels=${asset.ocm_labels},
   ),
 )
+blobfh.seek(0)
+github_assets.append({
+  'fh': blobfh,
+  'name': '${github_asset_name(asset)}',
+  'mimetype': blob_mimetype,
+})
+
 % else:
   <% raise ValueError(asset) %>
 % endif
@@ -440,6 +461,13 @@ upload_component_descriptor_as_release_asset(
   github_release=gh_release,
   component=component,
 )
+for gh_asset in github_assets:
+  logger.info(f'uploading {gh_asset=}')
+  gh_release.upload_asset(
+    content_type=gh_asset['mimetype'],
+    name=gh_asset['name'],
+    asset=gh_asset['fh'],
+  )
 % endif
 
 % if merge_back:
