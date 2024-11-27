@@ -434,9 +434,10 @@ except:
   pass
 
 % if release_trait.release_on_github():
-upload_github_release_asset(
-  github_helper=github_helper,
-  github_release_tag=tags[0],
+repo = github_helper.repository
+gh_release = repo.release_from_tag(tags[0].removeprefix('refs/tags/'))
+upload_component_descriptor_as_release_asset(
+  github_release=gh_release,
   component=component,
 )
 % endif
