@@ -1,6 +1,7 @@
 import dataclasses
 import datetime
 import enum
+import hashlib
 import typing
 
 import dacite
@@ -524,7 +525,6 @@ class ArtefactMetadata:
         | ComplianceSnapshot
         | dict # fallback, there should be a type
     )
-    id: int | None = None
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
 
     @staticmethod
@@ -553,6 +553,14 @@ class ArtefactMetadata:
             data_key = self.data.get('key')
 
         return _as_key(self.artefact.key, self.meta.datasource, self.meta.type, data_key)
+
+    @property
+    def id(self) -> str:
+        return hashlib.blake2s(
+            self.key.encode('utf-8'),
+            digest_size=16,
+            usedforsecurity=False,
+        ).hexdigest()
 
 
 def artefact_scan_info(
