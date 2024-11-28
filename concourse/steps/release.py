@@ -432,7 +432,7 @@ def upload_component_descriptor_as_release_asset(
     )
 
     normalized_component_name = component.name.replace('/', '_')
-    asset_name = f'{normalized_component_name}.component_descriptor.cnudie.yaml'
+    asset_name = f'{normalized_component_name}.component-descriptor.yaml'
     try:
         github_release.upload_asset(
             content_type='application/x-yaml',
