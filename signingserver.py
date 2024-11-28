@@ -87,6 +87,10 @@ class SigningResponse:
         return public_key_str
 
 
+class SigningserverException(Exception):
+    pass
+
+
 class SigningserverClient:
     def __init__(
         self,
@@ -143,7 +147,7 @@ class SigningserverClient:
             resp.raise_for_status()
         except requests.exceptions.HTTPError as e:
             if remaining_retries == 0:
-                raise
+                raise SigningserverException(e)
 
             logger.warning(f'caught http error, going to retry... ({remaining_retries=}); {e}')
             return self.sign(
@@ -152,6 +156,8 @@ class SigningserverClient:
                 signing_algorithm=signing_algorithm,
                 remaining_retries=remaining_retries - 1,
             )
+        except Exception as e:
+            raise SigningserverException(e)
 
         return SigningResponse(
             raw=resp.text,
