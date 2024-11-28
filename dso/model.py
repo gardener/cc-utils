@@ -99,21 +99,22 @@ class LocalArtefactId:
     def normalised_artefact_extra_id(self) -> str:
         return normalise_artefact_extra_id(self.artefact_extra_id)
 
-    def as_frozenset(self) -> frozenset[str]:
-        return frozenset((
+    @property
+    def key(self) -> str:
+        return _as_key(
             self.artefact_name,
-            self.artefact_type,
             self.artefact_version,
+            self.artefact_type,
             self.normalised_artefact_extra_id,
-        ))
+        )
 
     def __hash__(self) -> int:
-        return hash(self.as_frozenset())
+        return hash(self.key)
 
     def __eq__(self, other: typing.Self) -> bool:
         if not type(self) == type(other):
             return False
-        return self.as_frozenset() == other.as_frozenset()
+        return self.key == other.key
 
     def __str__(self) -> str:
         return (
@@ -141,26 +142,31 @@ class ComponentArtefactId:
     artefact_kind: ArtefactKind | None = None
     references: list[typing.Self] = dataclasses.field(default_factory=list)
 
-    def as_frozenset(self) -> frozenset[str]:
-        props = (
-            self.component_name,
-            self.component_version,
-            self.artefact_kind,
-            frozenset(self.references),
+    @property
+    def key(self) -> str:
+        artefact_key = self.artefact.key if self.artefact else None
+        references_key = _as_key(
+            *(
+                reference.key
+                for reference in sorted(self.references, key=lambda ref: ref.key)
+            )
         )
 
-        if self.artefact:
-            props += (self.artefact.as_frozenset(),)
-
-        return frozenset(props)
+        return _as_key(
+            self.component_name,
+            self.component_version,
+            artefact_key,
+            self.artefact_kind,
+            references_key,
+        )
 
     def __hash__(self) -> int:
-        return hash(self.as_frozenset())
+        return hash(self.key)
 
     def __eq__(self, other: typing.Self) -> bool:
         if not type(self) == type(other):
             return False
-        return self.as_frozenset() == other.as_frozenset()
+        return self.key == other.key
 
     def __str__(self) -> str:
         return (
