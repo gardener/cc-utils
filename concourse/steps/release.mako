@@ -461,6 +461,7 @@ upload_component_descriptor_as_release_asset(
   github_release=gh_release,
   component=component,
 )
+%   if assets:
 for gh_asset in github_assets:
   logger.info(f'uploading {gh_asset=}')
   gh_release.upload_asset(
@@ -468,6 +469,7 @@ for gh_asset in github_assets:
     name=gh_asset['name'],
     asset=gh_asset['fh'],
   )
+%   endif
 % endif
 
 % if merge_back:
