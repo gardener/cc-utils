@@ -499,9 +499,11 @@ class ArtefactMetadata:
     '''
     Model class to interact with entries of the delivery-db. In the first place, these entries are
     being identified via `ComponentArtefactId` (`artefact` property) as well as their `Datatype`
-    (`meta.type` property). If there might be multiple entries for this tuple, the `data` object
-    must define an extra `key` property, which allows a unique identification together with the
-    tuple of `artefact` and `meta.type`.
+    (`meta.type` property) and `Datasource` (`meta.datasource` property). If there might be multiple
+    entries for this tuple, the `data` object must define an extra `key` property, which allows a
+    unique identification together with the tuple of `artefact`, `meta.type` and `meta.datasource`.
+    The `id` property (derived from `key`) is intended to be used as private key in the underlying
+    database.
 
     If an instance of a datatype should become object of being rescored, the `data` property must
     derive from the `Finding` class and implement the `severity` property. Also, a corresponding
@@ -542,6 +544,15 @@ class ArtefactMetadata:
                 ],
             ),
         )
+
+    @property
+    def key(self) -> str:
+        if dataclasses.is_dataclass(self.data):
+            data_key = self.data.key if hasattr(self.data, 'key') else None
+        else:
+            data_key = self.data.get('key')
+
+        return _as_key(self.artefact.key, self.meta.datasource, self.meta.type, data_key)
 
 
 def artefact_scan_info(
