@@ -81,6 +81,9 @@ class OAuth(ModelBase):
     def scope(self):
         return self.raw.get('scope')
 
+    def role_bindings(self):
+        return self.raw.get('role_bindings')
+
 
 class SigningCfg(ModelBase):
     def id(self) -> str:
