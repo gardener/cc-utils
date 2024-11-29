@@ -365,6 +365,7 @@ jobs:
           git status
           if [ -z "$(git status --porcelain)" ]; then
             echo "no changes in documentation - no need to update documentation"
+            git checkout master # needed for post-gar
             exit 0
           fi
           git add -A
