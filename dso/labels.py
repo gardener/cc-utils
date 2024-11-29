@@ -42,7 +42,6 @@ class ScanningHint(LabelValue):
 @dataclasses.dataclass(frozen=True)
 class BinaryIdScanLabel(Label):
     name = 'cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1'
-    _alt_name = 'cloud.gardener.cnudie/dso/scanning-hints/binary/v1' # deprecated
     value: ScanningHint
 
 
@@ -114,8 +113,6 @@ def _label_to_type() -> dict[str, Label]:
     label_names_to_types = {}
     for t in types:
         label_names_to_types[t.name] = t
-        if (n := getattr(t, '_alt_name', None)):
-            label_names_to_types[n] = t
 
     return label_names_to_types
 
