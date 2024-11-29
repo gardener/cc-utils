@@ -1,0 +1,39 @@
+name: import-commit
+description: |
+  imports a commit previously exported using `capture-commit`.
+
+  This action is intended for the use-case of sharing a "release-commit" (where typically
+  some metadata-bearing files (e.g. containing version) are modified) with other jobs, without
+  persisting it, yet (as subsequent jobs might still fail).
+
+  This action will only work if git-repository is cloned using `git` (i.e. git-repository must be
+  present). It will work well if repository was cloned as `shallow`. The repository should have the
+  same state as it had when `capture-commit` was executed.
+
+inputs:
+  commit-objects:
+    required: true
+    description: |
+      a base64-encoded tarfile containing the objects to import into git-repository. The expected
+      format matches the one output from `capture-commit` action.
+  commit-digest:
+    required: true
+    description: |
+      the digest of the commit to import. This action will run a `git rebase` against this commit
+      after importing the needed objects, thus leaving the repository (and worktree) in a state
+      identical to what it would be if the commit would have been created locally.
+
+runs:
+  using: composite
+  steps:
+    - name: install-git
+      run: |
+        if which git &>/dev/null; then exit 0; fi
+        apt-get install -y git
+      shell: bash
+    - name: import-commit
+      run: |
+        echo 'importing objects into .git-dir'
+        echo "${{ inputs.commit-objects }}" | base64 -d | tar x
+        git rebase ${{ inputs.commit-digest }}
+      shell: bash

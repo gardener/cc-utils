@@ -47,7 +47,13 @@ jobs:
       next_version: ${{ steps.version.outputs.next_version }}
       repo_version: ${{ steps.version.outputs.repo_version }}
       setuptools_version: ${{ steps.version.outputs.setuptools_version }}
+      release-commit-objects: ${{ steps.capture-commit.outputs.commit-objects }}
+      release-commit-digest: ${{ steps.capture-commit.outputs.commit-digest }}
     steps:
+    - name: install git
+      run: |
+        if which git &>/dev/null; then exit 0; fi
+        apt-get install -y git
     - uses: actions/checkout@v4
     - name: calculate-effective-version
       id: version
@@ -75,13 +81,33 @@ jobs:
         echo "effective_version=${effective_version}" >> "${GITHUB_OUTPUT}"
         echo "repo_version=${src_version}" >> "${GITHUB_OUTPUT}"
         echo "setuptools_version=${setuptools_version}" >> "${GITHUB_OUTPUT}"
+    - name: create commit with effective version
+      run: |
+        git config --global --add safe.directory $PWD
+        git config user.name 'Gardener-CICD Bot'
+        git config user.email 'gardener.ci.user@gmail.com'
+        echo ${{ steps.version.outputs.effective_version }} | .ci/write-version
+        touch /tmp/timestamp-ref
+        git add .
+        if ${{ inputs.release || false }}; then
+          git commit -m "Release ${{ steps.version.outputs.effective_version }}"
+        else
+          git commit -m "Build ${{ steps.version.outputs.effective_version }}"
+        fi
+
+    - name: capture commit with effective version
+      uses: ./.github/actions/capture-commit
+      id: capture-commit
+      with:
+        timestamp-reference: /tmp/timestamp-ref
 
   package:
     runs-on: ubuntu-latest
     environment: build
     outputs:
       ocm_resources: ${{ steps.package.outputs.ocm_resources }}
-    needs: version
+    needs:
+      - version
     container:
       image: python:alpine
     steps:
@@ -191,7 +217,6 @@ jobs:
       - unittests
       - documentation
     outputs:
-      release_commit_digest: ${{  steps.releasecommit.commitdigest }}
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
     steps:
       - name: Install Packages
@@ -216,8 +241,14 @@ jobs:
         with:
           name: documentation
           path: /tmp/documentation-out.d
+      - name: Import Release-Commit
+        if: ${{ inputs.release }}
+        uses: ./.github/actions/import-commit
+        with:
+          commit-objects: ${{ needs.version.release-commit-objects }}
+          commit-digest: ${{ needs.version.release-commit-digest }}
 
-      - name: Create Release and Bump-Commits
+      - name: Push Release and Bump-Commits
         id: releasecommit
         if: ${{ inputs.release }}
         run: |
@@ -226,12 +257,7 @@ jobs:
           git config user.name 'Gardener-CICD Bot'
           git config user.email 'gardener.ci.user@gmail.com'
           effective_version=${{ needs.version.outputs.effective_version }}
-          echo "${effective_version}" | .ci/write-version
-          git add .
-          git commit -m "Release ${effective_version}"
-          git show
           commit_digest=$(git rev-parse @)
-          echo "release_commit_digest=${commit_digest}" >> "${GITHUB_OUTPUT}"
           tgt_ref="refs/tags/${effective_version}"
           echo "pushing release-commit ${commit_digest} to ${tgt_ref}"
           git push origin "@:${tgt_ref}"
@@ -280,7 +306,7 @@ jobs:
             > component-descriptor.yaml
 
           if ${{ inputs.release || false }}; then
-            commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
+            commit_digest=${{ needs.version.outputs.release-commit-digest || '' }}
           else
             commit_digest=${{ github.sha }}
           fi
@@ -355,7 +381,6 @@ jobs:
       - name: Publish Documentation
         if: ${{ inputs.release }}
         run: |
-          release_commit_digest=${{ steps.releasecommit.outputs.release_commit_digest || '' }}
           git fetch origin gh-pages
           git checkout gh-pages
           git clean -dfx

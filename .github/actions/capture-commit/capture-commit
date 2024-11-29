@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -eu
+
+# usage:
+# export GIT_DIR
+# $1: path to target-archive
+# $2: path to ref-file (must be older than commit)
+# $3: path to output-file for commit-digest (defaults to commit-digest)
+
+if [ -z "${GIT_DIR:-}" ]; then
+  echo "must set GIT_DIR"
+  exit 1
+fi
+
+if [ -z "${1:-}" ]; then
+  echo "must pass target-file as ARGV[1]"
+  exit 1
+else
+  archive=${1}
+fi
+
+if [ -z "${2:-}" ]; then
+  echo "must pass ref-file as ARGV[2]"
+  exit 1
+else
+  ref=$(readlink -f "${2}")
+fi
+
+if [ -z "${3:-}" ]; then
+  commit_digest_out='commit-digest'
+else
+  commit_digest_out=${3}
+fi
+
+
+object_paths=$(
+  cd $(dirname $GIT_DIR)
+  find .git/objects -type f -neweraa ${ref} | grep -v pack
+)
+
+# objects are already gzipped - there is no point in compressing them again
+tar cf "${archive}" -C $(dirname "${GIT_DIR}") ${object_paths}
+git rev-parse @ > ${commit_digest_out}

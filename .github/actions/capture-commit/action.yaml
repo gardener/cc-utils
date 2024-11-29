@@ -1,0 +1,72 @@
+name: capture-commit
+description: |
+  captures the head commit in serialised form in order to be shared w/ other jobs.
+
+  This action is intended for the use-case of sharing a "release-commit" (where typically
+  some metadata-bearing files (e.g. containing version) are modified) with other jobs, without
+  persisting it, yet (as subsequent jobs might still fail).
+
+  This action will only work if git-repository is cloned using `git` (i.e. git-repository must be
+  present). It will work well if repository was cloned as `shallow`. The action needs a reference
+  timestamp, which is passed via regular file. Said file *must* be created _prior_ to creating the
+  commit to serialise (/"capture"). It leverages git's internal organisation of objects, where new
+  objects will be created in separate files; such newly created object-files will be picked up, thus
+  containing both added/changed blobs, as well as tree-objects, and commit.
+
+  As release-commits are commonly rather small (typically just changing some versions in a few
+  files), the resulting data is typically only a few kiBs in size, which allows it to be exported
+  as a (base64-encoded) output (thus making passing-around somewhat less cumbersome).
+
+  Thus-exported commits can be imported, retaining the exact same commit-digest, provided the
+  importing repository has the same head-commit, into which the commit passed to this action had.
+
+  Note: this action makes use of git-internals (mostly layout of object-db). It will only work if
+  those are not violated (e.g. no git-gc or repack must be done prior to calling this action).
+
+inputs:
+  timestamp-reference:
+    required: true
+    description: |
+      a filepath pointing to a file that was created before the head-commit
+
+outputs:
+  commit-digest:
+    description: |
+      the commit-digest of the head-commit (for convenience - previous step might already know
+      it, of course)
+    value: ${{ steps.capture.outputs.commit-digest }}
+  commit-objects:
+    description: |
+      a base64-encoded tarfile containing the objects required to restore the head-commit.
+    value: ${{ steps.capture.outputs.commit-objects }}
+
+runs:
+  using: composite
+  steps:
+    - name: install-git
+      run: |
+        if which git &>/dev/null; then exit 0; fi
+        apt-get install -y git
+      shell: bash
+    - name: capture-commit
+      id: capture
+      run: |
+        ts_ref=${{ inputs.timestamp-reference }}
+        if [ ! -f ${ts_ref} ]; then
+          echo "no timestamp-reference-file at expected path: ${ts_ref}"
+          exit 1
+        fi
+        objects_out='commit-objects.tar'
+        commit_out='commit-digest'
+        GIT_DIR=$PWD/.git \
+          ${GITHUB_ACTION_PATH}/capture-commit \
+            ${objects_out} \
+            ${ts_ref} \
+            ${commit_out}
+
+        tar tf commit-objects.tar
+
+        echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
+        echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
+        git clean -dfx
+      shell: bash
