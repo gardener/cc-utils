@@ -13,6 +13,14 @@ import ocm
 import unixutil.model
 
 
+def _as_key(
+    *args,
+    separator: str='|',
+    absent_indicator: str='None', # be backwards compatible
+) -> str:
+    return separator.join(absent_indicator if arg is None else arg for arg in args)
+
+
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
@@ -276,7 +284,7 @@ class StructureInfo(BDBAMixin):
 
     @property
     def key(self) -> str:
-        return f'{self.package_name}|{self.package_version}'
+        return _as_key(self.package_name, self.package_version)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -294,7 +302,7 @@ class LicenseFinding(Finding, BDBAMixin):
 
     @property
     def key(self) -> str:
-        return f'{self.package_name}|{self.package_version}|{self.license.name}'
+        return _as_key(self.package_name, self.package_version, self.license.name)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -306,7 +314,7 @@ class VulnerabilityFinding(Finding, BDBAMixin):
 
     @property
     def key(self) -> str:
-        return f'{self.package_name}|{self.package_version}|{self.cve}'
+        return _as_key(self.package_name, self.package_version, self.cve)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -316,7 +324,7 @@ class RescoringVulnerabilityFinding:
 
     @property
     def key(self) -> str:
-        return f'{self.package_name}|{self.cve}'
+        return _as_key(self.package_name, self.cve)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -326,7 +334,7 @@ class RescoringLicenseFinding:
 
     @property
     def key(self) -> str:
-        return f'{self.package_name}|{self.license.name}'
+        return _as_key(self.package_name, self.license.name)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -338,7 +346,7 @@ class MalwareFindingDetails:
 
     @property
     def key(self) -> str:
-        return f'{self.content_digest}|{self.filename}|{self.malware}'
+        return _as_key(self.content_digest, self.filename, self.malware)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -371,7 +379,7 @@ class DikiFinding(Finding):
 
     @property
     def key(self) -> str:
-        return f'{self.provider_id}|{self.ruleset_id}:{self.ruleset_version}|{self.rule_id}'
+        return _as_key(self.provider_id, f'{self.ruleset_id}:{self.ruleset_version}', self.rule_id)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -381,7 +389,7 @@ class User:
 
     @property
     def key(self) -> str:
-        return f'{self.username}|{self.type}'
+        return _as_key(self.username, self.type)
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
@@ -423,9 +431,12 @@ class CustomRescoring:
 
     @property
     def key(self) -> str:
-        return (
-            f'{self.referenced_type}|{self.severity}|{self.user.key}|'
-            f'{self.comment}|{self.finding.key}'
+        return _as_key(
+            self.referenced_type,
+            self.severity,
+            self.user.key,
+            self.comment,
+            self.finding.key,
         )
 
 
@@ -450,7 +461,7 @@ class ComplianceSnapshot:
 
     @property
     def key(self) -> str:
-        return f'{self.cfg_name}|{self.correlation_id}'
+        return _as_key(self.cfg_name, self.correlation_id)
 
     def current_state(
         self,
