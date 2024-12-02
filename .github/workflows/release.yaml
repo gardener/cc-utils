@@ -1,0 +1,106 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      release-to-pypi:
+        required: false
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-and-test.yaml
+    with:
+      release: true
+      release-to-pypi: ${{ inputs.release-to-pypi }}
+
+
+  publish-release-and-bump-commit:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    steps:
+      - name: install git
+        run: |
+          if ! which git &>/dev/null; then
+            apt-get install git -y
+          fi
+      - uses: actions/checkout@v4
+      - name: Import Release-Commit
+        uses: ./.github/actions/import-commit
+        with:
+          commit-objects: ${{ needs.build.outputs.release-commit-objects }}
+          commit-digest: ${{ needs.build.outputs.release-commit-digest }}
+
+      - name: Push Release and Bump-Commits
+        id: releasecommit
+        run: |
+          echo "gha-creds*" >> .git/info/exclude
+          git config --global --add safe.directory $PWD
+          git config user.name 'Gardener-CICD Bot'
+          git config user.email 'gardener.ci.user@gmail.com'
+          effective_version=${{ needs.build.outputs.effective-version }}
+          commit_digest=$(git rev-parse @)
+          tgt_ref="refs/tags/${effective_version}"
+          echo "pushing release-commit ${commit_digest} to ${tgt_ref}"
+          git push origin "@:${tgt_ref}"
+          next_version=${{ needs.version.outputs.next_version }}
+          echo "next version: ${next_version}"
+          git reset --hard @~
+          echo "${next_version}" | .ci/write-version
+          git add .
+          git commit -m"Prepare next Dev-Cycle ${next_version}"
+          git pull --rebase
+          git push origin
+      - name: Retrieve Documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: /tmp/documentation-out.d
+      - name: Publish Documentation
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          git clean -dfx
+          git status
+          echo "let's hope our worktree is clean"
+          tar c -C /tmp/documentation-out.d . | tar x -C.
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no changes in documentation - no need to update documentation"
+            git checkout master # needed for post-gar
+            exit 0
+          fi
+          git add -A
+          git commit -m "update documentation"
+          git push origin refs/heads/gh-pages
+          git checkout master # needed for post-gar
+
+  pypi:
+    if: ${{ inputs.release-to-pypi }}
+    runs-on: ubuntu-latest
+    name: Publish to PYPI
+    needs:
+      - build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Retrieve Distribution Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: distribution-packages
+          path: /tmp/dist
+      - name: prepare build-filesystem
+        id: prepare
+        run: |
+          cp -r /tmp/dist .
+          ls -lta dist/
+          rm -rf dist/blobs.d dist/ocm_resources.yaml
+          ls -lta dist/
+      - name: publish to pypi
+        uses: pypa/gh-action-pypi-publish@release/v1
