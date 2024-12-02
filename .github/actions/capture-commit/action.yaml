@@ -68,5 +68,13 @@ runs:
 
         echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
         echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        ## Capture-Commit Summary
+        commit-digest: \`$(cat ${commit_out})\`
+        objects-listing (tarfile):
+        $(tar tf ${objects_out})
+        commit-message:
+        $(git show)
+        EOF
         git clean -dfx
       shell: bash

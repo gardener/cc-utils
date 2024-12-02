@@ -18,6 +18,12 @@ on:
       release-commit-digest:
         description: release-commit's digest
         value: ${{ jobs.version.outputs.release-commit-digest }}
+      effective-version:
+        description: effective version used during build
+        value: ${{ jobs.version.outputs.effective_version }}
+      next-version:
+        description: next version (for bump-commits)
+        value: ${{ jobs.version.outputs.next_version }}
   push:
 
 jobs:
