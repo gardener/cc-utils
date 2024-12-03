@@ -4,11 +4,11 @@ import datetime
 import enum
 
 import ocm
+import ocm.util
 import git
 import github3.repos
 
 import cnudie.retrieve
-import cnudie.util
 import gitutil
 import github.util
 import release_notes.model as rnm
@@ -257,7 +257,7 @@ def fetch_draft_release_notes(
         f'Creating draft-release notes from {previous_version} to current HEAD'
     )
 
-    source = cnudie.util.determine_main_source_for_component(component)
+    source = ocm.util.main_source(component)
     github_helper = rnu.github_helper_from_github_access(source.access)
     git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
 
@@ -364,7 +364,7 @@ def fetch_release_notes(
         current_version or SpecialVersion.HEAD
     )
 
-    source = cnudie.util.determine_main_source_for_component(component)
+    source = ocm.util.main_source(component)
     github_helper = rnu.github_helper_from_github_access(source.access)
     git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
 

@@ -3,6 +3,8 @@ import dataclasses
 import graphlib
 import textwrap
 
+import deprecated
+
 import ci.util
 import ocm
 import oci.model as om
@@ -260,6 +262,7 @@ def target_oci_ref(
     )
 
 
+@deprecated.deprecated('use ocm.util.main_source instead')
 def main_source(
     component: ocm.Component,
     absent_ok: bool=True,

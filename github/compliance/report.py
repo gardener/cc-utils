@@ -14,13 +14,13 @@ import github3.issues.issue
 import github3.repos
 
 import ocm
+import ocm.util
 import requests
 
 import ccc.github
 import checkmarx.model
 import cfg_mgmt.model as cmm
 import ci.util
-import cnudie.util
 import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import delivery.model
@@ -340,7 +340,7 @@ def _scanned_element_repository(
     scanned_element: gcm.Target,
 ) -> github3.repos.repo.Repository:
     if gcm.is_ocm_artefact_node(scanned_element):
-        source = cnudie.util.main_source(component=scanned_element.component)
+        source = ocm.util.main_source(component=scanned_element.component)
 
         if not source.access.type is ocm.AccessType.GITHUB:
             raise NotImplementedError(source)
