@@ -5,11 +5,10 @@ import traceback
 import typing
 
 import ocm
+import ocm.util
 import git
 import github3.pulls
 
-import cnudie.util
-import cnudie.retrieve
 import version
 
 logger = logging.getLogger(__name__)
@@ -326,14 +325,14 @@ def create_release_notes_obj(
         )
 
     # access
-    source_component_access = cnudie.util.determine_main_source_for_component(
+    source_component_access = ocm.util.main_source(
         component=source_component,
-        absent_ok=False
+        no_source_ok=False,
     ).access
 
-    current_src_access = cnudie.util.determine_main_source_for_component(
+    current_src_access = ocm.util.main_source(
         component=current_component,
-        absent_ok=False
+        no_source_ok=False,
     ).access
 
     from_same_github_instance = current_src_access.hostname() in source_component_access.hostname()

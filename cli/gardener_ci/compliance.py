@@ -26,9 +26,9 @@ import yaml
 import ci.util
 import cnudie.iter
 import cnudie.retrieve
-import cnudie.util
 import ctx
 import ocm
+import ocm.util
 import reutil
 
 
@@ -196,7 +196,7 @@ def diff(
     ]
 
     def resource_as_dict(component, resource, resource_id):
-        if (main_src := cnudie.util.main_source(component, absent_ok=True)):
+        if (main_src := ocm.util.main_source(component, no_source_ok=True)):
             src_url = main_src.access.repoUrl
         elif isinstance(resource.access, ocm.OciAccess):
             src_url = resource.access.imageReference

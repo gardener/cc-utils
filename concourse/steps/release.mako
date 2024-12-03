@@ -111,6 +111,7 @@ import concourse.model.traits.release
 import concourse.util
 import ocm
 import ocm.upload
+import ocm.util
 import github.util
 import gitutil
 
@@ -217,7 +218,7 @@ build_plan = current_build.plan()
 ## assuming buildlogs are typically not of interest for gh-releases, hardcode to omit those
 github_assets = []
 
-main_source = cnudie.util.main_source(component)
+main_source = ocm.util.main_source(component)
 main_source_ref = {
   'name': main_source.name,
   'version': main_source.version,

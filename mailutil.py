@@ -8,9 +8,8 @@ import smtplib
 import typing
 
 import ocm
+import ocm.util
 
-import cnudie.retrieve
-import cnudie.util
 from model.email import EmailConfig
 from ci.util import (
     existing_dir,
@@ -275,9 +274,9 @@ def _codeowners_parser_from_component(
     component: ocm.Component,
     branch_name: str='master',
 ):
-    main_source = cnudie.util.main_source(
+    main_source = ocm.util.main_source(
         component=component,
-        absent_ok=False,
+        no_source_ok=False,
     )
     if not main_source.access.type is ocm.AccessType.GITHUB:
         raise NotImplementedError(main_source.access.type)
