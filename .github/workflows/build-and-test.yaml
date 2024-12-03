@@ -212,7 +212,7 @@ jobs:
         path: dist/
 
   component_descriptor:
-    name: OCM + Release (only on manual triggering)
+    name: Generate + Publish OCM-Component-Descriptor
     runs-on: ubuntu-latest
     container:
       image: python:alpine
