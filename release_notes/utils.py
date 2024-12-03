@@ -14,7 +14,6 @@ import github3.structs as gh3s
 import yaml
 import yaml.scanner
 
-import ccc
 import ccc.github
 import ocm
 import github.util
