@@ -389,7 +389,7 @@ def traverse(
                 print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
         if isinstance(node, cnudie.iter.SourceNode):
             if not print_expr:
-                prefix = 'r'
+                prefix = 's'
                 indent += 1
                 print(f'{prefix}{" " * indent}{node.source.name}')
             else:
