@@ -52,6 +52,12 @@ class SourceScanLabel(Label):
 
 
 @dataclasses.dataclass(frozen=True)
+class PurposeLabel(Label):
+    name = 'gardener.cloud/purposes'
+    value: tuple[str, ...]
+
+
+@dataclasses.dataclass(frozen=True)
 class PackageVersionHint:
     name: str
     version: str
