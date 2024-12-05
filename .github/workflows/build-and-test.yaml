@@ -375,6 +375,10 @@ jobs:
         path: /tmp/dist
     - name: lint
       run: |
+        # debug
+        which python
+        which python3
+        python3 --version
         echo "install dependencies for python-packages"
         if ! apk add --no-cache $(cat gardener-cicd-libs.apk-packages) >/tmp/apk.log; then
           echo "error while trying to install apk-packages:"
