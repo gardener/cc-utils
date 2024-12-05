@@ -378,7 +378,7 @@ jobs:
     needs:
       - package
     container:
-      image: python:alpine
+      image: python:3.12-alpine
     steps:
     - name: install git
       run: |
