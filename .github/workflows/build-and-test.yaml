@@ -364,9 +364,6 @@ jobs:
     container:
       image: python:3.12-alpine
     steps:
-    - name: install git
-      run: |
-        apk add --no-cache git
     - uses: actions/checkout@v4
     - name: Retrieve Distribution Packages
       uses: actions/download-artifact@v4
