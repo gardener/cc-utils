@@ -8,11 +8,15 @@ src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 error=0
 
 # ignore files that are not under version-ctrl (helpful for local runs)
-GIT_DIR="${src_dir}/.git" \
-GIT_WORKTREE="${src_dir}" \
-    untracked=$(git status --porcelain=v2 | grep -e '^? ' | sed 's/^? //g')
+if which git &>/dev/null; then
+    GIT_DIR="${src_dir}/.git" \
+    GIT_WORKTREE="${src_dir}" \
+        untracked=$(git status --porcelain=v2 | grep -e '^? ' | sed 's/^? //g')
 
-exclude_args=$(echo -n "${untracked}" | tr \\n ,)
+    exclude_args=$(echo -n "${untracked}" | tr \\n ,)
+else
+    exclude_args=""
+fi
 
 # flake8 / the linter it instruments cannot handle our special type-hints (CliHint)
 if flake8 \
