@@ -8,7 +8,6 @@ import datetime
 import enum
 import io
 import re
-import sys
 
 import typing
 from typing import Iterable, Tuple
@@ -786,32 +785,6 @@ def branches(
     github_api = ccc.github.github_api(github_cfg=github_cfg)
     repo = github_api.repository(repo_owner, repo_name)
     return list(map(lambda r: r.name, repo.branches()))
-
-
-def retrieve_email_addresses(
-    github_cfg: GithubConfig,
-    github_users: typing.Sequence[str] | typing.Collection[str],
-    out_file: str=None
-):
-    github = ccc.github.github_api(github_cfg=github_cfg)
-
-    def retrieve_email(username: str):
-        user = github.user(username)
-        return user.email
-
-    fh = open(out_file, 'w') if out_file else sys.stdout
-
-    email_addresses_count = 0
-
-    for email_address in filter(None, map(retrieve_email, github_users)):
-        fh.write(email_address + '\n')
-        email_addresses_count += 1
-
-    ci.util.verbose('retrieved {sc} email address(es) from {uc} user(s)'.format(
-        sc=email_addresses_count,
-        uc=len(github_users)
-    )
-    )
 
 
 def _retrieve_team_by_name_or_none(
