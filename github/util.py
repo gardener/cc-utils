@@ -27,44 +27,11 @@ import ccc.github
 import ci.util
 import version
 
-from model.github import GithubConfig
-
 
 class RepoPermission(enum.Enum):
     PULL = "pull"
     PUSH = "push"
     ADMIN = "admin"
-
-
-class GitHubRepoBranch:
-    '''Instances of this class represent a specific branch of a given GitHub repository.
-    '''
-    def __init__(
-        self,
-        github_config: GithubConfig,
-        repo_owner: str,
-        repo_name: str,
-        branch: str,
-    ):
-        self._github_config = ci.util.not_none(github_config)
-        self._repo_owner = ci.util.not_empty(repo_owner)
-        self._repo_name = ci.util.not_empty(repo_name)
-        self._branch = ci.util.not_empty(branch)
-
-    def github_repo_path(self):
-        return f'{self._repo_owner}/{self._repo_name}'
-
-    def github_config(self):
-        return self._github_config
-
-    def repo_owner(self):
-        return self._repo_owner
-
-    def repo_name(self):
-        return self._repo_name
-
-    def branch(self):
-        return self._branch
 
 
 class RepositoryHelperBase:

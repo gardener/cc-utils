@@ -16,7 +16,6 @@ import git
 import git.objects.util
 import git.remote
 
-from github.util import GitHubRepoBranch
 import ci.log
 from ci.util import not_empty, not_none, existing_dir, fail, random_str, urljoin
 from model.github import (
@@ -90,17 +89,6 @@ class GitHelper:
             repo=target_directory,
             github_cfg=github_cfg,
             github_repo_path=github_repo_path,
-        )
-
-    @staticmethod
-    def from_githubrepobranch(
-        githubrepobranch: GitHubRepoBranch,
-        repo_path: str,
-    ):
-        return GitHelper(
-            repo=repo_path,
-            github_cfg=githubrepobranch.github_config(),
-            github_repo_path=githubrepobranch.github_repo_path(),
         )
 
     @property
