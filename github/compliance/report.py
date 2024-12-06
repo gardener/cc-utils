@@ -521,6 +521,7 @@ def create_or_update_github_issues(
     delivery_svc_client: delivery.client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
+    job_url_callback: typing.Callable[[], str]=None,
 ):
     result_groups = result_group_collection.result_groups
     result_groups_with_findings = result_group_collection.result_groups_with_findings
@@ -687,6 +688,7 @@ def create_or_update_github_issues(
                         scanned_element=scan_result.scanned_element,
                         issue_type=issue_type,
                     ),
+                    job_url_callback=job_url_callback,
                 )
 
                 element_name = github.compliance.issue.unique_name_for_element(

@@ -6,7 +6,6 @@ import textwrap
 import traceback
 import typing
 
-import concourse.util
 import github3
 import github3.issues
 import github3.issues.comment
@@ -265,12 +264,11 @@ def _update_issue(
 def _create_or_update_problems_comment(
     issue: github3.github.issues.ShortIssue,
     message: str,
+    job_url: str,
 ):
     '''
     Create or update a comment on an issue stating encountered problems.
     '''
-
-    job_url = concourse.util.own_running_build_url()
     now = datetime.datetime.now()
 
     issue_problems_comment_header = (
@@ -314,6 +312,7 @@ def create_or_update_issue(
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     ctx_labels: typing.Iterable[str]=(),
+    job_url_callback: typing.Callable[[], str]=None,
 ) -> github3.issues.issue.ShortIssue:
     '''
     Creates or updates a github issue for the given scanned_element. If no issue exists, yet, it will
@@ -396,7 +395,15 @@ def create_or_update_issue(
             if isinstance(e, github3.exceptions.GitHubError) and e.errors: # noqa: E1101
                 # also add much more helpful "errors", if available
                 message += f'Additional error-details supplied by github: \n{e.errors}' # noqa: E1101
-            _create_or_update_problems_comment(issue=open_issue, message=message)
+            if job_url_callback:
+                job_url = job_url_callback()
+            else:
+                job_url = '<unknown>'
+            _create_or_update_problems_comment(
+                issue=open_issue,
+                message=message,
+                job_url=job_url,
+            )
             raise
 
     else:

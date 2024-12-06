@@ -31,6 +31,7 @@ import ccc.github
 import ccc.oci
 import ci.util
 import cnudie.retrieve
+import concourse.util
 import github.compliance.model
 import github.compliance.report
 import github.issue
@@ -129,6 +130,7 @@ github.compliance.report.create_or_update_github_issues(
 % endif
   delivery_svc_client=delivery_db_client,
   delivery_svc_endpoints=delivery_svc_endpoints,
+  job_url_callback=concourse.util.own_running_build_url,
 )
 
 </%def>
