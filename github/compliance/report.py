@@ -21,13 +21,13 @@ import ccc.github
 import checkmarx.model
 import cfg_mgmt.model as cmm
 import ci.util
-import concourse.model.traits.image_scan as image_scan
 import delivery.client
 import delivery.model
 import github.codeowners
 import github.compliance.issue
 import github.compliance.milestone as gcmi
 import github.compliance.model as gcm
+import github.issue
 import github.retry
 import github.user
 import github.util
@@ -517,10 +517,11 @@ def create_or_update_github_issues(
     gh_api: github3.GitHub=None,
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
-    github_issue_template_cfgs: list[image_scan.GithubIssueTemplateCfg]=None,
+    github_issue_template_cfgs: list[github.issue.GithubIssueTemplateCfg]=None,
     delivery_svc_client: delivery.client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
+    job_url_callback: typing.Callable[[], str]=None,
 ):
     result_groups = result_group_collection.result_groups
     result_groups_with_findings = result_group_collection.result_groups_with_findings
@@ -687,6 +688,7 @@ def create_or_update_github_issues(
                         scanned_element=scan_result.scanned_element,
                         issue_type=issue_type,
                     ),
+                    job_url_callback=job_url_callback,
                 )
 
                 element_name = github.compliance.issue.unique_name_for_element(

@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pathlib import Path
 import logging
+import os
 import typing
 
 from github3 import GitHub, GitHubEnterprise
@@ -13,7 +13,6 @@ import github3.repos.repo
 import github3.search.user
 import github3.users
 
-from ci.util import existing_dir, existing_file, not_none
 import ci.log
 
 logger = logging.getLogger(__name__)
@@ -81,7 +80,6 @@ def enumerate_codeowners_from_remote_repo(
 def enumerate_codeowners_from_file(
     file_path: str,
 ) -> typing.Generator[Username | Team | EmailAddress, None, None]:
-    file_path = existing_file(file_path)
     with open(file_path) as f:
         yield from (
             parse_codeowner_entry(entry)
@@ -93,8 +91,7 @@ def enumerate_codeowners_from_local_repo(
     repo_dir: str,
     paths: typing.Iterable[str] = ('CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'),
 ) -> typing.Generator[Username | Team | EmailAddress, None, None]:
-    repo_dir = existing_dir(Path(repo_dir))
-    if not repo_dir.joinpath('.git').is_dir():
+    if not os.path.isdir(os.path.join(repo_dir, '.git')):
         raise ValueError(f'not a git root directory: {repo_dir}')
 
     for path in paths:
@@ -133,7 +130,9 @@ def determine_email_address(
     Return email address exposed for given user.
     `None` returned if either user not found, or no email address is exposed.
     '''
-    not_none(github_user_name)
+    if not github_user_name:
+        raise ValueError(github_user_name)
+
     try:
         user = github_api.user(github_user_name)
     except NotFoundError:

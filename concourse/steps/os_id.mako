@@ -30,10 +30,11 @@ import ccc.delivery
 import ccc.github
 import ccc.oci
 import ci.util
-import concourse.model.traits.image_scan as image_scan
 import cnudie.retrieve
+import concourse.util
 import github.compliance.model
 import github.compliance.report
+import github.issue
 
 ${concourse.steps.step_lib('os_id')}
 ${concourse.steps.step_lib('component_descriptor_util')}
@@ -76,7 +77,7 @@ overwrite_repository = None
 
 % if github_issue_templates:
 github_issue_template_cfgs = [dacite.from_dict(
-    data_class=image_scan.GithubIssueTemplateCfg,
+    data_class=github.issue.GithubIssueTemplateCfg,
     data=raw
     ) for raw in ${[dataclasses.asdict(ghit) for ghit in github_issue_templates]}
 ]
@@ -129,6 +130,7 @@ github.compliance.report.create_or_update_github_issues(
 % endif
   delivery_svc_client=delivery_db_client,
   delivery_svc_endpoints=delivery_svc_endpoints,
+  job_url_callback=concourse.util.own_running_build_url,
 )
 
 </%def>

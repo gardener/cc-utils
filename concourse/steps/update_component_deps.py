@@ -387,8 +387,9 @@ def create_upgrade_pr(
     pull_request_util: gu.PullRequestUtil,
     upgrade_script_path,
     upgrade_script_relpath,
-    githubrepobranch: gu.GitHubRepoBranch,
+    branch: str,
     repo_dir,
+    git_helper: gitutil.GitHelper,
     github_cfg_name,
     merge_policy: ucd.MergePolicy,
     merge_method: ucd.MergeMethod,
@@ -512,9 +513,9 @@ def create_upgrade_pr(
 
     upgrade_branch_name = push_upgrade_commit(
         ls_repo=ls_repo,
+        git_helper=git_helper,
         commit_message=commit_message,
-        githubrepobranch=githubrepobranch,
-        repo_dir=repo_dir,
+        branch=branch,
     )
     # branch was created. Cleanup if something fails
     try:
@@ -582,7 +583,7 @@ def create_upgrade_pr(
                 from_version=from_version,
                 to_version=to_version
             ),
-            base=githubrepobranch.branch(),
+            base=branch,
             head=upgrade_branch_name,
             body=pr_body.strip(),
         )
@@ -598,7 +599,7 @@ def create_upgrade_pr(
 
     logger.info(
         f"Merging upgrade-pr #{pull_request.number} ({merge_method=!s}) on branch "
-        f"'{upgrade_branch_name}' into branch '{githubrepobranch.branch()}'."
+        f"'{upgrade_branch_name}' into branch '{branch}'."
     )
 
     def  _merge_pr(
@@ -654,30 +655,24 @@ def create_upgrade_pr(
 
 def push_upgrade_commit(
     ls_repo: github3.repos.repo.Repository,
+    git_helper: gitutil.GitHelper,
     commit_message: str,
-    githubrepobranch: gu.GitHubRepoBranch,
-    repo_dir: str,
+    branch: str,
 ) -> str:
-    # mv diff into commit and push it
-    helper = gitutil.GitHelper.from_githubrepobranch(
-        githubrepobranch=githubrepobranch,
-        repo_path=repo_dir,
-    )
-    commit = helper.index_to_commit(message=commit_message)
+    commit = git_helper.index_to_commit(message=commit_message)
     logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
     new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    repo_branch = githubrepobranch.branch()
-    head_sha = ls_repo.ref(f'heads/{repo_branch}').object.sha
+    head_sha = ls_repo.ref(f'heads/{branch}').object.sha
     ls_repo.create_ref(f'refs/heads/{new_branch_name}', head_sha)
 
     try:
-        helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
+        git_helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
     except:
         logger.warning('an error occurred - removing now useless pr-branch')
         ls_repo.ref(f'heads/{new_branch_name}').delete()
         raise
 
-    helper.repo.git.checkout('.')
+    git_helper.repo.git.checkout('.')
 
     return new_branch_name
 

@@ -136,13 +136,9 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
     '${repo.repo_path()}',
   )
 )
-
-githubrepobranch = github.util.GitHubRepoBranch(
-    github_config=github_cfg,
-    repo_owner='${repo.repo_owner()}',
-    repo_name='${repo.repo_name()}',
-    branch=repository_branch,
-)
+github_api = ccc.github.github_api(github_cfg)
+repo_owner = '${repo.repo_owner()}'
+repo_name = '${repo.repo_name()}'
 
 <%
 import concourse.steps
@@ -362,12 +358,18 @@ version_path = '${os.path.join(repo.resource_name(), version_trait.write_callbac
 print(f'{version_path=}')
 print(f'{version_interface=}')
 
-git_helper = gitutil.GitHelper.from_githubrepobranch(
-  githubrepobranch=githubrepobranch,
-  repo_path=repo_dir,
+git_helper = gitutil.GitHelper(
+  repo=repo_dir,
+  github_cfg=github_cfg,
+  github_repo_path=f'{repo_owner}/{repo_name}',
 )
-github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
-branch = githubrepobranch.branch()
+branch = repository_branch
+github_helper = github.util.GitHubRepositoryHelper(
+  owner=repo_owner,
+  name=repo_name,
+  github_api=github_api,
+  default_branch=branch,
+)
 
 % if release_trait.rebase_before_release():
 logger.info(f'will fetch and rebase refs/heads/{branch}')

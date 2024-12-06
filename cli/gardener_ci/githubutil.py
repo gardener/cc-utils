@@ -41,7 +41,7 @@ def list_draft_releases(
     github_helper = GitHubRepositoryHelper(
         owner=github_repository_owner,
         name=github_repository_name,
-        github_cfg=github_cfg,
+        github_api=ccc.github.github_api(github_cfg),
     )
     if only_outdated:
         releases = [release for release in github_helper.repository.releases()]
@@ -74,7 +74,7 @@ def delete_releases(
     github_helper = GitHubRepositoryHelper(
         owner=github_repository_owner,
         name=github_repository_name,
-        github_cfg=github_cfg,
+        github_api=ccc.github.github_api(github_cfg),
     )
     github_helper.delete_releases(release_names=release_name)
 

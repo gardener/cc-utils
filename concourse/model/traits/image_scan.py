@@ -5,10 +5,11 @@
 
 import dataclasses
 import enum
-import re
 import typing
 
 import dacite
+
+import github.issue
 
 from concourse.model.job import (
     JobVariant,
@@ -68,32 +69,6 @@ class Notify(enum.Enum):
     GITHUB_ISSUES = 'github_issues'
 
 
-@dataclasses.dataclass
-class GithubIssueTemplateCfg:
-    body: str
-    type: str
-
-
-@dataclasses.dataclass
-class LicenseCfg:
-    '''
-    configures license policies for discovered licences
-
-    licenses are configured as lists of regular expressions (matching is done case-insensitive)
-    '''
-    prohibited_licenses: typing.Optional[list[str]] = None
-
-    def is_allowed(self, license: str):
-        if not self.prohibited_licenses:
-            return True
-
-        for prohibited in self.prohibited_licenses:
-            if re.fullmatch(prohibited, license, re.IGNORECASE):
-                return False
-        else:
-            return True
-
-
 @dataclasses.dataclass(frozen=True)
 class IssuePolicies:
     max_processing_time_days: gcm.MaxProcessingTimesDays = gcm.MaxProcessingTimesDays()
@@ -138,7 +113,7 @@ ATTRIBUTES = (
           - delivery_dashboard_url
 
         ''',
-        type=list[GithubIssueTemplateCfg],
+        type=list[github.issue.GithubIssueTemplateCfg],
     ),
     AttributeSpec.optional(
         name='github_issue_labels_to_preserve',
@@ -187,20 +162,20 @@ class ImageScanTrait(Trait):
     def overwrite_github_issues_tgt_repository_url(self) -> typing.Optional[str]:
         return self.raw.get('overwrite_github_issues_tgt_repository_url')
 
-    def github_issue_templates(self) -> list[GithubIssueTemplateCfg]:
+    def github_issue_templates(self) -> list[github.issue.GithubIssueTemplateCfg]:
         if not (raw := self.raw.get('github_issue_templates')):
             return None
 
         template_cfgs = [
             dacite.from_dict(
-                data_class=GithubIssueTemplateCfg,
+                data_class=github.issue.GithubIssueTemplateCfg,
                 data=cfg,
             ) for cfg in raw
         ]
 
         return template_cfgs
 
-    def github_issue_template(self, type: str) -> typing.Optional[GithubIssueTemplateCfg]:
+    def github_issue_template(self, type: str) -> github.issue.GithubIssueTemplateCfg | None:
         if not (template_cfgs := self.github_issue_templates()):
             return None
 

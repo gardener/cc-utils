@@ -41,14 +41,14 @@ import checkmarx.util
 import ci.log
 ci.log.configure_default_logging()
 import ci.util
+import concourse.util
 import delivery.client
 import github.compliance.model
 import github.compliance.report
 from concourse.model.traits.image_scan import (
-    GithubIssueTemplateCfg,
-    IssuePolicies,
     Notify,
 )
+from github.issue import GithubIssueTemplateCfg
 cfg_factory = ci.util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
@@ -115,6 +115,7 @@ logger.info('Creating and updating github issues')
 github.compliance.report.create_or_update_github_issues(
   result_group_collection=scan_results_grouped,
   max_processing_days=max_processing_days,
+  job_url_callback=concourse.util.own_running_build_url,
 % if issue_tgt_repo_url:
   gh_api=gh_api,
   overwrite_repository=overwrite_repository,
