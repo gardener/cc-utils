@@ -45,10 +45,9 @@ import delivery.client
 import github.compliance.model
 import github.compliance.report
 from concourse.model.traits.image_scan import (
-    GithubIssueTemplateCfg,
-    IssuePolicies,
     Notify,
 )
+from github.issue import GithubIssueTemplateCfg
 cfg_factory = ci.util.ctx().cfg_factory()
 cfg_set = cfg_factory.cfg_set("${cfg_set.name()}")
 
