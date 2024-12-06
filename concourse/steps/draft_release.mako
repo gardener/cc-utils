@@ -34,7 +34,6 @@ import release_notes.markdown
 from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
-    GitHubRepoBranch,
 )
 
 logger = logging.getLogger('draft-release')
@@ -89,15 +88,11 @@ ocm_version_lookup = cnudie.retrieve.version_lookup(
     ocm_repository_lookup=ocm_repository_lookup,
 )
 
-githubrepobranch = GitHubRepoBranch(
-    github_config=github_cfg,
-    repo_owner='${repo.repo_owner()}',
-    repo_name='${repo.repo_name()}',
-    branch='${repo.branch()}',
-)
-
-github_helper = GitHubRepositoryHelper.from_githubrepobranch(
-    githubrepobranch=githubrepobranch,
+github_helper = github.util.GitHubRepositoryHelper(
+    owner='${repo.repo_owner()}',
+    name='${repo.repo_name()}',
+    github_api=ccc.github.github_api(github_cfg),
+    default_branch='${repo.branch()}',
 )
 try:
     release_note_blocks = release_notes.fetch.fetch_draft_release_notes(

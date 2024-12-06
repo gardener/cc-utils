@@ -75,28 +75,20 @@ class RepositoryHelperBase:
         self,
         owner: str,
         name: str,
-        default_branch: str='master',
-        github_cfg: GithubConfig=None,
         github_api: GitHub=None,
+        default_branch: str='master',
     ):
         '''
         Args:
             owner (str):    repository owner (also called organisation in GitHub)
             name (str):     repository name
             default_branch (str): branch to use for operations when not specified
-            github_cfg (GithubConfig): cfg to construct github api object from
             github_api (GitHub): github api to use
-
-        Exactly one of `github_cfg` and `github_api` must be passed as argument.
-        Passing a GitHub object is more flexible (but less convenient).
         '''
-        if not (bool(github_cfg) ^ bool(github_api)):
-            raise ValueError('exactly one of github_api and github_cfg must be given')
+        if not github_api:
+            raise ValueError('must pass github_api')
 
-        if github_cfg:
-            self.github = ccc.github.github_api(github_cfg)
-        else:
-            self.github = github_api
+        self.github = github_api
 
         self.repository = self._create_repository(
             owner=owner,
@@ -440,17 +432,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 branch=branch,
             )
         return response['commit'].sha
-
-    @staticmethod
-    def from_githubrepobranch(
-        githubrepobranch: GitHubRepoBranch,
-    ):
-        return GitHubRepositoryHelper(
-            github_cfg=githubrepobranch.github_config(),
-            owner=githubrepobranch.repo_owner(),
-            name=githubrepobranch.repo_name(),
-            default_branch=githubrepobranch.branch(),
-        )
 
     def retrieve_file_contents(self, file_path: str, branch: str=None):
         if branch is None:

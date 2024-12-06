@@ -191,13 +191,14 @@ def github_api_for_pr_event(
         repo_url=ci.util.urljoin(github_host, repository_path),
         cfg_factory=cfg_set,
     )
+    github_api = ccc.github.github_api(github_cfg)
     owner, name = repository_path.split('/')
 
     try:
         github_helper = GitHubRepositoryHelper(
             owner=owner,
             name=name,
-            github_cfg=github_cfg,
+            github_api=github_api,
         )
     except NotFoundError:
         logger.warning(

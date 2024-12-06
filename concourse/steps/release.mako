@@ -136,11 +136,14 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
     '${repo.repo_path()}',
   )
 )
+github_api = ccc.github.github_api(github_cfg)
+repo_owner = '${repo.repo_owner()}'
+repo_name = '${repo.repo_name()}'
 
 githubrepobranch = github.util.GitHubRepoBranch(
     github_config=github_cfg,
-    repo_owner='${repo.repo_owner()}',
-    repo_name='${repo.repo_name()}',
+    repo_owner=repo_owner,
+    repo_name=repo_name,
     branch=repository_branch,
 )
 
@@ -366,8 +369,13 @@ git_helper = gitutil.GitHelper.from_githubrepobranch(
   githubrepobranch=githubrepobranch,
   repo_path=repo_dir,
 )
-github_helper = github.util.GitHubRepositoryHelper.from_githubrepobranch(githubrepobranch)
 branch = githubrepobranch.branch()
+github_helper = github.util.GitHubRepositoryHelper(
+  owner=repo_owner,
+  name=repo_name,
+  github_api=github_api,
+  default_branch=branch,
+)
 
 % if release_trait.rebase_before_release():
 logger.info(f'will fetch and rebase refs/heads/{branch}')

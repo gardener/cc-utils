@@ -41,6 +41,7 @@ import sys
 
 import dacite
 
+import ccc.github
 import ci.util
 import cnudie.util
 import cnudie.retrieve
@@ -95,7 +96,7 @@ pull_request_util = github.util.PullRequestUtil(
     owner=REPO_OWNER,
     name=REPO_NAME,
     default_branch=REPO_BRANCH,
-    github_cfg=github_cfg,
+    github_api=ccc.github.github_api(github_cfg),
 )
 
 ## hack / workaround: rebase to workaround concourse sometimes not refreshing git-resource
