@@ -20,10 +20,10 @@ from concourse.model.base import (
 import concourse.model.traits.component_descriptor
 
 from concourse.model.traits.image_scan import (
-    GithubIssueTemplateCfg,
     IssuePolicies,
     Notify,
 )
+from github.issue import GithubIssueTemplateCfg
 
 
 CHECKMARX_ATTRIBUTES = (

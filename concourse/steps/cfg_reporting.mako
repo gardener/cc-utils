@@ -18,9 +18,9 @@ import ccc.delivery
 import ccc.github
 import cfg_mgmt.reporting as cmr
 import ci.util
-import concourse.model.traits.image_scan
 import github.compliance.model as gcm
 import github.compliance.report as gcr
+import github.issue
 import model
 import model.concourse
 
@@ -62,7 +62,7 @@ grouped_no_undefined_policy = scan_result_group_collection_for_undefined_policy(
 
 github_issue_template_cfgs = [
   dacite.from_dict(
-    data_class=concourse.model.traits.image_scan.GithubIssueTemplateCfg,
+    data_class=github.issue.GithubIssueTemplateCfg,
     data=template_cfg_raw,
   )
   for template_cfg_raw in ${github_issue_template_cfgs_raw}
