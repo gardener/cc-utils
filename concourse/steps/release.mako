@@ -140,13 +140,6 @@ github_api = ccc.github.github_api(github_cfg)
 repo_owner = '${repo.repo_owner()}'
 repo_name = '${repo.repo_name()}'
 
-githubrepobranch = github.util.GitHubRepoBranch(
-    github_config=github_cfg,
-    repo_owner=repo_owner,
-    repo_name=repo_name,
-    branch=repository_branch,
-)
-
 <%
 import concourse.steps
 template = concourse.steps.step_template('component_descriptor')
@@ -365,11 +358,12 @@ version_path = '${os.path.join(repo.resource_name(), version_trait.write_callbac
 print(f'{version_path=}')
 print(f'{version_interface=}')
 
-git_helper = gitutil.GitHelper.from_githubrepobranch(
-  githubrepobranch=githubrepobranch,
-  repo_path=repo_dir,
+git_helper = gitutil.GitHelper(
+  repo=repo_dir,
+  github_cfg=github_cfg,
+  github_repo_path=f'{repo_owner}/{repo_name}',
 )
-branch = githubrepobranch.branch()
+branch = repository_branch
 github_helper = github.util.GitHubRepositoryHelper(
   owner=repo_owner,
   name=repo_name,

@@ -70,11 +70,10 @@ cfg_factory = ci.util.ctx().cfg_factory()
 github_cfg_name = '${github_cfg_name}'
 github_cfg=cfg_factory.github(github_cfg_name)
 
-githubrepobranch = github.util.GitHubRepoBranch(
-    github_config=github_cfg,
-    repo_owner=REPO_OWNER,
-    repo_name=REPO_NAME,
-    branch=REPO_BRANCH,
+git_helper = gitutil.GitHelper(
+    repo=REPO_ROOT,
+    github_cfg=github_cfg,
+    github_repo_path=f'{REPO_OWNER}/{REPO_NAME}',
 )
 merge_policy_configs = [
     concourse.model.traits.update_component_deps.MergePolicyConfig(cfg)
@@ -100,11 +99,6 @@ pull_request_util = github.util.PullRequestUtil(
 )
 
 ## hack / workaround: rebase to workaround concourse sometimes not refreshing git-resource
-git_helper = gitutil.GitHelper(
-    repo=REPO_ROOT,
-    github_cfg=github_cfg,
-    github_repo_path=f'{REPO_OWNER}/{REPO_NAME}',
-)
 git_helper.rebase(
     commit_ish=REPO_BRANCH,
 )
@@ -189,7 +183,8 @@ for from_ref, to_version in determine_upgrade_prs(
         pull_request_util=pull_request_util,
         upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
         upgrade_script_relpath='${set_dependency_version_script_path}',
-        githubrepobranch=githubrepobranch,
+        git_helper=git_helper,
+        branch=REPO_BRANCH,
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
         component_descriptor_lookup=ocm_lookup,
