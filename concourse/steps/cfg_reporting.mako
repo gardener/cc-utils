@@ -16,6 +16,7 @@ import dacite
 
 import ccc.delivery
 import ccc.github
+import concourse.util
 import cfg_mgmt.reporting as cmr
 import ci.util
 import github.compliance.model as gcm
@@ -82,6 +83,7 @@ for result_group_collection in (
     overwrite_repository=repository,
     delivery_svc_client=delivery_svc_client,
     github_issue_template_cfgs=github_issue_template_cfgs,
+    job_url_callback=concourse.util.own_running_build_url,
   )
 
 </%def>
