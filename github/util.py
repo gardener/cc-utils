@@ -5,7 +5,6 @@
 
 import collections
 import datetime
-import deprecated
 import enum
 import io
 import re
@@ -796,20 +795,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
 
         for release in draft_releases_to_delete:
             yield release, release.delete()
-
-
-@deprecated.deprecated
-def github_cfg_for_hostname(cfg_factory, host_name, require_labels=('ci',)): # XXX unhardcode label
-    return ccc.github.github_cfg_for_hostname(
-        host_name=host_name,
-        cfg_factory=cfg_factory,
-        require_labels=require_labels,
-    )
-
-
-@deprecated.deprecated
-def _create_github_api_object(github_cfg):
-    return ccc.github.github_api(github_cfg=github_cfg)
 
 
 def branches(
