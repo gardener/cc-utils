@@ -126,6 +126,20 @@ class DeliveryServiceRoutes:
             'cache',
         )
 
+    def scan_cfgs(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'service-extensions',
+            'scan-configurations',
+        )
+
+    def backlog_items(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'service-extensions',
+            'backlog-items',
+        )
+
 
 class DeliveryServiceClient:
     def __init__(
@@ -744,6 +758,50 @@ class DeliveryServiceClient:
         )
 
         res.raise_for_status()
+
+    def create_backlog_item(
+        self,
+        service: str,
+        cfg_name: str,
+        artefacts: collections.abc.Iterable[dso.model.ComponentArtefactId]=(),
+        priority: str | None=None, # see delivery-service k8s/backlog for allowed priorities
+    ):
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
+        params = dict()
+
+        params['service'] = service
+        params['cfg_name'] = cfg_name
+
+        if priority:
+            params['priority'] = priority
+
+        data, headers = http_requests.encode_request(
+            json={'artefacts': [
+                dataclasses.asdict(artefact)
+                for artefact in artefacts
+            ]},
+            headers=headers,
+        )
+
+        res = self.request(
+            url=self._routes.backlog_items(),
+            method='POST',
+            headers=headers,
+            data=data,
+            params=params,
+        )
+        res.raise_for_status()
+
+    def scan_cfgs(self) -> list:
+        res = self.request(
+            url=self._routes.scan_cfgs(),
+            method='GET',
+        )
+        res.raise_for_status()
+        return res.json()
 
 
 def _normalise_github_hostname(github_url: str):
