@@ -27,6 +27,7 @@ import ci.log
 import ci.util
 import cnudie.retrieve
 import cnudie.util
+import github.util
 import ocm
 import release_notes.fetch
 import release_notes.markdown
