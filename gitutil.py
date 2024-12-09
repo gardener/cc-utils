@@ -7,9 +7,7 @@ import contextlib
 import functools
 import logging
 import os
-import subprocess
 import tempfile
-import typing
 import urllib.parse
 
 import git
@@ -17,7 +15,7 @@ import git.objects.util
 import git.remote
 
 import ci.log
-from ci.util import not_empty, not_none, existing_dir, fail, random_str, urljoin
+from ci.util import not_none, random_str, urljoin
 from model.github import (
     GithubConfig,
     Protocol,
@@ -91,10 +89,6 @@ class GitHelper:
             github_repo_path=github_repo_path,
         )
 
-    @property
-    def is_dirty(self):
-        return len(self._changed_file_paths()) > 0
-
     def _changed_file_paths(self):
         lines = git.cmd.Git(self.repo.working_tree_dir).status('--porcelain=1', '-z').split('\x00')
         # output of git status --porcelain=1 and -z is guaranteed to not change in the future
@@ -148,22 +142,6 @@ class GitHelper:
             # recommended by maintainers:
             # https://github.com/gitpython-developers/GitPython/discussions/1536
             self.repo.git.submodule('update')
-
-    def check_tag_availability(
-        self,
-        tags: typing.Iterable[str],
-    ) -> typing.Tuple[typing.Iterable[str], typing.Iterable[str]]:
-        '''checks the availability of the tag-names in the given iterable.
-
-        Returns a pair of iterables, where the first contains all tags that are available (and thus
-        may still be created) and the second contains all tags that are already known to the
-        repository.
-        '''
-        known_tags = set(t.name for t in self.repo.tags)
-        tags_to_check = set(tags)
-        available_tags = tags_to_check - known_tags
-        existing_tags = tags_to_check - available_tags
-        return available_tags, existing_tags
 
     def _actor(self):
         if self.github_cfg:
@@ -230,15 +208,6 @@ class GitHelper:
             author=actor,
             committer=actor,
         )
-
-    def _stash_changes(self):
-        self.repo.git.stash('--include-untracked', '--quiet')
-
-    def _has_stash(self):
-        return bool(self.repo.git.stash('list'))
-
-    def _pop_stash(self):
-        self.repo.git.stash('pop', '--quiet')
 
     def push(self, from_ref, to_ref):
         with self._authenticated_remote() as (cmd_env, remote):
@@ -308,139 +277,3 @@ def url_with_credentials(
         ''
     ))
     return url
-
-
-def update_submodule(
-    repo_path: str,
-    tree_ish: str,
-    submodule_path: str,
-    commit_hash: str,
-    author: str,
-    email: str,
-):
-    '''Update the submodule of a git-repository to a specific commit.
-
-    Create a new commit, with the passed tree-ish as parent, in the given repository.
-
-    Note that this implementation only supports toplevel submodules. To be removed in a
-    future version.
-
-    Parameters
-    ------
-    repo_path : str
-        Path to a directory containing an intialised git-repo with a submodule to update.
-    tree_ish : str
-        Valid tree-ish to use as base for creating the new commit. Used as parent for the
-        commit to be created
-        Example: 'master' for the head of the master-branch.
-    submodule_path : str
-        Path (relative to the repository root) to the submodule. Must be immediately below the root
-        of the repository.
-    commit_hash : str
-        The hash the submodule should point to in the created commit. This should be a valid commit-
-        hash in the submodule's repository.
-    author : str,
-        Will be set as author of the created commit
-    email : str
-        Will be set for the author of the created commit
-
-    Returns
-    ------
-    str
-        The hexadecimal SHA-1 hash of the created commit
-    '''
-    repo_path = existing_dir(os.path.abspath(repo_path))
-
-    not_empty(submodule_path)
-    if '/' in submodule_path:
-        fail(f'This implementation only supports toplevel submodules: {submodule_path}')
-
-    not_empty(tree_ish)
-    not_empty(commit_hash)
-    not_empty(author)
-    not_empty(email)
-
-    repo = git.Repo(repo_path)
-    _ensure_submodule_exists(repo, submodule_path)
-
-    # Create mk-tree-parseable string-representation from given tree-ish.
-    tree = repo.tree(tree_ish)
-    tree_representation = _serialise_and_update_submodule(tree, submodule_path, commit_hash)
-
-    # Pass the patched tree to git mk-tree using GitPython. We cannot do this in GitPython
-    # directly as it does not support arbitrary tree manipulation.
-    # We must keep a reference to auto_interrupt as it closes all streams to the subprocess
-    # on finalisation
-    auto_interrupt = repo.git.mktree(istream=subprocess.PIPE, as_process=True)
-    process = auto_interrupt.proc
-    stdout, _ = process.communicate(input=tree_representation.encode())
-
-    # returned string is byte-encoded and newline-terminated
-    new_sha = stdout.decode('utf-8').strip()
-
-    # Create a new commit in the repo's object database from the newly created tree.
-    actor = git.Actor(author, email)
-    parent_commit = repo.commit(tree_ish)
-    commit = git.Commit.create_from_tree(
-      repo=repo,
-      tree=new_sha,
-      parent_commits=[parent_commit],
-      message=f'Upgrade submodule {submodule_path} to commit {commit_hash}',
-      author=actor,
-      committer=actor,
-    )
-
-    return commit.hexsha
-
-
-def _serialise_and_update_submodule(
-    tree: git.Tree,
-    submodule_path: str,
-    commit_hash: str,
-):
-    '''Return a modified, serialised tree-representation in which the given submodule's entry is
-    altered such that it points to the specified commit hash.
-    The returned serialisation  format is understood by git mk-tree.
-
-    Returns
-    ------
-        str
-            An updated serialised git-tree with the updated submodule entry
-    '''
-    # GitPython offers no API to retrieve ls-tree representation
-    return '\n'.join([
-        _serialise_object_replace_submodule(
-            tree_element=tree_element,
-            submodule_path=submodule_path,
-            commit_hash=commit_hash,
-        ) for tree_element in tree]
-    )
-
-
-def _serialise_object_replace_submodule(tree_element, submodule_path, commit_hash):
-    # GitPython uses the special type 'submodule' for submodules whereas git uses 'commit'.
-    if tree_element.type == 'submodule':
-        element_type = 'commit'
-        # Replace the hash the of the 'commit'-tree with the passed value if the submodule
-        # is at the specified path
-        if tree_element.path == submodule_path:
-            element_sha = commit_hash
-    else:
-        element_type = tree_element.type
-        element_sha = tree_element.hexsha
-
-    return '{mode} {type} {sha}\t{path}'.format(
-        sha=element_sha,
-        type=element_type,
-        # mode is a number in octal representation WITHOUT '0o' prefix
-        mode=format(tree_element.mode, 'o'),
-        path=tree_element.path,
-    )
-
-
-def _ensure_submodule_exists(repo: git.Repo, path: str):
-    '''Use GitPython to verify that a submodule with the given path exists in the repository.'''
-    for submodule in repo.submodules:
-        if submodule.path == path:
-            return
-    fail(f'No submodule with {path=} exists in the repository.')

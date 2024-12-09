@@ -44,9 +44,7 @@ def test_index_to_commit(git_helper):
 
     # file should be left in working_tree (but not added to index)
     assert os.path.isfile(new_file)
-    assert git_helper.is_dirty
     os.unlink(new_file)
-    assert not git_helper.is_dirty
 
     repo.head.reset(commit, working_tree=True)
     # check "new_file.txt" was actually added to returned commit
