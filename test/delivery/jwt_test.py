@@ -5,26 +5,28 @@ import Crypto.PublicKey.RSA
 import jwt
 
 import delivery.jwt
-import model.delivery
+
 
 ISSUER = 'test-issuer'
+private_key = Crypto.PublicKey.RSA.generate(4096)
+public_key = private_key.public_key()
 
 
 @pytest.fixture
-def signing_cfg() -> model.delivery.SigningCfg:
-    private_key = Crypto.PublicKey.RSA.generate(4096)
-
-    return model.delivery.SigningCfg({
-        'id': '0',
-        'algorithm': delivery.jwt.Algorithm.RS256,
-        'secret': private_key.export_key(format='PEM'),
-        'public_key': private_key.public_key().export_key(format='PEM'),
-        'purpose_labels': [],
-    })
+def json_web_key() -> delivery.jwt.JSONWebKey:
+    return delivery.jwt.JSONWebKey.from_dict(
+        data={
+            'use': delivery.jwt.Use.SIGNATURE,
+            'kid': 'foo',
+            'alg': delivery.jwt.Algorithm.RS256,
+            'n': delivery.jwt.encodeBase64urlUInt(public_key.n),
+            'e': delivery.jwt.encodeBase64urlUInt(private_key.e)
+        }
+    )
 
 
 @pytest.fixture
-def token(signing_cfg) -> str:
+def token() -> str:
     now = datetime.datetime.now(tz=datetime.timezone.utc)
     time_delta = datetime.timedelta(days=730) # 2 years
 
@@ -39,21 +41,17 @@ def token(signing_cfg) -> str:
             'email_address': 'test-user@email.com',
         },
         'exp': int((now + time_delta).timestamp()),
-        'key_id': signing_cfg.id(),
+        'key_id': '0',
     }
 
     return jwt.encode(
         payload=token,
-        key=signing_cfg.secret(),
-        algorithm=signing_cfg.algorithm(),
+        key=private_key.export_key(format='PEM'),
+        algorithm=delivery.jwt.Algorithm.RS256,
     )
 
 
-def test_jwt(signing_cfg, token):
-    json_web_key = delivery.jwt.JSONWebKey.from_signing_cfg(
-        signing_cfg=signing_cfg,
-    )
-
+def test_jwt(json_web_key, token):
     # token was just created and thus is not expired yet
     assert not delivery.jwt.is_jwt_token_expired(
         token=token,
