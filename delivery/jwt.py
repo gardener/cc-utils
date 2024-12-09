@@ -16,7 +16,6 @@ import Crypto.Util.number
 import dacite
 import jwt
 
-import model.delivery
 
 logger = logging.getLogger(__name__)
 JWT_KEY = 'bearer_token'
@@ -65,28 +64,6 @@ class JSONWebKey:
                 cast=[enum.Enum],
             ),
         )
-
-    @staticmethod
-    def from_signing_cfg(signing_cfg: model.delivery.SigningCfg) -> typing.Self:
-        algorithm = Algorithm(signing_cfg.algorithm().upper())
-        use = Use.SIGNATURE
-        kid = signing_cfg.id()
-
-        if algorithm == Algorithm.RS256:
-            public_key = Crypto.PublicKey.RSA.import_key(signing_cfg.public_key())
-
-            return RSAPublicKey(
-                use=use,
-                kid=kid,
-                n=encodeBase64urlUInt(public_key.n),
-                e=encodeBase64urlUInt(public_key.e),
-            )
-        elif algorithm == Algorithm.HS256:
-            return SymmetricKey(
-                use=use,
-                kid=kid,
-                k=encodeBase64url(signing_cfg.secret().encode('utf-8')),
-            )
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True)
