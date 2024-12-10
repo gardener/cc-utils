@@ -70,12 +70,23 @@ release_commit_publishing_policy = release_trait.release_commit_publishing_polic
 if release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_ONLY:
   merge_back = False
   push_release_commit = False
+  create_release_commit = True
+  bump_commit = True
 elif release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_PUSH_TO_BRANCH:
   merge_back = False
   push_release_commit = True
+  create_release_commit = True
+  bump_commit = True
 elif release_commit_publishing_policy is ReleaseCommitPublishingPolicy.TAG_AND_MERGE_BACK:
   push_release_commit = False
   merge_back = True
+  create_release_commit = True
+  bump_commit = True
+elif release_commit_publishing_policy is ReleaseCommitPublishingPolicy.SKIP:
+  push_release_commit = False
+  merge_back = False
+  create_release_commit = False
+  bump_commit = False
 else:
   raise ValueError(release_commit_publishing_policy)
 
@@ -379,27 +390,28 @@ upstream_commit_sha = git_helper.fetch_head(
 git_helper.rebase(commit_ish=upstream_commit_sha)
 % endif
 
+% if create_release_commit:
 release_commit = create_release_commit(
   git_helper=git_helper,
   branch=branch,
   version=version_str,
   version_interface=version_interface,
   version_path=version_path,
-% if release_commit_message_prefix:
+%   if release_commit_message_prefix:
   release_commit_message_prefix='${release_commit_message_prefix}',
-% endif
-% if release_callback_path:
+%   endif
+%   if release_callback_path:
   release_commit_callback='${release_callback_path}',
   release_commit_callback_image_reference=release_commit_callback_image_reference,
-% endif
+%   endif
 )
 
-% if push_release_commit:
+%   if push_release_commit:
 git_helper.push(
   from_ref=release_commit.hexsha,
   to_ref=branch,
 )
-% endif
+%   endif
 
 tags = _calculate_tags(
   version=version_str,
@@ -419,6 +431,7 @@ create_and_push_tags(
   tags=tags,
   release_commit=release_commit,
 )
+% endif
 
 % if release_trait.release_on_github():
 try:
@@ -529,7 +542,7 @@ except:
 release_notes_md = None
 % endif
 
-% if version_operation != version.NOOP:
+% if version_operation != version.NOOP and bump_commit:
 create_and_push_bump_commit(
   git_helper=git_helper,
   repo_dir=repo_dir,
