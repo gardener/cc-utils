@@ -22,6 +22,15 @@ def _as_key(
     return separator.join(absent_indicator if arg is None else arg for arg in args)
 
 
+class SastStatus(enum.StrEnum):
+    NO_LINTER = 'no-linter'
+
+
+class SastSubType(enum.StrEnum):
+    LOCAL_LINTING = 'local-linting'
+    CENTRAL_LINTING = 'central-linting'
+
+
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
@@ -33,6 +42,7 @@ class ScanArtifact:
 class Datasource:
     ARTEFACT_ENUMERATOR = 'artefact-enumerator'
     BDBA = 'bdba'
+    CM06 = 'cm06'
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
@@ -50,6 +60,11 @@ class Datasource:
                 Datatype.VULNERABILITY,
                 Datatype.LICENSE,
                 Datatype.STRUCTURE_INFO,
+                Datatype.RESCORING,
+            ),
+            Datasource.CM06: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.SAST_FINDING,
                 Datatype.RESCORING,
             ),
             Datasource.CHECKMARX: (
@@ -208,6 +223,7 @@ class Datatype:
     LICENSE = 'finding/license'
     VULNERABILITY = 'finding/vulnerability'
     MALWARE_FINDING = 'finding/malware'
+    SAST_FINDING = 'finding/sast'
     DIKI_FINDING = 'finding/diki'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     OS_IDS = 'os_ids'
@@ -224,6 +240,7 @@ class Datatype:
             Datatype.CODECHECKS_AGGREGATED: Datasource.CHECKMARX,
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
+            Datatype.SAST_FINDING: Datasource.CM06,
         }[datatype]
 
 
@@ -371,6 +388,17 @@ class ClamAVMalwareFinding(Finding):
 
 
 @dataclasses.dataclass(frozen=True)
+class SastFinding(Finding):
+    sast_statuses: list[SastStatus] | SastStatus
+    component_context: str
+    sub_type: SastSubType
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.component_context, self.sast_statuses, self.sub_type)
+
+
+@dataclasses.dataclass(frozen=True)
 class DikiCheck:
     message: str
     targets: list[dict] | dict
@@ -425,6 +453,7 @@ class CustomRescoring:
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
         | MalwareFindingDetails
+        | SastFinding
     )
     referenced_type: str
     severity: str
@@ -518,6 +547,7 @@ class ArtefactMetadata:
         | LicenseFinding
         | VulnerabilityFinding
         | ClamAVMalwareFinding
+        | SastFinding
         | DikiFinding
         | CodecheckSummary
         | OsID
@@ -541,6 +571,8 @@ class ArtefactMetadata:
                     ArtefactKind,
                     ComplianceSnapshotStatuses,
                     MetaRescoringRules,
+                    SastSubType,
+                    SastStatus,
                 ],
             ),
         )
