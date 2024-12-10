@@ -84,6 +84,10 @@ class ReleaseCommitPublishingPolicy(EnumWithDocumentation):
         value='tag_and_merge_back',
         doc='publish release tag to dead-end and merge back release commit to default branch',
     )
+    SKIP = EnumValueWithDocumentation(
+        value='skip',
+        doc='neither create, nor publish either of release- and bump-commits',
+    )
 
 
 class TagConflictAction(enum.StrEnum):
@@ -500,6 +504,13 @@ class ReleaseTraitTransformer(TraitTransformer):
         if main_repo:
             if 'trigger' not in pipeline_args.raw['repo']:
                 main_repo._trigger = False
+
+        # validate publishing to github is disabled if release-commit is disabled
+        if self.trait.release_commit_publishing_policy() is ReleaseCommitPublishingPolicy.SKIP:
+            if self.trait.release_on_github():
+                raise ModelValidationError(
+                    'must disable releasing to github if release-commit is set to `skip`',
+                )
 
         # validate assets if present
         for asset in self.trait.assets:
