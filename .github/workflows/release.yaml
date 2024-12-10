@@ -53,7 +53,7 @@ jobs:
           git reset --hard @~
           echo "${next_version}" | .ci/write-version
           git add .
-          git commit -m"Prepare next Dev-Cycle ${next-version}"
+          git commit -m"Prepare next Dev-Cycle ${next_version}"
           git pull --rebase
           git push origin
       - name: Retrieve Documentation
