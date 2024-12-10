@@ -48,12 +48,12 @@ jobs:
           tgt_ref="refs/tags/${effective_version}"
           echo "pushing release-commit ${commit_digest} to ${tgt_ref}"
           git push origin "@:${tgt_ref}"
-          next_version=${{ needs.build.outputs.next_version }}
+          next_version=${{ needs.build.outputs.next-version }}
           echo "next version: ${next_version}"
           git reset --hard @~
           echo "${next_version}" | .ci/write-version
           git add .
-          git commit -m"Prepare next Dev-Cycle ${next_version}"
+          git commit -m"Prepare next Dev-Cycle ${next-version}"
           git pull --rebase
           git push origin
       - name: Retrieve Documentation
