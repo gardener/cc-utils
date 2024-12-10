@@ -454,6 +454,9 @@ avoid a conflict)</p></td>
 <tr class="row-even"><td><p>tag_and_merge_back</p></td>
 <td><p>publish release tag to dead-end and merge back release commit to default branch</p></td>
 </tr>
+<tr class="row-odd"><td><p>skip</p></td>
+<td><p>neither create, nor publish either of release- and bump-commits</p></td>
+</tr>
 </tbody>
 </table>
 <h2>on_tag_conflict Enumeration Values<a class="headerlink" href="#trait-release" title="Link to this heading"></a></h2>
@@ -465,8 +468,8 @@ avoid a conflict)</p></td>
 <h2>Dependencies<a class="headerlink" href="#trait-release" title="Link to this heading"></a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 <li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
+<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
 </section>
 <p>This trait add release job semantics to the declaring build job.</p>
