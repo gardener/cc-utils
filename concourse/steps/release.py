@@ -136,14 +136,14 @@ def _calculate_tags(
 
 
 def collect_release_notes(
-    repo_dir,
+    git_helper: GitHelper,
     release_version: str,
     component,
     component_descriptor_lookup,
     version_lookup,
 ) -> str:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
-        repo_path=repo_dir,
+        git_helper=git_helper,
         component=component,
         version_lookup=version_lookup,
         component_descriptor_lookup=component_descriptor_lookup,

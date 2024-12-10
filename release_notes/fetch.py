@@ -241,7 +241,7 @@ def fetch_draft_release_notes(
     component: ocm.Component,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
-    repo_path: str,
+    git_helper: gitutil.GitHelper,
 ):
     known_versions: list[str] = list(version_lookup(component.identity()))
 
@@ -259,7 +259,6 @@ def fetch_draft_release_notes(
 
     source = ocm.util.main_source(component)
     github_helper = rnu.github_helper_from_github_access(source.access)
-    git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
 
     # make sure _all_ tags are available locally
     git_helper.fetch_tags()
@@ -300,14 +299,13 @@ def fetch_release_notes(
     component: ocm.Component,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
-    repo_path: str,
+    git_helper: gitutil.GitHelper,
     current_version: typing.Optional[str] = None,
     previous_version: typing.Optional[str] = None,
 ) -> set[rnm.ReleaseNote]:
     ''' Fetches and returns a set of release notes for the specified component.
 
-    :param component: An instance of the Component class from the GCI component model.
-    :param repo_path: The (local) path to the git-repository.
+    :param component: the OCM Component for which to retrieve release-notes.
     :param current_version: Optional argument to retrieve release notes up to a specific version.
         If not given, the current `HEAD` is used.
     :param previous_version: Optional argument to retrieve release notes starting at a specific \
@@ -366,7 +364,6 @@ def fetch_release_notes(
 
     source = ocm.util.main_source(component)
     github_helper = rnu.github_helper_from_github_access(source.access)
-    git_helper = rnu.git_helper_from_github_access(source.access, repo_path)
 
     # make sure _all_ tags are available locally
     git_helper.fetch_tags()
