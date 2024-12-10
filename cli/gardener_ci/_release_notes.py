@@ -1,6 +1,9 @@
+import ccc.github
 import cnudie.retrieve
 import ctx
+import gitutil
 import ocm
+import ocm.util
 import release_notes.fetch
 import release_notes.markdown
 import version
@@ -63,11 +66,27 @@ def print_release_notes(
         )
 
     component = component_descriptor.component
+    main_source = ocm.util.main_source(component)
+    try:
+        src_access = main_source.access
+        repo_url = src_access.repoUrl
+    except:
+        print(f'unsupported source-access-type: {main_source}')
+        exit(1)
+
+    github_cfg = ccc.github.github_cfg_for_repo_url(repo_url)
+
+    git_helper = gitutil.GitHelper.clone_into(
+        target_directory=repo_path,
+        github_cfg=github_cfg,
+        github_repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
+    )
+
     blocks = release_notes.fetch.fetch_release_notes(
         component=component,
         component_descriptor_lookup=ocm_lookup,
         version_lookup=version_lookup,
-        repo_path=repo_path,
+        git_helper=git_helper,
         current_version=current_version,
         previous_version=previous_version,
     )

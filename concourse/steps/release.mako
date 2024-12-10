@@ -515,7 +515,7 @@ except git.GitCommandError:
 % if process_release_notes:
 try:
   release_notes_md = collect_release_notes(
-    repo_dir=repo_dir,
+    git_helper=git_helper,
     release_version=version_str,
     component=component,
     component_descriptor_lookup=component_descriptor_lookup,

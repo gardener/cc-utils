@@ -28,11 +28,11 @@ import ci.util
 import cnudie.retrieve
 import cnudie.util
 import github.util
+import gitutil
 import ocm
 import release_notes.fetch
 import release_notes.markdown
 
-from gitutil import GitHelper
 from github.util import (
     GitHubRepositoryHelper,
 )
@@ -95,9 +95,14 @@ github_helper = github.util.GitHubRepositoryHelper(
     github_api=ccc.github.github_api(github_cfg),
     default_branch='${repo.branch()}',
 )
+git_helper = gitutil.GitHelper(
+    repo=repo_dir,
+    github_cfg=github_cfg,
+    github_repo_path='${repo.repo_owner()}/${repo.repo_name()}',
+)
 try:
     release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
-        repo_path=repo_dir,
+        git_helper=git_helper,
         component=component,
         component_descriptor_lookup=component_descriptor_lookup,
         version_lookup=ocm_version_lookup,

@@ -690,7 +690,7 @@ def create_release_notes(
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            gitutil.GitHelper.clone_into(
+            git_helper = gitutil.GitHelper.clone_into(
                 target_directory=temp_dir,
                 github_cfg=from_github_cfg,
                 github_repo_path=f'{from_repo_owner}/{from_repo_name}'
@@ -699,7 +699,7 @@ def create_release_notes(
                 component=from_component,
                 version_lookup=version_lookup,
                 component_descriptor_lookup=component_descriptor_lookup,
-                repo_path=temp_dir,
+                git_helper=git_helper,
                 current_version=to_version,
                 previous_version=from_version,
             )

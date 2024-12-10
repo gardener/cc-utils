@@ -267,15 +267,3 @@ def github_helper_from_github_access(
         owner=github_access.org_name(),
         name=github_access.repository_name(),
     )
-
-
-def git_helper_from_github_access(
-    github_access: ocm.GithubAccess,
-    repo_path: str,
-):
-    logger.info(f'Creating Git-helper for {github_access.repoUrl}')
-    return gitutil.GitHelper(
-        repo=repo_path,
-        github_cfg=ccc.github.github_cfg_for_repo_url(github_access.repoUrl),
-        github_repo_path=f'{github_access.org_name()}/{github_access.repository_name()}',
-    )
