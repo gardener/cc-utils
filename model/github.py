@@ -21,7 +21,7 @@ from model.base import (
 import ci.util
 
 
-class Protocol(enum.Enum):
+class Protocol(enum.StrEnum):
     SSH = 'ssh'
     HTTPS = 'https'
 
