@@ -18,7 +18,6 @@ import ci.log
 from ci.util import not_none, random_str, urljoin
 from model.github import (
     GithubConfig,
-    Protocol,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,10 +59,10 @@ class GitHelper:
     ) -> 'GitHelper':
 
         protocol = github_cfg.preferred_protocol()
-        if protocol is Protocol.SSH:
+        if protocol == 'ssh':
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=github_cfg)
             url = urljoin(github_cfg.ssh_url(), github_repo_path)
-        elif protocol is Protocol.HTTPS:
+        elif protocol in ('https', 'http'):
             url = url_with_credentials(github_cfg, github_repo_path)
         else:
             raise NotImplementedError
@@ -74,13 +73,13 @@ class GitHelper:
         args += [url, target_directory]
 
         repo = git.Git()
-        if protocol is Protocol.SSH:
+        if protocol == 'ssh':
             with repo.custom_environment(**cmd_env):
                 repo.clone(*args)
         else:
             repo.clone(*args)
 
-        if protocol is Protocol.SSH:
+        if protocol == 'ssh':
             os.unlink(tmp_id.name)
 
         return GitHelper(
@@ -98,10 +97,10 @@ class GitHelper:
     def _authenticated_remote(self):
         protocol = self.github_cfg.preferred_protocol()
         credentials = self.github_cfg.credentials()
-        if protocol is Protocol.SSH:
+        if protocol == 'ssh':
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
-        elif protocol is Protocol.HTTPS:
+        elif protocol in ('https', 'http'):
             url = url_with_credentials(
                 github_cfg=self.github_cfg,
                 github_repo_path=self.github_repo_path,
@@ -127,12 +126,12 @@ class GitHelper:
             yield (cmd_env, remote)
         finally:
             self.repo.delete_remote(remote)
-            if protocol is Protocol.SSH:
+            if protocol == 'ssh':
                 os.unlink(tmp_id.name)
 
     def submodule_update(self):
         protocol = self.github_cfg.preferred_protocol()
-        if protocol is Protocol.SSH:
+        if protocol == 'ssh':
             cmd_env, _ = _ssh_auth_env(github_cfg=self.github_cfg)
         else:
             cmd_env = {}
