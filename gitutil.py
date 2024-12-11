@@ -15,7 +15,7 @@ import git.objects.util
 import git.remote
 
 import ci.log
-from ci.util import not_none, random_str, urljoin
+from ci.util import random_str, urljoin
 from model.github import (
     GithubConfig,
 )
@@ -47,7 +47,8 @@ class GitHelper:
         github_cfg: GithubConfig,
         github_repo_path
     ):
-        not_none(repo)
+        if repo is None:
+            raise ValueError(repo)
         if not isinstance(repo, git.Repo):
             # assume it's a file path if it's not already a git.Repo
             repo = git.Repo(str(repo))
