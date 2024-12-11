@@ -7,7 +7,6 @@ import datetime
 import enum
 import functools
 import logging
-import traceback
 import urllib.parse
 
 import cachecontrol
@@ -300,43 +299,6 @@ def github_cfg_for_hostname(
             return github_cfg
 
     raise RuntimeError(f'no github_cfg for {host_name} with {require_labels}')
-
-
-def log_stack_trace_information_hook(resp, *args, **kwargs):
-    '''
-    This function stores the current stacktrace in elastic search.
-    It must not return anything, otherwise the return value is assumed to replace the response
-    '''
-    if not ci.util._running_on_ci():
-        return # early exit if not running in ci job
-
-    import ccc.elasticsearch
-    config_set_name = ci.util.check_env('CONCOURSE_CURRENT_CFG')
-    try:
-        els_index = 'github_access_stacktrace'
-        try:
-            config_set = ci.util.ctx().cfg_factory().cfg_set(config_set_name)
-        except KeyError:
-            # do nothing: external concourse does not have config set 'internal_active'
-            return
-        elastic_cfg = config_set.elasticsearch()
-
-        now = datetime.datetime.utcnow()
-        json_body = {
-            'date': now.isoformat(),
-            'url': resp.url,
-            'req_method': resp.request.method,
-            'stacktrace': traceback.format_stack()
-        }
-
-        elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-        elastic_client.store_document(
-            index=els_index,
-            body=json_body
-        )
-
-    except Exception as e:
-        ci.util.info(f'Could not log stack trace information: {e}')
 
 
 def github_api_from_gh_access(
