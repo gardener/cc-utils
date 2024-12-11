@@ -10,7 +10,6 @@ import logging
 import urllib.parse
 
 import cachecontrol
-import deprecated
 import ocm
 import github3
 import github3.github
@@ -264,37 +263,6 @@ def github_cfg_for_repo_url(
     gh_cfg = matching_cfgs[-1]
     logger.debug(f'using {gh_cfg.name()=} for {url=}')
     return gh_cfg
-
-
-@deprecated.deprecated()
-@functools.lru_cache()
-def github_cfg_for_hostname(
-    host_name,
-    cfg_factory=None,
-    require_labels=('ci',), # XXX unhardcode label
-):
-    ci.util.not_none(host_name)
-    if not cfg_factory:
-        ctx = ci.util.ctx()
-        cfg_factory = ctx.cfg_factory()
-
-    if isinstance(require_labels, str):
-        require_labels = tuple(require_labels)
-
-    def has_required_labels(github_cfg):
-        if not require_labels:
-            return True
-
-        for required_label in require_labels:
-            if required_label not in github_cfg.purpose_labels():
-                return False
-        return True
-
-    for github_cfg in filter(has_required_labels, cfg_factory._cfg_elements(cfg_type_name='github')):
-        if github_cfg.matches_hostname(host_name=host_name):
-            return github_cfg
-
-    raise RuntimeError(f'no github_cfg for {host_name} with {require_labels}')
 
 
 def github_api_from_gh_access(
