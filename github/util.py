@@ -23,7 +23,6 @@ from github3.pulls import PullRequest
 from github3.repos.release import Release
 
 import ocm
-import ccc.github
 import ci.util
 import version
 
@@ -742,16 +741,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
 
         for release in draft_releases_to_delete:
             yield release, release.delete()
-
-
-def branches(
-    github_cfg,
-    repo_owner: str,
-    repo_name: str,
-):
-    github_api = ccc.github.github_api(github_cfg=github_cfg)
-    repo = github_api.repository(repo_owner, repo_name)
-    return list(map(lambda r: r.name, repo.branches()))
 
 
 def _retrieve_team_by_name_or_none(
