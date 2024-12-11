@@ -165,10 +165,6 @@ def pr_helper(
     )
 
 
-# XXX remove this alias again
-github_repo_helper = repo_helper
-
-
 def github_api(
     github_cfg: model.github.GithubConfig=None,
     repo_url: str=None,
