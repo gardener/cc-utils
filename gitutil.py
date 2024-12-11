@@ -41,7 +41,12 @@ def _ssh_auth_env(github_cfg):
 
 
 class GitHelper:
-    def __init__(self, repo, github_cfg: GithubConfig, github_repo_path):
+    def __init__(
+        self,
+        repo,
+        github_cfg: GithubConfig,
+        github_repo_path
+    ):
         not_none(repo)
         if not isinstance(repo, git.Repo):
             # assume it's a file path if it's not already a git.Repo
@@ -63,7 +68,7 @@ class GitHelper:
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=github_cfg)
             url = urljoin(github_cfg.ssh_url(), github_repo_path)
         elif protocol in ('https', 'http'):
-            url = url_with_credentials(github_cfg, github_repo_path)
+            url = _url_with_credentials(github_cfg, github_repo_path)
         else:
             raise NotImplementedError
 
@@ -101,7 +106,7 @@ class GitHelper:
             url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
             cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
         elif protocol in ('https', 'http'):
-            url = url_with_credentials(
+            url = _url_with_credentials(
                 github_cfg=self.github_cfg,
                 github_repo_path=self.github_repo_path,
                 technical_user_name=credentials.username(),
@@ -251,7 +256,7 @@ class GitHelper:
                 remote.fetch(tags=True, recurse_submodules='no')
 
 
-def url_with_credentials(
+def _url_with_credentials(
     github_cfg: GithubConfig,
     github_repo_path: str,
     technical_user_name: str | None =None
