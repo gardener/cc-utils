@@ -546,7 +546,7 @@ class ReplicationResultProcessor:
         )
         github_api = ccc.github.github_api(github_cfg)
 
-        repo_helper = ccc.github.github_repo_helper(
+        repo_helper = ccc.github.repo_helper(
             host=main_repo['hostname'],
             org=repo_owner,
             repo=repo_name,
