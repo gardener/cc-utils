@@ -36,6 +36,7 @@ class Datasource:
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
+    CRYPTO = 'crypto'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
 
@@ -61,6 +62,10 @@ class Datasource:
             ),
             Datasource.CC_UTILS: (
                 Datatype.OS_IDS,
+            ),
+            Datasource.CRYPTO: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.CRYPTO_ASSET,
             ),
             Datasource.DELIVERY_DASHBOARD: (
                 Datatype.RESCORING,
@@ -214,6 +219,7 @@ class Datatype:
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
+    CRYPTO_ASSET = 'crypto_asset'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -224,6 +230,7 @@ class Datatype:
             Datatype.CODECHECKS_AGGREGATED: Datasource.CHECKMARX,
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
+            Datatype.CRYPTO_ASSET: Datasource.CRYPTO,
         }[datatype]
 
 
@@ -389,6 +396,86 @@ class DikiFinding(Finding):
         return _as_key(self.provider_id, f'{self.ruleset_id}:{self.ruleset_version}', self.rule_id)
 
 
+class AssetTypes(enum.StrEnum):
+    ALGORITHM = 'algorithm'
+    CERTIFICATE = 'certificate'
+    LIBRARY = 'library'
+    PROTOCOL = 'protocol'
+    RELATED_CRYPTO_MATERIAL = 'related-crypto-material'
+
+
+@dataclasses.dataclass
+class AlgorithmProperties:
+    primitive: str | None = None
+    parameter_set_identifier: str | None = None
+    curve: str | None = None
+    padding: str | None = None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.primitive, self.parameter_set_identifier, self.curve, self.padding)
+
+
+@dataclasses.dataclass
+class CertificateProperties:
+    subject_algorithm_ref: str | None = None
+    subject_public_key_ref: str | None = None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.subject_algorithm_ref, self.subject_public_key_ref)
+
+
+@dataclasses.dataclass
+class LibraryProperties:
+    name: str
+    version: str | None = None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.name, self.version)
+
+
+@dataclasses.dataclass
+class ProtocolProperties:
+    type: str | None = None
+    version: str | None = None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.type, self.version)
+
+
+@dataclasses.dataclass
+class RelatedCryptoMaterialProperties:
+    type: str | None = None
+    algorithm_ref: str | None = None
+    size: int | None = None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.type, self.algorithm_ref, str(self.size))
+
+
+@dataclasses.dataclass
+class CryptoAsset:
+    names: list[str]
+    locations: list[str]
+    asset_type: AssetTypes
+    properties: (
+        AlgorithmProperties
+        | CertificateProperties
+        | LibraryProperties
+        | RelatedCryptoMaterialProperties
+        | ProtocolProperties
+    )
+    count: int = 1
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.asset_type, self.properties.key)
+
+
 @dataclasses.dataclass(frozen=True)
 class User:
     username: str
@@ -523,6 +610,7 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
+        | CryptoAsset
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
@@ -541,7 +629,9 @@ class ArtefactMetadata:
                     ArtefactKind,
                     ComplianceSnapshotStatuses,
                     MetaRescoringRules,
+                    AssetTypes,
                 ],
+                strict=True,
             ),
         )
 
