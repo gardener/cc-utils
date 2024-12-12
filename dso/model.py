@@ -66,6 +66,7 @@ class Datasource:
             Datasource.CRYPTO: (
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.CRYPTO_ASSET,
+                Datatype.FIPS_FINDING,
             ),
             Datasource.DELIVERY_DASHBOARD: (
                 Datatype.RESCORING,
@@ -220,6 +221,7 @@ class Datatype:
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
     CRYPTO_ASSET = 'crypto_asset'
+    FIPS_FINDING = 'finding/fips'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -231,6 +233,7 @@ class Datatype:
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.CRYPTO_ASSET: Datasource.CRYPTO,
+            Datatype.FIPS_FINDING: Datasource.CRYPTO,
         }[datatype]
 
 
@@ -406,6 +409,7 @@ class AssetTypes(enum.StrEnum):
 
 @dataclasses.dataclass
 class AlgorithmProperties:
+    name: str
     primitive: str | None = None
     parameter_set_identifier: str | None = None
     curve: str | None = None
@@ -413,17 +417,23 @@ class AlgorithmProperties:
 
     @property
     def key(self) -> str:
-        return _as_key(self.primitive, self.parameter_set_identifier, self.curve, self.padding)
+        return _as_key(
+            self.name,
+            self.primitive,
+            self.parameter_set_identifier,
+            self.curve,
+            self.padding,
+        )
 
 
 @dataclasses.dataclass
 class CertificateProperties:
-    subject_algorithm_ref: str | None = None
+    signature_algorithm_ref: str | None = None
     subject_public_key_ref: str | None = None
 
     @property
     def key(self) -> str:
-        return _as_key(self.subject_algorithm_ref, self.subject_public_key_ref)
+        return _as_key(self.signature_algorithm_ref, self.subject_public_key_ref)
 
 
 @dataclasses.dataclass
@@ -477,6 +487,16 @@ class CryptoAsset:
 
 
 @dataclasses.dataclass(frozen=True)
+class FipsFinding(Finding):
+    asset: CryptoAsset
+    summary: str | None = None
+
+    @property
+    def key(self) -> str:
+        return self.asset.key
+
+
+@dataclasses.dataclass(frozen=True)
 class User:
     username: str
     type: str = 'user'
@@ -512,6 +532,7 @@ class CustomRescoring:
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
         | MalwareFindingDetails
+        | CryptoAsset
     )
     referenced_type: str
     severity: str
@@ -611,6 +632,7 @@ class ArtefactMetadata:
         | CustomRescoring
         | ComplianceSnapshot
         | CryptoAsset
+        | FipsFinding
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
