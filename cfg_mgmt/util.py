@@ -242,8 +242,9 @@ def rotate_config_element_and_persist_in_cfg_repo(
     '''
     git_helper = gitutil.GitHelper(
         repo=cfg_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
+        git_cfg=github_cfg.git_cfg(
+            repo_path=github_repo_path,
+        ),
     )
 
     src_file = _local_cfg_file(cfg_element, cfg_factory)
@@ -325,8 +326,9 @@ def process_cfg_queue_and_persist_in_repo(
     '''
     git_helper = gitutil.GitHelper(
         repo=cfg_dir,
-        github_cfg=github_cfg,
-        github_repo_path=github_repo_path,
+        git_cfg=github_cfg.git_cfg(
+            repo_path=github_repo_path,
+        ),
     )
 
     updated_element, processing_successful = cmro.delete_expired_secret(

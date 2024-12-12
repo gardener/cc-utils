@@ -97,8 +97,9 @@ github_helper = github.util.GitHubRepositoryHelper(
 )
 git_helper = gitutil.GitHelper(
     repo=repo_dir,
-    github_cfg=github_cfg,
-    github_repo_path='${repo.repo_owner()}/${repo.repo_name()}',
+    git_cfg=github_cfg.git_cfg(
+        repo_path='${repo.repo_owner()}/${repo.repo_name()}',
+    ),
 )
 try:
     release_note_blocks = release_notes.fetch.fetch_draft_release_notes(

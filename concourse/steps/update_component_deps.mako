@@ -72,8 +72,9 @@ github_cfg=cfg_factory.github(github_cfg_name)
 
 git_helper = gitutil.GitHelper(
     repo=REPO_ROOT,
-    github_cfg=github_cfg,
-    github_repo_path=f'{REPO_OWNER}/{REPO_NAME}',
+    git_cfg=github_cfg.git_cfg(
+        repo_path=f'{REPO_OWNER}/{REPO_NAME}',
+    ),
 )
 merge_policy_configs = [
     concourse.model.traits.update_component_deps.MergePolicyConfig(cfg)
