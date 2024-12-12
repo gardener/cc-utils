@@ -692,8 +692,9 @@ def create_release_notes(
         with tempfile.TemporaryDirectory() as temp_dir:
             git_helper = gitutil.GitHelper.clone_into(
                 target_directory=temp_dir,
-                github_cfg=from_github_cfg,
-                github_repo_path=f'{from_repo_owner}/{from_repo_name}'
+                git_cfg=from_github_cfg.git_cfg(
+                    repo_path=f'{from_repo_owner}/{from_repo_name}',
+                ),
             )
             release_note_blocks = release_notes_fetch.fetch_release_notes(
                 component=from_component,

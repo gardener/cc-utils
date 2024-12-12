@@ -15,7 +15,7 @@ def git_helper(tmpdir):
     repo = git.Repo.init(tmpdir)
     repo.index.commit(message='first (empty) commit')
 
-    git_helper = gitutil.GitHelper(repo=repo, github_cfg=None, github_repo_path='org/repo')
+    git_helper = gitutil.GitHelper(repo=repo, git_cfg=None)
 
     return git_helper
 

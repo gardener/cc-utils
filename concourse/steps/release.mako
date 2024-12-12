@@ -371,8 +371,9 @@ print(f'{version_interface=}')
 
 git_helper = gitutil.GitHelper(
   repo=repo_dir,
-  github_cfg=github_cfg,
-  github_repo_path=f'{repo_owner}/{repo_name}',
+  git_cfg=github_cfg.git_cfg(
+    repo_path=f'{repo_owner}/{repo_name}',
+  ),
 )
 branch = repository_branch
 github_helper = github.util.GitHubRepositoryHelper(

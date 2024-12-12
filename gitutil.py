@@ -4,6 +4,8 @@
 
 
 import contextlib
+import dataclasses
+import enum
 import functools
 import logging
 import os
@@ -15,21 +17,56 @@ import git.objects.util
 import git.remote
 
 import ci.log
-from ci.util import random_str, urljoin
-from model.github import (
-    GithubConfig,
-)
+from ci.util import random_str
 
 logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-def _ssh_auth_env(github_cfg):
-    credentials = github_cfg.credentials()
-    logger.info(f'using github-credentials with {credentials.username()=}')
+class AuthType(enum.StrEnum):
+    '''
+    SSH: credentials for use via SSH (typically a RSA-key w/ no explicit username)
+    HTTP_TOKEN: API-Token as understood by GitHub
+    PRESET: assume existing .git/config contains needed cfg
+    '''
+    SSH = 'ssh'
+    HTTP_TOKEN = 'http-token'
+    PRESET = 'preset'
+
+
+@dataclasses.dataclass(kw_only=True)
+class GitCfg:
+    '''
+    Configuration for interacting w/ a git-repository. This class intentionally leaves it to caller
+    whether or not to specify any values. If no values are set, this will tell `GitHelper` to
+    assume underlying git-repository's `.git/config` (or effective git-config) was already
+    adequately prepared. If values _are_ passed, they will be used transiently (i.e. .git/config
+    will not be altered) (with the notable exception of usage in context of clone_into).
+
+    For obvious reasons, GitHelper.clone_into will fail if repo_url is not present.
+
+    It is left to the user to ensure repo_url matches the auth_type (e.g. if auth_type is SSH,
+    repo_url *must* have ssh-scheme)
+
+    repo_url: if set, use as remote. Note: auth_type needs to match url-schema
+    user_name: if set, use as user.name
+    user_email: if set user as user.email
+    auth: if set, use for interactions w/ remote
+    auth_type: type of auth
+    '''
+    repo_url: str | None = None
+    user_name: str | None = None
+    user_email: str | None = None
+    auth: str | None = None
+    auth_type: AuthType = AuthType.PRESET
+
+
+def _ssh_auth_env(git_cfg: GitCfg):
+    credentials = git_cfg.auth
+    logger.info(f'using github-credentials with {git_cfg.user_name=}')
 
     tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # noqa; callers must unlink
-    tmp_id.write(credentials.private_key())
+    tmp_id.write(credentials)
     tmp_id.flush()
 
     os.chmod(tmp_id.name, 0o400)
@@ -44,8 +81,7 @@ class GitHelper:
     def __init__(
         self,
         repo,
-        github_cfg: GithubConfig,
-        github_repo_path
+        git_cfg: GitCfg,
     ):
         if repo is None:
             raise ValueError(repo)
@@ -53,23 +89,25 @@ class GitHelper:
             # assume it's a file path if it's not already a git.Repo
             repo = git.Repo(str(repo))
         self.repo = repo
-        self.github_cfg = github_cfg
-        self.github_repo_path = github_repo_path
+        self.git_cfg = git_cfg
 
     @staticmethod
     def clone_into(
         target_directory: str,
-        github_cfg: GithubConfig,
-        github_repo_path: str,
+        git_cfg: GitCfg,
         checkout_branch: str = None,
     ) -> 'GitHelper':
+        if not git_cfg.repo_url:
+            raise ValueError('repo-url must not be None')
 
-        protocol = github_cfg.preferred_protocol()
-        if protocol == 'ssh':
-            cmd_env, tmp_id = _ssh_auth_env(github_cfg=github_cfg)
-            url = urljoin(github_cfg.ssh_url(), github_repo_path)
-        elif protocol in ('https', 'http'):
-            url = _url_with_credentials(github_cfg, github_repo_path)
+        auth_type = git_cfg.auth_type
+        if auth_type is AuthType.SSH:
+            cmd_env, tmp_id = _ssh_auth_env(git_cfg=git_cfg)
+            url = git_cfg.repo_url
+        elif auth_type is AuthType.HTTP_TOKEN:
+            url = _url_with_credentials(git_cfg)
+        elif auth_type is AuthType.PRESET:
+            url = git_cfg.repo_url
         else:
             raise NotImplementedError
 
@@ -79,19 +117,18 @@ class GitHelper:
         args += [url, target_directory]
 
         repo = git.Git()
-        if protocol == 'ssh':
+        if auth_type is AuthType.SSH:
             with repo.custom_environment(**cmd_env):
                 repo.clone(*args)
         else:
             repo.clone(*args)
 
-        if protocol == 'ssh':
+        if auth_type is AuthType.SSH:
             os.unlink(tmp_id.name)
 
         return GitHelper(
-            repo=target_directory,
-            github_cfg=github_cfg,
-            github_repo_path=github_repo_path,
+            repo=repo,
+            git_cfg=git_cfg,
         )
 
     def _changed_file_paths(self):
@@ -101,44 +138,47 @@ class GitHelper:
 
     @contextlib.contextmanager
     def _authenticated_remote(self):
-        protocol = self.github_cfg.preferred_protocol()
-        credentials = self.github_cfg.credentials()
-        if protocol == 'ssh':
-            url = urljoin(self.github_cfg.ssh_url(), self.github_repo_path)
-            cmd_env, tmp_id = _ssh_auth_env(github_cfg=self.github_cfg)
-        elif protocol in ('https', 'http'):
+        auth_type = self.git_cfg.auth_type
+
+        cmd_env = os.environ.copy()
+        if (user := self.git_cfg.user_name):
+            cmd_env['GIT_AUTHOR_NAME'] = user
+            cmd_env['GIT_COMMITTER_NAME'] = user
+        if (email := self.git_cfg.user_email):
+            cmd_env['GIT_AUTHOR_EMAIL'] = email
+            cmd_env['GIT_COMMITTER_EMAIL'] = email
+
+        if auth_type is AuthType.SSH:
+            url = self.git_cfg.repo_url
+            cmd_env, tmp_id = _ssh_auth_env(git_cfg=self.git_cfg)
+        elif auth_type is AuthType.HTTP_TOKEN:
             url = _url_with_credentials(
-                github_cfg=self.github_cfg,
-                github_repo_path=self.github_repo_path,
-                technical_user_name=credentials.username(),
+                git_cfg=self.git_cfg,
             )
-            cmd_env = os.environ
+        elif auth_type is AuthType.PRESET:
+            yield os.environ, self.repo.remotes[0]
+            return
         else:
             raise NotImplementedError
-
-        cmd_env["GIT_AUTHOR_NAME"] = credentials.username()
-        cmd_env["GIT_AUTHOR_EMAIL"] = credentials.email_address()
-        cmd_env['GIT_COMMITTER_NAME'] = credentials.username()
-        cmd_env['GIT_COMMITTER_EMAIL'] = credentials.email_address()
 
         remote = git.remote.Remote.add(
             repo=self.repo,
             name=random_str(),
             url=url,
         )
-        logger.debug(f'authenticated {remote.name=} using {protocol=}')
+        logger.debug(f'authenticated {remote.name=} using {auth_type=}')
 
         try:
             yield (cmd_env, remote)
         finally:
             self.repo.delete_remote(remote)
-            if protocol == 'ssh':
+            if auth_type is AuthType.SSH:
                 os.unlink(tmp_id.name)
 
     def submodule_update(self):
-        protocol = self.github_cfg.preferred_protocol()
-        if protocol == 'ssh':
-            cmd_env, _ = _ssh_auth_env(github_cfg=self.github_cfg)
+        auth_type = self.git_cfg.auth_type
+        if auth_type is AuthType.SSH:
+            cmd_env, _ = _ssh_auth_env(git_cfg=self.git_cfg)
         else:
             cmd_env = {}
 
@@ -149,9 +189,12 @@ class GitHelper:
             self.repo.git.submodule('update')
 
     def _actor(self):
-        if self.github_cfg:
-            credentials = self.github_cfg.credentials()
-            return git.Actor(credentials.username(), credentials.email_address())
+        if not (git_cfg := self.git_cfg):
+            return None
+
+        if (user := git_cfg.user_name) and (email := git_cfg.user_email):
+            return git.Actor(user, email)
+
         return None
 
     def index_to_commit(self, message, parent_commits=None) -> git.Commit:
@@ -177,9 +220,7 @@ class GitHelper:
         git.cmd.Git(self.repo.working_tree_dir).add('.')
         tree = self.repo.index.write_tree()
 
-        if self.github_cfg:
-            actor = self._actor()
-
+        if (actor := self._actor()):
             create_commit = functools.partial(
                 git.Commit.create_from_tree,
                 author=actor,
@@ -200,7 +241,7 @@ class GitHelper:
     def add_and_commit(self, message):
         '''
         adds changed and new files (`git add .`) and creates a commit, potentially updating the
-        current branch (`git commit`). If a github_cfg is present, author and committer are set.
+        current branch (`git commit`). If a git_cfg is present, author and committer are set.
 
         see `index_to_commit` for an alternative implementation that will leave less side-effects
         in the underlying git repository and worktree.
@@ -229,13 +270,14 @@ class GitHelper:
                     raise RuntimeError('git-push failed (see stderr output)')
 
     def rebase(self, commit_ish: str):
-
-        credentials = self.github_cfg.credentials()
+        git_cfg = self.git_cfg
         cmd_env = os.environ.copy()
-        cmd_env["GIT_AUTHOR_NAME"] = credentials.username()
-        cmd_env["GIT_AUTHOR_EMAIL"] = credentials.email_address()
-        cmd_env['GIT_COMMITTER_NAME'] = credentials.username()
-        cmd_env['GIT_COMMITTER_EMAIL'] = credentials.email_address()
+        if (username := git_cfg.user_name):
+            cmd_env["GIT_AUTHOR_NAME"] = username
+            cmd_env['GIT_COMMITTER_NAME'] = username
+        if (email := git_cfg.user_email):
+            cmd_env["GIT_AUTHOR_EMAIL"] = email
+            cmd_env['GIT_COMMITTER_EMAIL'] = email
 
         with self.repo.git.custom_environment(**cmd_env):
             self.repo.git.rebase('--quiet', commit_ish)
@@ -258,27 +300,21 @@ class GitHelper:
 
 
 def _url_with_credentials(
-    github_cfg: GithubConfig,
-    github_repo_path: str,
-    technical_user_name: str | None =None
+    git_cfg: GitCfg,
 ):
-    base_url = urllib.parse.urlparse(github_cfg.http_url())
-
-    if technical_user_name:
-        credentials = github_cfg.credentials(technical_user_name=technical_user_name)
+    if git_cfg.auth_type is AuthType.PRESET:
+        return git_cfg.repo_url
+    elif git_cfg.auth_type is AuthType.SSH:
+        raise ValueError('auth-url cannot be created for auth-type SSH')
+    elif git_cfg.auth_type is AuthType.HTTP_TOKEN:
+        pass # ok to proceed
     else:
-        credentials = github_cfg.credentials()
+        raise ValueError(f'not implemented: {git_cfg.auth_type=}')
 
-    # prefer auth token
-    secret = credentials.auth_token() or credentials.passwd()
+    base_url = urllib.parse.urlparse(git_cfg.repo_url)
 
-    credentials_str = ':'.join((credentials.username(), secret))
-    url = urllib.parse.urlunparse((
-        base_url.scheme,
-        '@'.join((credentials_str, base_url.hostname)),
-        github_repo_path,
-        '',
-        '',
-        ''
-    ))
+    user, secret = git_cfg.auth
+    credentials_str = f'{user}:{secret}'
+
+    url = f'{base_url.scheme}://{base_url.netloc}@{credentials_str}{base_url.path}'
     return url

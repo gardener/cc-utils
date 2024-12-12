@@ -19,6 +19,7 @@ from model.base import (
     ModelValidationError,
 )
 import ci.util
+import gitutil
 
 
 class Protocol(enum.StrEnum):
@@ -53,6 +54,7 @@ class GithubConfig(NamedModelElement):
     def tls_validation(self):
         return not self.raw.get('disable_tls_validation')
 
+    @property
     def preferred_protocol(self):
         return self.available_protocols()[0]
 
@@ -128,6 +130,63 @@ class GithubConfig(NamedModelElement):
                 return True
 
         return False
+
+    def git_cfg(
+        self,
+        *,
+        repo_url=None,
+        repo_path=None,
+    ) -> gitutil.GitCfg:
+        '''
+        returns a GitCfg (for creating gitutil.GitHelper) for the given repository-url.
+
+        Exactly one of `repo_url`, `repo_path` must be passed. If repo_url does not specify a schema,
+        it is derived from this cfg's preferred_protocol, and patched into repo_url for GitCfg.
+
+        If `repo_path` is passed, it is expected to be of form `{org}/{repo_name}`, and appended to
+        this cfg's hostname. preferred_protocol will be honoured.
+        '''
+        if not (bool(repo_url) ^ bool(repo_path)):
+            raise ValueError('exactly one of repo_url, repo_path must be passed')
+        if repo_url:
+            # monkey-patch schema, otherwise take url as-is
+            if not '://' in repo_url:
+                if self.preferred_protocol is Protocol.SSH:
+                    repo_url = f'ssh://git@{repo_url}'
+                elif self.preferred_protocol is Protocol.HTTPS:
+                    repo_url = f'https://{repo_url}'
+
+        if repo_path:
+            if self.preferred_protocol is Protocol.SSH:
+                repo_url = f'ssh://git@{self.hostname()}/{repo_path.strip("/")}'
+            elif self.preferred_protocol is Protocol.HTTPS:
+                repo_url = f'https://{self.hostname()}/{repo_path.strip("/")}'
+            else:
+                raise ValueError(self.preferred_protocol)
+
+        credentials = self.credentials_with_most_remaining_quota()
+
+        # parse schema from URL (in case repo-url was passed w/ schema, it may differ from
+        # preferred protocol)
+        if (scheme := urlparse(repo_url).scheme) == 'ssh':
+            auth = credentials.private_key()
+            auth_type = gitutil.AuthType.SSH
+        elif scheme == 'https':
+            auth = (
+                credentials.username(),
+                credentials.auth_token(),
+            )
+            auth_type = gitutil.AuthType.HTTP_TOKEN
+        else:
+            raise ValueError(scheme, repo_url)
+
+        return gitutil.GitCfg(
+            repo_url=repo_url,
+            user_name=credentials.username(),
+            user_email=credentials.email_address(),
+            auth=auth,
+            auth_type=auth_type,
+        )
 
     def _optional_attributes(self):
         return (

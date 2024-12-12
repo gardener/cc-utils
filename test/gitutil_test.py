@@ -18,8 +18,7 @@ def git_repo(tmpdir):
 def git_helper(git_repo):
     return gitutil.GitHelper(
         repo=git_repo,
-        github_cfg=None,
-        github_repo_path=None,
+        git_cfg=None,
     )
 
 

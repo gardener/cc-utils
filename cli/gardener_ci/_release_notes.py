@@ -78,8 +78,9 @@ def print_release_notes(
 
     git_helper = gitutil.GitHelper.clone_into(
         target_directory=repo_path,
-        github_cfg=github_cfg,
-        github_repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
+        git_cfg=github_cfg.git_cfg(
+            repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
+        ),
     )
 
     blocks = release_notes.fetch.fetch_release_notes(
