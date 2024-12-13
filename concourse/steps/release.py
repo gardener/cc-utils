@@ -18,6 +18,7 @@ import git.types
 
 import ocm
 
+import ccc.github
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
@@ -143,10 +144,11 @@ def collect_release_notes(
     version_lookup,
 ) -> str:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
-        git_helper=git_helper,
         component=component,
-        version_lookup=version_lookup,
         component_descriptor_lookup=component_descriptor_lookup,
+        version_lookup=version_lookup,
+        git_helper=git_helper,
+        github_api_lookup=ccc.github.github_api_lookup,
         current_version=release_version,
     )
 

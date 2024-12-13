@@ -10,7 +10,6 @@ import github3.repos
 
 import cnudie.retrieve
 import gitutil
-import github.util
 import release_notes.model as rnm
 import release_notes.utils as rnu
 import version
@@ -144,8 +143,9 @@ def get_release_note_commits_tuple(
 def _determine_blocks_to_include(
     filter_in_commits: tuple[git.Commit, ...],
     filter_out_commits: tuple[git.Commit, ...],
+    github_access: ocm.GithubAccess,
     git_helper: gitutil.GitHelper,
-    github_helper: github.util.GitHubRepositoryHelper,
+    github_api_lookup: rnu.GithubApiLookup,
 ) -> set[rnm.SourceBlock]:
     logger.info(
         f'Found {(commit_count := len(filter_in_commits))} relevant commits for release notes '
@@ -178,9 +178,8 @@ def _determine_blocks_to_include(
     # find associated pull requests for commits
     commit_pulls = rnu.request_pull_requests_from_api(
         git_helper=git_helper,
-        gh=github_helper.github,
-        owner=github_helper.owner,
-        repo_name=github_helper.repository_name,
+        github_api_lookup=github_api_lookup,
+        github_access=github_access,
         commits=[*filter_in_commits, *filter_out_commits],
         group_size=commit_processing_group_size,
         min_seconds_per_group=processing_group_min_seconds,
@@ -242,6 +241,7 @@ def fetch_draft_release_notes(
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
+    github_api_lookup: rnu.GithubApiLookup,
 ):
     known_versions: list[str] = list(version_lookup(component.identity()))
 
@@ -257,15 +257,17 @@ def fetch_draft_release_notes(
         f'Creating draft-release notes from {previous_version} to current HEAD'
     )
 
-    source = ocm.util.main_source(component)
-    github_helper = rnu.github_helper_from_github_access(source.access)
+    # todo: need to check access-type / handle unsupported types (!= GitHub)
+    github_access = ocm.util.main_source(component).access
+    repo_url = github_access.repoUrl
 
     # make sure _all_ tags are available locally
     git_helper.fetch_tags()
 
-    github_repo: github3.repos.Repository = github_helper.github.repository(
-        owner=github_helper.owner,
-        repository=github_helper.repository_name,
+    github_api = github_api_lookup(repo_url)
+    github_repo: github3.repos.Repository = github_api.repository(
+        owner=github_access.org_name(),
+        repository=github_access.repository_name(),
     )
 
     # fetch commits for release
@@ -278,8 +280,9 @@ def fetch_draft_release_notes(
     release_note_blocks = _determine_blocks_to_include(
         filter_in_commits=filter_in_commits,
         filter_out_commits=filter_out_commits,
+        github_access=github_access,
         git_helper=git_helper,
-        github_helper=github_helper,
+        github_api_lookup=github_api_lookup,
     )
 
     release_notes: set[rnm.ReleaseNote] = {
@@ -300,6 +303,7 @@ def fetch_release_notes(
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
+    github_api_lookup: rnu.GithubApiLookup,
     current_version: typing.Optional[str] = None,
     previous_version: typing.Optional[str] = None,
 ) -> set[rnm.ReleaseNote]:
@@ -363,14 +367,17 @@ def fetch_release_notes(
     )
 
     source = ocm.util.main_source(component)
-    github_helper = rnu.github_helper_from_github_access(source.access)
+    # todo: check access-type / handle unsupported types (non-github)
+    github_access: ocm.GithubAccess = source.access
+
+    github_api = github_api_lookup(github_access.repoUrl)
 
     # make sure _all_ tags are available locally
     git_helper.fetch_tags()
 
-    github_repo: github3.repos.Repository = github_helper.github.repository(
-        owner=github_helper.owner,
-        repository=github_helper.repository_name,
+    github_repo: github3.repos.Repository = github_api.repository(
+        owner=github_access.org_name(),
+        repository=github_access.repository_name(),
     )
 
     # fetch commits for release
@@ -383,8 +390,9 @@ def fetch_release_notes(
     release_note_blocks = _determine_blocks_to_include(
         filter_in_commits=filter_in_commits,
         filter_out_commits=filter_out_commits,
+        github_access=github_access,
         git_helper=git_helper,
-        github_helper=github_helper,
+        github_api_lookup=github_api_lookup,
     )
 
     release_notes: set[rnm.ReleaseNote] = {
