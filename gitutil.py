@@ -127,7 +127,7 @@ class GitHelper:
             os.unlink(tmp_id.name)
 
         return GitHelper(
-            repo=repo,
+            repo=git.Repo(target_directory),
             git_cfg=git_cfg,
         )
 
