@@ -312,9 +312,17 @@ def _url_with_credentials(
         raise ValueError(f'not implemented: {git_cfg.auth_type=}')
 
     base_url = urllib.parse.urlparse(git_cfg.repo_url)
+    scheme = base_url.scheme
+    if not scheme:
+        if git_cfg.auth_type is AuthType.SSH:
+            scheme = 'ssh'
+        elif git_cfg.auth_type is AuthType.HTTP_TOKEN:
+            scheme = 'https'
+        else:
+            logger.warning(f'{git_cfg.repo_url=} does not contain a scheme')
 
     user, secret = git_cfg.auth
     credentials_str = f'{user}:{secret}'
 
-    url = f'{base_url.scheme}://{base_url.netloc}@{credentials_str}{base_url.path}'
+    url = f'{scheme}://{credentials_str}@{base_url.netloc}{base_url.path}'
     return url
