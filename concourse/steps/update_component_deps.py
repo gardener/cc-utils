@@ -698,9 +698,10 @@ def create_release_notes(
             )
             release_note_blocks = release_notes_fetch.fetch_release_notes(
                 component=from_component,
-                version_lookup=version_lookup,
                 component_descriptor_lookup=component_descriptor_lookup,
+                version_lookup=version_lookup,
                 git_helper=git_helper,
+                github_api_lookup=ccc.github.github_api_lookup,
                 current_version=to_version,
                 previous_version=from_version,
             )

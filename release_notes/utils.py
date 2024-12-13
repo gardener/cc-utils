@@ -14,14 +14,16 @@ import github3.structs as gh3s
 import yaml
 import yaml.scanner
 
-import ccc.github
 import ocm
-import github.util
 import gitutil
 import release_notes.model as rnm
 
 _meta_key = 'gardener.cloud/release-notes-metadata/v1'
 logger = logging.getLogger(__name__)
+
+
+RepoUrl: typing.TypeAlias = str
+GithubApiLookup = typing.Callable[[RepoUrl], github3.GitHub]
 
 
 # pylint: disable=protected-access
@@ -160,9 +162,8 @@ def _grouper(iterable, n, *, incomplete='fill', fillvalue=None):
 
 def request_pull_requests_from_api(
         git_helper: gitutil.GitHelper,
-        gh: github3.GitHub,
-        owner: str,
-        repo_name: str,
+        github_api_lookup: GithubApiLookup,
+        github_access: ocm.GithubAccess,
         commits: list[git.Commit],
         group_size: int = 200,
         min_seconds_per_group: int = 300,
@@ -217,7 +218,11 @@ def request_pull_requests_from_api(
                     pending[num].append(commit.hexsha)
                 continue
 
-            if prs := list_associated_pulls(gh, owner, repo_name, commit.hexsha):
+            owner = github_access.org_name()
+            repo_name = github_access.repository_name()
+            github_api = github_api_lookup(github_access.repoUrl)
+
+            if prs := list_associated_pulls(github_api, owner, repo_name, commit.hexsha):
                 # add all found pull requests to the result right away
                 result[commit.hexsha].extend(prs)
                 # only write notes to commit if there are no notes yet,
@@ -240,11 +245,12 @@ def request_pull_requests_from_api(
                 f'wait {int(wait_period)} seconds before continuing.'
             )
             time.sleep(wait_period)
+
         # make sure to always use github-user with largest remaining quota
-        gh = ccc.github.github_api(github_cfg=git_helper.github_cfg)
+        github_api = github_api_lookup(github_access.repoUrl)
 
     if pending:
-        for pull in list_pulls(gh, owner, repo_name):
+        for pull in list_pulls(github_api, owner, repo_name):
             if pull.number in pending:
                 for sha in pending[pull.number]:
                     result[sha].append(pull)
@@ -256,14 +262,3 @@ def request_pull_requests_from_api(
                            f'{pending.keys()} is/are either not closed or cannot be found')
 
     return result
-
-
-def github_helper_from_github_access(
-    github_access=ocm.GithubAccess,
-):
-    logger.info(f'Creating GH Repo-helper for {github_access.repoUrl}')
-    return github.util.GitHubRepositoryHelper(
-        github_api=ccc.github.github_api_from_gh_access(github_access),
-        owner=github_access.org_name(),
-        name=github_access.repository_name(),
-    )

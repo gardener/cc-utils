@@ -88,6 +88,7 @@ def print_release_notes(
         component_descriptor_lookup=ocm_lookup,
         version_lookup=version_lookup,
         git_helper=git_helper,
+        github_api_lookup=ccc.github.github_api_lookup,
         current_version=current_version,
         previous_version=previous_version,
     )

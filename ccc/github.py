@@ -220,6 +220,10 @@ def github_api(
     return github_api
 
 
+def github_api_lookup(repo_url, /) -> github3.GitHub:
+    return github_api(repo_url=repo_url)
+
+
 @functools.lru_cache()
 def github_cfg_for_repo_url(
     repo_url: str | urllib.parse.ParseResult=None,
