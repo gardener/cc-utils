@@ -85,9 +85,11 @@ class GitHelper:
     ):
         if repo is None:
             raise ValueError(repo)
+        if isinstance(repo, str):
+            repo = git.Repo(repo)
         if not isinstance(repo, git.Repo):
-            # assume it's a file path if it's not already a git.Repo
-            repo = git.Repo(str(repo))
+            raise ValueError(repo)
+
         self.repo = repo
         self.git_cfg = git_cfg
 
