@@ -143,13 +143,6 @@ class GitHelper:
         auth_type = self.git_cfg.auth_type
 
         cmd_env = os.environ.copy()
-        if (user := self.git_cfg.user_name):
-            cmd_env['GIT_AUTHOR_NAME'] = user
-            cmd_env['GIT_COMMITTER_NAME'] = user
-        if (email := self.git_cfg.user_email):
-            cmd_env['GIT_AUTHOR_EMAIL'] = email
-            cmd_env['GIT_COMMITTER_EMAIL'] = email
-
         if auth_type is AuthType.SSH:
             url = self.git_cfg.repo_url
             cmd_env, tmp_id = _ssh_auth_env(git_cfg=self.git_cfg)
@@ -162,6 +155,13 @@ class GitHelper:
             return
         else:
             raise NotImplementedError
+
+        if (user := self.git_cfg.user_name):
+            cmd_env['GIT_AUTHOR_NAME'] = user
+            cmd_env['GIT_COMMITTER_NAME'] = user
+        if (email := self.git_cfg.user_email):
+            cmd_env['GIT_AUTHOR_EMAIL'] = email
+            cmd_env['GIT_COMMITTER_EMAIL'] = email
 
         remote = git.remote.Remote.add(
             repo=self.repo,
