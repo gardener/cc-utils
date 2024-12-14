@@ -17,12 +17,12 @@ import ocm
 import ocm.util
 import requests
 
-import ccc.github
 import checkmarx.model
 import cfg_mgmt.model as cmm
 import ci.util
 import delivery.client
 import delivery.model
+import github
 import github.codeowners
 import github.compliance.issue
 import github.compliance.milestone as gcmi
@@ -338,6 +338,7 @@ def _template_vars(
 
 def _scanned_element_repository(
     scanned_element: gcm.Target,
+    github_api_lookup: github.GithubApiLookup,
 ) -> github3.repos.repo.Repository:
     if gcm.is_ocm_artefact_node(scanned_element):
         source = ocm.util.main_source(component=scanned_element.component)
@@ -347,12 +348,12 @@ def _scanned_element_repository(
 
         org = source.access.org_name()
         name = source.access.repository_name()
-        gh_api = ccc.github.github_api(repo_url=source.access.repoUrl)
+        gh_api = github_api_lookup(source.access.repoUrl)
 
         return gh_api.repository(org, name)
 
     elif isinstance(scanned_element, cmm.CfgElementStatusReport):
-        gh_api = ccc.github.github_api(repo_url=scanned_element.element_storage)
+        gh_api = github_api_lookup(scanned_element.element_storage)
 
         parsed_url = ci.util.urlparse(scanned_element.element_storage)
         path = parsed_url.path.strip('/')
@@ -515,6 +516,7 @@ def create_or_update_github_issues(
     result_group_collection: gcm.ScanResultGroupCollection,
     max_processing_days: gcm.MaxProcessingTimesDays=None,
     gh_api: github3.GitHub=None,
+    github_api_lookup: github.GithubApiLookup=None,
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     github_issue_template_cfgs: list[github.issue.GithubIssueTemplateCfg]=None,
@@ -563,7 +565,10 @@ def create_or_update_github_issues(
         if overwrite_repository:
             repository = overwrite_repository
         else:
-            repository = _scanned_element_repository(scan_result.scanned_element)
+            repository = _scanned_element_repository(
+                scan_result.scanned_element,
+                github_api_lookup=github_api_lookup,
+            )
 
         known_issues = _all_issues(repository)
 

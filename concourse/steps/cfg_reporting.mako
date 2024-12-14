@@ -80,6 +80,7 @@ for result_group_collection in (
     result_group_collection=result_group_collection,
     max_processing_days=gcm.MaxProcessingTimesDays(),
     gh_api=gh_api,
+    github_api_lookup=ccc.github.github_api_lookup,
     overwrite_repository=repository,
     delivery_svc_client=delivery_svc_client,
     github_issue_template_cfgs=github_issue_template_cfgs,

@@ -114,6 +114,7 @@ scan_results_grouped = scan_result_group_collection(
 logger.info('Creating and updating github issues')
 github.compliance.report.create_or_update_github_issues(
   result_group_collection=scan_results_grouped,
+  github_api_lookup=ccc.github.github_api_lookup,
   max_processing_days=max_processing_days,
   job_url_callback=concourse.util.own_running_build_url,
 % if issue_tgt_repo_url:

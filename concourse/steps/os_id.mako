@@ -121,6 +121,7 @@ github.compliance.report.create_or_update_github_issues(
   result_group_collection=result_group_collection,
   max_processing_days=max_processing_days,
   gh_api=gh_api,
+  github_api_lookup=ccc.github.github_api_lookup,
   overwrite_repository=overwrite_repository,
 % if github_issue_labels_to_preserve:
     preserve_labels_regexes=${github_issue_labels_to_preserve},
