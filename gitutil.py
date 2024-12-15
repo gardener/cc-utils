@@ -16,11 +16,9 @@ import git
 import git.objects.util
 import git.remote
 
-import ci.log
 from ci.util import random_str
 
 logger = logging.getLogger(__name__)
-ci.log.configure_default_logging()
 
 
 class AuthType(enum.StrEnum):
