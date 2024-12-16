@@ -18,6 +18,7 @@ import concourse.enumerator as ce
 logger = logging.getLogger('pipeline-cli')
 
 own_dir = os.path.abspath(os.path.dirname(__file__))
+cc_utils_root = os.path.join(own_dir, '../..')
 
 
 def _branch_cfg(
@@ -437,6 +438,13 @@ def component_descriptor(
         'CURRENT_COMPONENT_REPOSITORY': component_repo,
         'ADD_DEPENDENCIES_CMD': dependencies_cmd,
     }
+
+    component_cli_path = os.path.join(
+        cc_utils_root,
+        'bin',
+    )
+    path = f'{os.environ.get('PATH', '')}:{component_cli_path}'
+    env['PATH'] = path
 
     subprocess.run(
         (component_descriptor_script,),
