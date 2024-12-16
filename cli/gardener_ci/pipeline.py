@@ -59,7 +59,14 @@ def _pipeline_definitions(
     '''
     parses pipeline-definitions from .ci/pipeline_definitions from current repo's work-tree
     '''
-    with open(os.path.join(repo.working_tree_dir, '.ci', 'pipeline_definitions')) as f:
+    if not os.path.exists(pipeline_definitions_path := os.path.join(
+        repo.working_tree_dir, '.ci', 'pipeline_definitions'
+    )):
+        logger.error(f'Error: did not find pipeline-definitions at {pipeline_definitions_path}')
+        logger.info('hint: pass --repo')
+        exit(1)
+
+    with open(pipeline_definitions_path) as f:
         raw = yaml.safe_load(f)
 
     if not branch_cfg:
