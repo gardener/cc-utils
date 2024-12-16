@@ -95,7 +95,7 @@ def enumerate_codeowners_from_local_repo(
         raise ValueError(f'not a git root directory: {repo_dir}')
 
     for path in paths:
-        codeowners_file = repo_dir.joinpath(path)
+        codeowners_file = os.path.join(repo_dir, path)
         if codeowners_file.is_file():
             with open(codeowners_file) as f:
                 yield from (
