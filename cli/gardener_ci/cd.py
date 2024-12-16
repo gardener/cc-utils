@@ -75,12 +75,15 @@ def validate(
     component = component_descriptor.component
     logger.info('validating component-descriptor..')
 
+    oci_client = ccc.oci.oci_client()
+
     violations = tuple(
         cnudie.validate.iter_violations(
             nodes=cnudie.iter.iter(
                 component=component,
                 recursion_depth=0,
             ),
+            oci_client=oci_client,
         )
     )
 

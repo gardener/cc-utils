@@ -4,7 +4,6 @@ import logging
 
 import ocm
 
-import ccc.oci
 import cnudie.iter as ci
 import oci.model
 
@@ -38,8 +37,9 @@ class ValidationError:
         return f'{node_id_path}: {self.error}'
 
 
-def validate_resource_node(
+def _validate_resource_node(
     node: ci.ResourceNode,
+    oci_client: oci.client.Client,
 ) -> ValidationError | None:
     resource = node.resource
     if resource.type != ocm.ArtefactType.OCI_IMAGE:
@@ -62,8 +62,6 @@ def validate_resource_node(
             error=f'Invalid ImageReference: {image_reference}',
         )
 
-    oci_client = ccc.oci.oci_client()
-
     if not oci_client.head_manifest(
         image_reference=image_reference,
         absent_ok=True,
@@ -77,6 +75,7 @@ def validate_resource_node(
 
 def iter_violations(
     nodes: collections.abc.Iterable[ci.Node],
+    oci_client: oci.client.Client,
 ) -> collections.abc.Generator[ValidationError, None, None]:
     for node in nodes:
         if isinstance(node, ci.ComponentNode):
@@ -84,7 +83,10 @@ def iter_violations(
         elif isinstance(node, ci.SourceNode):
             continue # no validation, yet
         elif isinstance(node, ci.ResourceNode):
-            if (validation_error := validate_resource_node(node=node)):
+            if validation_error := _validate_resource_node(
+                node=node,
+                oci_client=oci_client,
+            ):
                 yield validation_error
         else:
             raise ValueError(node)

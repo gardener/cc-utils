@@ -459,7 +459,10 @@ nodes = cnudie.iter.iter(
   component=component,
   lookup=component_descriptor_lookup,
 )
-for validation_error in cnudie.validate.iter_violations(nodes=nodes):
+for validation_error in cnudie.validate.iter_violations(
+  nodes=nodes,
+  oci_client=oci_client,
+):
   logger.warning(f'{validation_error=}')
 
 tgt_ref = cnudie.util.target_oci_ref(component=component)
