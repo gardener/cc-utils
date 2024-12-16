@@ -23,7 +23,6 @@ class IngressConfig(NamedModelElement):
     def _required_attributes(self):
         yield from super()._required_attributes()
         yield from [
-            'issuer_name',
             'tls_host_names',
             'ttl',
         ]
