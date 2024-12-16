@@ -209,8 +209,8 @@ def file_system_cache_component_descriptor_lookup(
 
 
 def delivery_service_component_descriptor_lookup(
-    ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=None,
-    delivery_client=None,
+    ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup,
+    delivery_client,
     default_absent_ok: bool=True,
     default_ignore_errors: tuple[Exception]=(
         requests.exceptions.ConnectionError,
@@ -238,9 +238,6 @@ def delivery_service_component_descriptor_lookup(
         mapping of the  delivery-service, in case it could not be retrieved using
         `ocm_repository_lookup`
     '''
-    if not delivery_client:
-        import ccc.delivery
-        delivery_client = ccc.delivery.default_client_if_available()
     if not delivery_client:
         raise ValueError(delivery_client)
 
@@ -303,14 +300,9 @@ def delivery_service_component_descriptor_lookup(
 async def raw_component_descriptor_from_oci(
     component_id: ocm.ComponentIdentity,
     ocm_repos: collections.abc.Iterable[ocm.OciOcmRepository | str],
-    oci_client: oca.Client=None,
+    oci_client: oca.Client,
     absent_ok: bool=False,
 ) -> bytes:
-    if not oci_client:
-        import ccc.oci
-        if not (oci_client := ccc.oci.oci_client_async()):
-            raise ValueError('oci_client must not be empty')
-
     for ocm_repo in ocm_repos:
         if isinstance(ocm_repo, str):
             ocm_repo = ocm.OciOcmRepository(
@@ -398,9 +390,6 @@ def oci_component_descriptor_lookup(
         function
     '''
     if not oci_client:
-        import ccc.oci
-        oci_client = ccc.oci.oci_client_async()
-    if not oci_client:
         raise ValueError(oci_client)
 
     async def lookup(
@@ -450,16 +439,10 @@ def oci_component_descriptor_lookup(
 
 
 def version_lookup(
-    ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=None,
-    oci_client: oca.Client=None,
+    ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup,
+    oci_client: oca.Client,
     default_absent_ok: bool=True,
 ) -> VersionLookupByComponent:
-    if not oci_client:
-        import ccc.oci
-        oci_client = ccc.oci.oci_client_async()
-    if not oci_client:
-        raise ValueError(oci_client)
-
     async def lookup(
         component_id: cnudie.util.ComponentName,
         ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
@@ -588,7 +571,7 @@ def composite_component_descriptor_lookup(
 
 
 def create_default_component_descriptor_lookup(
-    ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup=None,
+    ocm_repository_lookup: cnudie.retrieve.OcmRepositoryLookup,
     cache_dir: str | None=None,
     oci_client: oca.Client | collections.abc.Callable[[], oca.Client]=None,
     delivery_client=None,
@@ -619,10 +602,6 @@ def create_default_component_descriptor_lookup(
         mapping of thedelivery-service, in case it could not be retrieved using
         `ocm_repository_lookup`
     '''
-    if not ocm_repository_lookup:
-        import ctx
-        ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
-
     lookups = [
         in_memory_cache_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repository_lookup,
@@ -641,9 +620,6 @@ def create_default_component_descriptor_lookup(
             )
         )
 
-    if not delivery_client:
-        import ccc.delivery
-        delivery_client = ccc.delivery.default_client_if_available()
     if delivery_client:
         lookups.append(
             delivery_service_component_descriptor_lookup(
@@ -708,14 +684,10 @@ async def component_diff(
 async def component_versions(
     component_name: str,
     ocm_repo: ocm.OcmRepository,
-    oci_client: oca.Client=None,
+    oci_client: oca.Client,
 ) -> collections.abc.Sequence[str]:
     if not isinstance(ocm_repo, ocm.OciOcmRepository):
         raise NotImplementedError(ocm_repo)
-
-    if not oci_client:
-        import ccc.oci
-        oci_client = ccc.oci.oci_client_async()
 
     ocm_repo: ocm.OciOcmRepository
     oci_ref = ocm_repo.component_oci_ref(component_name)

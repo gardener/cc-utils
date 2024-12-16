@@ -58,6 +58,7 @@ import ocm
 
 import ccc.concourse
 import ccc.github
+import ccc.oci
 import cnudie.retrieve
 import cnudie.util
 import ci.util
@@ -207,11 +208,14 @@ template = concourse.steps.step_template('component_descriptor')
 ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
 %>
 ${ocm_repository_lookup(ocm_repo_mappings)}
+oci_client = ccc.oci.oci_client()
 version_lookup = cnudie.retrieve.version_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
+  oci_client=oci_client,
 )
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
+  oci_client=oci_client,
 )
 
 ## Finally, determine recipients for all component names gathered

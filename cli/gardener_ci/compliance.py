@@ -24,6 +24,7 @@ import dacite
 import yaml
 
 import ci.util
+import ccc.oci
 import cnudie.iter
 import cnudie.retrieve
 import ctx
@@ -109,6 +110,7 @@ def diff(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
             *parsed.ocm_repo_urls,
         ),
+        oci_client=ccc.oci.oci_client(),
         cache_dir=cache_dir,
     )
 

@@ -14,6 +14,7 @@ import logging
 import os
 import threading
 
+import ccc.delivery
 import ccc.oci
 import ci.util
 import ctt.replicate
@@ -483,6 +484,7 @@ def process_images(
     tgt_component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(tgt_ocm_base_url),
         oci_client=oci_client,
+        delivery_client=ccc.delivery.default_client_if_available(),
         fallback_to_service_mapping=False,
     )
 

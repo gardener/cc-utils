@@ -20,6 +20,7 @@ def _ocm_lookup(ocm_repo: str=None):
     if ocm_repo:
         return cnudie.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo),
+            oci_client=ccc.oci.oci_client(),
         )
     else:
         return ctx.cfg.ctx.ocm_lookup
@@ -109,7 +110,10 @@ def ls(
     else:
         ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
 
-    version_lookup = cnudie.retrieve.version_lookup(ocm_repository_lookup=ocm_repo_lookup)
+    version_lookup = cnudie.retrieve.version_lookup(
+        ocm_repository_lookup=ocm_repo_lookup,
+        oci_client=ccc.oci.oci_client(),
+    )
 
     ocm_repo = next(ocm_repo_lookup(name))
 
@@ -143,7 +147,10 @@ def purge_old(
 
     ocm_repo = next(ocm_repo_lookup(name))
 
-    version_lookup = cnudie.retrieve.version_lookup(ocm_repository_lookup=ocm_repo_lookup)
+    version_lookup = cnudie.retrieve.version_lookup(
+        ocm_repository_lookup=ocm_repo_lookup,
+        oci_client=ccc.oci.oci_client(),
+    )
 
     versions = version_lookup(name)
 
@@ -182,33 +189,3 @@ def purge_old(
 
     for ref in concurrent.futures.as_completed(iter_oci_refs_to_rm()):
         pass
-
-
-def purge(
-    name: str,
-    recursive: bool=False,
-    version: str=None,
-    ocm_repo: str=None,
-):
-    if not version:
-        name, version = name.rsplit(':', 1)
-
-    ocm_lookup = _ocm_lookup(ocm_repo=ocm_repo)
-
-    lookup = cnudie.retrieve.oci_component_descriptor_lookup()
-
-    component_descriptor = ocm_lookup(
-        ocm.ComponentIdentity(
-            name=name,
-            version=version,
-        ),
-    )
-
-    oci_client = ccc.oci.oci_client()
-
-    cnudie.purge.remove_component_descriptor_and_referenced_artefacts(
-        component=component_descriptor.component,
-        oci_client=oci_client,
-        lookup=lookup,
-        recursive=recursive,
-    )

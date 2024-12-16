@@ -67,8 +67,12 @@ class CtxCfg:
             return None
 
         import cnudie.retrieve
+        import ccc.oci
+        import ccc.delivery
         return cnudie.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=self.ocm_repository_lookup,
+            oci_client=ccc.oci.oci_client(),
+            delivery_client=ccc.delivery.default_client_if_available(),
         )
 
     @property

@@ -168,6 +168,7 @@ def retrieve(
     else:
         ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo),
+            oci_client=ccc.oci.oci_client(),
         )
 
     component_descriptor = ocm_lookup(name)
@@ -204,6 +205,7 @@ def artefact(
     else:
         ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo),
+            oci_client=ccc.oci.oci_client(),
         )
 
     component = ocm_lookup(name).component
@@ -326,6 +328,7 @@ def traverse(
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repo_lookup,
+        oci_client=ccc.oci.oci_client(),
     )
 
     component_descriptor = component_descriptor_lookup(ocm.ComponentIdentity(

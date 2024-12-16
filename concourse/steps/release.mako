@@ -160,11 +160,14 @@ ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
 %>
 ${ocm_repository_lookup(ocm_repository_mappings)}
 
+oci_client = ccc.oci.oci_client()
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
+  oci_client=oci_client,
 )
 version_lookup = cnudie.retrieve.version_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
+  oci_client=oci_client,
 )
 
 component_descriptor = cdu.component_descriptor_from_dir(
@@ -173,7 +176,6 @@ component_descriptor = cdu.component_descriptor_from_dir(
 component = component_descriptor.component
 
 % if helmcharts:
-oci_client = ccc.oci.oci_client()
 component_descriptor_target_ref = cnudie.util.target_oci_ref(component=component)
 ## if there are helmcharts, we need to preprocess component-descriptor in order to include
 ## mappings emitted from helmcharts-step

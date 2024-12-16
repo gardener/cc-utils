@@ -14,6 +14,7 @@ import github3.repos
 
 import ccc.delivery
 import ccc.github
+import ccc.oci
 import cnudie.iter
 import cnudie.retrieve
 import checkmarx.client
@@ -47,6 +48,7 @@ def scan_sources(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
             component_descriptor.component.current_ocm_repo,
         ),
+        oci_client=ccc.oci.oci_client(),
     )
 
     components = tuple(

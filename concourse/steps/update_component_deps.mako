@@ -41,7 +41,9 @@ import sys
 
 import dacite
 
+import ccc.delivery
 import ccc.github
+import ccc.oci
 import ci.util
 import cnudie.util
 import cnudie.retrieve
@@ -127,11 +129,15 @@ ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
 %>
 ${ocm_repository_lookup(ocm_repository_mappings)}
 
+oci_client = ccc.oci.oci_client()
 ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
     ocm_repository_lookup=ocm_repository_lookup,
+    oci_client=oci_client,
+    delivery_client=ccc.delivery.default_client_if_available(),
 )
 version_lookup = cnudie.retrieve.version_lookup(
     ocm_repository_lookup=ocm_repository_lookup,
+    oci_client=oci_client,
 )
 
 # we at most need to do this once

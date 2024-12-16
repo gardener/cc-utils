@@ -60,6 +60,7 @@ import dacite
 import git
 import yaml
 
+import ccc.delivery
 import ccc.oci
 import cnudie.purge
 import cnudie.retrieve
@@ -91,12 +92,17 @@ component_labels = ${descriptor_trait.component_labels()}
 component_name_v2 = component_name.lower() # OCI demands lowercase
 ocm_repository_url = '${ocm_repository_url}'
 
+oci_client = ccc.oci.oci_client()
+
 ${ocm_repository_lookup(ocm_repository_mappings)}
 component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
+  oci_client=oci_client,
+  delivery_client=ccc.delivery.default_client_if_available(),
 )
 version_lookup = cnudie.retrieve.version_lookup(
   ocm_repository_lookup=ocm_repository_lookup,
+  oci_client=oci_client,
 )
 
 main_repo_path = os.path.abspath('${main_repo.resource_name()}')
@@ -283,8 +289,6 @@ if have_cd:
 else:
   print(f'XXX: did not find a component-descriptor at {v2_outfile=}')
   exit(1)
-
-oci_client = ccc.oci.oci_client()
 
 % if descriptor_trait.upload is comp_descr_trait.UploadMode.LEGACY:
   % if not (job_variant.has_trait('release') or job_variant.has_trait('update_component_deps')):

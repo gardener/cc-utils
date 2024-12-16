@@ -280,8 +280,8 @@ def file_system_cache_component_descriptor_lookup(
 
 
 def delivery_service_component_descriptor_lookup(
-    ocm_repository_lookup: OcmRepositoryLookup=None,
-    delivery_client=None,
+    ocm_repository_lookup: OcmRepositoryLookup,
+    delivery_client,
     default_absent_ok: bool=True,
     default_ignore_errors: tuple[Exception]=(
         requests.exceptions.ConnectionError,
@@ -309,9 +309,6 @@ def delivery_service_component_descriptor_lookup(
         mapping of the  delivery-service, in case it could not be retrieved using
         `ocm_repository_lookup`
     '''
-    if not delivery_client:
-        import ccc.delivery
-        delivery_client = ccc.delivery.default_client_if_available()
     if not delivery_client:
         raise ValueError(delivery_client)
 
@@ -370,17 +367,12 @@ def delivery_service_component_descriptor_lookup(
     return lookup
 
 
-def raw_component_descriptor_from_oci(
+def _raw_component_descriptor_from_oci(
     component_id: ocm.ComponentIdentity,
     ocm_repos: collections.abc.Iterable[ocm.OciOcmRepository | str],
-    oci_client: oc.Client=None,
+    oci_client: oc.Client,
     absent_ok: bool=False,
 ) -> bytes:
-    if not oci_client:
-        import ccc.oci
-        if not (oci_client := ccc.oci.oci_client()):
-            raise ValueError('oci_client must not be empty')
-
     for ocm_repo in ocm_repos:
         if isinstance(ocm_repo, str):
             ocm_repo = ocm.OciOcmRepository(
@@ -450,8 +442,8 @@ def raw_component_descriptor_from_oci(
 
 
 def oci_component_descriptor_lookup(
-    ocm_repository_lookup: OcmRepositoryLookup=None,
-    oci_client: oc.Client | collections.abc.Callable[[], oc.Client]=None,
+    ocm_repository_lookup: OcmRepositoryLookup,
+    oci_client: oc.Client | collections.abc.Callable[[], oc.Client],
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     '''
@@ -466,9 +458,6 @@ def oci_component_descriptor_lookup(
         sets the default behaviour in case of absent component descriptors for the returned lookup
         function
     '''
-    if not oci_client:
-        import ccc.oci
-        oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
 
@@ -492,7 +481,7 @@ def oci_component_descriptor_lookup(
             ocm_repository_lookup,
         )
 
-        raw = raw_component_descriptor_from_oci(
+        raw = _raw_component_descriptor_from_oci(
             component_id=component_id,
             ocm_repos=ocm_repos,
             oci_client=local_oci_client,
@@ -537,13 +526,10 @@ def error_code_indicating_not_found(image_reference: str | om.OciImageReference)
 
 
 def version_lookup(
-    ocm_repository_lookup: OcmRepositoryLookup=None,
-    oci_client: oc.Client=None,
+    ocm_repository_lookup: OcmRepositoryLookup,
+    oci_client: oc.Client,
     default_absent_ok: bool=True,
 ) -> VersionLookupByComponent:
-    if not oci_client:
-        import ccc.oci
-        oci_client = ccc.oci.oci_client()
     if not oci_client:
         raise ValueError(oci_client)
 
@@ -569,7 +555,7 @@ def version_lookup(
                 raise NotImplementedError(ocm_repo)
 
             try:
-                for version_tag in component_versions(
+                for version_tag in _component_versions(
                     component_name=component_name,
                     ocm_repo=ocm_repo,
                     oci_client=oci_client,
@@ -711,9 +697,13 @@ def create_default_component_descriptor_lookup(
         )
     ]
     if not cache_dir:
-        import ctx
-        if ctx.cfg:
-            cache_dir = ctx.cfg.ctx.cache_dir
+        try:
+            import ctx
+            if ctx.cfg:
+                cache_dir = ctx.cfg.ctx.cache_dir
+        except ImportError:
+            # ctx-module is an optional dependency for local dev setups
+            pass
 
     if cache_dir:
         lookups.append(
@@ -723,9 +713,6 @@ def create_default_component_descriptor_lookup(
             )
         )
 
-    if not delivery_client:
-        import ccc.delivery
-        delivery_client = ccc.delivery.default_client_if_available()
     if delivery_client:
         lookups.append(delivery_service_component_descriptor_lookup(
             delivery_client=delivery_client,
@@ -735,8 +722,8 @@ def create_default_component_descriptor_lookup(
 
     lookups.append(
         oci_component_descriptor_lookup(
-            oci_client=oci_client,
             ocm_repository_lookup=ocm_repository_lookup,
+            oci_client=oci_client,
         ),
     )
 
@@ -783,17 +770,13 @@ def component_diff(
     )
 
 
-def component_versions(
+def _component_versions(
     component_name: str,
     ocm_repo: ocm.OcmRepository,
-    oci_client: oc.Client=None,
+    oci_client: oc.Client,
 ) -> collections.abc.Sequence[str]:
     if not isinstance(ocm_repo, ocm.OciOcmRepository):
-        raise NotImplementedError(ocm_repo)
-
-    if not oci_client:
-        import ccc.oci
-        oci_client = ccc.oci.oci_client()
+        raise ValueError(ocm_repo)
 
     ocm_repo: ocm.OciOcmRepository
     oci_ref = ocm_repo.component_oci_ref(component_name)

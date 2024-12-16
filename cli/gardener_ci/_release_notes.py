@@ -1,4 +1,5 @@
 import ccc.github
+import ccc.oci
 import cnudie.retrieve
 import ctx
 import gitutil
@@ -19,6 +20,7 @@ def print_release_notes(
     current_version: str = None,
     previous_version: str = None,
 ):
+    oci_client = ccc.oci.oci_client()
     if not ocm_repo_base_url:
         ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
         ocm_lookup = ctx.cfg.ctx.ocm_lookup
@@ -28,6 +30,7 @@ def print_release_notes(
         )
         ocm_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repository_lookup,
+            oci_client=oci_client,
         )
 
     if not ocm_lookup:
@@ -36,6 +39,7 @@ def print_release_notes(
 
     version_lookup = cnudie.retrieve.version_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
+        oci_client=oci_client,
     )
 
     # We need a component. Fetch one with given information (assuming the relevant information
