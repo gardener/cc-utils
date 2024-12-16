@@ -4,7 +4,6 @@ import traceback
 
 import ocm
 
-import ccc.oci
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
@@ -18,14 +17,11 @@ logger = logging.getLogger(__name__)
 def iter_componentversions_to_purge(
     component: ocm.Component | ocm.ComponentDescriptor,
     policy: version.VersionRetentionPolicies,
-    oci_client: oc.Client=None,
+    oci_client: oc.Client,
 ) -> collections.abc.Generator[ocm.ComponentIdentity, None, None]:
     oci_ref = cnudie.util.oci_ref(component=component)
     if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
-
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
 
     for v in version.versions_to_purge(
         versions=oci_client.tags(oci_ref.ref_without_tag),
@@ -40,7 +36,7 @@ def iter_componentversions_to_purge(
 
 def remove_component_descriptor_and_referenced_artefacts(
     component: ocm.Component | ocm.ComponentDescriptor,
-    oci_client: oc.Client=None,
+    oci_client: oc.Client,
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursive: bool=False,
     on_error: str='abort', # todo: implement, e.g. patch-component-descriptor-and-abort
@@ -52,8 +48,6 @@ def remove_component_descriptor_and_referenced_artefacts(
 
     current_component = None
     resources_with_removal_errors = []
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
 
     for node in cnudie.iter.iter(
         component=component,
