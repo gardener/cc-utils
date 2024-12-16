@@ -646,17 +646,14 @@ def create_default_component_descriptor_lookup(
 async def component_diff(
     left_component: ocm.Component | ocm.ComponentDescriptor,
     right_component: ocm.Component | ocm.ComponentDescriptor,
+    component_descriptor_lookup: ComponentDescriptorLookupById,
     ignore_component_names=(),
-    component_descriptor_lookup: ComponentDescriptorLookupById=None,
 ) -> cnudie.util.ComponentDiff:
     import cnudie.iter as ci
     import cnudie.iter_async as cia # late import to avoid cyclic dependencies
 
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
-
-    if not component_descriptor_lookup:
-        component_descriptor_lookup = create_default_component_descriptor_lookup()
 
     left_components = [
         component_node.component async for component_node in cia.iter(
