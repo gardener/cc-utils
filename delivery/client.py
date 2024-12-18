@@ -145,7 +145,6 @@ class DeliveryServiceClient:
         self,
         routes: DeliveryServiceRoutes,
         cfg_factory: model.ConfigFactory | None=None,
-        auth_credentials: dm.GitHubAuthCredentials=None,
     ):
         '''
         Initialises a client which can be used to interact with the delivery-service.
@@ -155,13 +154,10 @@ class DeliveryServiceClient:
             delivery-service as well as the available routes
         :param ConfigFactory cfg_factory (optional + deprecated):
             the config factory is used to retrieve available GitHub configurations
-        :param GitHubAuthCredentials auth_credentials (optional):
-            object which contains credentials required for authentication against the
-            delivery-service api
         '''
         self._routes = routes
         self.cfg_factory = cfg_factory
-        self.auth_credentials = auth_credentials
+        self.auth_credentials: dm.GitHubAuthCredentials = None # filled lazily as needed
 
         self._bearer_token = None
         self._session = requests.sessions.Session()
