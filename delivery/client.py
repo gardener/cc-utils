@@ -20,7 +20,6 @@ import dso.model
 import http_requests
 import model
 import model.base
-import model.github
 
 
 logger = logging.getLogger(__name__)
@@ -145,7 +144,6 @@ class DeliveryServiceClient:
     def __init__(
         self,
         routes: DeliveryServiceRoutes,
-        github_cfgs: tuple[model.github.GithubConfig]=(),
         cfg_factory: model.ConfigFactory | None=None,
         auth_credentials: dm.GitHubAuthCredentials=None,
     ):
@@ -155,18 +153,13 @@ class DeliveryServiceClient:
         :param DeliveryServiceRoutes routes
             object which contains information of the base url of the desired instance of the
             delivery-service as well as the available routes
-        :param tuple[GithubConfig] github_cfgs (optional):
-            tuple of the available GitHub configurations which are used to authenticate against the
-            delivery-service
-        :param ConfigFactory cfg_factory (optional):
-            the config factory is used to retrieve available GitHub configurations in case they are
-            not provided anyways (i.e. can be safely omitted in case `github_cfgs` is specified)
+        :param ConfigFactory cfg_factory (optional + deprecated):
+            the config factory is used to retrieve available GitHub configurations
         :param GitHubAuthCredentials auth_credentials (optional):
             object which contains credentials required for authentication against the
             delivery-service api
         '''
         self._routes = routes
-        self.github_cfgs = github_cfgs
         self.cfg_factory = cfg_factory
         self.auth_credentials = auth_credentials
 
@@ -223,7 +216,6 @@ class DeliveryServiceClient:
                         api_url=api_url,
                         cfg_factory=self.cfg_factory,
                         require_labels=(),
-                        github_cfgs=self.github_cfgs,
                     )
                     break
                 except model.base.ConfigElementNotFoundError:
