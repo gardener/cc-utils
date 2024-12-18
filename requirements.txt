@@ -54,5 +54,4 @@ sseclient-py
 tabulate
 termcolor
 urllib3
-websockets
 yamllint
