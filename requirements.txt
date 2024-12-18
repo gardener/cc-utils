@@ -44,7 +44,6 @@ python-keystoneclient
 python-magic
 python-swiftclient
 pytimeparse
-pytz
 pyyaml
 requests
 ruamel.yaml==0.17.21
