@@ -96,7 +96,7 @@ def enumerate_codeowners_from_local_repo(
 
     for path in paths:
         codeowners_file = os.path.join(repo_dir, path)
-        if codeowners_file.is_file():
+        if os.path.exists(codeowners_file):
             with open(codeowners_file) as f:
                 yield from (
                     parse_codeowner_entry(entry)
