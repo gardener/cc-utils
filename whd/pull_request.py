@@ -335,10 +335,23 @@ def set_pr_labels(
     repo = pr_event.repository()
     repository_path = repo.repository_path()
     owner, _ = repository_path.split('/')
-    job_mapping_set: model.concourse.JobMappingSet = cfg_set.job_mapping()
-    job_mapping = job_mapping_set.job_mapping_for_repo_url(
-        repo.repository_url(), cfg_set
-    )
+
+    for jms in cfg_set._cfg_elements('job_mapping'):
+        jms: model.concourse.JobMappingSet
+
+        try:
+            job_mapping = jms.job_mapping_for_repo_url(
+                repo_url=repo.repository_url(),
+                cfg_set=cfg_set,
+            )
+        except ValueError:
+            job_mapping = None
+
+        if job_mapping:
+            break
+
+    else:
+        raise ValueError(f'no job-mapping found for {repo.repository_url()}')
 
     if pr_event.action() is PullRequestAction.OPENED:
         if _should_label(
