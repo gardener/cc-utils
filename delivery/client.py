@@ -4,12 +4,12 @@ import datetime
 import logging
 import requests
 import time
+import typing
 
 import dacite
 
 import ocm
 
-import ccc.github
 import ci.util
 import cnudie.iter
 import cnudie.retrieve
@@ -18,8 +18,6 @@ import delivery.jwt
 import delivery.model as dm
 import dso.model
 import http_requests
-import model
-import model.base
 
 
 logger = logging.getLogger(__name__)
@@ -140,11 +138,23 @@ class DeliveryServiceRoutes:
         )
 
 
+Url: typing.TypeAlias = str
+AuthToken: typing.TypeAlias = str
+'''
+A lookup crafted slightly special-cased for auth-token-based authentication. Implementations *must*
+accept a single positional parameter, which is the URL for which the lookup should return a (valid)
+auth-token.
+If the lookup cannot offer an authtoken for a given URL, it *must* return None. Exceptions raised
+by lookups are not handled.
+'''
+AuthTokenLookup: typing.TypeAlias = typing.Callable[[Url], AuthToken]
+
+
 class DeliveryServiceClient:
     def __init__(
         self,
         routes: DeliveryServiceRoutes,
-        cfg_factory: model.ConfigFactory | None=None,
+        auth_token_lookup: AuthTokenLookup | None=None,
     ):
         '''
         Initialises a client which can be used to interact with the delivery-service.
@@ -152,11 +162,11 @@ class DeliveryServiceClient:
         :param DeliveryServiceRoutes routes
             object which contains information of the base url of the desired instance of the
             delivery-service as well as the available routes
-        :param ConfigFactory cfg_factory (optional + deprecated):
-            the config factory is used to retrieve available GitHub configurations
+        :param AuthTokenLookup auth_token_lookup (optional)
+            the lookup to use for retrieving auth-tokens against oauth-endpoints
         '''
         self._routes = routes
-        self.cfg_factory = cfg_factory
+        self.auth_token_lookup = auth_token_lookup
         self.auth_credentials: dm.GitHubAuthCredentials = None # filled lazily as needed
 
         self._bearer_token = None
@@ -194,6 +204,10 @@ class DeliveryServiceClient:
         ):
             return
 
+        if not self.auth_token_lookup:
+            logger.info('DeliverService-Client has no auth-token-lookup - attempting anonymous auth')
+            return
+
         if not self.auth_credentials:
             res = self._session.get(
                 url=self._routes.auth_configs(),
@@ -207,22 +221,15 @@ class DeliveryServiceClient:
             for auth_config in auth_configs:
                 api_url = auth_config.get('api_url')
 
-                try:
-                    github_cfg = ccc.github.github_cfg_for_repo_url(
-                        api_url=api_url,
-                        cfg_factory=self.cfg_factory,
-                        require_labels=(),
-                    )
+                if (auth_token := self.auth_token_lookup(api_url)):
                     break
-                except model.base.ConfigElementNotFoundError:
-                    continue
             else:
                 logger.info('no valid credentials found - attempting anonymous-auth')
                 return
 
             self.auth_credentials = dm.GitHubAuthCredentials(
                 api_url=api_url,
-                auth_token=github_cfg.credentials().auth_token(),
+                auth_token=auth_token,
             )
 
         params = {

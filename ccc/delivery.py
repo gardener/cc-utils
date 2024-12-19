@@ -1,9 +1,11 @@
 import logging
 
+import ccc.github
 import ci.log
 import ci.util
 import ctx
 import delivery.client
+import model.base
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
@@ -19,6 +21,17 @@ def _current_cfg_set(
     cfg_set = cfg_factory.cfg_set(cfg_set_name)
 
     return cfg_set
+
+
+def auth_token_lookup(api_url: str, /):
+    '''
+    an implementation of delivery.client.AuthTokenLookup
+    '''
+    try:
+        github_cfg = ccc.github.github_cfg_for_repo_url(api_url)
+        return github_cfg.credentials().auth_token()
+    except model.base.ConfigElementNotFoundError:
+        return None
 
 
 def default_client_if_available(
@@ -51,7 +64,7 @@ def default_client_if_available(
     )
     return delivery.client.DeliveryServiceClient(
         routes=routes,
-        cfg_factory=cfg_factory,
+        auth_token_lookup=auth_token_lookup,
     )
 
 
@@ -74,7 +87,7 @@ def client(
 
     return delivery.client.DeliveryServiceClient(
         routes=routes,
-        cfg_factory=cfg_factory,
+        auth_token_lookup=auth_token_lookup,
     )
 
 
