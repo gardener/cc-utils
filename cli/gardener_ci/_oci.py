@@ -11,6 +11,7 @@ import tempfile
 
 import requests
 
+import ccc.delivery
 import ccc.oci
 import ctx
 import delivery.client
@@ -502,7 +503,7 @@ def osinfo(
             routes=delivery.client.DeliveryServiceRoutes(
                 base_url=delivery_cfg.base_url(),
             ),
-            cfg_factory=cfg_factory,
+            auth_token_lookup=ccc.delivery.auth_token_lookup,
         )
     else:
         delivery_client = None
