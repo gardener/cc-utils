@@ -149,6 +149,7 @@ jobs:
         echo "pkgdir: ${pkg_dir}"
         for path in \
           setup.py \
+          setup.gha.py \
           setup.oci.py \
           setup.ocm.py \
           setup.whd.py \
@@ -179,6 +180,7 @@ jobs:
           gardener-cicd-whd \
           gardener-cicd-cli \
           gardener-cicd-libs \
+          gardener-gha-libs \
           gardener-oci \
           gardener-ocm \
           ; do

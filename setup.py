@@ -25,6 +25,7 @@ def modules():
     ]
 
     # avoid including other setup-scripts
+    module_names.remove('setup.gha')
     module_names.remove('setup.oci')
     module_names.remove('setup.ocm')
     module_names.remove('setup.whd')
