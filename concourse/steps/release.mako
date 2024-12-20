@@ -98,7 +98,7 @@ def github_asset_name(asset):
   if asset.github_asset_name:
     return asset.github_asset_name
 
-  return asset.name + '-'.join(
+  return '-'.join(
     [asset.name] + list(asset.artefact_extra_id.values())
   )
 %>
