@@ -1,0 +1,16 @@
+name: Install Gardener-GHA-Libs
+description: |
+  Install Python3 and gardener-gha-libs
+
+runs:
+  using: composite
+  steps:
+    - name: install python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: install-gardener-gha-libs
+      shell: bash
+      run: |
+        python3 --version
+        pip install gardener-gha-libs
