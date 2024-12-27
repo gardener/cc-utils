@@ -173,7 +173,7 @@ class _OciRequestHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         if self.shortcut:
-            logger.info('oci-request-reporting to elasticsearch was shortcut due to previous error')
+            logger.debug('oci-request-reporting to elasticsearch was shortcut due to previous error')
             return
 
         method = record.__dict__.get('method')
