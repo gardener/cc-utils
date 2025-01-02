@@ -5,6 +5,6 @@ labels: kind/enhancement
 
 ---
 
-**What would you like to be added**:
+# Context / Motivation
 
-**Why is this needed**:
+# Implementation Proposal
