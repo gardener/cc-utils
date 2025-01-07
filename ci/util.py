@@ -10,7 +10,6 @@ import functools
 import logging
 import os
 import pathlib
-import shutil
 import string
 import sys
 import typing
@@ -166,10 +165,6 @@ def _quiet():
     return ctx().args and ctx().args.quiet
 
 
-def _verbose():
-    return ctx().args and ctx().args.verbose
-
-
 def _print(msg, colour, outfh=sys.stdout):
     if not msg:
         return
@@ -210,14 +205,6 @@ def warning(msg:str):
         return
     if msg:
         _print('WARNING: ' + str(msg), colour='yellow', outfh=sys.stderr)
-
-
-@deprecated.deprecated
-def verbose(msg:str):
-    if not _verbose():
-        return
-    if msg:
-        _print('VERBOSE: ' + msg, colour=None, outfh=sys.stdout)
 
 
 @deprecated.deprecated
@@ -427,21 +414,6 @@ def urlparse(url: str) -> urllib.parse.ParseResult:
     return urllib.parse.urlparse(url)
 
 
-def file_extension_join(path: str, extension: str) -> str:
-    return '.'.join((path, extension))
-
-
-def which(cmd_name: str) -> str:
-    '''
-    wrapper around shutil.which that calls ci.util.fail if the requested executable is not
-    found in the PATH.
-    '''
-    cmd_path = shutil.which(cmd_name)
-    if not cmd_path:
-        fail("{cmd} not found in PATH".format(cmd=cmd_name))
-    return cmd_path
-
-
 def merge_dicts(base: dict, *other: dict, list_semantics='merge'):
     '''
     merges copies of the given dict instances and returns the merge result.
@@ -484,47 +456,6 @@ def merge_dicts(base: dict, *other: dict, list_semantics='merge'):
     )
 
 
-class FluentIterable:
-    ''' a fluent object stream processing chain builder inspired by guava's FluentIterable
-
-    Example:
-        result = FluentIterable(items=(1,2,3))
-            .filter(lambda e: e < 2)
-            .map(lambda e: e * 2)
-            .as_generator()
-
-    '''
-
-    def __init__(self, items):
-        def starter():
-            yield from items
-        self.ops = [starter]
-
-    def filter(self, filter_func):
-        last_op = self.ops[-1]
-
-        def f():
-            yield from filter(filter_func, last_op())
-
-        self.ops.append(f)
-        return self
-
-    def map(self, map_func):
-        last_op = self.ops[-1]
-
-        def m():
-            yield from map(map_func, last_op())
-
-        self.ops.append(m)
-        return self
-
-    def as_generator(self):
-        return self.ops[-1]()
-
-    def as_list(self):
-        return list(self.as_generator())
-
-
 def dict_factory_enum_serialisiation(data):
 
     def convert_value(obj):
@@ -549,16 +480,3 @@ def dict_to_json_factory(data):
         return obj
 
     return dict((k, convert_value(v)) for k, v in data)
-
-
-class MultilineYamlDumper(yaml.SafeDumper):
-    def represent_data(self, data):
-        # by default, the SafeDumper includes an extra empty line for each line in the data for
-        # string-blocks. As all provided ways to configure the dumper differently affect all
-        # rendered types we create our own Dumper.
-        if isinstance(data, str) and '\n' in data:
-            return self.represent_scalar(u'tag:yaml.org,2002:str', data, style='|')
-        # Also, don't include keys with None/null values.
-        if data is None:
-            return self.represent_scalar('tag:yaml.org,2002:null', '')
-        return super().represent_data(data)

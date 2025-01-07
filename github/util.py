@@ -7,6 +7,7 @@ import collections
 import datetime
 import enum
 import io
+import logging
 import re
 
 import typing
@@ -25,6 +26,8 @@ from github3.repos.release import Release
 import ocm
 import ci.util
 import version
+
+logger = logging.getLogger(__name__)
 
 
 class RepoPermission(enum.Enum):
@@ -310,37 +313,25 @@ class PullRequestUtil(RepositoryHelperBase):
         self,
         state: str='all',
         pattern: re.Pattern=None,
-    ):
-        '''returns a sequence of `UpgradePullRequest` for all found pull-requests
-        '''
+    ) -> typing.Generator[UpgradePullRequest, None, None]:
         def has_upgrade_pr_title(pull_request):
             return bool(pattern.fullmatch(pull_request.title))
-
-        def pr_to_upgrade_pr(pull_request):
-            return self._pr_to_upgrade_pull_request(
-                pull_request=pull_request,
-                pattern=pattern,
-            )
-
-        def strip_title(pull_request):
-            pull_request.title = pull_request.title.strip()
-            return pull_request
 
         if not pattern:
             pattern = self._pr_title_pattern
 
-        parsed_prs = ci.util.FluentIterable(
-            self.repository.pull_requests(
-                state=state,
-                number=128, # avoid issueing more than one github-api-request
+        for pull_request in self.repository.pull_requests(
+            state=state,
+            number=128, # avoid issueing more than one github-api-request
+        ):
+            pull_request.title = pull_request.title.strip()
+            if not has_upgrade_pr_title(pull_request):
+                continue
+
+            yield self._pr_to_upgrade_pull_request(
+                pull_request=pull_request,
+                pattern=pattern,
             )
-        ) \
-            .map(strip_title) \
-            .filter(has_upgrade_pr_title) \
-            .map(pr_to_upgrade_pr) \
-            .filter(lambda e: e) \
-            .as_list()
-        return parsed_prs
 
     def retrieve_pr_template_text(self):
         '''Return the content for the PR template file looking in predefined directories.
@@ -380,7 +371,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             decoded_contents = contents.decoded.decode('utf-8')
             if decoded_contents == file_contents:
                 # Nothing to do
-                return ci.util.info(
+                return logger.info(
                     'Repository file contents are identical to passed file contents.'
                 )
             else:

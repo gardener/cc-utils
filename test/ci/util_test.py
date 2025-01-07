@@ -47,14 +47,6 @@ def test_fail():
     assert len(stdout.getvalue()) == 0
 
 
-def test_success():
-    with capture_out() as (stdout, stderr):
-        examinee.success('xxx')
-
-    assert 'SUCCESS: xxx' == stdout.getvalue().strip()
-    assert len(stderr.getvalue()) == 0
-
-
 class UtilTest(unittest.TestCase):
     def test_not_empty(self):
         result = examinee.not_empty('foo')

@@ -545,7 +545,7 @@ def is_semver_parseable(version_string: str):
     try:
         parse_to_semver(version_string)
     except ValueError:
-        ci.util.verbose(f"Could not parse '{version_string}' as semver version")
+        logger.debug(f"Could not parse '{version_string}' as semver version")
         return False
     return True
 
