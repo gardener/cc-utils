@@ -111,10 +111,6 @@ def normalise_artefact_extra_id(
     sorted by key in alphabetical order and concatinated following pattern:
     key1:value1_key2:value2_ ...
     '''
-    # steamline inconsistency between extra-id handling, drop version attribute entirely
-    if artefact_extra_id.get('version'):
-        del artefact_extra_id['version']
-
     s = sorted(artefact_extra_id.items(), key=lambda items: items[0])
     return '_'.join([':'.join(values) for values in s])
 
