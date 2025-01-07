@@ -106,8 +106,10 @@ git_helper.rebase(
     commit_ish=REPO_BRANCH,
 )
 
-upgrade_pull_requests = pull_request_util.enumerate_upgrade_pull_requests(
-    state='all',
+upgrade_pull_requests = tuple(
+    pull_request_util.enumerate_upgrade_pull_requests(
+        state='all',
+    ),
 )
 
 own_component = current_component()
