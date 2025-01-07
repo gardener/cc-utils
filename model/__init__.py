@@ -15,7 +15,6 @@ import deprecated
 import github3.exceptions
 import yaml
 
-import ci.log
 import ctx
 
 import model.base
@@ -35,7 +34,6 @@ dc = dataclasses.dataclass
 empty_list = dataclasses.field(default_factory=list) # noqa:E3701
 empty_tuple = dataclasses.field(default_factory=tuple) # noqa:E3701
 
-ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 '''

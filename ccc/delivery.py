@@ -7,7 +7,6 @@ import ctx
 import delivery.client
 import model.base
 
-ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
