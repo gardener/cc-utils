@@ -684,7 +684,7 @@ def create_default_component_descriptor_lookup(
         function
     @param fallback_to_service_mapping:
         if set, it is tried to retrieve the requested component descriptor using the OCM repository
-        mapping of thedelivery-service, in case it could not be retrieved using
+        mapping of the delivery-service, in case it could not be retrieved using
         `ocm_repository_lookup`
     '''
     if not ocm_repository_lookup:
