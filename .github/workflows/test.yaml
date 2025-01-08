@@ -1,0 +1,57 @@
+name: Test
+on:
+  push:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test-release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install git
+        run: |
+          if ! which git &>/dev/null; then
+            apt-get install git -y
+          fi
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/install-gardener-gha-libs
+      - name: try-use-release-notes
+        uses: ./.github/actions/release-notes
+      - name: inspect-filesystem
+        run: |
+          echo "test"
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install git
+        run: |
+          if ! which git &>/dev/null; then
+            apt-get install git -y
+          fi
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/install-gardener-gha-libs
+      - name: inspect filesystem
+        run: |
+          set -xu
+          echo "smoketest for gha-libs"
+          python3 -c "import gitutil; print(gitutil.__file__)"
+
+          git config --global --add safe.directory $PWD
+          git config user.name 'Gardener-CICD Bot'
+          git config user.email 'gardener.ci.user@gmail.com'
+
+          echo "git-cfg"
+          git config -l
+
+          echo "try to fetch another repository"
+          git fetch https://github.com/gardener/gardener
+
+          echo "try to clone another repository"
+          mkdir /tmp/bla
+          git clone https://github.com/gardener/cc-utils /tmp/bla/cc-utils
+
+          echo "try to clone another repository from other PWD"
+          cd /tmp/bla
+          git clone https://github.com/gardener/cc-utils cc-utils2
