@@ -57,20 +57,6 @@ def _raw_image_dep_to_v2(raw: dict):
   return ocm.Resource(**args)
 
 
-def _raw_generic_dep_to_v2(raw: dict):
-  name = raw['name']
-  version = raw['version']
-  rel = ocm.ResourceRelation(raw.get('relation', ocm.ResourceRelation.LOCAL))
-
-  return ocm.Resource(
-    name=name,
-    version=version,
-    type='generic', # removed in later OCM versions, kept for backwards compatibility
-    relation=rel,
-    access=None,
-  )
-
-
 def add_dependencies(
   descriptor_src_file: str,
   component_name: str,
@@ -78,7 +64,6 @@ def add_dependencies(
   descriptor_out_file: str=None,
   component_dependencies: [str]=[],
   container_image_dependencies: [str]=[],
-  generic_dependencies: [str]=[],
 ):
   component_descriptor = ocm.ComponentDescriptor.from_dict(
     ci.util.parse_yaml_file(descriptor_src_file)
@@ -99,11 +84,6 @@ def add_dependencies(
     img_res = _raw_image_dep_to_v2(img_dep)
 
     component.resources.append(img_res)
-
-  for gen_dep in generic_dependencies:
-    gen_dep = parse(gen_dep)
-    gen_res = _raw_generic_dep_to_v2(gen_dep)
-    component.resources.append(gen_res)
 
   if descriptor_out_file:
     outfh = open(descriptor_out_file, 'w')
