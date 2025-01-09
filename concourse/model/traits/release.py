@@ -515,7 +515,12 @@ class ReleaseTraitTransformer(TraitTransformer):
         # validate assets if present
         for asset in self.trait.assets:
             if not pipeline_args.has_step(asset.step_name):
-                raise ValueError(f'{asset=}\'s step_name refers to an absent build-step')
+                raise ValueError(textwrap.dedent(f'''\
+                    {asset=}\'s step_name refers to an absent build-step. If the step in question is
+                    declared branch-specifically, i.e. via `branch.cfg`, and the current branch is
+                    going to be merged with a branch declaring the pipeline step, this error can be
+                    safely ignored, iff the branch is transient only (not used for release).
+                '''))
 
             if isinstance(asset, BuildstepFileAsset):
                 asset: BuildstepFileAsset
