@@ -10,7 +10,7 @@ runs:
       with:
         python-version: '3.12'
     - name: install-gardener-gha-libs
-      shell: bash
+      shell: sh
       run: |
         python3 --version
         pip install gardener-gha-libs
