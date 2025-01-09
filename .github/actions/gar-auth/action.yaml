@@ -48,7 +48,7 @@ runs:
         workload_identity_provider: ${{ inputs.workload_identity_provider }}
     - name: Export Access-Token
       id: export
-      shell: bash
+      shell: sh
       run: |
         set -eu
         set -o pipefail
