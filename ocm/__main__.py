@@ -1,4 +1,5 @@
 import argparse
+import collections.abc
 import dataclasses
 import datetime
 import json
@@ -58,20 +59,12 @@ def dump(component_descriptor: ocm.ComponentDescriptor, parsed):
     outfh.flush()
 
 
-def create(parsed):
-    now_ts = datetime.datetime.now(datetime.timezone.utc).isoformat(
-        timespec='seconds',
-    ).removesuffix('+00:00') + 'Z'
-
-    if parsed.ocm_repo:
-        ocm_repos = [
-            ocm.OciOcmRepository(baseUrl=parsed.ocm_repo),
-        ]
-    else:
-        ocm_repos = []
-
-    labels = []
-    for label in parsed.labels:
+def _iter_parsed_labels(labels) -> collections.abc.Generator[ocm.Label, None, None]:
+    '''
+    parses the passed labels (which is expected to be str-instances in YAML/JSON format) into
+    OCM-Labels.
+    '''
+    for label in labels:
         if os.path.exists(label):
             label = _parse_yaml_or_json(label)
         else:
@@ -86,12 +79,23 @@ def create(parsed):
             exit(1)
 
         for label in label_entries:
-            labels.append(
-                ocm.Label(
-                    name=label['name'],
-                    value=label['value'],
-                ),
+            yield ocm.Label(
+                name=label['name'],
+                value=label['value'],
             )
+
+
+def create(parsed):
+    now_ts = datetime.datetime.now(datetime.timezone.utc).isoformat(
+        timespec='seconds',
+    ).removesuffix('+00:00') + 'Z'
+
+    if parsed.ocm_repo:
+        ocm_repos = [
+            ocm.OciOcmRepository(baseUrl=parsed.ocm_repo),
+        ]
+    else:
+        ocm_repos = []
 
     component_descriptor = ocm.ComponentDescriptor(
         meta=ocm.Metadata(),
@@ -103,7 +107,7 @@ def create(parsed):
             componentReferences=[],
             sources=[],
             resources=[],
-            labels=labels,
+            labels=list(_iter_parsed_labels(labels=parsed.labels)),
             creationTime=now_ts,
         ),
         signatures=[],
