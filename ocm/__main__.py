@@ -131,9 +131,30 @@ def append(parsed):
     else:
         obj = json.load(sys.stdin)
 
+    if not (labels := parsed.labels):
+        labels = []
+    else:
+        labels = [dataclasses.asdict(l) for l in _iter_parsed_labels(labels=labels)]
+
+    def inject_labels(artefact: dict, labels):
+        if not 'labels' in artefact:
+            artefact['labels'] = []
+
+        artefact['labels'] = labels
+
     if isinstance(obj, list):
+        for o in obj:
+            inject_labels(
+                artefact=o,
+                labels=labels,
+            )
+
         attr.extend(obj)
     else:
+        inject_labels(
+            artefact=obj,
+            labels=labels,
+        )
         attr.append(obj)
 
     with open(parsed.file, 'w') as f:
@@ -230,6 +251,13 @@ def main():
     )
     add_parser.add_argument('type', choices=('r', 'resource', 's', 'source'))
     add_parser.add_argument('--file', '-f', required=True)
+    add_parser.add_argument(
+        '--label',
+        dest='labels',
+        action='append',
+        default=[],
+        help='labels to set for passed artefact (for convenience)',
+    )
     add_parser.set_defaults(callable=append)
 
     upload_parser = maincmd_parsers.add_parser(
