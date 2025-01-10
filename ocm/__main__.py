@@ -77,11 +77,21 @@ def create(parsed):
         else:
             label = _yaml_or_json_load(label)
 
-        label = ocm.Label(
-            name=label['name'],
-            value=label['value'],
-        )
-        labels.append(label)
+        if isinstance(label, list):
+            label_entries = label
+        elif isinstance(label, dict):
+            label_entries = (label,)
+        else:
+            print(f'Error: --label must be either an array, or an object. got: {label=}')
+            exit(1)
+
+        for label in label_entries:
+            labels.append(
+                ocm.Label(
+                    name=label['name'],
+                    value=label['value'],
+                ),
+            )
 
     component_descriptor = ocm.ComponentDescriptor(
         meta=ocm.Metadata(),
