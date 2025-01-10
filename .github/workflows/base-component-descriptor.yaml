@@ -1,0 +1,161 @@
+name: Generate Base Component-Descriptor
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      component-name:
+        required: false
+        type: string
+        description: |
+          Sets the Component-Name. If not passed, defaults to repository-URL
+      ocm-repo:
+        required: true
+        type: string
+        description: |
+          the OCM-Repository the Component-Descriptor is intended to be published to
+      commit-digest:
+        required: false
+        type: string
+        description: |
+          the commit-digest to use for declaring main source. If not passed, will default to
+          current HEAD. Useful in conjunction with `capture-commit` / `import-commit`, if
+          release-commit is created upfront.
+      provider:
+        required: false
+        type: string
+        default: SAP SE
+      labels:
+        required: false
+        type: string
+        description: |
+          Labels to set for the component in YAML-form (caveat: need to quote). May either be a
+          single object, or an array.
+          Example:
+            # single label
+            name: cloud.gardener.cnudie/responsibles
+            value:
+              - type: githubTeam
+                teamname: gardener/maintainers
+                github_hostname: github.com
+
+            # list of labels
+            - name: label1
+              value: value1
+            - name: label2
+              value: value2
+      src-labels:
+        required: false
+        type: string
+        description: |
+          Labels to be set for main-source. Same syntax as for `labels`
+      artefact-name:
+        default: base-component-descriptor
+        type: string
+        description: |
+          Base-Component-Descriptor is exposed both via output (component-descriptor) and as
+          artefact. If needed, target-artefact-name can be configured through this input.
+    outputs:
+      component-descriptor:
+        description: |
+          The generated Base OCM-Component-Descriptor (in YAML format)
+        value: ${{ jobs.base-component-descriptor.outputs.component-descriptor }}
+
+
+jobs:
+  base-component-descriptor:
+    runs-on: ubuntu-latest
+    outputs:
+      component-descriptor: ${{ steps.generate.outputs.component-descriptor }}
+      artefact-name: ${{ steps.generate.outputs.artefact-name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: install gardener-gha-libs
+        uses: ./.github/actions/install-gardener-gha-libs
+      - name: Generate Base-Component-Descriptor
+        id: generate
+        run: |
+          set -eu
+          host="$(echo ${{ github.server_url }} | cut -d / -f3)"
+          if  ${{ inputs.component-name || false }}; then
+            component_name="${{inputs.component-name}}"
+          else
+            component_name="${host}/${{ github.repository }}"
+          fi
+
+          version="${{ inputs.version }}"
+          ocm_repo="${{ inputs.ocm-repo }}"
+          provider="${{ inputs.provider }}"
+          if [ -n "${{ inputs.labels }}" ]; then
+            labels="${{ inputs.labels }}"
+          else
+            labels="[]"
+          fi
+
+          echo "Initial Component-Descriptor:"
+          python3 -m ocm create \
+            --name "${component_name}" \
+            --version "${version}" \
+            --ocm-repo "${ocm_repo}" \
+            --provider "${provider}" \
+            --label "${labels}" \
+          > component-descriptor.yaml
+          cat component-descriptor.yaml
+
+          echo "Adding main source:"
+          set -x
+          if [ -n "${{ inputs.commit-digest }}" ]; then
+            commit="${{ inputs.commit-digest }}"
+          else
+            commit="${{ github.sha }}"
+          fi
+
+          if [ -n "${{ inputs.src-labels }}" ]; then
+            src_labels="${{ inputs.src-labels }}"
+          else
+            src_labels='[]'
+          fi
+
+          classification_label="$(cat << EOF
+          name: cloud.gardener/cicd/source
+          value:
+            repository-classification: main
+          EOF
+          )"
+
+          cat << EOF | python3 -m ocm append source \
+            --label "${src_labels}" \
+            --label "${classification_label}" \
+            --file component-descriptor.yaml
+          name: main-source
+          version: ${version}
+          type: git
+          access:
+            type: github
+            repoUrl: ${host}/${{ github.repository }}
+            commit: ${commit}
+            ref: ${{ github.ref }}
+          EOF
+
+          echo "Component-Descriptor:"
+          cat component-descriptor.yaml
+
+          # XXX: TODO: honour .ci/component_descriptor-callback
+
+          echo 'component-descriptor<<EOF' >> ${GITHUB_OUTPUT}
+          cat component-descriptor.yaml >> ${GITHUB_OUTPUT}
+          echo EOF >> ${GITHUB_OUTPUT}
+
+          cat << EOF > ${GITHUB_STEP_SUMMARY}
+          ## Base OCM-Component-Descriptor
+          \`\`\`
+          $(cat component-descriptor.yaml)
+          \`\`\`
+          EOF
+
+      - name: Upload Base-Component-Descriptor
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artefact-name }}
+          path: component-descriptor.yaml

@@ -213,6 +213,33 @@ jobs:
         name: distribution-packages
         path: dist/
 
+  base-component-descriptor:
+    name: Generate Base-OCM-Component-Descriptor
+    needs:
+      - version
+      - params
+    uses: ./.github/workflows/base-component-descriptor.yaml
+    with:
+      version: ${{ needs.version.outputs.effective_version }}
+      ocm-repo: ${{ needs.params.outputs.ocm_repository }}
+      commit-digest: ${{ needs.version.outputs.release-commit-digest }}
+      labels: |
+        name: cloud.gardener.cnudie/responsibles
+        value:
+          - type: githubTeam
+            teamname: gardener/ci-maintainers
+            github_hostname: github.com
+      src-labels: |
+        - name: gardener.cloud/purposes
+          value:
+            - lint
+            - sast
+            - pybandit
+        - name: gardener.cloud/comment
+          value: |
+            we use bandit (linter) for SAST scans
+            see: https://bandit.readthedocs.io/en/latest/
+
   component_descriptor:
     name: Generate + Publish OCM-Component-Descriptor
     runs-on: ubuntu-latest
@@ -222,6 +249,7 @@ jobs:
       contents: write
       id-token: write
     needs:
+      - base-component-descriptor
       - version
       - params
       - package
@@ -264,51 +292,15 @@ jobs:
             requests \
             www-authenticate \
           &>/dev/null
-          python -c "import oci"
           version=${{ needs.version.outputs.effective_version }}
           ocm_repo=${{ needs.params.outputs.ocm_repository }}
-          echo "generating component-descriptor"
-          python3 -m ocm create \
-            --name github.com/${{ github.repository }} \
-            --version ${version} \
-            --ocm-repo ${ocm_repo} \
-            --provider sap-se \
-            --label '{
-                "name": "cloud.gardener.cnudie/responsibles",
-                "value": [
-                  {
-                    "type": "githubTeam",
-                    "teamname": "gardener/ci-maintainers",
-                    "github_hostname": "github.com"
-                  }
-                ]
-            }' \
+          echo "importing base-component-descriptor"
+          echo "${{ needs.base-component-descriptor.outputs.component-descriptor }}" \
             > component-descriptor.yaml
 
-          if ${{ inputs.release || false }}; then
-            commit_digest=${{ needs.version.outputs.release-commit-digest }}
-          else
-            commit_digest=${{ github.sha }}
-          fi
-
-          echo "adding main source"
-          echo "\
-          name: main-source
-          version: ${version}
-          type: git
-          labels:
-            - name: cloud.gardener/cicd/source
-              value:
-                repository-classification: main
-          access:
-            type: github
-            repoUrl: github.com/${{ github.repository }}
-            version: ${version}
-            commit: ${commit_digest}
-            ref: ${{ github.ref }}
-          " \
-          | python3 -m ocm append source \
-            --file component-descriptor.yaml
+          echo "base-component-descriptor:"
+          cat component-descriptor.yaml
+          echo "------------------------------------"
 
           echo "adding resources"
           ocm_resources=${{ needs.package.outputs.ocm_resources }}
