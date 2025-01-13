@@ -72,7 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: install gardener-gha-libs
-        uses: ./.github/actions/install-gardener-gha-libs
+        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: Generate Base-Component-Descriptor
         id: generate
         run: |
