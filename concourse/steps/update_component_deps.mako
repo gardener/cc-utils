@@ -106,7 +106,7 @@ git_helper.rebase(
     commit_ish=REPO_BRANCH,
 )
 
-upgrade_pull_requests = tuple(
+upgrade_pull_requests = list(
     pull_request_util.enumerate_upgrade_pull_requests(
         state='all',
     ),
