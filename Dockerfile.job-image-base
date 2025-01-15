@@ -1,0 +1,63 @@
+FROM alpine:3 AS builder
+
+COPY gardener-cicd-libs.apk-packages .
+COPY requirements.txt .
+
+RUN apk add --no-cache \
+  curl \
+&& cat gardener-cicd-libs.apk-packages | xargs apk add --no-cache \
+&& mkdir -p $HOME/.config/pip \
+&& echo -e "[global]\nbreak-system-packages = true" >> $HOME/.config/pip/pip.conf \
+&& pip3 install --upgrade --no-cache-dir \
+   pip \
+&& pip3 install --root /pkgs --upgrade --no-cache-dir \
+   $(grep -v '#' requirements.txt | grep -v 'gardener' | tr '\n' ' ')
+
+FROM alpine:3
+
+
+ARG DOCKER_CHANNEL=stable
+ARG DOCKER_VERSION=27.4.1
+ARG PATH=$PATH:/opt/docker
+ARG TARGETARCH
+
+ARG DOCKER_BUILDX_VERSION=v0.19.3
+
+COPY apk-packages.blacklist .
+COPY --from=builder /pkgs/usr /usr
+
+RUN if [ -z "${TARGETARCH}" ]; then TARGETARCH="amd64"; fi \
+&&  if [ "${TARGETARCH}" == "arm64" ]; then DOCKER_ARCH="aarch64"; \
+      elif [ "${TARGETARCH}" == "amd64" ]; then DOCKER_ARCH="x86_64"; fi \
+&& apk add --no-cache \
+  py3-pip \
+  curl \
+&& curl -L https://github.com/gardener/cc-utils/raw/master/gardener-cicd-libs.apk-packages \
+    | grep -v -f apk-packages.blacklist \
+    | xargs apk add --no-cache \
+&& mkdir -p $HOME/.config/pip \
+&& echo -e "[global]\nbreak-system-packages = true" >> $HOME/.config/pip/pip.conf \
+&& pip3 install --upgrade --no-cache-dir \
+   pip \
+&& echo "before docker" \
+&& curl -Lf \
+ "https://download.docker.com/linux/static/${DOCKER_CHANNEL}/${DOCKER_ARCH}/docker-${DOCKER_VERSION}.tgz" \
+ | tar zx -C /opt \
+&& mkdir -p /usr/lib/docker/cli-plugins \
+&& echo "before docker-buildx" \
+&& curl -Lo /usr/lib/docker/cli-plugins/docker-buildx \
+ https://github.com/docker/buildx/releases/download/${DOCKER_BUILDX_VERSION}/buildx-${DOCKER_BUILDX_VERSION}.linux-${TARGETARCH} \
+&& chmod +x /usr/lib/docker/cli-plugins/docker-buildx \
+&& echo "before first aia" \
+&&  curl http://aia.pki.co.sap.com/aia/SAP%20Global%20Root%20CA.crt -o \
+  /usr/local/share/ca-certificates/SAP_Global_Root_CA.crt \
+&& echo "before second aia" \
+&& curl http://aia.pki.co.sap.com/aia/SAPNetCA_G2.crt -o \
+    /usr/local/share/ca-certificates/SAPNetCA_G2.crt \
+&& curl -Lo /usr/local/share/ca-certificates/SAPNetCA_G2_2.crt \
+    http://aia.pki.co.sap.com/aia/SAPNetCA_G2_2.crt \
+&& update-ca-certificates \
+&& dos2unix /etc/ssl/certs/ca-certificates.crt \
+&& ln -sf /etc/ssl/certs/ca-certificates.crt "$(python3 -m certifi)" \
+&&  mkdir -p ~/.ssh \
+&& ssh-keyscan -H github.wdf.sap.corp github.com >> ~/.ssh/known_hosts
