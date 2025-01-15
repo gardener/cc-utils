@@ -1,0 +1,45 @@
+name: update draft-release
+description: |
+  Creates/Updates GitHub-Release-draft for upcoming release.
+
+inputs:
+  component-descriptor:
+    description: |
+      effective OCM component-descriptor. It is sufficient to pass a `base component-descriptor`,
+      as output by `base-component-descriptor` workflow. Its version must be set to next planned
+      version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
+    required: true
+  github-token:
+    description: |
+      the github-auth-token to use for authenticating against GitHub.
+      Use `secrets.GITHUB_TOKEN`. If not passed-on via input, env-var GITHUB_TOKEN will be
+      honoured
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: Update draft-release
+      shell: sh
+      run: |
+        set -eu
+        echo "${{ inputs.component-descriptor }}" > component-descriptor.yaml
+
+        # XXX rm again after next release of cc-utils/gardener-gha-libs (containing cachetools as
+        # dependency)
+        pip install cachetools
+
+        echo 'Component-Descriptor:'
+        cat component-descriptor.yaml
+
+        auth_token="${{ inputs.github-token }}"
+
+        if [ -z "${auth_token:-}" ]; then
+          auth_token="${GITHUB_TOKEN}"
+        fi
+
+        echo 'Fetching release-notes and updating / creating draft-release'
+        "${GITHUB_ACTION_PATH}/update_draft_release.py" \
+          --component-descriptor component-descriptor.yaml \
+          --github-auth-token "${auth_token}"
