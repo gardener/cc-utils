@@ -34,7 +34,6 @@ def requirements():
         'aliyun-python-sdk-ram',
         'brypt',
         'boto3',
-        'cachetools',
         'cryptography',
         'dockerfile-parse',
         'docutils',
