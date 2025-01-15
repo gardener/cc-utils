@@ -342,12 +342,14 @@ component.resources.append(
     labels=${asset.ocm_labels},
   ),
 )
-blobfh.seek(0)
-github_assets.append({
-  'fh': blobfh,
-  'name': '${github_asset_name(asset)}',
-  'mimetype': blob_mimetype,
-})
+%  if asset.upload_as_github_asset:
+  blobfh.seek(0)
+  github_assets.append({
+    'fh': blobfh,
+    'name': '${github_asset_name(asset)}',
+    'mimetype': blob_mimetype,
+  })
+%  endif
 
 % else:
   <% raise ValueError(asset) %>

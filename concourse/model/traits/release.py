@@ -116,6 +116,7 @@ class Asset:
     - step_name: pipelinestep-name of data-source
     - comment: unused
     - type: asset-type - overwritten by subclasses
+    - upload_as_github_asset: whether the asset should _also_ be published as github release asset
     - github_asset_name: name to use for github asset (must be unique per release)
 
     Purpose-labels will be added as OCM-Label `gardener.cloud/purposes`.
@@ -139,6 +140,7 @@ class Asset:
     artefact_extra_id: dict[str, str] = dataclasses.field(default_factory=dict)
     purposes: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
+    upload_as_github_asset: bool = True
     github_asset_name: str | None = None
 
     def __post_init__(self):
