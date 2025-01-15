@@ -57,18 +57,16 @@ processed_version = version.process_version(
 
 repo_dir = ci.util.existing_dir('${repo.resource_name()}')
 
-have_cd = os.path.exists(component_descriptor_path := '${component_descriptor_path}')
-
-if have_cd:
-    component = ocm.ComponentDescriptor.from_dict(
-            component_descriptor_dict=ci.util.parse_yaml_file(
-                component_descriptor_path,
-            ),
-            validation_mode=ocm.ValidationMode.WARN,
-    ).component
-else:
-   print('did not find component-descriptor')
+if not os.path.exists(component_descriptor_path := '${component_descriptor_path}'):
+   logger.error(f'did not find component-descriptor at {component_descriptor_path}')
    exit(1)
+
+component = ocm.ComponentDescriptor.from_dict(
+        component_descriptor_dict=ci.util.parse_yaml_file(
+            component_descriptor_path,
+        ),
+        validation_mode=ocm.ValidationMode.WARN,
+).component
 
 github_cfg = ccc.github.github_cfg_for_repo_url(
   ci.util.urljoin(
