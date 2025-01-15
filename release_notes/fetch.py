@@ -242,7 +242,7 @@ def fetch_draft_release_notes(
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
-):
+) -> set[rnm.ReleaseNote]:
     known_versions: list[str] = list(version_lookup(component.identity()))
 
     previous_version = version.greatest_version_before(
