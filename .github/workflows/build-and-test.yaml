@@ -240,6 +240,22 @@ jobs:
             we use bandit (linter) for SAST scans
             see: https://bandit.readthedocs.io/en/latest/
 
+  update-draft-release:
+    name: Update / Create Draft-Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs:
+      - base-component-descriptor
+    if: ${{ ! inputs.release && github.ref_name == 'master' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: update-draft-release
+        uses: ./.github/actions/draft-release
+        with:
+          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
   component_descriptor:
     name: Generate + Publish OCM-Component-Descriptor
     runs-on: ubuntu-latest
