@@ -1,17 +1,12 @@
 import collections
+import collections.abc
 import dataclasses
-import datetime
 import enum
 import functools
-import typing
-
-import github3.repos
 
 import cfg_mgmt.model as cmm
 import cnudie.iter
-import delivery.client
 import ocm
-import github.compliance.milestone as gcmi
 import unixutil.model
 
 
@@ -86,52 +81,12 @@ Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode | cmm.CfgElementStatu
 @dataclasses.dataclass(kw_only=True)
 class ScanResult:
     scanned_element: Target
-    discovery_date: datetime.date = datetime.date.today()
 
     state: ScanState = ScanState.SUCCEEDED
 
     @property
     def scan_succeeded(self) -> bool:
         return self.state in [ScanState.SUCCEEDED, ScanState.SKIPPED]
-
-    @property
-    def severity(self) -> Severity:
-        # has to be defined by enclosing class
-        pass
-
-    def calculate_latest_processing_date(
-        self,
-        max_processing_days: MaxProcessingTimesDays=None,
-        delivery_svc_client: delivery.client.DeliveryServiceClient=None,
-        repository: github3.repos.Repository=None,
-    ) -> datetime.date | None:
-        # explicitly check for `None` in case severity is `0`
-        if self.severity is None:
-            return None
-
-        if not max_processing_days:
-            max_processing_days = MaxProcessingTimesDays()
-        max_days = max_processing_days.for_severity(severity=self.severity)
-        date = self.discovery_date + datetime.timedelta(days=max_days)
-
-        if delivery_svc_client and repository:
-            try:
-                target_sprints = gcmi.target_sprints(
-                    delivery_svc_client=delivery_svc_client,
-                    latest_processing_date=date,
-                    sprints_count=2,
-                )
-                target_milestone, _ = gcmi.find_or_create_sprint_milestone(
-                    repo=repository,
-                    sprints=target_sprints,
-                )
-                if target_milestone:
-                    date = target_milestone.due_on.date()
-            except Exception:
-                import traceback
-                traceback.print_exc()
-
-        return date
 
 
 @dataclasses.dataclass
@@ -145,14 +100,14 @@ class CfgScanResult(ScanResult):
     evaluation_result: cmm.CfgStatusEvaluationResult
 
 
-FindingsCallback = typing.Callable[[ScanResult], bool]
+FindingsCallback = collections.abc.Callable[[ScanResult], bool]
 '''
 callback type accepting a ScanResult; expected to return True iff argument has a "finding" and False
 otherwise.
 
 Definition of "finding" is type-specific
 '''
-ClassificationCallback = typing.Callable[[ScanResult], Severity]
+ClassificationCallback = collections.abc.Callable[[ScanResult], Severity]
 
 
 def is_ocm_artefact_node(
@@ -178,8 +133,7 @@ class ScanResultGroup:
     inconsistent state.
     '''
     name: str
-    # {component.name}:{component.version}:{artifact.name}:{artifact.version} |
-    # {component.name}:{component.version}:{artifact.name}:{artifact.version}:{processing_date} |
+    # {component.name}:{artifact.name} |
     # {cfg_element_storage}/{cfg_element_type}/{cfg_element_name}
     results: tuple[ScanResult]
     issue_type: str
@@ -274,9 +228,6 @@ class ScanResultGroupCollection:
     issue_type: str
     classification_callback: ClassificationCallback
     findings_callback: FindingsCallback
-    max_processing_days: MaxProcessingTimesDays = None
-    delivery_svc_client: delivery.client.DeliveryServiceClient = None
-    repository: github3.repos.Repository = None
 
     @property
     def result_groups(self) -> tuple[ScanResultGroup]:
@@ -285,22 +236,11 @@ class ScanResultGroupCollection:
 
         grouped_results = collections.defaultdict(list)
 
-        import github.compliance.issue as gci
         for result in self.results:
             if is_ocm_artefact_node(result.scanned_element):
                 c = result.scanned_element.component
                 a = artifact_from_node(result.scanned_element)
-                if (self.issue_type == gci._label_bdba or
-                    self.issue_type == gci._label_licenses):
-                    group_name = f'{c.name}:{c.version}:{a.name}:{a.version}'
-                    if (latest_processing_date := result.calculate_latest_processing_date(
-                        max_processing_days=self.max_processing_days,
-                        delivery_svc_client=self.delivery_svc_client,
-                        repository=self.repository,
-                    )):
-                        group_name += f':{latest_processing_date}'
-                else:
-                    group_name = f'{c.name}:{a.name}'
+                group_name = f'{c.name}:{a.name}'
             elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
                 group_name = result.scanned_element.name
             else:

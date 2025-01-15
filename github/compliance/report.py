@@ -618,22 +618,14 @@ def create_or_update_github_issues(
 
             if delivery_svc_client:
                 try:
-                    if not scan_result.severity:
-                        if not max_processing_days:
-                            max_processing_days = gcm.MaxProcessingTimesDays()
-                        max_days = max_processing_days.for_severity(
-                            criticality_classification,
-                        )
-                        latest_processing_date = datetime.date.today() + datetime.timedelta(
-                            days=max_days,
-                        )
-                    else:
-                        # do not pass delivery service client or repository here to avoid
-                        # determining milestone here because then we would lose track of
-                        # failed milestone assignments
-                        latest_processing_date = scan_result.calculate_latest_processing_date(
-                            max_processing_days=max_processing_days,
-                        )
+                    if not max_processing_days:
+                        max_processing_days = gcm.MaxProcessingTimesDays()
+                    max_days = max_processing_days.for_severity(
+                        criticality_classification,
+                    )
+                    latest_processing_date = datetime.date.today() + datetime.timedelta(
+                        days=max_days,
+                    )
 
                     target_sprints = gcmi.target_sprints(
                         delivery_svc_client=delivery_svc_client,
