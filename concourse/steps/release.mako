@@ -343,12 +343,12 @@ component.resources.append(
   ),
 )
 %  if asset.upload_as_github_asset:
-  blobfh.seek(0)
-  github_assets.append({
-    'fh': blobfh,
-    'name': '${github_asset_name(asset)}',
-    'mimetype': blob_mimetype,
-  })
+blobfh.seek(0)
+github_assets.append({
+  'fh': blobfh,
+  'name': '${github_asset_name(asset)}',
+  'mimetype': blob_mimetype,
+})
 %  endif
 
 % else:
