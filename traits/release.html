@@ -281,7 +281,13 @@ avoid a conflict)</p></td>
 <td><p>str | None</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p>github_asset_name</p></td>
+<tr class="row-even"><td><p>upload_as_github_asset</p></td>
+<td><p>no</p></td>
+<td><p>True</p></td>
+<td><p>bool</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>github_asset_name</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str | None</p></td>
@@ -348,31 +354,37 @@ avoid a conflict)</p></td>
 <td><p>str | None</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p>github_asset_name</p></td>
+<tr class="row-even"><td><p>upload_as_github_asset</p></td>
+<td><p>no</p></td>
+<td><p>True</p></td>
+<td><p>bool</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p>github_asset_name</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str | None</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p>step_output_dir</p></td>
+<tr class="row-even"><td><p>step_output_dir</p></td>
 <td><p>yes</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p>path</p></td>
+<tr class="row-odd"><td><p>path</p></td>
 <td><p>yes</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p>prefix</p></td>
+<tr class="row-even"><td><p>prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str | None</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p>mode</p></td>
+<tr class="row-odd"><td><p>mode</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">tar</span></code></p></td>
 <td><p>FileAssetMode</p></td>
@@ -468,8 +480,8 @@ avoid a conflict)</p></td>
 <h2>Dependencies<a class="headerlink" href="#trait-release" title="Link to this heading"></a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 <li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
+<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
 </section>
 <p>This trait add release job semantics to the declaring build job.</p>
