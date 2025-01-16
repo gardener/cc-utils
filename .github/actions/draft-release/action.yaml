@@ -20,6 +20,12 @@ runs:
   steps:
     - name: install-gardener-gha-libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: install-git
+      run: |
+        set -eu
+        if which git &>/dev/null; then exit 0; fi
+        apt-get install -y git
+      shell: sh
     - name: Update draft-release
       shell: sh
       run: |
@@ -32,6 +38,9 @@ runs:
 
         echo 'Component-Descriptor:'
         cat component-descriptor.yaml
+
+        git config --global user.name 'Gardener GitHubActions-Bot'
+        git config --global user.email 'no-reply@github.com'
 
         auth_token="${{ inputs.github-token }}"
 
