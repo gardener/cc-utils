@@ -1,0 +1,81 @@
+name: release-notes
+description: |
+  retrieves release-notes following conventions from Gardener-Project
+
+inputs:
+  component-descriptor:
+    description: |
+      effective OCM component-descriptor. It is sufficient to pass a `base component-descriptor`,
+      as output by `base-component-descriptor` workflow. Its version must be set to next planned
+      version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
+    required: true
+  github-token:
+    description: |
+      the github-auth-token to use for authenticating against GitHub.
+      Use `secrets.GITHUB_TOKEN`. If not passed-on via input, env-var GITHUB_TOKEN will be
+      honoured
+  draft:
+    type: boolean
+    default: false
+    description: |
+      if true, will collect draft-release-notes
+outputs:
+  release-notes:
+    description: |
+      the collected release-notes in markdown format
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: install-git
+      run: |
+        set -eu
+        if which git &>/dev/null; then exit 0; fi
+        apt-get install -y git
+      shell: sh
+    - name: Update draft-release
+      shell: bash
+      run: |
+        set -eu
+        echo "${{ inputs.component-descriptor }}" > component-descriptor.yaml
+
+        # XXX rm again after next release of cc-utils/gardener-gha-libs (containing cachetools as
+        # dependency)
+        pip install cachetools
+
+        echo 'Component-Descriptor:'
+        cat component-descriptor.yaml
+
+        # todo: remove after next release of gardener-gha-libs (2025-01-16)
+        git config --global user.name 'Gardener GitHubActions-Bot'
+        git config --global user.email 'no-reply@github.com'
+
+        auth_token="${{ inputs.github-token }}"
+
+        if [ -z "${auth_token:-}" ]; then
+          auth_token="${GITHUB_TOKEN}"
+        fi
+
+        if [ "${{ inputs.draft }}" == 'true' ]; then
+          draft_arg='--draft'
+        fi
+
+        echo 'Fetching release-notes'
+        "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
+          --component-descriptor component-descriptor.yaml \
+          --github-auth-token "${auth_token}" \
+         ${draft_arg:-} \
+          --outfile release-notes.md
+
+        echo 'Release-notes written to `release-notes.md`'
+
+        echo 'release-notes<<EOF' >> ${GITHUB_OUTPUT}
+        cat release-notes.md >> ${GITHUB_OUTPUT}
+        echo EOF >> ${GITHUB_OUTPUT}
+
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        ## Release-Notes
+        $(cat release-notes.md)
+        EOF
