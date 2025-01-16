@@ -152,8 +152,6 @@ def main():
         github_helper.create_draft_release(
             name=draft_release_name,
             body=release_notes_md,
-            component_version=component.version,
-            component_name=component.name,
         )
     else:
         if not draft_release.body == release_notes_md:

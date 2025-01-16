@@ -405,7 +405,6 @@ def github_release(
             draft_release=release,
             release_tag=release_tag,
             release_version=release_version,
-            component_name=component_name,
         )
     else:
         release = github_helper.create_release(
@@ -414,7 +413,6 @@ def github_release(
             draft=False,
             prerelease=False,
             name=release_version,
-            component_name=component_name,
         )
 
 
