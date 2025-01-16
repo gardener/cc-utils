@@ -187,7 +187,7 @@ def rotate_cfg_element(
             else:
                 logger.info(
                     'No secondary oAuth token provided for credential with username '
-                    f"'{credential.username}' of github-config '{cfg_to_rotate.name()}' "
+                    f"'{credential.username()}' of github-config '{cfg_to_rotate.name()}' "
                     '- will not attempt rotation.'
                 )
         except requests.exceptions.HTTPError as http_error:
