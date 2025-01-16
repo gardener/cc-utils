@@ -247,13 +247,21 @@ jobs:
       contents: write
     needs:
       - base-component-descriptor
+      - version
     if: ${{ ! inputs.release && github.ref_name == 'master' }}
     steps:
       - uses: actions/checkout@v4
+      - name: draft-release-notes
+        uses: ./.github/actions/release-notes
+        with:
+          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          draft: true
       - name: update-draft-release
         uses: ./.github/actions/draft-release
         with:
-          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+          release-notes: ${{ steps.draft-release-notes.outputs.release-notes }}
+          version: ${{ needs.version.outputs.effective_version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   component_descriptor:

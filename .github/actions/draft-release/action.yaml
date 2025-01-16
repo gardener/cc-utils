@@ -3,11 +3,13 @@ description: |
   Creates/Updates GitHub-Release-draft for upcoming release.
 
 inputs:
-  component-descriptor:
+  release-notes:
     description: |
-      effective OCM component-descriptor. It is sufficient to pass a `base component-descriptor`,
-      as output by `base-component-descriptor` workflow. Its version must be set to next planned
-      version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
+      the release-notes to publish to draft-release
+    required: true
+  version:
+    description: |
+      the version to use as prefix for the release-name
     required: true
   github-token:
     description: |
@@ -20,27 +22,11 @@ runs:
   steps:
     - name: install-gardener-gha-libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - name: install-git
-      run: |
-        set -eu
-        if which git &>/dev/null; then exit 0; fi
-        apt-get install -y git
-      shell: sh
     - name: Update draft-release
       shell: sh
       run: |
         set -eu
-        echo "${{ inputs.component-descriptor }}" > component-descriptor.yaml
-
-        # XXX rm again after next release of cc-utils/gardener-gha-libs (containing cachetools as
-        # dependency)
-        pip install cachetools
-
-        echo 'Component-Descriptor:'
-        cat component-descriptor.yaml
-
-        git config --global user.name 'Gardener GitHubActions-Bot'
-        git config --global user.email 'no-reply@github.com'
+        echo "${{ inputs.release-notes }}" > release-notes.md
 
         auth_token="${{ inputs.github-token }}"
 
@@ -48,7 +34,8 @@ runs:
           auth_token="${GITHUB_TOKEN}"
         fi
 
-        echo 'Fetching release-notes and updating / creating draft-release'
+        echo 'Updating / creating draft-release'
         "${GITHUB_ACTION_PATH}/update_draft_release.py" \
-          --component-descriptor component-descriptor.yaml \
+          --release-notes release-notes.md \
+          --version "${{ inputs.version }}" \
           --github-auth-token "${auth_token}"

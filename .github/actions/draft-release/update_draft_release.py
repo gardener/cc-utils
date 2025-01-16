@@ -4,36 +4,27 @@ import argparse
 import os
 import pprint
 import sys
-import tempfile
 
 import github3
-import yaml
 
 try:
-    import ocm
+    import github.util
 except ImportError:
     # make local development more comfortable
     repo_root = os.path.join(os.path.dirname(__file__), '../../..')
     sys.path.insert(1, repo_root)
     print(f'note: added {repo_root} to python-path (sys.path)')
-    import ocm
+    import github.util
 
-import cnudie.retrieve
-import github.util
-import gitutil
-import oci.auth
-import oci.client
-import release_notes.fetch
-import release_notes.markdown
-import version
+import version as version_mod
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--component-descriptor',
-        default='component-descriptor.yaml',
-        help='path to component-descriptor file to read from',
+        '--release-notes',
+        default='release-notes.md',
+        help='path to file to read release-notes from',
     )
     parser.add_argument(
         '--repo-url',
@@ -49,9 +40,8 @@ def main():
         help='the github-auth-token to use (defaults to GitHub-Action\'s default',
     )
     parser.add_argument(
-        '--repo-worktree',
-        default=os.getcwd(),
-        help='path to root-component\'s worktree root',
+        '--version',
+        help='the draft-release\'s version (will be finalised if not a final version)',
     )
     parser.add_argument(
         '--draftname-suffix',
@@ -61,33 +51,10 @@ def main():
     parsed = parser.parse_args()
     pprint.pprint(parsed)
 
-    with open(parsed.component_descriptor) as f:
-        component_descriptor = ocm.ComponentDescriptor.from_dict(
-            yaml.safe_load(f)
-        )
-
-    component = component_descriptor.component
-    # effective component-descriptor will be default contain either "-next"-version, or
-    # effective version (which is suffixed w/ commit-digests). hardcode conversion to
-    # next final version (might make this configurable later, if needed)
-    component.version = version.process_version(
-        component.version,
+    # effective or raw version will often be non-final; finalise for convenience
+    version = version_mod.process_version(
+        parsed.version,
         operation='finalise',
-    )
-
-    oci_client = oci.client.Client(
-        credentials_lookup=oci.auth.docker_credentials_lookup(),
-    )
-    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(component.current_ocm_repo)
-
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=ocm_repository_lookup,
-        oci_client=oci_client,
-        cache_dir=tempfile.TemporaryDirectory().name,
-    )
-    ocm_version_lookup = cnudie.retrieve.version_lookup(
-        ocm_repository_lookup=ocm_repository_lookup,
-        oci_client=oci_client,
     )
 
     if (repo_url := parsed.repo_url):
@@ -109,44 +76,11 @@ def main():
         name=repo,
         github_api=github_api,
     )
-    git_helper = gitutil.GitHelper(
-        repo=parsed.repo_worktree,
-        git_cfg=gitutil.GitCfg(
-            repo_url=f'https://{host}/{org}/{repo}',
-            user_name='Gardener-CICD-GitHubAction-Bot',
-            user_email='no-reply@github.com',
-            auth=None,
-            auth_type=gitutil.AuthType.PRESET,
-        ),
-    )
 
-    def github_api_lookup(repo_url):
-        # XXX: needs to be extended for cross-github-support
-        return github_api
+    with open(parsed.release_notes) as f:
+        release_notes_md = f.read()
 
-    try:
-        release_notes_md = 'no release notes available'
-        release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
-            current_version=component.version,
-            component=component,
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=ocm_version_lookup,
-            git_helper=git_helper,
-            github_api_lookup=github_api_lookup,
-        )
-    except ValueError as ve:
-        print(f'Warning: error whilst fetch draft-release-notes: {ve=}')
-        import traceback
-        traceback.print_exc()
-        release_note_blocks = None
-
-    if release_note_blocks:
-        release_notes_md = '\n'.join(
-            str(rn) for rn
-            in release_notes.markdown.render(release_note_blocks)
-        )
-
-    draft_release_name = f'{component.version}{parsed.draftname_suffix}'
+    draft_release_name = f'{version}{parsed.draftname_suffix}'
     if not (draft_release := github_helper.draft_release_with_name(draft_release_name)):
         print(f'Creating {draft_release_name=}')
         github_helper.create_draft_release(
