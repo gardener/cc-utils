@@ -13,4 +13,7 @@ runs:
       shell: sh
       run: |
         python3 --version
-        pip install gardener-gha-libs
+        if ! pip install gardener-gha-libs &> /tmp/pip-install.log; then
+          echo 'An error occured while tring to run pip install:'
+          cat /tmp/pip-install.log
+        fi
