@@ -149,7 +149,18 @@ class GitHelper:
                 git_cfg=self.git_cfg,
             )
         elif auth_type is AuthType.PRESET:
-            yield os.environ, self.repo.remotes[0]
+            cmd_env = os.environ.copy()
+            if (user := self.git_cfg.user_name):
+                if not 'GIT_AUTHOR_NAME' in cmd_env:
+                    cmd_env['GIT_AUTHOR_NAME'] = user
+                if not 'GIT_COMMITTER_NAME' in cmd_env:
+                    cmd_env['GIT_COMMITTER_NAME'] = user
+            if (email := self.git_cfg.user_email):
+                if not 'GIT_AUTHOR_EMAIL' in cmd_env:
+                    cmd_env['GIT_AUTHOR_EMAIL'] = email
+                if not 'GIT_COMMITTER_EMAIL' in cmd_env:
+                    cmd_env['GIT_COMMITTER_EMAIL'] = email
+            yield cmd_env, self.repo.remotes[0]
             return
         else:
             raise NotImplementedError
