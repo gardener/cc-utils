@@ -462,8 +462,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         draft: bool=False,
         prerelease: bool=False,
         name: str=None,
-        component_name: str=None,
-        component_version: str=None,
     ):
         if len(body) < MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
             return self.repository.create_release(
@@ -511,16 +509,12 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         self,
         name: str,
         body: str,
-        component_name: str=None,
-        component_version: str=None,
     ):
         return self.create_release(
             tag_name='',
             name=name,
             body=body,
             draft=True,
-            component_name=component_name,
-            component_version=component_version,
         )
 
     def promote_draft_release(
@@ -528,7 +522,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         draft_release,
         release_tag,
         release_version,
-        component_name: str=None,
     ):
         draft_release.edit(
             tag_name=release_tag,
@@ -554,7 +547,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
     def update_release_notes(
         self,
         tag_name: str,
-        component_name: str,
         body: str,
     ) -> bool:
         ci.util.not_empty(tag_name)

@@ -541,7 +541,6 @@ try:
   github_helper.update_release_notes(
     tag_name=version_str,
     body=release_notes_md,
-    component_name=component.name,
   )
   git_helper.push('refs/notes/commits', 'refs/notes/commits')
 except:

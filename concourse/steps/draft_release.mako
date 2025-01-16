@@ -130,8 +130,6 @@ if not draft_release:
     github_helper.create_draft_release(
         name=draft_name,
         body=release_notes_md,
-        component_version=processed_version,
-        component_name=component.name,
     )
 else:
     if not draft_release.body == release_notes_md:
