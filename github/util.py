@@ -9,6 +9,7 @@ import enum
 import io
 import logging
 import re
+import textwrap
 
 import typing
 from typing import Iterable, Tuple
@@ -28,6 +29,14 @@ import ci.util
 import version
 
 logger = logging.getLogger(__name__)
+
+'''
+The maximum allowed length of github-release-bodies.
+This limit is not documented explicitly in the GitHub docs. To see it, the error returned by
+GitHub when creating a release with more then the allowed number of characters must be
+looked at.
+'''
+MAXIMUM_GITHUB_RELEASE_BODY_LENGTH = 25000
 
 
 class RepoPermission(enum.Enum):
@@ -433,23 +442,15 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             tagger=author
         )
 
-    MAXIMUM_GITHUB_RELEASE_BODY_LENGTH = 25000
-    '''The limit is not documented explicitly in the GitHub docs. To see it, the error returned by
-    GitHub when creating a release with more then the allowed number of characters must be
-    looked at.'''
-
     def _replacement_release_notes(
         self,
         asset_url: str,
-        component_name: str,
-        component_version: str,
     ):
-        return (
-            f'The release-notes for component **{component_name}** in version '
-            f'**{component_version}** exceeded the maximum length of '
-            f'{self.MAXIMUM_GITHUB_RELEASE_BODY_LENGTH} characters allowed by GitHub for '
-            'release-bodies.\n'
-            f'They have been uploaded as release-asset and can be found at {asset_url}.'
+        return textwrap.dedent(
+            f'''\
+            Release-Notes were too long (limit: {MAXIMUM_GITHUB_RELEASE_BODY_LENGTH} octets).
+            They were instaed uploaded as [release-asset]({asset_url}).
+            '''
         )
 
     RELEASE_NOTES_ASSET_NAME = 'release_notes.md'
@@ -464,7 +465,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         component_name: str=None,
         component_version: str=None,
     ):
-        if len(body) < self.MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
+        if len(body) < MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
             return self.repository.create_release(
                 tag_name=tag_name,
                 body=body,
@@ -494,9 +495,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             release.edit(
                 body=self._replacement_release_notes(
                     asset_url=release_notes_asset.browser_download_url,
-                    component_name=component_name,
-                    # Fallback: use tag_name if version not explicitly given
-                    component_version=component_version or tag_name,
                 )
             )
             return release
@@ -550,8 +548,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             draft_release.edit(
                 body=self._replacement_release_notes(
                     asset_url=release_notes_asset.browser_download_url,
-                    component_name=component_name,
-                    component_version=release_version,
                 )
             )
 
@@ -570,7 +566,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 f"in repository {self.repository}"
             )
 
-        if len(body) < self.MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
+        if len(body) < MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
             release.edit(body=body)
         else:
             release_notes_asset = next(
@@ -590,8 +586,7 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             release.edit(
                 body=self._replacement_release_notes(
                     asset_url=release_notes_asset.browser_download_url,
-                    component_version=tag_name,
-                    component_name=component_name)
+                ),
             )
 
         return release
