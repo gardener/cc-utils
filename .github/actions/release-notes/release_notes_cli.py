@@ -3,6 +3,7 @@
 # note: do not name this file `release_notes.py` to avoid conflicts w/ package of this name
 
 import argparse
+import logging
 import os
 import pprint
 import sys
@@ -27,6 +28,11 @@ import oci.client
 import release_notes.fetch
 import release_notes.markdown
 import version
+
+logging.basicConfig(
+    level=logging.INFO,
+    stream=sys.stderr,
+)
 
 
 def main():
