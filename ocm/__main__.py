@@ -138,9 +138,9 @@ def append(parsed):
 
     def inject_labels(artefact: dict, labels):
         if not 'labels' in artefact:
-            artefact['labels'] = []
-
-        artefact['labels'] = labels
+            artefact['labels'] = labels
+        else:
+            artefact['labels'].extend(labels)
 
     if isinstance(obj, list):
         for o in obj:
