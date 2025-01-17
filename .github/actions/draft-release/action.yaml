@@ -28,6 +28,10 @@ runs:
         set -eu
         echo "${{ inputs.release-notes }}" > release-notes.md
 
+        echo "release-notes:"
+        cat release-notes.md
+        echo "-------------------"
+
         auth_token="${{ inputs.github-token }}"
 
         if [ -z "${auth_token:-}" ]; then

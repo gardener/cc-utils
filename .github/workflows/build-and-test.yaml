@@ -265,7 +265,6 @@ jobs:
       - name: update-draft-release
         uses: ./.github/actions/draft-release
         with:
-          release-notes: ${{ steps.draft-release-notes.outputs.release-notes }}
           version: ${{ needs.version.outputs.effective_version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
