@@ -221,6 +221,7 @@ jobs:
     uses: ./.github/workflows/base-component-descriptor.yaml
     with:
       version: ${{ needs.version.outputs.effective_version }}
+      component-name: 'github.com/gardener/cc-utils'
       ocm-repo: ${{ needs.params.outputs.ocm_repository }}
       commit-digest: ${{ needs.version.outputs.release-commit-digest }}
       labels: |
