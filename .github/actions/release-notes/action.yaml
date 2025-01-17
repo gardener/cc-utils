@@ -77,12 +77,14 @@ runs:
         fi
 
         echo 'Fetching release-notes'
-        "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
-          --component-descriptor component-descriptor.yaml \
-          --github-auth-token "${auth_token}" \
-          ${draft_arg:-} \
-          ${ocm_repositories_arg:-} \
-          --outfile release-notes.md
+        #"${GITHUB_ACTION_PATH}/release_notes_cli.py" \
+        #  --component-descriptor component-descriptor.yaml \
+        #  --github-auth-token "${auth_token}" \
+        #  ${draft_arg:-} \
+        #  ${ocm_repositories_arg:-} \
+        #  --outfile release-notes.md
+        #
+        echo "no release-notes available" > release-notes.md
 
         echo 'Release-notes written to `release-notes.md`'
 
