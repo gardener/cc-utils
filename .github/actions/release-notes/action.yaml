@@ -9,6 +9,16 @@ inputs:
       as output by `base-component-descriptor` workflow. Its version must be set to next planned
       version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
     required: true
+  ocm-repositories:
+    description: |
+      a (commaseparated) list of ocm-repository-URLs where component-versions are to be looked up
+      (order is honoured).
+
+      Caveat: this action will only honour final versions. Hence, at least one ocm-repository
+      containing final/release versions must be passed.
+
+      If no ocm-repository is passed, this action will fallback to the current ocm-repository from
+      passed ocm-component-descriptor (see caveat above).
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub.
@@ -62,11 +72,16 @@ runs:
           draft_arg='--draft'
         fi
 
+        if [ -n "${{ inputs.ocm-repositories }}" ]; then
+          ocm_repositories_arg="--ocm-repositories ${{ inputs.ocm-repositories }}"
+        fi
+
         echo 'Fetching release-notes'
         "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
           --component-descriptor component-descriptor.yaml \
           --github-auth-token "${auth_token}" \
-         ${draft_arg:-} \
+          ${draft_arg:-} \
+          ${ocm_repositories_arg:-} \
           --outfile release-notes.md
 
         echo 'Release-notes written to `release-notes.md`'
