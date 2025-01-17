@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
+      ocm_releases_repository: ${{ steps.params.outputs.ocm_releases_repository }}
       oci_repository: ${{ steps.params.outputs.oci_repository }}
       oci_platforms: ${{ steps.params.outputs.oci_platforms }}
     steps:
@@ -49,6 +50,7 @@ jobs:
             oci_repository=${snapshots_repo}
           fi
 
+          echo "ocm_releases_repository=${releases_repo}" >> "${GITHUB_OUTPUT}"
           echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_repository=${oci_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
@@ -248,6 +250,7 @@ jobs:
       contents: write
     needs:
       - base-component-descriptor
+      - params
       - version
     if: ${{ ! inputs.release && github.ref_name == 'master' }}
     steps:
@@ -256,6 +259,7 @@ jobs:
         uses: ./.github/actions/release-notes
         with:
           component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+          ocm-repositories: ${{ needs.params.ocm_releases_repository }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
       - name: update-draft-release
