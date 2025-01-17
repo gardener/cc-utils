@@ -259,7 +259,7 @@ jobs:
         uses: ./.github/actions/release-notes
         with:
           component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
-          ocm-repositories: ${{ needs.params.ocm_releases_repository }}
+          ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
       - name: update-draft-release
