@@ -127,13 +127,6 @@ def main():
             token=parsed.github_auth_token,
         )
 
-    repository = github_api.repository(org, repo)
-    if repository.fork and not parsed.repo_url:
-        # if repo-url was not passed-in explicitly, rewrite org to "parent" (from where fork was
-        # created). In the majority of cases, this will likely be helpful (so release-notes will
-        # be calculated from fork's source)
-        org = repository.parent.full_name.split('/')[-1]
-
     git_helper = gitutil.GitHelper(
         repo=parsed.repo_worktree,
         git_cfg=gitutil.GitCfg(
