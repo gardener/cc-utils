@@ -45,7 +45,7 @@ runs:
         if which git &>/dev/null; then exit 0; fi
         apt-get install -y git
       shell: sh
-    - name: Update draft-release
+    - name: Retrieve Release-Notes
       shell: bash
       run: |
         set -eu
