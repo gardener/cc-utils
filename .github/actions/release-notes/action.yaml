@@ -45,6 +45,11 @@ runs:
         if which git &>/dev/null; then exit 0; fi
         apt-get install -y git
       shell: sh
+    - name: checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # release-notes code needs full commit-history and tags
+        fetch-tags: 0
     - name: Retrieve Release-Notes
       shell: bash
       run: |
