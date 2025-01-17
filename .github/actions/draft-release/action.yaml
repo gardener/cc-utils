@@ -26,7 +26,10 @@ runs:
       shell: sh
       run: |
         set -eu
-        echo "${{ inputs.release-notes }}" > release-notes.md
+        if [ -n "${{ inputs.release-notes }}" ]; then
+          echo "${{ inputs.release-notes }}" > release-notes.md
+        fi
+        # if not passed via input, expect file `release-notes.md`
 
         echo "release-notes:"
         cat release-notes.md
