@@ -43,6 +43,12 @@ def main():
         help='path to component-descriptor file to read from',
     )
     parser.add_argument(
+        '--ocm-repositories',
+        action='extend',
+        type=lambda repo: repo.split(','),
+        default=[],
+    )
+    parser.add_argument(
         '--repo-url',
         required=False,
         default=None,
@@ -92,7 +98,10 @@ def main():
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(),
     )
-    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(component.current_ocm_repo)
+    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
+        *parsed.ocm_repositories,
+        component.current_ocm_repo,
+    )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
