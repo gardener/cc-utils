@@ -155,7 +155,14 @@ def main():
                 github_api_lookup=github_api_lookup,
             )
         else:
-            raise RuntimeError('not implemented')
+            release_note_blocks = release_notes.fetch.fetch_release_notes(
+                component=component,
+                component_descriptor_lookup=component_descriptor_lookup,
+                version_lookup=ocm_version_lookup,
+                git_helper=git_helper,
+                github_api_lookup=github_api_lookup,
+                version_whither=component.version,
+            )
     except ValueError as ve:
         print(f'Warning: error whilst fetch draft-release-notes: {ve=}')
         import traceback
