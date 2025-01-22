@@ -48,13 +48,13 @@ class DiffArguments:
     right_name: str
     left_version: str
     right_version: str
+    outfile_prefix: str
     ocm_repo_urls: list[str]
     exclude_component_names: list[str] = None
     exclude_component_resource_names: list[ComponentResourceNames] = None
     resource_types: list[str] = None
     name_template: str = None
     name_template_expr: str = None
-    outfile_prefix: str = 'resource-diff'
 
 
 def diff(
@@ -91,6 +91,8 @@ def diff(
         params['name_template_expr'] = name_template
     if resource_types:
         params['resource_types'] = resource_types
+    if outfile_prefix:
+        params['outfile_prefix'] = outfile_prefix
 
     try:
         parsed = dacite.from_dict(
@@ -227,12 +229,14 @@ def diff(
         else:
             name = resource.name
 
-        return {
+        name2 = f"{component.name.split('/')[-1]}_{component.version}"
+
+        return [{
             'name': name,
             'version': resource.version,
             'src_url': src_url,
             **pull_cmd,
-        }
+        }, {'component': name2}]
 
     print(f'{left_cd.component.name}:{left_cd.component.version} -> {right_cd.component.version}')
     print(20 * '=')
@@ -242,7 +246,7 @@ def diff(
     print()
 
     print(yaml.safe_dump((new_resources := [
-        resource_as_dict(c,r,i) for c,r,i in new_resource_version_ids
+        resource_as_dict(c,r,i)[0] for c,r,i in new_resource_version_ids
     ])))
 
     print()
@@ -253,11 +257,16 @@ def diff(
     print()
 
     print(yaml.safe_dump((removed_resources := [
-        resource_as_dict(c,r,i) for c,r,i in removed_resource_version_ids
+        resource_as_dict(c,r,i)[0] for c,r,i in removed_resource_version_ids
+    ])))
+    
+    print(yaml.safe_dump((component_list := [
+        resource_as_dict(c,r,i)[1] for c,r,i in new_resource_version_ids
     ])))
 
     outfile_new = f'{parsed.outfile_prefix}-added.yaml'
     outfile_removed = f'{parsed.outfile_prefix}-removed.yaml'
+    outfile_components = 'names.yaml'
 
     print()
 
@@ -273,5 +282,12 @@ def diff(
         print(f'writing removed resource-versions to {outfile_removed=}')
         yaml.safe_dump(
             removed_resources,
+            f,
+        )
+
+    with open(outfile_components, 'w') as f:
+        print(f'writing component_list to {outfile_components=}')
+        yaml.safe_dump(
+            component_list,
             f,
         )
