@@ -48,10 +48,10 @@ print()
 oci_client = ccc.oci.oci_client()
 
 % for helmchart_cfg in helmchart_cfgs:
-logger.info('Chart: {helmchart_cfg.name}')
+helmchart_name = '${helmchart_cfg.name}'
+logger.info(f'Chart: {helmchart_name}')
 print()
 helmchart_dir = os.path.join('${main_repo_relpath}', '${helmchart_cfg.dir}')
-helmchart_name = '${helmchart_cfg.name}'
 print(f'{helmchart_dir=} {helmchart_name=}')
 if not os.path.isdir(helmchart_dir):
   logger.error(f'not an existing directory: {helmchart_dir=}')
