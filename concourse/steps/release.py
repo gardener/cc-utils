@@ -149,7 +149,7 @@ def collect_release_notes(
         version_lookup=version_lookup,
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
-        current_version=release_version,
+        version_whither=release_version,
     )
 
     release_notes_markdown = '\n'.join(
