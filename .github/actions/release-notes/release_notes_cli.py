@@ -33,6 +33,7 @@ logging.basicConfig(
     level=logging.INFO,
     stream=sys.stderr,
 )
+logging.getLogger('github3').setLevel(logging.DEBUG) # silence verbose logger from github3
 
 
 def main():
