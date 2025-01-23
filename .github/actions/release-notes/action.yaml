@@ -81,6 +81,10 @@ runs:
           ocm_repositories_arg="--ocm-repositories ${{ inputs.ocm-repositories }}"
         fi
 
+        # XXX rm again after next release of gardener-gha-libs (need to use unreleased changes
+        # in release_notes package which contains an unreleased incompatible api-change)
+        export PYTHONPATH="$PWD:${PYTHONPATH:-}"
+
         echo 'Fetching release-notes'
         "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
           --component-descriptor component-descriptor.yaml \
