@@ -7,10 +7,6 @@ on:
         required: false
         type: boolean
         default: false
-      release-to-pypi:
-        required: false
-        type: boolean
-        default: false
     outputs:
       release-commit-objects:
         description: release-commit-objects (for importing release-commit)

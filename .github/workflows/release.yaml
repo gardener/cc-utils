@@ -16,7 +16,6 @@ jobs:
     uses: ./.github/workflows/build-and-test.yaml
     with:
       release: true
-      release-to-pypi: ${{ inputs.release-to-pypi }}
 
 
   publish-release-and-bump-commit:
