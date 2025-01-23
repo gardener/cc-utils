@@ -235,17 +235,17 @@ def _determine_blocks_to_include(
 
 
 def fetch_draft_release_notes(
-    current_version: str,
     component: ocm.Component,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
+    version_whither: str,
 ) -> set[rnm.ReleaseNote]:
     known_versions: list[str] = list(version_lookup(component.identity()))
 
     previous_version = version.greatest_version_before(
-        reference_version=current_version,
+        reference_version=version_whither,
         versions=known_versions,
         ignore_prerelease_versions=True,
     ) or SpecialVersion.INITIAL
