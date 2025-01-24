@@ -7,10 +7,6 @@ on:
         required: false
         type: boolean
         default: false
-      release-to-pypi:
-        required: false
-        type: boolean
-        default: false
     outputs:
       release-commit-objects:
         description: release-commit-objects (for importing release-commit)
@@ -243,30 +239,15 @@ jobs:
             we use bandit (linter) for SAST scans
             see: https://bandit.readthedocs.io/en/latest/
 
-  update-draft-release:
-    name: Update / Create Draft-Release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  update-draft-relase:
+    if: ${{ ! inputs.release && github.ref_name == github.event.repository.default_branch }}
     needs:
-      - base-component-descriptor
       - params
-      - version
-    if: ${{ ! inputs.release && github.ref_name == 'master' }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: draft-release-notes
-        uses: ./.github/actions/release-notes
-        with:
-          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
-          ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          draft: true
-      - name: update-draft-release
-        uses: ./.github/actions/draft-release
-        with:
-          version: ${{ needs.version.outputs.effective_version }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - base-component-descriptor
+    uses: ./.github/workflows/draft-release.yaml
+    with:
+      component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+      ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
 
   component_descriptor:
     name: Generate + Publish OCM-Component-Descriptor

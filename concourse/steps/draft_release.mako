@@ -3,7 +3,6 @@
   filter="indent_func(indent),trim">
 <%
 from makoutil import indent_func
-import ci.util
 import os
 import concourse.steps.component_descriptor_util as cdu
 import ocm
@@ -107,18 +106,18 @@ git_helper = gitutil.GitHelper(
 )
 try:
     release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
-        current_version=version_str,
         component=component,
         component_descriptor_lookup=component_descriptor_lookup,
         version_lookup=ocm_version_lookup,
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
+        version_whither=version_str,
     )
     release_notes_md = '\n'.join(
         str(i) for i in release_notes.markdown.render(release_note_blocks)
     ) or 'no release notes available'
 except ValueError as e:
-    ci.util.warning(f'Error when computing release notes: {e}')
+    logger.warning(f'Error when computing release notes: {e}')
     # this will happen if a component-descriptor for a more recent version than what is available in the
     # repository is already published - usually by steps that erroneously publish them before they should.
     release_notes_md = 'no release notes available'
@@ -126,22 +125,22 @@ except ValueError as e:
 draft_name = f'{processed_version}-draft'
 draft_release = github_helper.draft_release_with_name(draft_name)
 if not draft_release:
-    ci.util.info(f"Creating draft-release '{draft_name}'")
+    logger.info(f"Creating draft-release '{draft_name}'")
     github_helper.create_draft_release(
         name=draft_name,
         body=release_notes_md,
     )
 else:
     if not draft_release.body == release_notes_md:
-        ci.util.info(f"Updating draft-release '{draft_name}'")
+        logger.info(f"Updating draft-release '{draft_name}'")
         draft_release.edit(body=release_notes_md)
     else:
-        ci.util.info('draft release notes are already up to date')
+        logger.info('draft release notes are already up to date')
 
-ci.util.info("Checking for outdated draft releases to delete")
+logger.info("Checking for outdated draft releases to delete")
 for release, deletion_successful in github_helper.delete_outdated_draft_releases():
     if deletion_successful:
-        ci.util.info(f"Deleted release '{release.name}'")
+        logger.info(f"Deleted release '{release.name}'")
     else:
-        ci.util.warning(f"Could not delete release '{release.name}'")
+        logger.warning(f"Could not delete release '{release.name}'")
 </%def>

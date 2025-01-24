@@ -702,8 +702,8 @@ def create_release_notes(
                 version_lookup=version_lookup,
                 git_helper=git_helper,
                 github_api_lookup=ccc.github.github_api_lookup,
-                current_version=to_version,
-                previous_version=from_version,
+                version_whither=to_version,
+                version_whence=from_version,
             )
             if release_note_blocks:
                 n = '\n'

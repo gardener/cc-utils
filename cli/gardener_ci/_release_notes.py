@@ -17,8 +17,8 @@ def print_release_notes(
     repo_path: str,
     component_name: str,
     ocm_repo_base_url: str = None,
-    current_version: str = None,
-    previous_version: str = None,
+    version_whither: str = None,
+    version_whence: str = None,
 ):
     oci_client = ccc.oci.oci_client()
     if not ocm_repo_base_url:
@@ -44,7 +44,7 @@ def print_release_notes(
 
     # We need a component. Fetch one with given information (assuming the relevant information
     # is still correct if no version was given).
-    if not current_version and not previous_version:
+    if not version_whither and not version_whence:
         greatest_version = version.greatest_version(
             versions=version_lookup(component_name),
         )
@@ -54,18 +54,18 @@ def print_release_notes(
                 version=greatest_version,
             ),
         )
-    elif current_version:
+    elif version_whither:
         component_descriptor = ocm_lookup(
             ocm.ComponentIdentity(
                 name=component_name,
-                version=current_version,
+                version=version_whither,
             ),
         )
-    elif previous_version:
+    elif version_whence:
         component_descriptor = ocm_lookup(
             ocm.ComponentIdentity(
                 name=component_name,
-                version=previous_version,
+                version=version_whence,
             ),
         )
 
@@ -93,8 +93,8 @@ def print_release_notes(
         version_lookup=version_lookup,
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
-        current_version=current_version,
-        previous_version=previous_version,
+        version_whither=version_whither,
+        version_whence=version_whence,
     )
     rendered_notes = release_notes.markdown.render(blocks)
     print('\n'.join(str(n) for n in rendered_notes))

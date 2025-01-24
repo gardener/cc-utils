@@ -1,5 +1,4 @@
 import logging
-import typing
 import datetime
 import enum
 
@@ -236,17 +235,17 @@ def _determine_blocks_to_include(
 
 
 def fetch_draft_release_notes(
-    current_version: str,
     component: ocm.Component,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
+    version_whither: str,
 ) -> set[rnm.ReleaseNote]:
     known_versions: list[str] = list(version_lookup(component.identity()))
 
     previous_version = version.greatest_version_before(
-        reference_version=current_version,
+        reference_version=version_whither,
         versions=known_versions,
         ignore_prerelease_versions=True,
     ) or SpecialVersion.INITIAL
@@ -304,66 +303,66 @@ def fetch_release_notes(
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
-    current_version: typing.Optional[str] = None,
-    previous_version: typing.Optional[str] = None,
+    version_whither: str | None = None,
+    version_whence: str | None = None,
 ) -> set[rnm.ReleaseNote]:
     ''' Fetches and returns a set of release notes for the specified component.
 
     :param component: the OCM Component for which to retrieve release-notes.
-    :param current_version: Optional argument to retrieve release notes up to a specific version.
+    :param version_wither: Optional argument to retrieve release notes up to specified version.
         If not given, the current `HEAD` is used.
-    :param previous_version: Optional argument to retrieve release notes starting at a specific \
-        version. If not given, the closest version to `current_version` is used.
+    :param version_whence: Optional argument to retrieve release notes starting at a specific \
+        version. If not given, the closest version to `version_whither` is used.
 
     :return: A set of ReleaseNote objects for the specified component.
     '''
 
     # sanity-checks / validation
-    if current_version and previous_version:
-        current_semver = version.parse_to_semver(current_version)
-        previous_semver = version.parse_to_semver(previous_version)
+    if version_whither and version_whence:
+        current_semver = version.parse_to_semver(version_whither)
+        previous_semver = version.parse_to_semver(version_whence)
 
         if current_semver < previous_semver:
             logger.info(
-                f'{current_version=} is a predecessor to {previous_version=}. '
+                f'{version_whither=} is a predecessor to {version_whence=}. '
                 'will not generate release-notes.'
             )
             return set()
 
         if current_semver == previous_semver:
             logger.info(
-                f'Current and previous versions given are equal ({current_version!s}), '
+                f'Current and previous versions given are equal ({version_whither!s}), '
                 'will not generate release-notes.'
             )
             return set()
 
     known_versions: list[str] = list(version_lookup(component.identity()))
 
-    if not previous_version:
-        if current_version:
+    if not version_whence:
+        if version_whither:
             # if we have a current version, try to find closest match and use it
-            previous_version = version.greatest_version_before(
-                reference_version=current_version,
+            version_whence = version.greatest_version_before(
+                reference_version=version_whither,
                 versions=known_versions,
                 ignore_prerelease_versions=True,
             )
         else:
             # if no current version was given, use latest version
-            previous_version = version.greatest_version(
+            version_whence = version.greatest_version(
                 versions=known_versions,
                 ignore_prerelease_versions=True,
             )
-        if not previous_version:
+        if not version_whence:
             # if still no previous version could be determined this is probably the first release.
-            previous_version = SpecialVersion.INITIAL
+            version_whence = SpecialVersion.INITIAL
 
     logger.info(
-        f'current: {current_version=}, previous: {previous_version=},'
+        f'current: {version_whither=}, {version_whence=},'
     )
 
     release_note_version_range = (
-        previous_version or SpecialVersion.INITIAL,
-        current_version or SpecialVersion.HEAD
+        version_whence or SpecialVersion.INITIAL,
+        version_whither or SpecialVersion.HEAD
     )
 
     source = ocm.util.main_source(component)
