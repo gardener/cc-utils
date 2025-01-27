@@ -17,11 +17,14 @@ inputs:
       a base64-encoded tarfile containing the objects to import into git-repository. The expected
       format matches the one output from `capture-commit` action.
   commit-digest:
-    required: true
+    required: false
     description: |
       the digest of the commit to import. This action will run a `git rebase` against this commit
       after importing the needed objects, thus leaving the repository (and worktree) in a state
       identical to what it would be if the commit would have been created locally.
+
+      if commit-digest is not passed, will fall back to hardcoded ref `refs/capture-commit`, which
+      is written by `capture-commit` action.
 
 runs:
   using: composite
@@ -35,5 +38,11 @@ runs:
       run: |
         echo 'importing objects into .git-dir'
         echo "${{ inputs.commit-objects }}" | base64 -d | tar x
-        git rebase ${{ inputs.commit-digest }}
+        if [ -n "${{ inputs.commit-digest }}" ]; then
+          commit_digest="${{ inputs.commit-digest }}"
+        else
+          commit_digest="$(git rev-parse refs/capture-commit)"
+        fi
+
+        git rebase "${commit_digest}"
       shell: bash
