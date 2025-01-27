@@ -16,6 +16,7 @@ except ImportError:
     print(f'note: added {repo_root} to python-path (sys.path)')
     import github.util
 
+import github.release
 import version as version_mod
 
 
@@ -76,16 +77,24 @@ def main():
         name=repo,
         github_api=github_api,
     )
+    repository = github_helper.repository
 
     with open(parsed.release_notes) as f:
         release_notes_md = f.read()
 
     draft_release_name = f'{version}{parsed.draftname_suffix}'
-    if not (draft_release := github_helper.draft_release_with_name(draft_release_name)):
+    release_notes_md, _ = github.release.body_or_replacement(
+        release_notes_md,
+    )
+    if not (draft_release := github.release.find_draft_release(
+        repository=repository,
+        name=draft_release_name,
+    )):
         print(f'Creating {draft_release_name=}')
-        github_helper.create_draft_release(
-            name=draft_release_name,
+        repository.create_release(
+            tag_name=draft_release_name,
             body=release_notes_md,
+            draft=True,
         )
     else:
         if not draft_release.body == release_notes_md:

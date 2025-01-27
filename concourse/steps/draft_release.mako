@@ -28,6 +28,7 @@ import ci.log
 import ci.util
 import cnudie.retrieve
 import cnudie.util
+import github.release
 import github.util
 import gitutil
 import ocm
@@ -122,18 +123,27 @@ except ValueError as e:
     # repository is already published - usually by steps that erroneously publish them before they should.
     release_notes_md = 'no release notes available'
 
+repository = github_helper.repository
 draft_name = f'{processed_version}-draft'
-draft_release = github_helper.draft_release_with_name(draft_name)
+draft_release = github.release.find_draft_release(
+    repository=repository,
+    name=draft_name,
+)
+body = github.body_or_replacement(
+    body=release_notes_md,
+)
 if not draft_release:
-    logger.info(f"Creating draft-release '{draft_name}'")
-    github_helper.create_draft_release(
-        name=draft_name,
-        body=release_notes_md,
+    logger.info(f"Creating {draft_name=}")
+    repository.create_release(
+        tag_name=draft_name,
+        body=body,
+        draft=True,
+        prerelease=False,
     )
 else:
-    if not draft_release.body == release_notes_md:
+    if not draft_release.body == body:
         logger.info(f"Updating draft-release '{draft_name}'")
-        draft_release.edit(body=release_notes_md)
+        draft_release.edit(body=body)
     else:
         logger.info('draft release notes are already up to date')
 

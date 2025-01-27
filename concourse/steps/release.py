@@ -22,6 +22,7 @@ import ccc.github
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
+import github.release
 import release_notes.fetch
 import release_notes.markdown
 import slackclient.util
@@ -400,7 +401,10 @@ def github_release(
     # github-api expects unqualified tagname
     release_tag = release_tag.removeprefix('refs/tags/')
 
-    if release := github_helper.draft_release_with_name(f'{release_version}-draft'):
+    if release := github.release.find_draft_release(
+        repository=github_helper.repository,
+        name=f'{release_version}-draft',
+    ):
         github_helper.promote_draft_release(
             draft_release=release,
             release_tag=release_tag,
