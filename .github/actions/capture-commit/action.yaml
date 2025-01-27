@@ -20,6 +20,13 @@ description: |
   Thus-exported commits can be imported, retaining the exact same commit-digest, provided the
   importing repository has the same head-commit, into which the commit passed to this action had.
 
+  For convenience, the commit-digest is written to hardcoded ref `refs/capture-commit` (and may
+  therefore be retrieve, e.g. using `git rev-parse capture-commit`), thus allowing it to be read
+  w/o the need to pass `commit-digest` from this step's outputs.
+
+  Caveat: if more than one commit is imported, importing steps relying on said ref will have to
+  guard against overwrites which will otherwise happen.
+
   Note: this action makes use of git-internals (mostly layout of object-db). It will only work if
   those are not violated (e.g. no git-gc or repack must be done prior to calling this action).
 
