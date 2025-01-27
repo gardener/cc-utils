@@ -64,21 +64,6 @@ def list_draft_releases(
         print(draft_release.name)
 
 
-def delete_releases(
-    github_cfg_name: str,
-    github_repository_owner: str,
-    github_repository_name: str,
-    release_name: [str],
-):
-    github_cfg = ctx().cfg_factory().github(github_cfg_name)
-    github_helper = GitHubRepositoryHelper(
-        owner=github_repository_owner,
-        name=github_repository_name,
-        github_api=ccc.github.github_api(github_cfg),
-    )
-    github_helper.delete_releases(release_names=release_name)
-
-
 def greatest_release_version(
     github_repository_url: str,
     anonymous: bool=False,
