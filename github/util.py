@@ -6,15 +6,12 @@
 import collections
 import datetime
 import enum
-import io
 import logging
 import re
 import textwrap
 
 import typing
 from typing import Iterable, Tuple
-
-import requests
 
 import github3
 import github3.issues
@@ -37,12 +34,6 @@ GitHub when creating a release with more then the allowed number of characters m
 looked at.
 '''
 MAXIMUM_GITHUB_RELEASE_BODY_LENGTH = 25000
-
-
-class RepoPermission(enum.Enum):
-    PULL = "pull"
-    PUSH = "push"
-    ADMIN = "admin"
 
 
 class RepositoryHelperBase:
@@ -342,106 +333,8 @@ class PullRequestUtil(RepositoryHelperBase):
                 pattern=pattern,
             )
 
-    def retrieve_pr_template_text(self):
-        '''Return the content for the PR template file looking in predefined directories.
-        If no template is found None is returned.
-        '''
-        pattern = re.compile(r"(pull_request_template)(\..{1,3})?$")
-        directories = ['.github', '.', 'docs']
-        for directory in directories:
-            try:
-                for filename, content in self.repository.directory_contents(directory):
-                    if pattern.match(filename):
-                        content.refresh()
-                        return content.decoded.decode('utf-8')
-            except github3.exceptions.NotFoundError:
-                pass  # directory does not exist
-
-        return None
-
 
 class GitHubRepositoryHelper(RepositoryHelperBase):
-    def create_or_update_file(
-        self,
-        file_path: str,
-        file_contents: str,
-        commit_message: str,
-        branch: str=None,
-    ) -> str:
-        if branch is None:
-            branch = self.default_branch
-
-        try:
-            contents = self.retrieve_file_contents(file_path=file_path, branch=branch)
-        except NotFoundError:
-            contents = None # file did not yet exist
-
-        if contents:
-            decoded_contents = contents.decoded.decode('utf-8')
-            if decoded_contents == file_contents:
-                # Nothing to do
-                return logger.info(
-                    'Repository file contents are identical to passed file contents.'
-                )
-            else:
-                response = contents.update(
-                    message=commit_message,
-                    content=file_contents.encode('utf-8'),
-                    branch=branch,
-                )
-        else:
-            response = self.repository.create_file(
-                path=file_path,
-                message=commit_message,
-                content=file_contents.encode('utf-8'),
-                branch=branch,
-            )
-        return response['commit'].sha
-
-    def retrieve_file_contents(self, file_path: str, branch: str=None):
-        if branch is None:
-            branch = self.default_branch
-
-        return self.repository.file_contents(
-            path=file_path,
-            ref=branch,
-        )
-
-    def retrieve_text_file_contents(
-        self,
-        file_path: str,
-        branch: str=None,
-        encoding: str='utf-8',
-    ):
-        if branch is None:
-            branch = self.default_branch
-
-        contents = self.retrieve_file_contents(file_path, branch)
-        return contents.decoded.decode(encoding)
-
-    def create_tag(
-        self,
-        tag_name: str,
-        tag_message: str,
-        repository_reference: str,
-        author_name: str,
-        author_email: str,
-        repository_reference_type: str='commit'
-    ):
-        author = {
-            'name': author_name,
-            'email': author_email,
-            'date': datetime.datetime.now(datetime.timezone.utc)
-                    .strftime(self.GITHUB_TIMESTAMP_UTC_FORMAT)
-        }
-        self.repository.create_tag(
-            tag=tag_name,
-            message=tag_message,
-            sha=repository_reference,
-            obj_type=repository_reference_type,
-            tagger=author
-        )
-
     def _replacement_release_notes(
         self,
         asset_url: str,
@@ -496,14 +389,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
                 )
             )
             return release
-
-    def delete_releases(
-        self,
-        release_names: typing.Iterable[str],
-    ):
-        for release in self.repository.releases():
-            if release.name in release_names:
-                release.delete()
 
     def create_draft_release(
         self,
@@ -608,52 +493,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             return True
         except NotFoundError:
             return False
-
-    def retrieve_asset_contents(self, release_tag: str, asset_label: str):
-        ci.util.not_none(release_tag)
-        ci.util.not_none(asset_label)
-
-        release = self.repository.release_from_tag(release_tag)
-        for asset in release.assets():
-            if asset.label == asset_label or asset.name == asset_label:
-                break
-        else:
-            response = requests.Response()
-            response.status_code = 404
-            response.json = lambda: {'message':'no asset with label {} found'.format(asset_label)}
-            raise NotFoundError(resp=response)
-
-        buffer = io.BytesIO()
-        asset.download(buffer)
-        return buffer.getvalue().decode()
-
-    def release_versions(self):
-        for tag_name in self._release_tags():
-            try:
-                version.parse_to_semver(tag_name)
-                yield tag_name
-                # XXX should rather return a "Version" object, containing both parsed and original
-            except ValueError:
-                pass # ignore
-
-    def _release_tags(self):
-        for release in self.repository.releases():
-            if release.draft or release.prerelease:
-                continue
-            if not (tag := release.tag_name):
-                continue
-
-            yield tag
-
-    def search_issues_in_repo(self, query: str):
-        query = f'repo:{self.owner}/{self.repository_name} {query}'
-        search_result = self.github.search_issues(query)
-        return search_result
-
-    def is_pr_created_by_org_member(self, pull_request_number):
-        pull_request = self.repository.pull_request(pull_request_number)
-        user_login = pull_request.user.login
-        return self.is_org_member(self.owner, user_login)
 
     def add_labels_to_pull_request(self, pull_request_number, *labels):
         pull_request = self.repository.pull_request(pull_request_number)
