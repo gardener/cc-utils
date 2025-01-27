@@ -42,5 +42,5 @@ object_paths=$(
 )
 
 # objects are already gzipped - there is no point in compressing them again
-tar cf "${archive}" -C $(dirname "${GIT_DIR}") ${object_paths} refs/capture-commit
+tar cf "${archive}" -b1 -C $(dirname "${GIT_DIR}") ${object_paths} refs/capture-commit
 echo "${commit_digest}" > ${commit_digest_out}
