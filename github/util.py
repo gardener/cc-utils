@@ -4,7 +4,6 @@
 
 
 import collections
-import datetime
 import enum
 import logging
 import re
@@ -21,8 +20,8 @@ from github3.orgs import Team
 from github3.pulls import PullRequest
 from github3.repos.release import Release
 
-import ocm
 import ci.util
+import ocm
 import version
 
 logger = logging.getLogger(__name__)
@@ -32,6 +31,7 @@ The maximum allowed length of github-release-bodies.
 This limit is not documented explicitly in the GitHub docs. To see it, the error returned by
 GitHub when creating a release with more then the allowed number of characters must be
 looked at.
+as (inofficial) alternative, see: https://github.com/dead-claudia/github-limits
 '''
 MAXIMUM_GITHUB_RELEASE_BODY_LENGTH = 25000
 
@@ -390,18 +390,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             )
             return release
 
-    def create_draft_release(
-        self,
-        name: str,
-        body: str,
-    ):
-        return self.create_release(
-            tag_name='',
-            name=name,
-            body=body,
-            draft=True,
-        )
-
     def promote_draft_release(
         self,
         draft_release,
@@ -467,21 +455,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             )
 
         return release
-
-    def draft_release_with_name(
-        self,
-        name: str
-    ) -> Release:
-        # if there are more than 1021 releases, github(.com) will return http-500 one requesting
-        # additional releases. As this limit is typically not reached, hardcode limit for now
-        # in _most_ cases, most recent releases are returned first, so this should hardly ever
-        # be an actual issue
-        max_releases = 1020
-        for release in self.repository.releases(number=max_releases):
-            if not release.draft:
-                continue
-            if release.name == name:
-                return release
 
     def tag_exists(
         self,
