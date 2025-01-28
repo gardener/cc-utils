@@ -494,7 +494,7 @@ except:
 release_notes_md = None
 %   endif
 
-release_tag = tags[0].removeprefix('refs/tags')
+release_tag = tags[0].removeprefix('refs/tags/')
 draft_tag = f'{version_str}-draft'
 
 if release_notes_md is not None:
