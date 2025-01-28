@@ -440,24 +440,6 @@ create_and_push_tags(
 )
 % endif
 
-% if release_trait.release_on_github():
-try:
-  clean_draft_releases(
-    github_helper=github_helper,
-  )
-except:
-  logger.warning('An Error occurred whilst trying to remove draft-releases')
-  traceback.print_exc()
-  # keep going
-
-github_release(
-  github_helper=github_helper,
-  release_tag=tags[0],
-  release_version=version_str,
-  component_name=component.name,
-)
-% endif
-
 logger.info('validating component-descriptor')
 nodes = cnudie.iter.iter(
   component=component,
@@ -481,6 +463,21 @@ except:
   pass
 
 % if release_trait.release_on_github():
+try:
+  clean_draft_releases(
+    github_helper=github_helper,
+  )
+except:
+  logger.warning('An Error occurred whilst trying to remove draft-releases')
+  traceback.print_exc()
+  # keep going
+
+github_release(
+  github_helper=github_helper,
+  release_tag=tags[0],
+  release_version=version_str,
+  component_name=component.name,
+)
 repo = github_helper.repository
 gh_release = repo.release_from_tag(tags[0].removeprefix('refs/tags/'))
 upload_component_descriptor_as_release_asset(
