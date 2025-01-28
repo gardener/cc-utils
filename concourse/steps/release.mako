@@ -505,7 +505,7 @@ else:
   truncated_release_notes = False
 
 
-gh_release := github.release.find_draft_release(
+gh_release = github.release.find_draft_release(
   repository=repo,
   name=draft_tag,
 )
