@@ -148,7 +148,7 @@ else:
         logger.info('draft release notes are already up to date')
 
 logger.info("Checking for outdated draft releases to delete")
-for release, deletion_successful in github_helper.delete_outdated_draft_releases():
+for release, deletion_successful in github.release.delete_outdated_draft_releases(repository):
     if deletion_successful:
         logger.info(f"Deleted release '{release.name}'")
     else:

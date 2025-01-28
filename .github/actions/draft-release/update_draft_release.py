@@ -8,15 +8,14 @@ import sys
 import github3
 
 try:
-    import github.util
+    import github.release
 except ImportError:
     # make local development more comfortable
     repo_root = os.path.join(os.path.dirname(__file__), '../../..')
     sys.path.insert(1, repo_root)
     print(f'note: added {repo_root} to python-path (sys.path)')
-    import github.util
+    import github.release
 
-import github.release
 import version as version_mod
 
 
@@ -72,12 +71,7 @@ def main():
             token=parsed.github_auth_token,
         )
 
-    github_helper = github.util.GitHubRepositoryHelper(
-        owner=org,
-        name=repo,
-        github_api=github_api,
-    )
-    repository = github_helper.repository
+    repository = github_api.repository(org, repo)
 
     with open(parsed.release_notes) as f:
         release_notes_md = f.read()
@@ -101,7 +95,7 @@ def main():
             print(f'Updating {draft_release_name=}')
             draft_release.edit(body=release_notes_md)
 
-    for release, deleted in github_helper.delete_outdated_draft_releases():
+    for release, deleted in github.release.delete_outdated_draft_releases(repository):
         if deleted:
             print('Deleted obsolete draft {release.name=}')
         else:
