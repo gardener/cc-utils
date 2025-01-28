@@ -129,7 +129,7 @@ draft_release = github.release.find_draft_release(
     repository=repository,
     name=draft_name,
 )
-body = github.release.body_or_replacement(
+body, _ = github.release.body_or_replacement(
     body=release_notes_md,
 )
 if not draft_release:
