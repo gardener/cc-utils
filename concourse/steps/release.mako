@@ -432,7 +432,6 @@ if have_tag_conflicts(
 ):
   exit(1)
 
-
 create_and_push_tags(
   git_helper=git_helper,
   tags=tags,
@@ -471,6 +470,35 @@ except:
   logger.warning('An Error occurred whilst trying to remove draft-releases')
   traceback.print_exc()
   # keep going
+
+%   if process_release_notes:
+try:
+  release_notes_md = collect_release_notes(
+    git_helper=git_helper,
+    release_version=version_str,
+    component=component,
+    component_descriptor_lookup=component_descriptor_lookup,
+    version_lookup=version_lookup,
+  )
+except:
+  logger.warning('an error occurred whilst trying to collect release-notes')
+  logger.warning('release will continue')
+  traceback.print_exc()
+  release_notes_md = None
+
+try:
+  github_helper.update_release_notes(
+    tag_name=version_str,
+    body=release_notes_md,
+  )
+  git_helper.push('refs/notes/commits', 'refs/notes/commits')
+except:
+  logger.warning('an error occurred whilst trying to update release-notes')
+  logger.warning('release will continue')
+  traceback.print_exc()
+%   else:
+release_notes_md = None
+%   endif
 
 github_release(
   github_helper=github_helper,
@@ -519,34 +547,6 @@ except git.GitCommandError:
   )
 % endif
 
-% if process_release_notes:
-try:
-  release_notes_md = collect_release_notes(
-    git_helper=git_helper,
-    release_version=version_str,
-    component=component,
-    component_descriptor_lookup=component_descriptor_lookup,
-    version_lookup=version_lookup,
-  )
-except:
-  logger.warning('an error occurred whilst trying to collect release-notes')
-  logger.warning('release will continue')
-  traceback.print_exc()
-  release_notes_md = None
-
-try:
-  github_helper.update_release_notes(
-    tag_name=version_str,
-    body=release_notes_md,
-  )
-  git_helper.push('refs/notes/commits', 'refs/notes/commits')
-except:
-  logger.warning('an error occurred whilst trying to update release-notes')
-  logger.warning('release will continue')
-  traceback.print_exc()
-% else:
-release_notes_md = None
-% endif
 
 % if version_operation != version.NOOP and bump_commit:
 create_and_push_bump_commit(
