@@ -22,7 +22,6 @@ import ccc.github
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
-import github.release
 import release_notes.fetch
 import release_notes.markdown
 import slackclient.util
@@ -390,34 +389,6 @@ def create_and_push_mergeback_commit(
         index=True,
         working_tree=True,
     ) # make sure next dev-cycle commit does not undo the merge-commit
-
-
-def github_release(
-    github_helper: GitHubRepositoryHelper,
-    release_tag: str,
-    release_version: str,
-    component_name: str,
-):
-    # github-api expects unqualified tagname
-    release_tag = release_tag.removeprefix('refs/tags/')
-
-    if release := github.release.find_draft_release(
-        repository=github_helper.repository,
-        name=f'{release_version}-draft',
-    ):
-        github_helper.promote_draft_release(
-            draft_release=release,
-            release_tag=release_tag,
-            release_version=release_version,
-        )
-    else:
-        release = github_helper.create_release(
-            tag_name=release_tag,
-            body='',
-            draft=False,
-            prerelease=False,
-            name=release_version,
-        )
 
 
 def upload_component_descriptor_as_release_asset(

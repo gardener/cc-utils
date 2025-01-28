@@ -125,6 +125,7 @@ import concourse.util
 import ocm
 import ocm.upload
 import ocm.util
+import github.release
 import github.util
 import gitutil
 
@@ -480,34 +481,55 @@ try:
     component_descriptor_lookup=component_descriptor_lookup,
     version_lookup=version_lookup,
   )
+  git_helper.push('refs/notes/commits', 'refs/notes/commits')
 except:
   logger.warning('an error occurred whilst trying to collect release-notes')
   logger.warning('release will continue')
   traceback.print_exc()
   release_notes_md = None
-
-try:
-  github_helper.update_release_notes(
-    tag_name=version_str,
-    body=release_notes_md,
-  )
-  git_helper.push('refs/notes/commits', 'refs/notes/commits')
-except:
-  logger.warning('an error occurred whilst trying to update release-notes')
-  logger.warning('release will continue')
-  traceback.print_exc()
 %   else:
 release_notes_md = None
 %   endif
 
-github_release(
-  github_helper=github_helper,
-  release_tag=tags[0],
-  release_version=version_str,
-  component_name=component.name,
-)
 repo = github_helper.repository
-gh_release = repo.release_from_tag(tags[0].removeprefix('refs/tags/'))
+release_tag = tags[0].removeprefix('refs/tags')
+draft_tag = f'{version_str}-draft'
+
+if release_notes_md is not None:
+  release_notes_md, truncated_release_notes  = github.release.body_or_replacement(
+    body=release_notes_md,
+  )
+else:
+  truncated_release_notes = False
+
+
+gh_release := github.release.find_draft_release(
+  repository=repo,
+  name=draft_tag,
+)
+if not gh_release:
+  gh_release = repo.create_release(
+    tag_name=release_tag,
+    body=release_notes_md or '',
+    draft=False,
+    prerelease=False,
+  )
+else:
+  gh_release.edit(
+    tag_name=release_tag,
+    body=release_notes_md or '',
+    draft=False,
+    prerelease=False,
+  )
+
+if truncated_release_notes:
+  gh_release.upload_asset(
+    content_type='application/markdown',
+    name='release-notes.md',
+    asset=release_notes_md.encode('utf-8'),
+    label='Release Notes',
+  )
+
 upload_component_descriptor_as_release_asset(
   github_release=gh_release,
   component=component,
