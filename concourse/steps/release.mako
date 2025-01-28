@@ -463,10 +463,13 @@ except:
   pass
 
 % if release_trait.release_on_github():
+repo = github_helper.repository
 try:
-  clean_draft_releases(
-    github_helper=github_helper,
-  )
+  for releases, succeeded in github.release.delete_outdated_draft_releases(repo):
+    if succeeded:
+      logger.info(f'deleted {release.name=}')
+    else:
+      logger.warn(f'failed to delete {release.name=}')
 except:
   logger.warning('An Error occurred whilst trying to remove draft-releases')
   traceback.print_exc()
@@ -491,7 +494,6 @@ except:
 release_notes_md = None
 %   endif
 
-repo = github_helper.repository
 release_tag = tags[0].removeprefix('refs/tags')
 draft_tag = f'{version_str}-draft'
 

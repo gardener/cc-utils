@@ -2,20 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import urllib
-
 from ci.util import (
     ctx,
 )
-from github.util import (
-    GitHubRepositoryHelper,
-    find_greatest_github_release_version,
-    outdated_draft_releases,
-
-)
+import github.release
 import ccc.github
-
-import github3
 
 
 def list_draft_releases(
@@ -38,23 +29,27 @@ def list_draft_releases(
     not equal to 0.
     '''
     github_cfg = ctx().cfg_factory().github(github_cfg_name)
-    github_helper = GitHubRepositoryHelper(
+    github_api = ccc.github.github_api(github_cfg)
+
+    repository = github_api.repository(
         owner=github_repository_owner,
-        name=github_repository_name,
-        github_api=ccc.github.github_api(github_cfg),
+        repository=github_repository_name,
     )
+
     if only_outdated:
-        releases = [release for release in github_helper.repository.releases()]
+        releases = [release for release in repository.releases()]
         non_draft_releases = [release for release in releases if not release.draft]
-        greatest_release_version = find_greatest_github_release_version(non_draft_releases)
+        greatest_release_version = github.release.find_greatest_github_release_version(
+            non_draft_releases,
+        )
     else:
-        releases = github_helper.repository.releases()
+        releases = repository.releases()
 
     draft_releases = [release for release in releases if release.draft]
 
     if only_outdated:
         if greatest_release_version is not None:
-            draft_releases = outdated_draft_releases(
+            draft_releases = github.release.outdated_draft_releases(
                 draft_releases=draft_releases,
                 greatest_release_version=greatest_release_version,
             )
@@ -62,48 +57,3 @@ def list_draft_releases(
             draft_releases = []
     for draft_release in draft_releases:
         print(draft_release.name)
-
-
-def greatest_release_version(
-    github_repository_url: str,
-    anonymous: bool=False,
-    ignore_prereleases: bool=False,
-):
-    '''Find the release with the greatest name (according to semver) and print its semver-version.
-
-    Note:
-    - This will only consider releases whose names are either immediately parseable as semver-
-    versions, or prefixed with a single character ('v').
-    - The 'v'-prefix (if present) will be not be present in the output.
-    - If a release has no name, its tag will be used instead of its name.
-
-    For more details on the ordering of semantic versioning, see 'https://www.semver.org'.
-    '''
-    parse_result = urllib.parse.urlparse(github_repository_url)
-
-    if not parse_result.netloc:
-        raise ValueError(f'Could not determine host for github-url {github_repository_url}')
-    host = parse_result.netloc
-
-    try:
-        path = parse_result.path.strip('/')
-        org, repo = path.split('/')
-    except ValueError as e:
-        raise ValueError(f"Could not extract org- and repo-name. Error: {e}")
-
-    if anonymous:
-        if 'github.com' not in host:
-            raise ValueError("Anonymous access is only possible for github.com")
-        github_api = github3.GitHub()
-        repo_helper = GitHubRepositoryHelper(owner=org, name=repo, github_api=github_api)
-
-    else:
-        repo_helper = ccc.github.repo_helper(host=host, org=org, repo=repo)
-
-    print(
-        find_greatest_github_release_version(
-            releases=repo_helper.repository.releases(),
-            warn_for_unparseable_releases=False,
-            ignore_prerelease_versions=ignore_prereleases,
-        )
-    )

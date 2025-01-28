@@ -27,9 +27,6 @@ import release_notes.markdown
 import slackclient.util
 
 from gitutil import GitHelper
-from github.util import (
-    GitHubRepositoryHelper,
-)
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
@@ -417,16 +414,6 @@ def upload_component_descriptor_as_release_asset(
         )
     except ConnectionError:
         logger.warning('Unable to attach component-descriptors to release as release-asset.')
-
-
-def clean_draft_releases(
-    github_helper: GitHubRepositoryHelper,
-):
-    for release, deletion_successful in github_helper.delete_outdated_draft_releases():
-        if deletion_successful:
-            logger.info(f'Deleted draft {release.name=}')
-        else:
-            logger.warning(f'Could not delete draft {release.name=}')
 
 
 def post_to_slack(
