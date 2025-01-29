@@ -602,14 +602,13 @@ class ComplianceSnapshotState:
 
 @dataclasses.dataclass(frozen=True)
 class ComplianceSnapshot:
-    cfg_name: str
     latest_processing_date: datetime.date
     correlation_id: str
     state: list[ComplianceSnapshotState]
 
     @property
     def key(self) -> str:
-        return _as_key(self.cfg_name, self.correlation_id)
+        return self.correlation_id
 
     def current_state(
         self,
