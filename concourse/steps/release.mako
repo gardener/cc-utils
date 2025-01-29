@@ -519,6 +519,7 @@ if not gh_release:
 else:
   gh_release.edit(
     tag_name=release_tag,
+    name=release_tag,
     body=release_notes_md or '',
     draft=False,
     prerelease=False,
