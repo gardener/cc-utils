@@ -11,7 +11,7 @@ boto3
 cachecontrol<1
 cachetools
 cryptography
-dacite<=1.8.1
+dacite
 deepmerge
 deprecated
 dockerfile-parse>=1.2
