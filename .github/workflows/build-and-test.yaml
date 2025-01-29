@@ -292,7 +292,7 @@ jobs:
           set -eu
           pip3 install --no-cache \
             aiohttp \
-            dacite \
+            dacite==1.8.1 \
             deprecated \
             pyaml \
             python-dateutil \
