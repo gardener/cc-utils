@@ -136,6 +136,7 @@ if not draft_release:
     logger.info(f"Creating {draft_name=}")
     repository.create_release(
         tag_name=draft_name,
+        name=draft_name,
         body=body,
         draft=True,
         prerelease=False,
