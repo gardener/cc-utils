@@ -1,4 +1,4 @@
-dacite
+dacite<=1.8.1
 jsonschema
 gardener-oci
 python-dateutil
