@@ -20,7 +20,11 @@ ${step_lib('replicate_secrets')}
 
 import ccc.elasticsearch
 import ccc.github
-import cfg_mgmt.reporting as cmr
+try:
+  import cfg_mgmt.reporting as cmr
+except:
+  print('unable to import cfg_mgmt package, have you tried installing "gardener-cicd-cfg-mgmt"?')
+  raise
 import model
 import model.concourse
 import model.config_repo

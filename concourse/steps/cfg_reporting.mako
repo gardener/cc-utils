@@ -17,7 +17,11 @@ import dacite
 import ccc.delivery
 import ccc.github
 import concourse.util
-import cfg_mgmt.reporting as cmr
+try:
+  import cfg_mgmt.reporting as cmr
+except:
+  print('unable to import cfg_mgmt package, have you tried installing "gardener-cicd-cfg-mgmt"?')
+  raise
 import ci.util
 import github.compliance.model as gcm
 import github.compliance.report as gcr

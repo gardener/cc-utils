@@ -1,5 +1,8 @@
-
-import cfg_mgmt.model as cmm
+try:
+    import cfg_mgmt.model as cmm
+except:
+    print('unable to import cfg_mgmt package, have you tried installing "gardener-cicd-cfg-mgmt"?')
+    raise
 import github.compliance.issue as gci
 import github.compliance.model as gcm
 

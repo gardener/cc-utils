@@ -163,6 +163,7 @@ jobs:
           setup.oci.py \
           setup.ocm.py \
           setup.whd.py \
+          setup.cfg_mgmt.py \
         ; do
          echo "building distribution package from ${path}"
          python3 ${path} \
@@ -190,6 +191,7 @@ jobs:
           gardener-cicd-whd \
           gardener-cicd-cli \
           gardener-cicd-libs \
+          gardener-cicd-cfg-mgmt \
           gardener-gha-libs \
           gardener-oci \
           gardener-ocm \
@@ -396,6 +398,7 @@ jobs:
           --find-links /tmp/dist \
           gardener-cicd-libs \
           gardener-cicd-cli \
+          gardener-cicd-cfg-mgmt \
           gardener-oci \
           gardener-ocm \
           bandit \
@@ -449,6 +452,7 @@ jobs:
           --find-links /tmp/dist \
           gardener-cicd-libs \
           gardener-cicd-cli \
+          gardener-cicd-cfg-mgmt \
           gardener-oci \
           gardener-ocm \
           pytest \
