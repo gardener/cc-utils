@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import logging
 import os
+import time
 import typing
 
 import pytimeparse
@@ -225,6 +226,59 @@ def write_changes_to_local_dir(
     )
 
 
+def _push_with_retry(
+    git_helper: gitutil.GitHelper,
+    target_ref: str,
+    cfg_element: model.NamedModelElement,
+    secret_id: dict,
+    max_retries: int = 12,
+    initial_delay: int = 60, # seconds
+    max_delay: int = 3600, # 1 hour
+    backoff_factor: float = 2.0,
+):
+    try:
+        git_helper.push('@', target_ref)
+        logger.info('Successfully pushed changes to GitHub')
+        return True
+    except Exception as e:
+        retries_left = max_retries - 1
+
+        if max_retries <= 0:
+            if cfg_element._type_name == 'bdba':
+                '''
+                BDBA API keys are immediately invalid once rotated.
+                If we lose the new key, we cannot recover the old one.
+                So we log it to allow manual intervention if needed
+                '''
+                logger.info(f'NEW BDBA API KEY: {secret_id.get("api_key")}')
+            raise RuntimeError(f'Failed to push changes to GitHub after {max_retries} attempts')
+
+        # calculate the delay using exponential backoff, but ensure it doesn't exceed the max_delay
+        delay = min(
+            initial_delay * (backoff_factor ** (max_retries - retries_left)),
+            max_delay,
+        )
+        logger.warning(
+            f'Failed to push changes to GitHub (retries left: {retries_left}) - '
+            f'will retry in {delay} seconds. Error: {e}'
+        )
+        # pull the latest changes and rebase
+        latest_commit = git_helper.fetch_head(target_ref)
+        git_helper.rebase(latest_commit.hexsha)
+        time.sleep(delay)
+
+        return _push_with_retry(
+            git_helper=git_helper,
+            target_ref=target_ref,
+            cfg_element=cfg_element,
+            secret_id=secret_id,
+            max_retries=retries_left,
+            initial_delay=initial_delay,
+            max_delay=max_delay,
+            backoff_factor=backoff_factor,
+        )
+
+
 def rotate_config_element_and_persist_in_cfg_repo(
     cfg_element: model.NamedModelElement,
     cfg_factory: model.ConfigFactory,
@@ -297,7 +351,13 @@ def rotate_config_element_and_persist_in_cfg_repo(
         git_helper.add_and_commit(
             message=commit_message,
         )
-        git_helper.push('@', target_ref)
+        _push_with_retry(
+            git_helper=git_helper,
+            target_ref=target_ref,
+            cfg_element=cfg_element,
+            secret_id=secret_id,
+        )
+
     except Exception as e:
         logger.warning(f'failed to push updated secret - reverting. Error: {e}')
         revert_function()
