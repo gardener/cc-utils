@@ -78,7 +78,7 @@ jobs:
         run: |
           set -eu
           host="$(echo ${{ github.server_url }} | cut -d / -f3)"
-          if  ${{ inputs.component-name || false }}; then
+          if  [ -n "${{ inputs.component-name }}" ]; then
             component_name="${{inputs.component-name}}"
           else
             component_name="${host}/${{ github.repository }}"
