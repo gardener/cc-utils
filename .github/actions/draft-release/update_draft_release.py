@@ -8,13 +8,13 @@ import sys
 import github3
 
 try:
-    import github.util
+    import github.release
 except ImportError:
     # make local development more comfortable
     repo_root = os.path.join(os.path.dirname(__file__), '../../..')
     sys.path.insert(1, repo_root)
     print(f'note: added {repo_root} to python-path (sys.path)')
-    import github.util
+    import github.release
 
 import version as version_mod
 
@@ -71,28 +71,31 @@ def main():
             token=parsed.github_auth_token,
         )
 
-    github_helper = github.util.GitHubRepositoryHelper(
-        owner=org,
-        name=repo,
-        github_api=github_api,
-    )
+    repository = github_api.repository(org, repo)
 
     with open(parsed.release_notes) as f:
         release_notes_md = f.read()
 
     draft_release_name = f'{version}{parsed.draftname_suffix}'
-    if not (draft_release := github_helper.draft_release_with_name(draft_release_name)):
+    release_notes_md, _ = github.release.body_or_replacement(
+        release_notes_md,
+    )
+    if not (draft_release := github.release.find_draft_release(
+        repository=repository,
+        name=draft_release_name,
+    )):
         print(f'Creating {draft_release_name=}')
-        github_helper.create_draft_release(
-            name=draft_release_name,
+        repository.create_release(
+            tag_name=draft_release_name,
             body=release_notes_md,
+            draft=True,
         )
     else:
         if not draft_release.body == release_notes_md:
             print(f'Updating {draft_release_name=}')
             draft_release.edit(body=release_notes_md)
 
-    for release, deleted in github_helper.delete_outdated_draft_releases():
+    for release, deleted in github.release.delete_outdated_draft_releases(repository):
         if deleted:
             print('Deleted obsolete draft {release.name=}')
         else:

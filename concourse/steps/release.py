@@ -27,9 +27,6 @@ import release_notes.markdown
 import slackclient.util
 
 from gitutil import GitHelper
-from github.util import (
-    GitHubRepositoryHelper,
-)
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
@@ -391,31 +388,6 @@ def create_and_push_mergeback_commit(
     ) # make sure next dev-cycle commit does not undo the merge-commit
 
 
-def github_release(
-    github_helper: GitHubRepositoryHelper,
-    release_tag: str,
-    release_version: str,
-    component_name: str,
-):
-    # github-api expects unqualified tagname
-    release_tag = release_tag.removeprefix('refs/tags/')
-
-    if release := github_helper.draft_release_with_name(f'{release_version}-draft'):
-        github_helper.promote_draft_release(
-            draft_release=release,
-            release_tag=release_tag,
-            release_version=release_version,
-        )
-    else:
-        release = github_helper.create_release(
-            tag_name=release_tag,
-            body='',
-            draft=False,
-            prerelease=False,
-            name=release_version,
-        )
-
-
 def upload_component_descriptor_as_release_asset(
     github_release,
     component,
@@ -442,16 +414,6 @@ def upload_component_descriptor_as_release_asset(
         )
     except ConnectionError:
         logger.warning('Unable to attach component-descriptors to release as release-asset.')
-
-
-def clean_draft_releases(
-    github_helper: GitHubRepositoryHelper,
-):
-    for release, deletion_successful in github_helper.delete_outdated_draft_releases():
-        if deletion_successful:
-            logger.info(f'Deleted draft {release.name=}')
-        else:
-            logger.warning(f'Could not delete draft {release.name=}')
 
 
 def post_to_slack(

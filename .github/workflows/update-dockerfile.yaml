@@ -1,0 +1,87 @@
+name: Job-Image-Base Dockerfile Version Bump
+run-name: Update Job-Image-Base Dockerfile with latest Docker and Buildx versions
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # daily
+  workflow_dispatch:
+
+jobs:
+  update-dockerfile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      docker_version: ${{ steps.get_docker_version.outputs.docker_version }}
+      buildx_version: ${{ steps.get_buildx_version.outputs.buildx_version }}
+      changes_detected: ${{ steps.check_changes.outputs.changes_detected }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Git Identity
+        uses: ./.github/actions/setup-git-identity
+
+      - name: Get latest Docker version
+        id: get_docker_version
+        run: |
+          greatest_version=$(curl -sL https://download.docker.com/linux/static/stable/x86_64/ \
+            | cut -d\" -f2 \
+            | grep "docker-[[:digit:]]" \
+            | cut -d- -f2 \
+            | cut -d. -f1,2,3 \
+            | sort -Vr \
+            | head -1)
+          echo "docker_version=$greatest_version" >> $GITHUB_OUTPUT
+
+      - name: Get latest Buildx version
+        id: get_buildx_version
+        run: |
+          greatest_version=$(curl -sL https://api.github.com/repos/docker/buildx/releases \
+            -H 'Accept: application/json' \
+            | jq -r '.[].tag_name' \
+            | sort -Vr \
+            | head -1)
+          echo "buildx_version=$greatest_version" >> $GITHUB_OUTPUT
+
+      - name: Update Dockerfile with latest Versions
+        run: |
+          sed -i "s/DOCKER_VERSION=.*/DOCKER_VERSION=\
+          ${{ steps.get_docker_version.outputs.docker_version }}/" Dockerfile.job-image-base
+          sed -i "s/DOCKER_BUILDX_VERSION=.*/DOCKER_BUILDX_VERSION=\
+          ${{ steps.get_buildx_version.outputs.buildx_version }}/" \
+          Dockerfile.job-image-base
+    
+      - name: Check for Changes
+        id: check_changes
+        run: |
+          if git diff --quiet Dockerfile.job-image-base; then
+            echo "No changes detected. Exiting workflow."
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected, proceeding with commit."
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Commit and Push Changes
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        run: |
+          git add Dockerfile.job-image-base
+          git commit -m "Update Dockerfile to use Docker \
+          ${{ steps.get_docker_version.outputs.docker_version }} and Buildx \
+          ${{ steps.get_buildx_version.outputs.buildx_version }}"
+          git checkout -b update-dockerfile
+          git push origin update-dockerfile --force
+
+      - name: Create or Update Pull Request
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        run: |
+          gh pr create \
+            -B master \
+            -H update-dockerfile \
+            --title "Update Dockerfile with latest Docker and Buildx versions" \
+            --body "Updates the Dockerfile to use the latest versions:
+              - Docker: ${{ steps.get_docker_version.outputs.docker_version }}
+              - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

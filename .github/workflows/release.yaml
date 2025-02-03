@@ -29,6 +29,7 @@ jobs:
             apt-get install git -y
           fi
       - uses: actions/checkout@v4
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       - name: Import Release-Commit
         uses: ./.github/actions/import-commit
         with:
@@ -39,9 +40,6 @@ jobs:
         id: releasecommit
         run: |
           echo "gha-creds*" >> .git/info/exclude
-          git config --global --add safe.directory $PWD
-          git config user.name 'Gardener-CICD Bot'
-          git config user.email 'gardener.ci.user@gmail.com'
           effective_version=${{ needs.build.outputs.effective-version }}
           commit_digest=$(git rev-parse @)
           tgt_ref="refs/tags/${effective_version}"

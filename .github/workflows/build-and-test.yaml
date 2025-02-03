@@ -92,12 +92,10 @@ jobs:
         echo "effective_version=${effective_version}" >> "${GITHUB_OUTPUT}"
         echo "repo_version=${src_version}" >> "${GITHUB_OUTPUT}"
         echo "setuptools_version=${setuptools_version}" >> "${GITHUB_OUTPUT}"
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - name: create commit with effective version
       if: ${{ inputs.release }}
       run: |
-        git config --global --add safe.directory $PWD
-        git config user.name 'Gardener-CICD Bot'
-        git config user.email 'gardener.ci.user@gmail.com'
         echo ${{ steps.version.outputs.effective_version }} | .ci/write-version
         touch /tmp/timestamp-ref
         git add .

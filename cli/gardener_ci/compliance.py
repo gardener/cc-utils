@@ -48,13 +48,13 @@ class DiffArguments:
     right_name: str
     left_version: str
     right_version: str
+    outfile_prefix: str
     ocm_repo_urls: list[str]
     exclude_component_names: list[str] = None
     exclude_component_resource_names: list[ComponentResourceNames] = None
     resource_types: list[str] = None
     name_template: str = None
     name_template_expr: str = None
-    outfile_prefix: str = 'resource-diff'
 
 
 def diff(
@@ -91,6 +91,8 @@ def diff(
         params['name_template_expr'] = name_template
     if resource_types:
         params['resource_types'] = resource_types
+    if outfile_prefix:
+        params['outfile_prefix'] = outfile_prefix
 
     try:
         parsed = dacite.from_dict(

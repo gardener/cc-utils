@@ -4,17 +4,11 @@
 
 
 import collections
-import datetime
 import enum
-import io
 import logging
 import re
-import textwrap
 
 import typing
-from typing import Iterable, Tuple
-
-import requests
 
 import github3
 import github3.issues
@@ -22,27 +16,12 @@ from github3.exceptions import NotFoundError
 from github3.github import GitHub
 from github3.orgs import Team
 from github3.pulls import PullRequest
-from github3.repos.release import Release
 
-import ocm
 import ci.util
+import ocm
 import version
 
 logger = logging.getLogger(__name__)
-
-'''
-The maximum allowed length of github-release-bodies.
-This limit is not documented explicitly in the GitHub docs. To see it, the error returned by
-GitHub when creating a release with more then the allowed number of characters must be
-looked at.
-'''
-MAXIMUM_GITHUB_RELEASE_BODY_LENGTH = 25000
-
-
-class RepoPermission(enum.Enum):
-    PULL = "pull"
-    PUSH = "push"
-    ADMIN = "admin"
 
 
 class RepositoryHelperBase:
@@ -342,262 +321,8 @@ class PullRequestUtil(RepositoryHelperBase):
                 pattern=pattern,
             )
 
-    def retrieve_pr_template_text(self):
-        '''Return the content for the PR template file looking in predefined directories.
-        If no template is found None is returned.
-        '''
-        pattern = re.compile(r"(pull_request_template)(\..{1,3})?$")
-        directories = ['.github', '.', 'docs']
-        for directory in directories:
-            try:
-                for filename, content in self.repository.directory_contents(directory):
-                    if pattern.match(filename):
-                        content.refresh()
-                        return content.decoded.decode('utf-8')
-            except github3.exceptions.NotFoundError:
-                pass  # directory does not exist
-
-        return None
-
 
 class GitHubRepositoryHelper(RepositoryHelperBase):
-    def create_or_update_file(
-        self,
-        file_path: str,
-        file_contents: str,
-        commit_message: str,
-        branch: str=None,
-    ) -> str:
-        if branch is None:
-            branch = self.default_branch
-
-        try:
-            contents = self.retrieve_file_contents(file_path=file_path, branch=branch)
-        except NotFoundError:
-            contents = None # file did not yet exist
-
-        if contents:
-            decoded_contents = contents.decoded.decode('utf-8')
-            if decoded_contents == file_contents:
-                # Nothing to do
-                return logger.info(
-                    'Repository file contents are identical to passed file contents.'
-                )
-            else:
-                response = contents.update(
-                    message=commit_message,
-                    content=file_contents.encode('utf-8'),
-                    branch=branch,
-                )
-        else:
-            response = self.repository.create_file(
-                path=file_path,
-                message=commit_message,
-                content=file_contents.encode('utf-8'),
-                branch=branch,
-            )
-        return response['commit'].sha
-
-    def retrieve_file_contents(self, file_path: str, branch: str=None):
-        if branch is None:
-            branch = self.default_branch
-
-        return self.repository.file_contents(
-            path=file_path,
-            ref=branch,
-        )
-
-    def retrieve_text_file_contents(
-        self,
-        file_path: str,
-        branch: str=None,
-        encoding: str='utf-8',
-    ):
-        if branch is None:
-            branch = self.default_branch
-
-        contents = self.retrieve_file_contents(file_path, branch)
-        return contents.decoded.decode(encoding)
-
-    def create_tag(
-        self,
-        tag_name: str,
-        tag_message: str,
-        repository_reference: str,
-        author_name: str,
-        author_email: str,
-        repository_reference_type: str='commit'
-    ):
-        author = {
-            'name': author_name,
-            'email': author_email,
-            'date': datetime.datetime.now(datetime.timezone.utc)
-                    .strftime(self.GITHUB_TIMESTAMP_UTC_FORMAT)
-        }
-        self.repository.create_tag(
-            tag=tag_name,
-            message=tag_message,
-            sha=repository_reference,
-            obj_type=repository_reference_type,
-            tagger=author
-        )
-
-    def _replacement_release_notes(
-        self,
-        asset_url: str,
-    ):
-        return textwrap.dedent(
-            f'''\
-            Release-Notes were too long (limit: {MAXIMUM_GITHUB_RELEASE_BODY_LENGTH} octets).
-            They were instaed uploaded as [release-asset]({asset_url}).
-            '''
-        )
-
-    RELEASE_NOTES_ASSET_NAME = 'release_notes.md'
-
-    def create_release(
-        self,
-        tag_name: str,
-        body: str,
-        draft: bool=False,
-        prerelease: bool=False,
-        name: str=None,
-    ):
-        if len(body) < MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
-            return self.repository.create_release(
-                tag_name=tag_name,
-                body=body,
-                draft=draft,
-                prerelease=prerelease,
-                name=name
-            )
-        else:
-            # release notes are too large to be added to the github-release directly. As a work-
-            # around, attach them to the release and write an appropriate release-body pointing
-            # towards the attached asset.
-            # For draft releases, the url cannot be calculated easily beforehand, so create the
-            # release, attach the notes and then retrieve the URL via the asset-object.
-            release = self.repository.create_release(
-                tag_name=tag_name,
-                body='',
-                draft=draft,
-                prerelease=prerelease,
-                name=name
-            )
-            release_notes_asset = release.upload_asset(
-                content_type='text/markdown',
-                name=self.RELEASE_NOTES_ASSET_NAME,
-                asset=body.encode('utf-8'),
-                label='Release Notes',
-            )
-            release.edit(
-                body=self._replacement_release_notes(
-                    asset_url=release_notes_asset.browser_download_url,
-                )
-            )
-            return release
-
-    def delete_releases(
-        self,
-        release_names: typing.Iterable[str],
-    ):
-        for release in self.repository.releases():
-            if release.name in release_names:
-                release.delete()
-
-    def create_draft_release(
-        self,
-        name: str,
-        body: str,
-    ):
-        return self.create_release(
-            tag_name='',
-            name=name,
-            body=body,
-            draft=True,
-        )
-
-    def promote_draft_release(
-        self,
-        draft_release,
-        release_tag,
-        release_version,
-    ):
-        draft_release.edit(
-            tag_name=release_tag,
-            body=None,
-            draft=False,
-            prerelease=False,
-            name=release_version,
-        )
-
-        # If there is a release-notes asset attached, we need to update the release-notes after
-        # promoting the release so that the contained URL is adjusted as well
-        release_notes_asset = next(
-            (a for a in draft_release.assets() if a.name == self.RELEASE_NOTES_ASSET_NAME),
-            None,
-        )
-        if release_notes_asset:
-            draft_release.edit(
-                body=self._replacement_release_notes(
-                    asset_url=release_notes_asset.browser_download_url,
-                )
-            )
-
-    def update_release_notes(
-        self,
-        tag_name: str,
-        body: str,
-    ) -> bool:
-        ci.util.not_empty(tag_name)
-
-        release = self.repository.release_from_tag(tag_name)
-        if not release:
-            raise RuntimeError(
-                f"No release with tag '{tag_name}' found "
-                f"in repository {self.repository}"
-            )
-
-        if len(body) < MAXIMUM_GITHUB_RELEASE_BODY_LENGTH:
-            release.edit(body=body)
-        else:
-            release_notes_asset = next(
-                (a for a in release.assets() if a.name == self.RELEASE_NOTES_ASSET_NAME),
-                None,
-            )
-            # Clean up any attached release-note-asset
-            if release_notes_asset:
-                release_notes_asset.delete()
-
-            release_notes_asset = release.upload_asset(
-                content_type='text/markdown',
-                name=self.RELEASE_NOTES_ASSET_NAME,
-                asset=body.encode('utf-8'),
-                label='Release Notes',
-            )
-            release.edit(
-                body=self._replacement_release_notes(
-                    asset_url=release_notes_asset.browser_download_url,
-                ),
-            )
-
-        return release
-
-    def draft_release_with_name(
-        self,
-        name: str
-    ) -> Release:
-        # if there are more than 1021 releases, github(.com) will return http-500 one requesting
-        # additional releases. As this limit is typically not reached, hardcode limit for now
-        # in _most_ cases, most recent releases are returned first, so this should hardly ever
-        # be an actual issue
-        max_releases = 1020
-        for release in self.repository.releases(number=max_releases):
-            if not release.draft:
-                continue
-            if release.name == name:
-                return release
-
     def tag_exists(
         self,
         tag_name: str,
@@ -608,52 +333,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             return True
         except NotFoundError:
             return False
-
-    def retrieve_asset_contents(self, release_tag: str, asset_label: str):
-        ci.util.not_none(release_tag)
-        ci.util.not_none(asset_label)
-
-        release = self.repository.release_from_tag(release_tag)
-        for asset in release.assets():
-            if asset.label == asset_label or asset.name == asset_label:
-                break
-        else:
-            response = requests.Response()
-            response.status_code = 404
-            response.json = lambda: {'message':'no asset with label {} found'.format(asset_label)}
-            raise NotFoundError(resp=response)
-
-        buffer = io.BytesIO()
-        asset.download(buffer)
-        return buffer.getvalue().decode()
-
-    def release_versions(self):
-        for tag_name in self._release_tags():
-            try:
-                version.parse_to_semver(tag_name)
-                yield tag_name
-                # XXX should rather return a "Version" object, containing both parsed and original
-            except ValueError:
-                pass # ignore
-
-    def _release_tags(self):
-        for release in self.repository.releases():
-            if release.draft or release.prerelease:
-                continue
-            if not (tag := release.tag_name):
-                continue
-
-            yield tag
-
-    def search_issues_in_repo(self, query: str):
-        query = f'repo:{self.owner}/{self.repository_name} {query}'
-        search_result = self.github.search_issues(query)
-        return search_result
-
-    def is_pr_created_by_org_member(self, pull_request_number):
-        pull_request = self.repository.pull_request(pull_request_number)
-        user_login = pull_request.user.login
-        return self.is_org_member(self.owner, user_login)
 
     def add_labels_to_pull_request(self, pull_request_number, *labels):
         pull_request = self.repository.pull_request(pull_request_number)
@@ -688,38 +367,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         else:
             return True
 
-    def delete_outdated_draft_releases(self) -> Iterable[Tuple[github3.repos.release.Release, bool]]:
-        '''Find outdated draft releases and try to delete them
-
-        Yields tuples containing a release and a boolean indicating whether its deletion was
-        successful.
-
-        A draft release is considered outdated iff:
-        1: its version is smaller than the greatest release version (according to semver) AND
-            2a: it is NOT a hotfix draft release AND
-            2b: there are no hotfix draft releases with the same major and minor version
-            OR
-            3a: it is a hotfix draft release AND
-            3b: there is a hotfix draft release of greater version (according to semver)
-                with the same major and minor version
-        '''
-
-        releases = [release for release in self.repository.releases(number=20)]
-        non_draft_releases = [release for release in releases if not release.draft]
-        draft_releases = [release for release in releases if release.draft]
-        greatest_release_version = find_greatest_github_release_version(non_draft_releases)
-
-        if greatest_release_version is not None:
-            draft_releases_to_delete = outdated_draft_releases(
-                    draft_releases=draft_releases,
-                    greatest_release_version=greatest_release_version,
-            )
-        else:
-            draft_releases_to_delete = []
-
-        for release in draft_releases_to_delete:
-            yield release, release.delete()
-
 
 def _retrieve_team_by_name_or_none(
     organization: github3.orgs.Organization,
@@ -728,102 +375,6 @@ def _retrieve_team_by_name_or_none(
 
     team_list = list(filter(lambda t: t.name == team_name, organization.teams()))
     return team_list[0] if team_list else None
-
-
-def find_greatest_github_release_version(
-    releases: list[Release],
-    warn_for_unparseable_releases: bool = True,
-    ignore_prerelease_versions: bool = False,
-):
-    # currently, non-draft-releases are not created with a name by us. Use the tag name as fallback
-    release_versions = [
-        release.name if release.name else release.tag_name
-        for release in releases
-    ]
-
-    def filter_non_semver_parseable_releases(release_name):
-        try:
-            version.parse_to_semver(release_name)
-            return True
-        except ValueError:
-            if warn_for_unparseable_releases:
-                ci.util.warning(f'ignoring release {release_name=} (not semver)')
-            return False
-
-    release_versions = [
-        name for name in filter(filter_non_semver_parseable_releases, release_versions)
-    ]
-
-    release_version_infos = [
-        version.parse_to_semver(release_version)
-        for release_version in release_versions
-    ]
-    latest_version = version.find_latest_version(
-        versions=release_version_infos,
-        ignore_prerelease_versions=ignore_prerelease_versions,
-    )
-    if latest_version:
-        return str(latest_version)
-    else:
-        return None
-
-
-def outdated_draft_releases(
-    draft_releases: list[Release],
-    greatest_release_version: str,
-):
-    '''Find outdated draft releases from a list of draft releases and return them. This is achieved
-    by partitioning the release versions according to their joined major and minor version.
-    Partitions are then checked:
-        - if there is only a single release in a partition it is either a hotfix release
-            (keep corresponding release) or it is not (delete if it is not the greatest release
-            according to semver)
-        - if there are multiple releases versions in a partition, keep only the release
-            corresponding to greatest (according to semver)
-    '''
-
-    greatest_release_version_info = version.parse_to_semver(greatest_release_version)
-
-    def _has_semver_draft_prerelease_label(release_name):
-        version_info = version.parse_to_semver(release_name)
-        if version_info.prerelease != 'draft':
-            return False
-        return True
-
-    autogenerated_draft_releases = [
-        release for release in draft_releases
-        if release.name
-        and version.is_semver_parseable(release.name)
-        and _has_semver_draft_prerelease_label(release.name)
-    ]
-
-    draft_release_version_infos = [
-        version.parse_to_semver(release.name)
-        for release in autogenerated_draft_releases
-    ]
-
-    def _yield_outdated_version_infos_from_partition(partition):
-        if len(partition) == 1:
-            version_info = partition.pop()
-            if version_info < greatest_release_version_info and version_info.patch == 0:
-                yield version_info
-        else:
-            yield from [
-                version_info
-                for version_info in partition[1:]
-            ]
-
-    outdated_version_infos = list()
-    for partition in version.partition_by_major_and_minor(draft_release_version_infos):
-        outdated_version_infos.extend(_yield_outdated_version_infos_from_partition(partition))
-
-    outdated_draft_releases = [
-        release
-        for release in autogenerated_draft_releases
-        if version.parse_to_semver(release.name) in outdated_version_infos
-    ]
-
-    return outdated_draft_releases
 
 
 def close_issue(

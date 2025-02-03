@@ -33,12 +33,15 @@ else
   commit_digest_out=${3}
 fi
 
+commit_digest="$(git rev-parse @)"
+echo "${commit_digest}" > "${GIT_DIR}/refs/capture-commit"
 
 object_paths=$(
   cd $(dirname $GIT_DIR)
   find .git/objects -type f -neweraa ${ref} | grep -v pack
 )
+object_paths+=(refs/capture-commit)
 
 # objects are already gzipped - there is no point in compressing them again
-tar cf "${archive}" -C $(dirname "${GIT_DIR}") ${object_paths}
-git rev-parse @ > ${commit_digest_out}
+tar cf "${archive}" -b1 -C $(dirname "${GIT_DIR}") ${object_paths}
+echo "${commit_digest}" > ${commit_digest_out}
