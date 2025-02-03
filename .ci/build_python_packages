@@ -55,6 +55,8 @@ python3 "${repo_dir}/setup.py" bdist_wheel
 rm -rf "${repo_dir}/build"
 python3 "${repo_dir}/setup.whd.py" bdist_wheel
 rm -rf "${repo_dir}/build"
+python3 "${repo_dir}/setup.cfg_mgmt.py" bdist_wheel
+rm -rf "${repo_dir}/build"
 
 # keep for subsequent docker build
 cp dist/* ${out_dir}
