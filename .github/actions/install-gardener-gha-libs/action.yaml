@@ -2,6 +2,9 @@ name: Install Gardener-GHA-Libs
 description: |
   Install Python3 and gardener-gha-libs
 
+  As GitHub-Actions in https://github.com/gardener/cc-utils still sees frequent development,
+  install from sources (checking out head of `master`), rather than from PYPI.
+
 runs:
   using: composite
   steps:
@@ -9,13 +12,39 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
+    - uses: actions/checkout@v4
+      with:
+        repository: gardener/cc-utils
+        path: cc-utils
     - name: install-gardener-gha-libs
       shell: bash
       run: |
         set -eu
+        cd cc-utils
         python3 --version
-        if ! pip install gardener-gha-libs > /tmp/pip-install.log; then
-          echo 'An error occured while tring to run pip install:'
-          cat /tmp/pip-install.log
-          exit 1
+
+        pip install setuptools >/dev/null
+
+        version=$(.ci/read-version)
+        if [[ "${version}" == *-* ]]; then
+          # version was non-final - add suffix compliant w/ pep-440
+          # (see: https://peps.python.org/pep-0440/)
+          version="${version%%-*}-dev0"
+          # ensure packages see exactly the same version as we expect
+          echo "${version}" | .ci/write-version
         fi
+
+        echo 'building gardener-gha-libs'
+        python3 setup.gha.py bdist_wheel \
+          --dist-dir dist
+
+        echo "building w/ effective version ${version}"
+
+        if ! pip install --find-links dist \
+          gardener-gha-libs=="${version}" > /tmp/pip-install.log; then
+            echo 'An error occured while tring to run pip install:'
+            cat /tmp/pip-install.log
+            exit 1
+        fi
+
+        pip show gardener-gha-libs
