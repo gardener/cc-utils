@@ -1,6 +1,7 @@
 aliyun-python-sdk-core
 aliyun-python-sdk-ecs
 aliyun-python-sdk-ram
+bdba
 boto3
 google-api-core<3
 google-api-python-client<3
