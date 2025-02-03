@@ -107,6 +107,7 @@ def modules():
     module_names.remove('setup.oci')
     module_names.remove('setup.ocm')
     module_names.remove('setup.whd')
+    module_names.remove('setup.cfg_mgmt')
     return module_names
 
 
