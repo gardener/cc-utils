@@ -6,9 +6,8 @@ import typing
 
 import googleapiclient
 import googleapiclient.errors
+import googleapiclient.discovery
 
-import ccc.gcp
-import ccc.github
 import cfg_mgmt
 import cfg_mgmt.model as cmm
 import ci.log
@@ -23,6 +22,42 @@ ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 GcpServiceAccount = model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount
+
+
+def qualified_service_account_name(
+    service_account_name: str,
+    project_id: str = '-',
+) -> str:
+    return f'projects/{project_id}/serviceAccounts/{service_account_name}'
+
+
+def qualified_service_account_key_name(
+    service_account_name: str,
+    key_name: str,
+    project_id: str = '-',
+) -> str:
+    base_name = qualified_service_account_name(
+        service_account_name=service_account_name,
+        project_id=project_id,
+    )
+    return f'{base_name}/keys/{key_name}'
+
+
+def create_iam_client(
+    cfg_element: model.container_registry.ContainerRegistryConfig | model.gcp.GcpServiceAccount,
+) -> googleapiclient.discovery.Resource:
+    if isinstance(cfg_element, model.container_registry.ContainerRegistryConfig):
+        credentials = cfg_element.credentials().service_account_credentials()
+    elif isinstance(cfg_element, model.gcp.GcpServiceAccount):
+        credentials = cfg_element.service_account_credentials()
+    else:
+        raise NotImplementedError
+
+    return googleapiclient.discovery.build(
+        serviceName='iam',
+        version='v1',
+        credentials=credentials,
+    )
 
 
 def _create_service_account_key(
@@ -89,16 +124,16 @@ def rotate_cfg_element(
 
     client_email = cfg_element.client_email()
 
-    iam_client = ccc.gcp.create_iam_client(
+    iam_client = create_iam_client(
         cfg_element=rotation_cfg,
     )
 
-    service_account_name = ccc.gcp.qualified_service_account_name(
+    service_account_name = qualified_service_account_name(
         client_email,
     )
 
     old_key_id = cfg_element.private_key_id()
-    old_key_id = ccc.gcp.qualified_service_account_key_name(
+    old_key_id = qualified_service_account_key_name(
         service_account_name=client_email,
         key_name=old_key_id,
     )
@@ -129,7 +164,7 @@ def rotate_cfg_element(
     def revert():
         delete_service_account_key(
             iam_client=iam_client,
-            service_account_key_name=ccc.gcp.qualified_service_account_key_name(
+            service_account_key_name=qualified_service_account_key_name(
                 service_account_name=client_email,
                 key_name=new_key['private_key_id'],
             )
@@ -151,7 +186,7 @@ def delete_config_secret(
     logger.info(f'using {rotation_cfg.name()=} for deletion')
 
     logger.info('deleting old gcr secret')
-    iam_client = ccc.gcp.create_iam_client(
+    iam_client = create_iam_client(
         cfg_element=rotation_cfg,
     )
     delete_service_account_key(
