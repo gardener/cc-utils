@@ -1,0 +1,195 @@
+name: release
+description: |
+  An opinionated release-Action for creating releases adhering to conventions established within
+  Gardener-CICD.
+
+  This actions assumes the version to be released is contained within passed
+  OCM-Component-Descriptor. It also assumes a commit containing code-changes for said release was
+  created upfront (as output by `capture-commit` action).
+
+  Releases encompass:
+  - publishing of OCM Component-Descriptor
+  - pushing of a release-tag (pointing to release-commit)
+  - creating of a github-release (including release-notes + release-assets)
+  - pushing of "bump-commit" (to current branch)
+
+inputs:
+  component-descriptor:
+    description: |
+      Effective Component-Descriptor to publish. Any local-blobs are assumed to already be
+      present in target-OCI-Repository.
+    required: true
+  release-commit:
+    description: |
+      release-commit in serialised form (as output by `capture-commit` action)
+    required: true
+  release-commit-target:
+    type: choice
+    description: |
+      controls where to push release-commit (and tag) to. Using `tag` option is safest, as it is
+      guaranteed to succeed, also if current branch's head change during build. As release-commit
+      should ideally not change (as it is referenced, e.g. in Component-Descriptor), if using
+      `branch` option, merging back to current branch is attempted (instead of rebase).
+      tag: push to tag (outside of current branch)
+      branch: push to current branch (attempt merge if needed)
+    default: tag
+    options:
+      - tag
+      - branch
+  bump-commit:
+    description: |
+      bump-commit (for setting next dev-version) in serialised form (as output by `capture-commit`
+      action).
+    required: true
+  github-token:
+    description: |
+      the github-auth-token to use for authenticating against GitHub.
+      Use `secrets.GITHUB_TOKEN`
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: install git
+      run: |
+        if ! which git &>/dev/null; then
+          apt-get install git -y
+        fi
+    - uses: actions/checkout@v4
+    - name: import-release-commit
+      uses: gardener/cc-utils/.github/actions/import-commit@master
+      with:
+        commit-objects: ${{ inputs.release-commit }}
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - name: fetch-release-notes
+      id: release-notes
+      uses: gardener/cc-utils/.github/actions/release-notes@master
+      with:
+        component-descriptor: ${{ inputs.component-descriptor }}
+        github-token: ${{ inputs.github-token }}
+        draft: false # explicit is better than implicit
+    - name: preprocess
+      id: preprocess
+      run: |
+        pip install yq
+
+        # pass to next steps
+        echo "${{ inputs.component-descriptor }}" > /tmp/component-descriptor
+        version=$(yq .component.version /tmp/component-descriptor)
+        echo "version=${version}" >> $GITHUB_OUTPUT
+        tag_name="${version}"
+        tag_ref="refs/tags/${tag_name}"
+        echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
+        echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
+
+    - name: push release-tag
+      run: |
+        set -eu
+
+        # debug (print release-commit)
+        echo release-commit:
+
+        orig_ref="$(git rev-parse @)"
+        push_spec="@:${{ steps.preprocess.outputs.tag-ref }}"
+        echo "pushing release-commit using ${push_spec}"
+
+        git show @
+        case "${{ inputs.release-commit-target }}" in
+          tag)
+          echo "chose to not push tag to source-branch: exiting now"
+          exit 0
+          ;;
+          branch)
+          echo "will try to push against ${{ github.ref }}"
+          # fall-through (there is only error-case ahead)
+          ;;
+          *)
+          echo "error - don't know how to handle release-commit-target:"
+          echo "${{ inputs.release-commit-target }}"
+          exit 1
+          ;;
+        esac
+
+        # `branch`-case: we try to also push release-commit to branch that triggered us.
+        #                if that fails (due to concurrent head-update), we will try to do a
+        #                merge.
+
+        push_spec="@:${{ github.ref }}"
+        echo "trying to push release-commit using ${push_spec}"
+        if git push origin "${push_spec}"; then
+          echo "Successfully pushed release-commit to ${{ github.ref }}"
+          exit 0
+        fi
+
+        version="${{ steps.prepare.outputs.version }}"
+        echo "we failed to push release-commit to ${{ github.ref }} - trying to merge"
+        git fetch origin "${{ github.ref }}"
+        git checkout -B "${{ github.ref_name }}" FETCH_HEAD
+        if git merge "${orig_ref}" -m "merge back from release ${version}"; then
+          git push origin "@:${{ github.ref }}"
+          exit 0
+        else
+          echo "Warning: failed to merge release-commit back to ${{ github.ref }}"
+          echo "release will continue as tag was successfully pushed"
+          # abort merge
+          rm -f .git/MERGE_HEAD
+          git reset --hard FETCH_HEAD
+          git checkout -B "${{ github.ref_name }}"
+          # at this point, repository should have clean checkout of source-branch, pointing to
+          # head-commit (discarding previous failed merge-attempt + also release-commit)
+          # -> this should be okay:
+          #   - tag was pushed
+          #   - we still might succeed in publishing bump-commit
+        fi
+
+    - name: create github-release
+      shell: python
+      run: |
+        import os
+
+        import github3
+
+        import github.release
+
+        host = os.environ['GITHUB_SERVER_URL'].removeprefix('https://')
+        org, repo = os.environ['GITHUB_REPOSITORY'].split('/')
+
+        token = '${{ inputs.github-token }}'
+        if host == 'github.com':
+          github_api = github3.GitHub(token=token)
+        else:
+          github_api = github3.GitHubEnterprise(
+            url=f'https://{host}',
+            token=token,
+          )
+
+        repository = github_api.repository(org, repo)
+
+
+        release_notes_markdown = '''\
+        ${{ steps.release-notes.outputs.release-notes }}
+        '''
+
+        release_tag_name = '${{ steps.preprocess.outputs.tag-name }}'
+        draft_tag_name = f'{tag_name}-draft'
+
+        if not (gh_release := github.release.find_draft_release(
+          repository=repository,
+          name=draft_tag_name,
+        )):
+          repository.create_release(
+            tag_name=release_tag_name,
+            body=release_notes_markdown or 'no release-notes available',
+            draft=False,
+            prerelease=False,
+          )
+        else:
+          gh_release.edit(
+            tag_name=release_tag_name,
+            name=release_tag_name,
+            body=release_notes_markdown or 'no release-notes available',
+            draft=False,
+            prerelease=False,
+          )
