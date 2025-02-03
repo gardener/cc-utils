@@ -5,6 +5,7 @@ import cfg_mgmt
 import cfg_mgmt.aws as cmaws
 import cfg_mgmt.alicloud as cmali
 import cfg_mgmt.azure as cma
+import cfg_mgmt.bdba as cmbd
 import cfg_mgmt.btp_application_certificate as cmbac
 import cfg_mgmt.btp_service_binding as cmb
 import cfg_mgmt.gcp as cmg
@@ -162,6 +163,9 @@ def rotate_cfg_element(
     elif type_name == 'kubernetes':
         rotation_validation_function = cmk.validate_for_rotation
         update_secret_function = cmk.rotate_cfg_element
+
+    elif type_name == 'bdba':
+        update_secret_function = cmbd.rotate_cfg_element
 
     if not update_secret_function:
         logger.warning(f'{type_name=} is not (yet) supported for automated rotation')
