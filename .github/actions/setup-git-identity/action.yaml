@@ -1,5 +1,9 @@
 name: Setup Git Identity
-description: Configures the Git user identity for commits
+description: |
+  Configures the Git user identity (user.name, user.email) such to allow issuing of git-commands
+  that need this cfg (most prominently creating new commits).
+
+  Existing cfg will be preserved
 inputs:
   user_name:
     description: The Git user name
@@ -16,5 +20,9 @@ runs:
       shell: bash
       run: |
         git config --global --add safe.directory $PWD
-        git config --global user.name "${{ inputs.user_name }}"
-        git config --global user.email "${{ inputs.user_email }}"
+        if ! git config user.name >/dev/null; then
+          git config user.name "${{ inputs.user_name }}"
+        fi
+        if ! git config user.email >/dev/null; then
+          git config user.email "${{ inputs.user_email }}"
+        fi
