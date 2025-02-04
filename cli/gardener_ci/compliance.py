@@ -263,7 +263,7 @@ def diff(
 
     print()
 
-    with open(os.environ['SOURCE_PATH']+'/versionDiff/outfile_new, 'w') as f:
+    with open(outfile_new, 'w') as f:
         print(f'writing added resource-versions to {outfile_new=}')
         yaml.safe_dump(
             new_resources,
@@ -271,7 +271,7 @@ def diff(
         )
         print()
 
-    with open(os.environ['SOURCE_PATH']+'/versionDiff/outfile_removed, 'w') as f:
+    with open(outfile_removed, 'w') as f:
         print(f'writing removed resource-versions to {outfile_removed=}')
         yaml.safe_dump(
             removed_resources,
