@@ -25,6 +25,32 @@ inputs:
 
       if commit-digest is not passed, will fall back to hardcoded ref `refs/capture-commit`, which
       is written by `capture-commit` action.
+  after-import:
+    default: rebase
+    required: true
+    type: choice
+    description: |
+      controls what should happen after importing of commit:
+
+      *rebase* (default)
+      rebase current branch against imported commit. This is mostly equivalent to doing a
+      cherry-pick, but will ensure the imported commit will keep its commit-digest (which is
+      useful for release-commits, whose commit-digests might have been used in earlier stages
+      of the pipeline).
+
+      *cherry-pick*
+      use git-cherry-pick to bring imported commit as successor to current head. This is useful
+      in cases where rebase is not possible (for example to consume a "bump-commit")
+
+      *noop*
+      import commit, and leave follow-up steps to caller. This is useful in cases where callers
+      need more control. Note that if not explicitly doing something w/ imported objects, this will
+      have _no_ visible effect to either worktree nor commit-history (+ imported objects will remain
+      loose).
+    options:
+      - rebase
+      - cherry-pick
+      - noop
 
 runs:
   using: composite
@@ -44,5 +70,21 @@ runs:
           commit_digest="$(git rev-parse refs/capture-commit)"
         fi
 
-        git rebase "${commit_digest}"
+        case "${{ inputs.after-import }}" in
+          rebase)
+          git rebase "${commit_digest}"
+          ;;
+          cherry-pick)
+          git cherry-pick "${commit_digest}"
+          ;;
+          noop)
+          echo 'after-import set to noop - exiting now'
+          exit 0
+          ;;
+          *)
+          echo "don't know how to handle after-import action '${{ inputs.after-import }}'"
+          echo "note: this indicates a bug in _this_ github-action"
+          exit 1
+          ;;
+        esac
       shell: bash
