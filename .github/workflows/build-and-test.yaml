@@ -26,15 +26,20 @@ on:
         default: "build ${version}"
 
     outputs:
-      release-commit-objects:
-        description: release-commit-objects (for importing release-commit)
-        value: ${{ jobs.version.outputs.release-commit-objects }}
-      release-commit-digest:
-        description: release-commit's digest
-        value: ${{ jobs.version.outputs.release-commit-digest }}
+      version-commit-objects:
+        description: commit-objects (for importing commit changing to effective version)
+        value: ${{ jobs.version.outputs.commit-objects }}
+      version-commit-digest:
+        description: commit-digest for version-commit
+        value: ${{ jobs.version.outputs.commit-digest }}
       effective-version:
         description: effective version used during build
         value: ${{ jobs.version.outputs.version }}
+      component-descriptor:
+        description: |
+          the OCM Component-Descriptor in YAML-format (referenced inline-blobs and resources
+          are guaranteed to already have been published)
+        value: ${{ jobs.component-descriptor.outputs.component-descriptor }}
 
 jobs:
   params:
@@ -228,7 +233,7 @@ jobs:
       version: ${{ needs.version.outputs.version }}
       component-name: 'github.com/gardener/cc-utils'
       ocm-repo: ${{ needs.params.outputs.ocm_repository }}
-      commit-digest: ${{ needs.version.outputs.release-commit-digest }}
+      commit-digest: ${{ needs.version.outputs.version-commit-digest }}
       labels: |
         name: cloud.gardener.cnudie/responsibles
         value:
@@ -256,7 +261,7 @@ jobs:
       component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
       ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
 
-  component_descriptor:
+  component-descriptor:
     name: Generate + Publish OCM-Component-Descriptor
     runs-on: ubuntu-latest
     container:
@@ -276,6 +281,7 @@ jobs:
       - documentation
     outputs:
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
+      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
       - name: Install Packages
         run: |
@@ -301,6 +307,7 @@ jobs:
           oci-image-reference: ${{ needs.params.outputs.ocm_repository }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
       - name: component-descriptor
+        id: component-descriptor
         run: |
           set -eu
           pip3 install --no-cache \
@@ -370,6 +377,9 @@ jobs:
           python -m ocm upload \
             --file component-descriptor.yaml \
             --blobs-dir /tmp/dist/blobs.d
+          echo 'component-descriptor<<EOF' >> ${GITHUB_OUTPUT}
+          cat component-descriptor.yaml >> ${GITHUB_OUTPUT}
+          echo EOF >> ${GITHUB_OUTPUT}
 
   lint:
     runs-on: ubuntu-latest
