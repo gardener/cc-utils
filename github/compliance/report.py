@@ -54,20 +54,6 @@ def _all_issues(
     return set(repository.issues())
 
 
-def _criticality_classification(cve_score: float) -> gcm.Severity:
-    if not cve_score or cve_score <= 0:
-        return None
-
-    if cve_score < 4.0:
-        return gcm.Severity.LOW
-    if cve_score < 7.0:
-        return gcm.Severity.MEDIUM
-    if cve_score < 9.0:
-        return gcm.Severity.HIGH
-    if cve_score >= 9.0:
-        return gcm.Severity.CRITICAL
-
-
 def _delivery_dashboard_url(
     component: ocm.Component,
     base_url: str,
