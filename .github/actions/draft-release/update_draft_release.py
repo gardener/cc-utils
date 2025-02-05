@@ -87,6 +87,7 @@ def main():
         print(f'Creating {draft_release_name=}')
         repository.create_release(
             tag_name=draft_release_name,
+            name=draft_release_name,
             body=release_notes_md,
             draft=True,
         )
