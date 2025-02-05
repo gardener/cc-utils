@@ -61,10 +61,6 @@ jobs:
       release-commit-objects: ${{ steps.capture-commit.outputs.commit-objects }}
       release-commit-digest: ${{ steps.capture-commit.outputs.commit-digest }}
     steps:
-    - name: install git
-      run: |
-        if which git &>/dev/null; then exit 0; fi
-        apt-get install -y git
     - uses: actions/checkout@v4
     - name: calculate-effective-version
       id: version
