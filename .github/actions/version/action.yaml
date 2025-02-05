@@ -1,0 +1,168 @@
+name: Version
+description: |
+  performs version-operations for release- and non-release pipelines. This action assumes version
+  is kept track of within repository (either in a regular versionfile, or using callbacks). It also
+  assumes versions adhere to "relaxed semver" (relaxed in that an optional v-prefix is allowed, and
+  `patch` may be omitted (e.g. v1.2)).
+
+  The action defines some defaults w.r.t versionfile/callback-lookup such to reduce amount of
+  explicit configuration for convenience.
+
+  Specifically, the following files are honoured (all paths relative to repository-root):
+    - VERSION # textfile containing version
+    - .ci/read-version # executable; callback (version read from stdout)
+    - .ci/write-version # executable; callback (version written to stdin)
+
+  If exactly one of `VERSION`, or `.ci/read-version`, `.ci/write-version` is present, those are
+  used (without the need to set inputs accordingly). If both are present, explicit inputs are
+  required.
+
+  The action will read the current version (repository-version), and calculate the "effective
+  version" from it, by performing the specified `version-operation`.
+
+  The action offers different options of how to convey created diff from  writing effective version,
+  controlled via the `repository-operation`-input:
+
+  - leave-dirty: do not create a commit, leave diff in repository
+  - commit-to-head: create a commit, update head (regular result of git commit)
+  - capture-commit: create a commit, but capture using `capture-commit` action (no change to head)
+
+inputs:
+  versionfile:
+    required: false
+    type: string
+  read-callback:
+    required: false
+    type: string
+  write-callback:
+    required: false
+    type: string
+  version:
+    required: false
+    type: string
+    description: |
+      pass-in version for more control, if needed. versionfile/callbacks will not be used for
+      reading (however, they will be used for writing). In conjunction w/ setting version-operation
+      to `noop`, this allows for full control over effective-version.
+  commit-message:
+    required: false
+    type: string
+    description: |
+      commit-message-template to use if the action should create a commit.
+      currently only supported template-var: ${version} (bash-syntax).
+    default: Set version to ${version}
+  version-operation:
+    required: true
+    type: choice
+    default: commit-digest-as-prerelease
+    description: |
+      how to calculate effective version. Possible values:
+      - noop: keep version as-is (useful in conjunction w/ passing-in `version`)
+      - finalise: make version final (remove build/prerelease-suffix)
+      - commit-digest-as-prerelease: set commit-digest as prerelease-suffix
+      - timestamp-as-prerelease: set unix-epoch-timestamp as prerelease-suffix
+      - bump-major: increment major-version by 1
+      - bump-minor: increment minor-version by 1
+      - bump-patch: increment patch-version by 1
+
+      Note to `commit-digest-as-prelease`: The commit-digest that will be used is the one on which
+      pipeline-run is based (not, e.g. the commit-digest of version-change-commit)
+    options:
+      - noop
+      - finalise
+      - commit-digest-as-prerelease
+      - timestamp-as-prerelease
+      - bump-major
+      - bump-minor
+      - bump-patch
+  repository-operation:
+    required: true
+    type: choice
+    default: capture-commit
+    description: |
+      Controls how to convey effective version.
+      *capture-commit* (default)
+      will leave repository in clean state (that is: discard _any_ changes from worktree).
+      version-changing commit will be exposed using `capture-commit` action (and thus will need
+      to be imported again for consumption).
+      This is particularly useful if commit is to be conveyed to other jobs, with identical
+      commit-digest, but without pushing the commit to upstream repository (yet).
+
+      *leave-dirty*
+      do not create a commit. Instead, leave created diff (if any) in worktree
+
+      *commit-to-head*
+      create a commit, and update head to it
+    options:
+      - capture-commit
+      - leave-dirty
+      - commit-to-head
+
+outputs:
+  version:
+    description: |
+      the effective version
+    value: ${{ steps.version.outputs.version }}
+  commit-objects:
+    description: |
+      a base64-encoded tarfile containing the objects required to restore the version-change-commit,
+      as output by capture-commit action (see for additional reference).
+    value: ${{ steps.capture-commit.outputs.commit-objects }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: version
+      id: version
+      shell: bash
+      run: |
+        set -eu
+
+        git stash
+
+        restore_stash() {
+          stash_len=$(git stash list | wc -l)
+          if [ ${stash_len} -gt 0 ]; then
+            git stash pop
+          fi
+        }
+
+        touch /tmp/timestamp-ref
+
+        "${GITHUB_ACTION_PATH}/version_cli.py" \
+          --versionfile="${{ inputs.versionfile }}" \
+          --read-callback="${{ inputs.read-callback }}" \
+          --write-callback="${{ inputs.write-callback }}" \
+          --root-dir="${PWD}" \
+          --version="${{ inputs.version }}" \
+          --operation="${{ inputs.version-operation }}" \
+          --extra-version-outfile /tmp/effective-version \
+          --commit-digest="${{ github.sha }}"
+
+        if [ "${{ inputs.repository-operation }}" == leave-dirty ]; then
+            restore_stash
+            exit 0
+        fi
+
+        # expose to commit-message template
+        version="$(cat /tmp/effective-version)"
+
+        git add -A
+        git commit -m "${{ inputs.commit-message }}"
+
+        echo "version=${version}" >> $GITHUB_OUTPUT
+
+    - name: capture-commit
+      id: capture-commit
+      if: ${{ inputs.repository-operation != 'leave-dirty' }}
+      uses: gardener/cc-utils/.github/actions/capture-commit@master
+      with:
+        timestamp-reference: /tmp/timestamp-ref
+    - name: reset-repository
+      if: ${{ inputs.repository-operation == 'capture-commit' }}
+      shell: bash
+      run: |
+        git reset @~
