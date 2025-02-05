@@ -17,9 +17,6 @@ on:
       effective-version:
         description: effective version used during build
         value: ${{ jobs.version.outputs.effective_version }}
-      next-version:
-        description: next version (for bump-commits)
-        value: ${{ jobs.version.outputs.next_version }}
   push:
 
 jobs:
@@ -55,7 +52,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       effective_version: ${{ steps.version.outputs.effective_version }}
-      next_version: ${{ steps.version.outputs.next_version }}
       repo_version: ${{ steps.version.outputs.repo_version }}
       setuptools_version: ${{ steps.version.outputs.setuptools_version }}
       release-commit-objects: ${{ steps.capture-commit.outputs.commit-objects }}
@@ -75,11 +71,6 @@ jobs:
         if ${{ inputs.release || false }}; then
           effective_version=${major}.${minor}.${patch}
           setuptools_version=${effective_version}
-          # hardcode to bumping "minor" for now
-          next_minor=$(( $minor + 1 ))
-          next_version="${major}.${next_minor}.${patch}-dev"
-          echo "next_version=${next_version}" >> "${GITHUB_OUTPUT}"
-          echo "next_version=${next_version}"
         else
           effective_version=${major}.${minor}.${patch}-${commit}
           setuptools_version=${src_version}

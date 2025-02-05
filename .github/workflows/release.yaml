@@ -36,7 +36,7 @@ jobs:
           commit-objects: ${{ needs.build.outputs.release-commit-objects }}
           commit-digest: ${{ needs.build.outputs.release-commit-digest }}
 
-      - name: Push Release and Bump-Commits
+      - name: Push Release-Commit
         id: releasecommit
         run: |
           echo "gha-creds*" >> .git/info/exclude
@@ -45,13 +45,21 @@ jobs:
           tgt_ref="refs/tags/${effective_version}"
           echo "pushing release-commit ${commit_digest} to ${tgt_ref}"
           git push origin "@:${tgt_ref}"
-          next_version=${{ needs.build.outputs.next-version }}
-          echo "next version: ${next_version}"
-          git reset --hard @~
-          echo "${next_version}" | .ci/write-version
-          git add .
-          git commit -m"Prepare next Dev-Cycle ${next_version}"
-          git pull --rebase
+
+          # reset again to upstream branch (to allow for easier publishing of bump-commit)
+          git fetch origin ${{ github.ref }}
+          git checkout -B ${{ github.ref_name }} FETCH_HEAD
+
+      - name: Create Bump-Commit
+        uses: ./.github/actions/version
+        with:
+          read-callback: .ci/read-version
+          write-callback: .ci/write-version
+          commit-message: "next version: ${version}"
+          version-operation: bump-minor
+          repository-operation: commit-to-head
+      - name: Push Bump-Commit
+        run: |
           git push origin
       - name: Retrieve Documentation
         uses: actions/download-artifact@v4
