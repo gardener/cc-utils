@@ -20,7 +20,12 @@ runs:
       shell: bash
       run: |
         set -eu
-        cd cc-utils
+
+        # mv outside of $PWD to avoid leaving files in workdir
+        tmpdir="$(mktemp -d)"
+        mv cc-utils ${tmpdir}
+        cd "${tmpdir}/cc-utils"
+
         python3 --version
 
         pip install setuptools >/dev/null
