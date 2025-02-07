@@ -476,6 +476,7 @@ except:
   # keep going
 
 %   if process_release_notes:
+release_notes_md = None
 try:
   release_notes_md = collect_release_notes(
     git_helper=git_helper,
@@ -489,7 +490,6 @@ except:
   logger.warning('an error occurred whilst trying to collect release-notes')
   logger.warning('release will continue')
   traceback.print_exc()
-  release_notes_md = None
 %   else:
 release_notes_md = None
 %   endif
