@@ -63,6 +63,10 @@ jobs:
             oci_repository=${snapshots_repo}
           fi
 
+          echo "ocm_releases_repository=${releases_repo}"
+          echo "ocm_repository=${ocm_repository}"
+          echo "oci_repository=${oci_repository}"
+
           echo "ocm_releases_repository=${releases_repo}" >> "${GITHUB_OUTPUT}"
           echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
           echo "oci_repository=${oci_repository}" >> "${GITHUB_OUTPUT}"
