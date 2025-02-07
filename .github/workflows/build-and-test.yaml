@@ -31,7 +31,27 @@ jobs:
       - name: params
         id: params
         run: |
-          repo_base=europe-docker.pkg.dev/gardener-project
+          set -eu
+          set -o pipefail
+
+          is_fork=$(
+            curl -qL -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+            https://api.github.com/repos/${{ github.repository }} \
+            | jq .fork
+          )
+          echo "repo is a fork: ${is_fork}"
+
+          if [ "${is_fork}" == true ]; then
+            # avoid interference w/ images or component-descriptors from forked repositories
+            # (also: do not require forks to have permissions for gardener's registries)
+            repo_base=https://ghcr.io/${{ github.repository }}
+          elif [ "${is_fork}" == false ]; then
+            repo_base=europe-docker.pkg.dev/gardener-project
+          else
+            echo "unexpected value for is_fork: ${is_fork}"
+            exit 1
+          fi
+
           snapshots_repo="${repo_base}/snapshots"
           releases_repo="${repo_base}/releases"
 
