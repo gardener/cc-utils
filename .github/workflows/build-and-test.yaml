@@ -7,6 +7,24 @@ on:
         required: false
         type: boolean
         default: false
+      version-operation:
+        required: true
+        type: string
+        description: |
+          version-operation to pass to `version` action (cannot validate allowed values here)
+          one of:
+          - noop
+          - finalise
+          - commit-digest-as-prerelease
+          - timestamp-as-prerelease
+          - bump-major
+          - bump-minor
+          - bump-patch
+      version-commit-message:
+        required: false
+        type: string
+        default: "build ${version}"
+
     outputs:
       release-commit-objects:
         description: release-commit-objects (for importing release-commit)
@@ -16,8 +34,7 @@ on:
         value: ${{ jobs.version.outputs.release-commit-digest }}
       effective-version:
         description: effective version used during build
-        value: ${{ jobs.version.outputs.effective_version }}
-  push:
+        value: ${{ jobs.version.outputs.version }}
 
 jobs:
   params:
@@ -44,7 +61,7 @@ jobs:
           if [ "${is_fork}" == true ]; then
             # avoid interference w/ images or component-descriptors from forked repositories
             # (also: do not require forks to have permissions for gardener's registries)
-            repo_base=https://ghcr.io/${{ github.repository }}
+            repo_base=ghcr.io/${{ github.repository }}
           elif [ "${is_fork}" == false ]; then
             repo_base=europe-docker.pkg.dev/gardener-project
           else
@@ -75,49 +92,30 @@ jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
-      effective_version: ${{ steps.version.outputs.effective_version }}
-      repo_version: ${{ steps.version.outputs.repo_version }}
-      setuptools_version: ${{ steps.version.outputs.setuptools_version }}
+      version: ${{ steps.version.outputs.version }}
+      setuptools-version: ${{ steps.version-setuptools.outputs.setuptools-version }}
       release-commit-objects: ${{ steps.capture-commit.outputs.commit-objects }}
       release-commit-digest: ${{ steps.capture-commit.outputs.commit-digest }}
     steps:
     - uses: actions/checkout@v4
-    - name: calculate-effective-version
+    - uses: gardener/cc-utils/.github/actions/version@master
       id: version
-      run: |
-        src_version=$(.ci/read-version)
-        commit=${{ github.sha }}
-        echo "commit-digest: ${commit}"
-        major="$(echo ${src_version} | cut -d. -f1)"
-        minor="$(echo ${src_version} | cut -d. -f2)"
-        patch="$(echo ${src_version} | cut -d. -f3 | cut -d- -f1)"
-
-        if ${{ inputs.release || false }}; then
-          effective_version=${major}.${minor}.${patch}
-          setuptools_version=${effective_version}
-        else
-          effective_version=${major}.${minor}.${patch}-${commit}
-          setuptools_version=${src_version}
-        fi
-        echo "effective-version: ${effective_version}"
-        echo "effective_version=${effective_version}" >> "${GITHUB_OUTPUT}"
-        echo "repo_version=${src_version}" >> "${GITHUB_OUTPUT}"
-        echo "setuptools_version=${setuptools_version}" >> "${GITHUB_OUTPUT}"
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
-    - name: create commit with effective version
-      if: ${{ inputs.release }}
-      run: |
-        echo ${{ steps.version.outputs.effective_version }} | .ci/write-version
-        touch /tmp/timestamp-ref
-        git add .
-        git commit -m "Release ${{ steps.version.outputs.effective_version }}"
-
-    - name: capture commit with effective version
-      if: ${{ inputs.release }}
-      uses: ./.github/actions/capture-commit
-      id: capture-commit
       with:
-        timestamp-reference: /tmp/timestamp-ref
+        read-callback: .ci/read-version
+        write-callback: .ci/write-version
+        commit-message: ${{ inputs.version-commit-message }}
+        version-operation: ${{ inputs.version-operation }}
+        repository-operation: capture-commit
+    - name: version-setuptools
+      id: version-setuptools
+      run: |
+        set -eu
+        version=${{ steps.version.outputs.version }}
+        if [[ "${version}" == *-* ]]; then
+          # version was non-final - add suffix compliant w/ pep-440
+          version="${version%%-*}-dev0"
+        fi
+        echo "setuptools-version=${version}" >> ${GITHUB_OUTPUT}
 
   package:
     runs-on: ubuntu-latest
@@ -147,7 +145,7 @@ jobs:
       id: package
       run: |
         set -eu
-        version=${{ needs.version.outputs.setuptools_version }}
+        version=${{ needs.version.outputs.setuptools-version }}
         echo "version: ${version}"
         echo "${version}" | .ci/write-version
         pkg_dir=dist
@@ -227,7 +225,7 @@ jobs:
       - params
     uses: ./.github/workflows/base-component-descriptor.yaml
     with:
-      version: ${{ needs.version.outputs.effective_version }}
+      version: ${{ needs.version.outputs.version }}
       component-name: 'github.com/gardener/cc-utils'
       ocm-repo: ${{ needs.params.outputs.ocm_repository }}
       commit-digest: ${{ needs.version.outputs.release-commit-digest }}
@@ -310,7 +308,7 @@ jobs:
             requests \
             www-authenticate \
           &>/dev/null
-          version=${{ needs.version.outputs.effective_version }}
+          version=${{ needs.version.outputs.version }}
           ocm_repo=${{ needs.params.outputs.ocm_repository }}
           echo "importing base-component-descriptor"
           echo "${{ needs.base-component-descriptor.outputs.component-descriptor }}" \
@@ -498,7 +496,7 @@ jobs:
           cp -r /tmp/dist .
           ls -lta
 
-          setuptools_version=${{ needs.version.outputs.setuptools_version }}
+          setuptools_version=${{ needs.version.outputs.setuptools-version }}
           # workaround: set repository-version to setuptools-version so installation of
           #             packages will succeed
           echo "${setuptools_version}" | .ci/write-version
@@ -508,7 +506,7 @@ jobs:
         with:
           name: job-image
           repository: ${{ needs.params.outputs.oci_repository }}/cicd/job-image
-          version: ${{ needs.version.outputs.effective_version }}
+          version: ${{ needs.version.outputs.version }}
           oci_platforms: ${{ needs.params.outputs.oci_platforms }}
           context: . # pass modified path rather than clean checkout
           ocm_labels: |
