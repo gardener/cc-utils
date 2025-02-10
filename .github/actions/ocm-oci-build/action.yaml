@@ -2,8 +2,9 @@ name: Build and Push OCI-Image / OCM-Resource
 description: |
   Builds an OCI Image using `docker/build-push-action@v6`, and exposes a (customisable)
   OCM Resource fragment as output (for being added to OCM Component-Descriptor).
-  For convenience, the action tries to authenticate against target-OCI-Registry using
-  github.com/gardener/cc-utils/.github/actions/gar-auth.
+
+  Note that callers must authenticate against target OCI-Registry prior to calling this action.
+  (see actions/oci-auth for a convenient action for github.com/gardener).
 
   *Caveat for "matrix-builds"*
 
@@ -82,9 +83,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: GAR-Auth
-      id: auth
-      uses: gardener/cc-utils/.github/actions/gar-auth@master
     - name: Preprocess Parameters
       shell: bash
       id: preprocess
