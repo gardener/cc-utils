@@ -16,6 +16,8 @@ jobs:
     uses: ./.github/workflows/build-and-test.yaml
     with:
       release: true
+      version-operation: finalise
+      version-commit-message: "release ${version}"
 
 
   publish-release-and-bump-commit:
