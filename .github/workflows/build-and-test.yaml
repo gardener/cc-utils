@@ -293,9 +293,12 @@ jobs:
         with:
           name: linting-logs # targetpath: bandit.tar.gz
           path: /tmp/linting-logs
-      - name: GAR-Auth
+      - name: OCI-Auth
         id: auth
-        uses: ./.github/actions/gar-auth
+        uses: ./.github/actions/oci-auth
+        with:
+          oci-image-reference: ${{ needs.params.outputs.ocm_repository }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
       - name: component-descriptor
         run: |
           set -eu
@@ -481,6 +484,7 @@ jobs:
     environment: build
     permissions:
       contents: read
+      packages: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
@@ -500,6 +504,11 @@ jobs:
           # workaround: set repository-version to setuptools-version so installation of
           #             packages will succeed
           echo "${setuptools_version}" | .ci/write-version
+      - name: Authenticate against OCI-Registry
+        uses: ./.github/actions/oci-auth
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          oci-image-reference: ${{ needs.params.outputs.oci_repository }}
       - name: Build OCI Image (using ocm-oci-build-action)
         uses: ./.github/actions/ocm-oci-build
         id: image-build
