@@ -29,7 +29,7 @@ google-crc32c>1.1.4
 html2text
 jsonschema
 jsonpath-ng
-kubernetes>=26.0.0
+kubernetes<32.0.0,>=26.0.0
 msal<2
 openstacksdk
 oss2
