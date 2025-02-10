@@ -40,8 +40,14 @@ runs:
         fi
 
         echo 'building gardener-gha-libs'
-        python3 setup.gha.py bdist_wheel \
-          --dist-dir dist
+        if ! python3 setup.gha.py bdist_wheel \
+          --dist-dir dist >/tmp/build.log; then
+          echo package-build returned an error - dumping log:
+          cat /tmp/build.log
+          echo ----
+          echo will now exit
+          exit 1
+        fi
 
         echo "building w/ effective version ${version}"
 
