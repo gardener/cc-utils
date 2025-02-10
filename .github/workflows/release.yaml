@@ -25,11 +25,6 @@ jobs:
     needs:
       - build
     steps:
-      - name: install git
-        run: |
-          if ! which git &>/dev/null; then
-            apt-get install git -y
-          fi
       - uses: actions/checkout@v4
       - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       - name: Import Release-Commit
