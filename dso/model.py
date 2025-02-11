@@ -418,7 +418,7 @@ class DikiFinding(Finding):
 
     @property
     def key(self) -> str:
-        return _as_key(self.provider_id, f'{self.ruleset_id}:{self.ruleset_version}', self.rule_id)
+        return _as_key(self.provider_id, self.ruleset_id, self.rule_id)
 
 
 @dataclasses.dataclass(frozen=True)
