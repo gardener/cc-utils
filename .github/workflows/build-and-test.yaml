@@ -264,8 +264,6 @@ jobs:
   component-descriptor:
     name: Generate + Publish OCM-Component-Descriptor
     runs-on: ubuntu-latest
-    container:
-      image: python:alpine
     permissions:
       contents: write
       id-token: write
@@ -283,13 +281,8 @@ jobs:
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
       component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
-      - name: Install Packages
-        run: |
-          apk add --no-cache \
-            bash \
-            git
-          git config --global --add safe.directory $PWD
       - uses: actions/checkout@v4
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: Retrieve Distribution Packages
         uses: actions/download-artifact@v4
         with:
@@ -310,15 +303,6 @@ jobs:
         id: component-descriptor
         run: |
           set -eu
-          pip3 install --no-cache \
-            aiohttp \
-            dacite \
-            deprecated \
-            pyaml \
-            python-dateutil \
-            requests \
-            www-authenticate \
-          &>/dev/null
           version=${{ needs.version.outputs.version }}
           ocm_repo=${{ needs.params.outputs.ocm_repository }}
           echo "importing base-component-descriptor"
