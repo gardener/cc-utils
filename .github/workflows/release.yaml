@@ -26,7 +26,7 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v4
-      - uses: gardener/cc-utils/.github/actions/release-notes@master
+      - uses: ./.github/actions/release-notes
         with:
           component-descriptor: ${{ needs.build.outputs.component-descriptor }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
