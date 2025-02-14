@@ -94,8 +94,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       setuptools-version: ${{ steps.version-setuptools.outputs.setuptools-version }}
-      release-commit-objects: ${{ steps.capture-commit.outputs.commit-objects }}
-      release-commit-digest: ${{ steps.capture-commit.outputs.commit-digest }}
+      commit-objects: ${{ steps.version.outputs.commit-objects }}
+      commit-digest: ${{ steps.version.outputs.commit-digest }}
     steps:
     - uses: actions/checkout@v4
     - uses: gardener/cc-utils/.github/actions/version@master
