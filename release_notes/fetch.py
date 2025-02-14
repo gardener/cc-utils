@@ -45,11 +45,17 @@ def _list_commits_since_tag(
 
 def _get_release_note_commits_tuple_for_release(
         current_version: str,
+        current_version_ref_commit: git.Commit | None,
         previous_version: str,
         git_helper: gitutil.GitHelper,
         github_repo: github3.repos.Repository,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
+    current_version: version which defines upper boundary of versions to honour (needed if fetching
+                     release-notes for a non-head release-branch)
+    current_version_ref_commit: if tag is not present in remote (e.g. if pipeline does not
+                                want to to publish it, yet), pass-in commit to use for
+                                walking up to previous release-tag/commit.
     :return: a tuple of commits which should be included in the release notes
     and a tuple of commits which should not be included in the release notes
     '''
@@ -65,11 +71,13 @@ def _get_release_note_commits_tuple_for_release(
     previous_version_tag_commit_sha = git_helper.fetch_head(
         f'refs/tags/{previous_version_tag}'
     )
-    current_tag_commit_sha = git_helper.fetch_head(f'refs/tags/{current_version_tag}')
-    if git_helper.repo.is_ancestor(previous_version_tag_commit_sha, current_tag_commit_sha):
+    if not current_version_ref_commit:
+        current_version_ref_commit = git_helper.fetch_head(f'refs/tags/{current_version_tag}')
+
+    if git_helper.repo.is_ancestor(previous_version_tag_commit_sha, current_version_ref_commit):
         logger.info('Previous tag is an ancestor, simple range should be enough.')
         return tuple(git_helper.repo.iter_commits(
-            f'{current_tag_commit_sha}...{previous_version_tag_commit_sha}')
+            f'{current_version_ref_commit}...{previous_version_tag_commit_sha}')
         ), tuple()
 
     # otherwise, use the new method
@@ -96,7 +104,7 @@ def _get_release_note_commits_tuple_for_release(
 
     # all commits (and release notes!) not included in {filter_out_commits} should be added to the
     # final generated release notes
-    filter_in_commits_range = f'{current_tag_commit_sha}...{previous_branch_start}'
+    filter_in_commits_range = f'{current_version_ref_commit}...{previous_branch_start}'
     logger.debug(f'{filter_in_commits_range=}')
     filter_in_commits = git_helper.repo.iter_commits(filter_in_commits_range)
 
@@ -107,6 +115,7 @@ def get_release_note_commits_tuple(
         release_note_version_range: tuple[str | SpecialVersion, str | SpecialVersion],
         git_helper:gitutil.GitHelper,
         github_repo: github3.repos.Repository,
+        current_version_ref_commit: git.Commit | None=None,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
@@ -134,6 +143,7 @@ def get_release_note_commits_tuple(
     return _get_release_note_commits_tuple_for_release(
         previous_version=from_version,
         current_version=to_version,
+        current_version_ref_commit=current_version_ref_commit,
         git_helper=git_helper,
         github_repo=github_repo,
     )
@@ -305,6 +315,7 @@ def fetch_release_notes(
     github_api_lookup: rnu.GithubApiLookup,
     version_whither: str | None = None,
     version_whence: str | None = None,
+    version_whither_ref_commit: git.Commit | None = None,
 ) -> set[rnm.ReleaseNote]:
     ''' Fetches and returns a set of release notes for the specified component.
 
@@ -382,6 +393,7 @@ def fetch_release_notes(
     # fetch commits for release
     filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
         release_note_version_range=release_note_version_range,
+        current_version_ref_commit=version_whither_ref_commit,
         git_helper=git_helper,
         github_repo=github_repo
     )

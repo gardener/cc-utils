@@ -139,6 +139,11 @@ def main():
         ),
     )
 
+    # pass current head as ref-commit. This avoids release-tag to exist in remote while
+    # fetching release-notes
+    repository = git_helper.repo
+    version_whither_ref_commit = repository.head.commit
+
     def github_api_lookup(repo_url):
         # XXX: needs to be extended for cross-github-support
         return github_api
@@ -162,6 +167,7 @@ def main():
                 git_helper=git_helper,
                 github_api_lookup=github_api_lookup,
                 version_whither=component.version,
+                version_whither_ref_commit=version_whither_ref_commit,
             )
     except ValueError as ve:
         print(f'Warning: error whilst fetch draft-release-notes: {ve=}')
