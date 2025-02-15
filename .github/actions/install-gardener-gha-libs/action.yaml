@@ -41,7 +41,7 @@ runs:
 
         echo 'building gardener-gha-libs'
         if ! python3 setup.gha.py bdist_wheel \
-          --dist-dir dist >/tmp/build.log; then
+          --dist-dir dist &>/tmp/build.log; then
           echo package-build returned an error - dumping log:
           cat /tmp/build.log
           echo ----
@@ -52,7 +52,7 @@ runs:
         echo "building w/ effective version ${version}"
 
         if ! pip install --find-links dist \
-          gardener-gha-libs=="${version}" > /tmp/pip-install.log; then
+          gardener-gha-libs=="${version}" &> /tmp/pip-install.log; then
             echo 'An error occured while tring to run pip install:'
             cat /tmp/pip-install.log
             exit 1
