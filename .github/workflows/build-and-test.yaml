@@ -103,7 +103,7 @@ jobs:
       commit-digest: ${{ steps.version.outputs.commit-digest }}
     steps:
     - uses: actions/checkout@v4
-    - uses: gardener/cc-utils/.github/actions/version@master
+    - uses: ./.github/actions/version
       id: version
       with:
         read-callback: .ci/read-version
