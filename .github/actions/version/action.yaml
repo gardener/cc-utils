@@ -169,4 +169,6 @@ runs:
       if: ${{ inputs.repository-operation == 'capture-commit' }}
       shell: bash
       run: |
-        git reset @~
+        echo "resetting (hard) worktree and index, as capture-commit was chosen"
+        git reset --hard @~
+        git status
