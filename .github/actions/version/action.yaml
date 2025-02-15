@@ -154,6 +154,10 @@ runs:
         git commit -m "${{ inputs.commit-message }}"
 
         echo "version=${version}" >> $GITHUB_OUTPUT
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        ## Version-Commit Summary
+        cat $(git show)
+        EOF
 
     - name: capture-commit
       id: capture-commit
