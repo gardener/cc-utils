@@ -9,6 +9,8 @@ on:
 jobs:
   update-dockerfile:
     runs-on: ubuntu-latest
+    env:
+      BRANCH: update-dockerfile
     permissions:
       contents: write
       pull-requests: write
@@ -40,7 +42,7 @@ jobs:
         run: |
           greatest_version=$(curl -sL https://api.github.com/repos/docker/buildx/releases \
             -H 'Accept: application/json' \
-            | jq -r '.[].tag_name' \
+            | jq -r '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
             | sort -Vr \
             | head -1)
           echo "buildx_version=$greatest_version" >> $GITHUB_OUTPUT
@@ -70,18 +72,30 @@ jobs:
           git commit -m "Update Dockerfile to use Docker \
           ${{ steps.get_docker_version.outputs.docker_version }} and Buildx \
           ${{ steps.get_buildx_version.outputs.buildx_version }}"
-          git checkout -b update-dockerfile
-          git push origin update-dockerfile --force
+          git checkout -B $BRANCH
+          git push origin $BRANCH --force
 
       - name: Create or Update Pull Request
         if: steps.check_changes.outputs.changes_detected == 'true'
         run: |
-          gh pr create \
-            -B master \
-            -H update-dockerfile \
-            --title "Update Dockerfile with latest Docker and Buildx versions" \
-            --body "Updates the Dockerfile to use the latest versions:
-              - Docker: ${{ steps.get_docker_version.outputs.docker_version }}
-              - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
+          # Check if a pull request for the branch already exists
+          pr_number=$(gh pr list --head $BRANCH --state open --json number --jq '.[].number')
+          if [ -n "$pr_number" ]; then
+            echo "Pull Request #$pr_number already exists, updating title and description..."
+            gh pr edit "$pr_number" \
+              --title "Update Dockerfile with latest Docker and Buildx versions" \
+              --body "Updates the Dockerfile to use the latest versions:
+                - Docker: ${{ steps.get_docker_version.outputs.docker_version }}
+                - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
+          else
+            echo "No existing Pull Request found, creating a new one..."
+            gh pr create \
+              -B master \
+              -H $BRANCH \
+              --title "Update Dockerfile with latest Docker and Buildx versions" \
+              --body "Updates the Dockerfile to use the latest versions:
+                - Docker: ${{ steps.get_docker_version.outputs.docker_version }}
+                - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
