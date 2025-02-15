@@ -63,7 +63,7 @@ runs:
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - uses: actions/checkout@v4
     - name: import-release-commit
-      uses: gardener/cc-utils/.github/actions/import-commit@master
+      uses: ./.github/actions/import-commit
       with:
         commit-objects: ${{ inputs.release-commit-objects }}
         after-import: rebase
