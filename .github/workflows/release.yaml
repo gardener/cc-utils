@@ -44,6 +44,7 @@ jobs:
         with:
           component-descriptor: ${{ needs.build.outputs.component-descriptor }}
           release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
+          release-commit-digest: ${{ needs.build.outputs.version-commit-digest }}
           release-commit-target: branch
           bump-commit-objects: ${{ steps.bump.outputs.commit-objects }}
           release-notes: ${{ steps.release-notes.outputs.release-notes }}

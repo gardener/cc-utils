@@ -108,6 +108,10 @@ outputs:
       a base64-encoded tarfile containing the objects required to restore the version-change-commit,
       as output by capture-commit action (see for additional reference).
     value: ${{ steps.capture-commit.outputs.commit-objects }}
+  commit-digest:
+    description: |
+      the commit-digest (as hex-string) of the created version-commit
+    value: ${{ steps.capture-commit.outputs.commit-digest }}
 
 runs:
   using: composite
