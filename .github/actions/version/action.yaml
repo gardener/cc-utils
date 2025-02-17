@@ -116,7 +116,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - name: version
