@@ -36,7 +36,8 @@ class ReplicationTargetConfig:
 
 def replication_config_from_cfg_dir(cfg_dir: str) -> ReplicationTargetConfig:
     replication_config = ci.util.parse_yaml_file(
-        os.path.join(cfg_dir, 'config_replication_targets.yaml')
+        path=os.path.join(cfg_dir, 'config_replication_targets.yaml'),
+        lint=True,
     )
     return dacite.from_dict(
         data_class=ReplicationTargetConfig,
