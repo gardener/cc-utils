@@ -85,7 +85,7 @@ def write_version_to_file(version: str, path: str):
 def write_version_to_callback(version, path: str, root_dir: str):
     subprocess.run(
         args=(path,),
-        input=version,
+        input=str(version),
         text=True,
         cwd=root_dir,
         check=True,
