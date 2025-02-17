@@ -39,11 +39,32 @@ inputs:
     options:
       - tag
       - branch
-  bump-commit-objects:
+  next-version:
+    type: string
     description: |
-      bump-commit (for setting next dev-version) in serialised form (as output by `capture-commit`
-      action).
-    required: true
+      passed to `version` action as `version-operation`. see this action for documentation
+    required: false
+    default: bump-minor
+  next-version-commit-message:
+    type: string
+    description: |
+      passed to `version` action as `commit-message`. see this action for documentation
+    required: false
+    default: 'next version: ${version}'
+  version-read-callback:
+    type: string
+    description: |
+      passed to `version` action as `read-callback`. see this action for documentation
+    required: false
+  version-write-callback:
+    type: string
+    description: |
+      passed to `version` action as `write-callback`. see this action for documentation
+    required: false
+  version-versionfile:
+    type: string
+    description: |
+      passed to `version` action as `versionfile`. see this action for documentation
   release-notes:
     description: |
       the release-notes to publish as body for GitHub-Release (release-notes action might be
@@ -207,13 +228,17 @@ runs:
         # reset back to (current) head of branch for which release-job was started
         # (this will avoid merge-conflicts)
         git fetch origin "${{ github.ref }}"
-        git checkout -B "${{ github.ref_name }}" FETCH_HEAD
+        git rebase
 
-    - name: import-bump-commit
-      uses: ./.github/actions/import-commit
+    - name: create-bump-commit
+      id: bump
+      uses: ./.github/actions/version
       with:
-        commit-objects: ${{ inputs.bump-commit-objects }}
-        after-import: cherry-pick
+        read-callback: ${{ inputs.version-read-callback }}
+        write-callback: ${{ inputs.version-write-callback }}
+        version-operation: ${{ inputs.next-version }}
+        commit-message: ${{ inputs.next-version-commit-message }}
+        repository-operation: commit-to-head
 
     - name: push-bump-commit
       shell: bash

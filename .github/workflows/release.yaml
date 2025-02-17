@@ -31,22 +31,16 @@ jobs:
           component-descriptor: ${{ needs.build.outputs.component-descriptor }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
-      - name: Create Bump-Commit
-        id: bump
-        uses: ./.github/actions/version
-        with:
-          read-callback: .ci/read-version
-          write-callback: .ci/write-version
-          commit-message: "next version: ${version}"
-          version-operation: bump-minor
-          repository-operation: capture-commit
       - uses: ./.github/actions/release
         with:
           component-descriptor: ${{ needs.build.outputs.component-descriptor }}
           release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
           release-commit-digest: ${{ needs.build.outputs.version-commit-digest }}
           release-commit-target: branch
-          bump-commit-objects: ${{ steps.bump.outputs.commit-objects }}
+          version-read-callback: .ci/read-version
+          version-write-callback: .ci/write-version
+          next-version: bump-minor
+          next-version-commit-message: "next version: ${version}"
           release-notes: ${{ steps.release-notes.outputs.release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
