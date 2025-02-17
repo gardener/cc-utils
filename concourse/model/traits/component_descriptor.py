@@ -290,13 +290,6 @@ class ComponentDescriptorTrait(Trait):
             return None
 
         if ocm_repo:
-            # XXX ocm_repo used to also be interpreted as a cfg-element-name
-            # -> heuristically check it is a URL by checking for presence of `/` characters
-            # (which is both not common / allowed for cfg-element-names)
-            # -> remove this check again e.g. after 2025-01-01
-            if not '/' in ocm_repo:
-                raise ValueError(f'unexpected {ocm_repo=} - expected a URL rather than cfg-name')
-
             return ocm.OciOcmRepository(
                 baseUrl=ocm_repo,
             )
