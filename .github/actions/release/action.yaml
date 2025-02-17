@@ -210,7 +210,7 @@ runs:
         git checkout -B "${{ github.ref_name }}" FETCH_HEAD
 
     - name: import-bump-commit
-      uses: gardener/cc-utils/.github/actions/import-commit@master
+      uses: ./.github/actions/import-commit
       with:
         commit-objects: ${{ inputs.bump-commit-objects }}
         after-import: cherry-pick
