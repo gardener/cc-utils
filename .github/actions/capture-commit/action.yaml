@@ -50,11 +50,6 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: install-git
-      run: |
-        if which git &>/dev/null; then exit 0; fi
-        apt-get install -y git
-      shell: bash
     - name: capture-commit
       id: capture
       run: |
