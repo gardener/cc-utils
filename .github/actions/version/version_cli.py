@@ -159,25 +159,20 @@ def check_default_files(root_dir: str):
     have_read_callback = os.path.isfile(read_callback)
     have_write_callback = os.path.isfile(write_callback)
 
-    if have_read_callback ^ have_write_callback:
-        logger.error(f'either none or both must exist: {read_callback=}, {write_callback=}')
-        exit(1)
-
-    if have_versionfile and have_read_callback:
-        logger.error(
-            f'ambiguous whether to use {versionfile=} or {read_callback=}, {write_callback=}'
-        )
-        exit(1)
-
-    if have_versionfile:
-        return versionfile
-
-    if have_read_callback:
+    # read/write-callbacks have precedence over versionfile
+    if have_read_callback and have_write_callback:
         file_is_executable_or_fail(
             read_callback,
             write_callback,
         )
         return read_callback, write_callback
+
+    if have_read_callback ^ have_write_callback:
+        logger.error(f'either none or both must exist: {read_callback=}, {write_callback=}')
+        exit(1)
+
+    if have_versionfile:
+        return versionfile
 
     return None
 

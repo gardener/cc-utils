@@ -14,8 +14,8 @@ description: |
     - .ci/write-version # executable; callback (version written to stdin)
 
   If exactly one of `VERSION`, or `.ci/read-version`, `.ci/write-version` is present, those are
-  used (without the need to set inputs accordingly). If both are present, explicit inputs are
-  required.
+  used (without the need to set inputs accordingly). If both are present, `.ci/read-version` and
+  `.ci/write-version` callbacks have precedence.
 
   The action will read the current version (repository-version), and calculate the "effective
   version" from it, by performing the specified `version-operation`.
