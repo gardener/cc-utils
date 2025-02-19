@@ -1,0 +1,49 @@
+name: repo-metadata
+description: Retrieve repository metadata using the GitHub API
+inputs:
+  gh-token:
+    description: GitHub token to query the API
+    required: true
+outputs:
+  fork:
+    description: |
+      Repository fork status (true if fork, false otherwise)
+    value: ${{ steps.metadata.outputs.fork }}
+  private:
+    description: |
+      Repository privacy status (true if private, false otherwise)
+    value: ${{ steps.metadata.outputs.private }}
+  default-branch:
+    description: |
+      Default branch of the repository (branch name only, e.g., master)
+    value: ${{ steps.metadata.outputs.default-branch }}
+  archived:
+    description: |
+      Repository archived status (true if archived, false otherwise)
+    value: ${{ steps.metadata.outputs.archived }}
+runs:
+  using: composite
+  steps:
+    - name: Retrieve repository metadata
+      id: metadata
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Query the GitHub API for repository data
+        repo_json=$(
+          curl -sL --fail \
+          -H 'Authorization: Bearer ${{ inputs.gh-token }}' \
+          ${{ github.api_url }}/repos/${{ github.repository }}
+        )
+
+        # Extract attributes
+        fork=$(echo "$repo_json" | jq -r .fork)
+        private=$(echo "$repo_json" | jq -r .private)
+        default_branch=$(echo "$repo_json" | jq -r .default_branch)
+        archived=$(echo "$repo_json" | jq -r .archived)
+
+        # Output
+        echo "fork=$fork" >> $GITHUB_OUTPUT
+        echo "private=$private" >> $GITHUB_OUTPUT
+        echo "default-branch=$default_branch" >> $GITHUB_OUTPUT
+        echo "archived=$archived" >> $GITHUB_OUTPUT
