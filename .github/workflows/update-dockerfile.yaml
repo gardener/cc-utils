@@ -7,7 +7,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  repo-metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      fork: ${{ steps.repo-metadata.outputs.fork}}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve repository metadata
+        id: repo-metadata
+        uses: ./.github/actions/repo-metadata
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+
   update-dockerfile:
+    needs: repo-metadata
+    if: needs.repo-metadata.outputs.fork == 'false'
     runs-on: ubuntu-latest
     env:
       BRANCH: update-dockerfile
@@ -65,6 +79,7 @@ jobs:
             echo "Changes detected, proceeding with commit."
             echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
+
       - name: Commit and Push Changes
         if: steps.check_changes.outputs.changes_detected == 'true'
         run: |
