@@ -403,6 +403,16 @@ class SastFinding(Finding):
 
 
 @dataclasses.dataclass(frozen=True)
+class RescoreSastFinding:
+    sast_status: SastStatus
+    sub_type: SastSubType
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.sast_status, self.sub_type)
+
+
+@dataclasses.dataclass(frozen=True)
 class DikiCheck:
     message: str
     targets: list[dict] | dict
@@ -457,7 +467,7 @@ class CustomRescoring:
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
         | MalwareFindingDetails
-        | SastFinding
+        | RescoreSastFinding
     )
     referenced_type: str
     severity: str
