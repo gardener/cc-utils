@@ -25,6 +25,12 @@ jobs:
       - name: Setup Git Identity
         uses: ./.github/actions/setup-git-identity
 
+      - name: Retrieve repository metadata
+        id: repo_metadata
+        uses: ./.github/actions/repo-metadata
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Get latest Docker version
         id: get_docker_version
         run: |
@@ -62,11 +68,12 @@ jobs:
             echo "No changes detected. Exiting workflow."
             echo "changes_detected=false" >> $GITHUB_OUTPUT
           else
-            echo "Changes detected, proceeding with commit."
+            echo "Changes detected, proceeding with commit if not a fork."
             echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
+
       - name: Commit and Push Changes
-        if: steps.check_changes.outputs.changes_detected == 'true'
+        if: steps.check_changes.outputs.changes_detected == 'true' && steps.repo_metadata.outputs.fork == 'false'
         run: |
           git add Dockerfile.job-image-base
           git commit -m "Update Dockerfile to use Docker \
@@ -76,7 +83,7 @@ jobs:
           git push origin $BRANCH --force
 
       - name: Create or Update Pull Request
-        if: steps.check_changes.outputs.changes_detected == 'true'
+        if: steps.check_changes.outputs.changes_detected == 'true' && steps.repo_metadata.outputs.fork == 'false'
         run: |
           # Check if a pull request for the branch already exists
           pr_number=$(gh pr list --head $BRANCH --state open --json number --jq '.[].number')
