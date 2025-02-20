@@ -228,14 +228,16 @@ def diff(
             name = eval(parsed.name_template_expr) # nosec B307
         else:
             name = resource.name
+                
+        name2 = f"{component.name.split('/')[-1]}_{component.version}"
 
-        return {
+        return [{
             'name': name,
             'version': resource.version,
             'src_url': src_url,
             **pull_cmd,
-        }
-
+        }, {'component': name2}]
+    
     print(f'{left_cd.component.name}:{left_cd.component.version} -> {right_cd.component.version}')
     print(20 * '=')
 
@@ -244,7 +246,7 @@ def diff(
     print()
 
     print(yaml.safe_dump((new_resources := [
-        resource_as_dict(c,r,i) for c,r,i in new_resource_version_ids
+        resource_as_dict(c,r,i)[0] for c,r,i in new_resource_version_ids
     ])))
 
     print()
@@ -255,11 +257,16 @@ def diff(
     print()
 
     print(yaml.safe_dump((removed_resources := [
-        resource_as_dict(c,r,i) for c,r,i in removed_resource_version_ids
+        resource_as_dict(c,r,i)[0] for c,r,i in removed_resource_version_ids
+    ])))
+    
+    print(yaml.safe_dump((component_list := [
+        resource_as_dict(c,r,i)[1] for c,r,i in new_resource_version_ids
     ])))
 
     outfile_new = f'{parsed.outfile_prefix}-added.yaml'
     outfile_removed = f'{parsed.outfile_prefix}-removed.yaml'
+    outfile_components = 'names.yaml'
 
     print()
 
@@ -277,3 +284,10 @@ def diff(
             removed_resources,
             f,
         )
+
+    with open(outfile_components, 'w') as f:
+    print(f'writing component_list to {outfile_components=}')
+    yaml.safe_dump(
+        component_list,
+        f,
+    )
