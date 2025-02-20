@@ -259,7 +259,7 @@ def diff(
     print(yaml.safe_dump((removed_resources := [
         resource_as_dict(c,r,i)[0] for c,r,i in removed_resource_version_ids
     ])))
-    
+
     print(yaml.safe_dump((component_list := [
         resource_as_dict(c,r,i)[1] for c,r,i in new_resource_version_ids
     ])))
