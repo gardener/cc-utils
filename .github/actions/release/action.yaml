@@ -123,7 +123,6 @@ runs:
         echo "pushing release-commit using ${push_spec}"
         git push origin "${push_spec}"
 
-        git show @
         case "${{ inputs.release-commit-target }}" in
           tag)
           echo "chose to not push tag to source-branch: exiting now"
