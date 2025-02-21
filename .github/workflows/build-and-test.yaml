@@ -7,19 +7,17 @@ on:
         required: false
         type: boolean
         default: false
-      version-operation:
+      version-prerelease:
         required: true
         type: string
         description: |
-          version-operation to pass to `version` action (cannot validate allowed values here)
+          the prerelease-version to set for effective version (see version-action)
+
+          reasonable values:
           one of:
-          - noop
-          - finalise
-          - commit-digest-as-prerelease
-          - timestamp-as-prerelease
-          - bump-major
-          - bump-minor
-          - bump-patch
+          - '' (empty string): -> finalise version
+          - "${commit_digest}" -> current head-commit-digest (for head-update / pullrequest-builds)
+          - "${epoch}" -> unix-epoch in seconds
       version-commit-message:
         required: false
         type: string
@@ -109,7 +107,7 @@ jobs:
         read-callback: .ci/read-version
         write-callback: .ci/write-version
         commit-message: ${{ inputs.version-commit-message }}
-        version-operation: ${{ inputs.version-operation }}
+        prerelease: ${{ inputs.version-prerelease }}
         repository-operation: capture-commit
     - name: version-setuptools
       id: version-setuptools

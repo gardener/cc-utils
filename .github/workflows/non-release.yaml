@@ -7,5 +7,5 @@ jobs:
     uses: ./.github/workflows/build-and-test.yaml
     with:
       release: false
-      version-operation: commit-digest-as-prerelease
+      version-prerelease: "${commit_digest}"
       version-commit-message: "build ${version}"

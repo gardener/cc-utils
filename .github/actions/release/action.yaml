@@ -237,6 +237,7 @@ runs:
         read-callback: ${{ inputs.version-read-callback }}
         write-callback: ${{ inputs.version-write-callback }}
         version-operation: ${{ inputs.next-version }}
+        prerelease: 'dev'
         commit-message: ${{ inputs.next-version-commit-message }}
         repository-operation: commit-to-head
 
