@@ -27,6 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/release-notes
+        id: release-notes
         with:
           component-descriptor: ${{ needs.build.outputs.component-descriptor }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
