@@ -6,7 +6,6 @@ import logging
 import os
 import subprocess
 import sys
-import time
 
 try:
     import version as version_mod
@@ -27,12 +26,10 @@ logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 
 class VersionOperation(enum.StrEnum):
     NOOP = 'noop'
-    FINALISE = 'finalise'
-    COMMIT_DIGEST_AS_PRERELEASE = 'commit-digest-as-prerelease'
+    SET_PRERELEASE = 'set-prerelease'
     BUMP_MAJOR = 'bump-major'
     BUMP_MINOR = 'bump-minor'
     BUMP_PATCH = 'bump-patch'
-    TIMESTAMP_AS_PRERELEASE = 'timestamp-as-prerelease'
 
 
 def file_exists_or_fail(*paths):
@@ -104,6 +101,7 @@ def parse_args():
     parser.add_argument('--root-dir', default=os.getcwd())
     parser.add_argument('--version', required=False, default=None)
     parser.add_argument('--operation', type=VersionOperation, default=VersionOperation.NOOP)
+    parser.add_argument('--prerelease', default=None)
     parser.add_argument('--commit-digest', default=None)
     parser.add_argument('--extra-version-outfile', default=None)
 
@@ -180,34 +178,33 @@ def check_default_files(root_dir: str):
 def process_version(
     version: str,
     operation: VersionOperation,
+    prerelease: str,
     commit_digest: str,
 ):
     if operation is VersionOperation.NOOP:
         return version
     parsed_version = version_mod.parse_to_semver(version)
-    if operation is VersionOperation.FINALISE:
-        return str(parsed_version.finalize_version())
-    if operation is VersionOperation.COMMIT_DIGEST_AS_PRERELEASE:
-        version = parsed_version.finalize_version()
-        return f'{version}-{commit_digest}'
-    if operation is VersionOperation.TIMESTAMP_AS_PRERELEASE:
-        version = parsed_version.finalize_version()
-        ts = int(time.time())
-        return f'{version}-{ts}'
+    parsed_version.replace(
+        prerelease=prerelease,
+    )
+
+    if operation is VersionOperation.SET_PRERELEASE:
+        return str(parsed_version)
+
     if operation is VersionOperation.BUMP_MAJOR:
         bumped = parsed_version.bump_major()
-        if parsed_version.prerelease:
-            bumped = f'{bumped}-{parsed_version.prerelease}'
+        if prerelease:
+            bumped = f'{bumped}-{prerelease}'
         return bumped
     if operation is VersionOperation.BUMP_MINOR:
         bumped = parsed_version.bump_minor()
-        if parsed_version.prerelease:
-            bumped = f'{bumped}-{parsed_version.prerelease}'
+        if prerelease:
+            bumped = f'{bumped}-{prerelease}'
         return bumped
     if operation is VersionOperation.BUMP_PATCH:
         bumped = parsed_version.bump_patch()
-        if parsed_version.prerelease:
-            bumped = f'{bumped}-{parsed_version.prerelease}'
+        if prerelease:
+            bumped = f'{bumped}-{prerelease}'
         return bumped
 
     raise ValueError('unexpected version-operation', operation)
@@ -251,6 +248,7 @@ def main():
     effective_version = process_version(
         version=version,
         operation=parsed.operation,
+        prerelease=parsed.prerelease,
         commit_digest=parsed.commit_digest,
     )
 

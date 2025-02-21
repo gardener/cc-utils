@@ -54,13 +54,11 @@ inputs:
   version-operation:
     required: true
     type: choice
-    default: commit-digest-as-prerelease
+    default: set-prerelease
     description: |
       how to calculate effective version. Possible values:
       - noop: keep version as-is (useful in conjunction w/ passing-in `version`)
-      - finalise: make version final (remove build/prerelease-suffix)
-      - commit-digest-as-prerelease: set commit-digest as prerelease-suffix
-      - timestamp-as-prerelease: set unix-epoch-timestamp as prerelease-suffix
+      - set-prerelease: replace / set version's prerelease (e.g. 1.2.3-${prerelease})
       - bump-major: increment major-version by 1
       - bump-minor: increment minor-version by 1
       - bump-patch: increment patch-version by 1
@@ -69,12 +67,23 @@ inputs:
       pipeline-run is based (not, e.g. the commit-digest of version-change-commit)
     options:
       - noop
-      - finalise
-      - commit-digest-as-prerelease
-      - timestamp-as-prerelease
+      - set-prerelease
       - bump-major
       - bump-minor
       - bump-patch
+  prerelease:
+    required: false
+    type: string
+    default: ''
+    description: |
+      the prerelease to set. value will be interpreted as a bash-expression. The following variables
+      are available (for convenience):
+      - ${commit_digest} # output of `git rev-parse @`, i.e. current head's digest
+      - ${epoch} # output of `rate +%s`; unix epoch in seconds
+
+      If `noop` is set as `version-operation`, passed values are ignored.
+      Setting prerelease to the empty string (which is the default) will "finalise" version.
+
   repository-operation:
     required: true
     type: choice
@@ -135,6 +144,11 @@ runs:
 
         touch /tmp/timestamp-ref
 
+        # pass variables to prerelease-template
+        commit_digest=$(git rev-parse @)
+        epoch=$(date +%s)
+        prerelease="${{ inputs.prerelease }}"
+
         "${GITHUB_ACTION_PATH}/version_cli.py" \
           --versionfile="${{ inputs.versionfile }}" \
           --read-callback="${{ inputs.read-callback }}" \
@@ -142,6 +156,7 @@ runs:
           --root-dir="${PWD}" \
           --version="${{ inputs.version }}" \
           --operation="${{ inputs.version-operation }}" \
+          --prerelease="${prerelease}" \
           --extra-version-outfile /tmp/effective-version \
           --commit-digest="${{ github.sha }}"
 
