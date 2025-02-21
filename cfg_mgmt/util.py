@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 import logging
 import os
+import time
 import typing
 
 import pytimeparse
@@ -17,6 +18,9 @@ import model.base
 
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 5
+RETRY_DELAY = 60 # seconds
 
 
 def iter_cfg_elements(
@@ -297,7 +301,31 @@ def rotate_config_element_and_persist_in_cfg_repo(
         git_helper.add_and_commit(
             message=commit_message,
         )
-        git_helper.push('@', target_ref)
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                git_helper.push('@', target_ref)
+                logger.info(f'Successfully pushed changes to GitHub on attempt {attempt}')
+                break
+            except Exception as e:
+                if attempt < MAX_RETRIES:
+                    logger.warning(f'GitHub push failed (attempt {attempt}/{MAX_RETRIES}): {e}')
+                    logger.info(f'Retrying in {RETRY_DELAY} seconds...')
+
+                    # pull the latest changes and rebase
+                    latest_commit = git_helper.fetch_head(target_ref)
+                    git_helper.rebase(latest_commit.hexsha)
+
+                    time.sleep(RETRY_DELAY)
+        else:
+            '''
+            BDBA API keys are immediately invalid once rotated.
+            If we lose the new key, we cannot recover the old one.
+            So we log it to allow manual intervention if needed
+            '''
+            if cfg_element._type_name == 'bdba':
+                logger.info(f'NEW BDBA API KEY: {secret_id.get('api_key')}')
+            raise RuntimeError(f'Failed to push changes to GitHub after {MAX_RETRIES} attempts')
+
     except Exception as e:
         logger.warning(f'failed to push updated secret - reverting. Error: {e}')
         revert_function()
