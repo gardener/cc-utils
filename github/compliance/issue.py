@@ -33,6 +33,7 @@ _label_bdba = 'vulnerabilities/bdba'
 _label_licenses = 'licenses/bdba'
 _label_os_outdated = 'os/outdated'
 _label_malware = 'malware/clamav'
+_label_sast = 'compliance/sast'
 _label_diki = 'compliance/diki'
 
 _label_no_responsible = 'cfg/policy-violation/no-responsible'
