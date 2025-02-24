@@ -51,6 +51,7 @@ class Datasource:
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
+    CRYPTO = 'crypto'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
 
@@ -81,6 +82,11 @@ class Datasource:
             ),
             Datasource.CC_UTILS: (
                 Datatype.OS_IDS,
+            ),
+            Datasource.CRYPTO: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.CRYPTO_ASSET,
+                Datatype.CRYPTO,
             ),
             Datasource.DELIVERY_DASHBOARD: (
                 Datatype.RESCORING,
@@ -251,6 +257,8 @@ class Datatype:
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
+    CRYPTO_ASSET = 'crypto_asset'
+    CRYPTO = 'finding/crypto'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -262,6 +270,8 @@ class Datatype:
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST,
+            Datatype.CRYPTO_ASSET: Datasource.CRYPTO,
+            Datatype.CRYPTO: Datasource.CRYPTO,
         }[datatype]
 
 
@@ -449,6 +459,134 @@ class DikiFinding(Finding):
         return _as_key(self.provider_id, self.ruleset_id, self.rule_id)
 
 
+class CryptoAssetTypes(enum.StrEnum):
+    ALGORITHM = 'algorithm'
+    CERTIFICATE = 'certificate'
+    LIBRARY = 'library'
+    PROTOCOL = 'protocol'
+    RELATED_CRYPTO_MATERIAL = 'related-crypto-material'
+
+
+class Primitives(enum.StrEnum):
+    BLOCK_CIPHER = 'block-cipher'
+    HASH = 'hash'
+    PKE = 'pke'
+    SIGNATURE = 'signature'
+
+
+@dataclasses.dataclass
+class AlgorithmProperties:
+    name: str
+    primitive: Primitives | None
+    parameter_set_identifier: str | None
+    curve: str | None
+    padding: str | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(
+            self.name,
+            self.primitive,
+            self.parameter_set_identifier,
+            self.curve,
+            self.padding,
+        )
+
+
+class CertificateKind(enum.StrEnum):
+    ROOT_CA = 'root-ca'
+    INTERMEDIATE_CA = 'intermediate-ca'
+    END_USER = 'end-user'
+
+
+@dataclasses.dataclass
+class CertificateProperties:
+    kind: CertificateKind
+    validity_years: int | None
+    signature_algorithm_ref: str | None
+    subject_public_key_ref: str | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(
+            self.kind,
+            str(self.validity_years),
+            self.signature_algorithm_ref,
+            self.subject_public_key_ref,
+        )
+
+
+@dataclasses.dataclass
+class LibraryProperties:
+    name: str
+    version: str | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.name, self.version)
+
+
+@dataclasses.dataclass
+class ProtocolProperties:
+    type: str | None
+    version: str | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.type, self.version)
+
+
+@dataclasses.dataclass
+class RelatedCryptoMaterialProperties:
+    type: str | None
+    algorithm_ref: str | None
+    curve: str | None
+    size: int | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.type, self.algorithm_ref, self.curve, str(self.size))
+
+
+@dataclasses.dataclass
+class CryptoAsset:
+    names: list[str]
+    locations: list[str]
+    asset_type: CryptoAssetTypes
+    properties: (
+        AlgorithmProperties
+        | CertificateProperties
+        | LibraryProperties
+        | RelatedCryptoMaterialProperties
+        | ProtocolProperties
+    )
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.asset_type, self.properties.key)
+
+
+@dataclasses.dataclass(frozen=True)
+class CryptoFinding(Finding):
+    standard: str
+    asset: CryptoAsset
+    summary: str | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.standard, self.asset.key)
+
+
+@dataclasses.dataclass
+class RescoringCryptoFinding:
+    standard: str
+    asset: CryptoAsset
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.standard, self.asset.key)
+
+
 @dataclasses.dataclass(frozen=True)
 class User:
     username: str
@@ -486,6 +624,7 @@ class CustomRescoring:
         | RescoringLicenseFinding
         | MalwareFindingDetails
         | RescoreSastFinding
+        | RescoringCryptoFinding
     )
     referenced_type: str
     severity: str
@@ -583,6 +722,8 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
+        | CryptoAsset
+        | CryptoFinding
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
@@ -604,6 +745,9 @@ class ArtefactMetadata:
                     SastSubType,
                     SastStatus,
                     MatchCondition,
+                    CryptoAssetTypes,
+                    CertificateKind,
+                    Primitives,
                 ],
                 strict=True,
             ),
