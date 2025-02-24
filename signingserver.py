@@ -151,7 +151,7 @@ class SigningserverClient:
 
             logger.warning(f'caught http error, going to retry... ({remaining_retries=}); {e}')
             return self.sign(
-                content=content,
+                digest=digest,
                 hash_algorithm=hash_algorithm,
                 signing_algorithm=signing_algorithm,
                 remaining_retries=remaining_retries - 1,
