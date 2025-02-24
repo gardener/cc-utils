@@ -67,9 +67,10 @@ class Datasource:
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
     FALCO = 'falco'
+    INVENTORY = 'inventory'
 
     @staticmethod
-    def datasource_to_datatypes(datasource: str) -> tuple[str]:
+    def datasource_to_datatypes(datasource: str) -> tuple[str, ...]:
         return {
             Datasource.ARTEFACT_ENUMERATOR: (
                 Datatype.COMPLIANCE_SNAPSHOTS,
@@ -112,6 +113,9 @@ class Datasource:
             ),
             Datasource.FALCO: (
                 Datatype.FALCO_FINDING,
+            ),
+            Datasource.INVENTORY: (
+                Datatype.INVENTORY_FINDING,
             ),
         }[datasource]
 
@@ -279,6 +283,7 @@ class Datatype:
     CRYPTO_ASSET = 'crypto_asset'
     CRYPTO = 'finding/crypto'
     FALCO_FINDING = 'finding/falco'
+    INVENTORY_FINDING = 'finding/inventory'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -294,6 +299,7 @@ class Datatype:
             Datatype.CRYPTO_ASSET: Datasource.CRYPTO,
             Datatype.CRYPTO: Datasource.CRYPTO,
             Datatype.FALCO_FINDING: Datasource.FALCO,
+            Datatype.INVENTORY_FINDING: Datasource.INVENTORY,
         }[datatype]
 
 
@@ -614,6 +620,32 @@ class RescoringCryptoFinding:
 
 
 @dataclasses.dataclass(frozen=True)
+class InventoryFinding(Finding):
+    """
+    Represents a finding from the gardener/inventory system
+    """
+    # Name of provider, where orphan resources originate from, e.g. AWS, Azure,
+    # GCP, OpenStack, etc.
+    provider_name: str
+
+    # Kind of the orphan resource, e.g. Virtual Machine, Public IP address, etc.
+    resource_kind: str
+
+    # Resource name specifies the unique name of the resource in the provider
+    resource_name: str
+
+    # Short summary of the finding
+    summary: str
+
+    # Additional attributes associated with this finding
+    attributes: dict
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.provider_name, self.resource_kind, self.resource_name)
+
+
+@dataclasses.dataclass(frozen=True)
 class User:
     username: str
     type: str = 'user'
@@ -868,6 +900,7 @@ class ArtefactMetadata:
         | CryptoAsset
         | CryptoFinding
         | FalcoFinding
+        | InventoryFinding
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
