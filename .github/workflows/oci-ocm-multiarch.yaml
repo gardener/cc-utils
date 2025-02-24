@@ -1,0 +1,301 @@
+name: OCI-Build (multiarch)
+description: |
+  Reusable Workflow for building multi-platform OCI Images (grouped with an OCI Image Index),
+  accompanied by an OCM Component Descriptor Resource fragment.
+
+  The workflow will spawn a separate job for each specified platform, trying to use matching runners.
+  Currently, native runners for either `linux/arm64`. and `linux/amd64` are used. Other platforms
+  will be built on runners on `linux/amd64`, using emulation.
+on:
+  workflow_call:
+    inputs:
+      oci-registry:
+        description: |
+          The (optional) oci-registry as part of image-push-target.
+          If both oci-registry, and oci-repository are present, push-target is calculated as:
+          {oci-registry}/{oci-repository}
+        type: string
+        required: false
+      oci-repository:
+        description: |
+          The oci-repository as part of image-push-target.
+          If both oci-registry, and oci-repository are present, push-target is calculated as:
+          {oci-registry}/{oci-repository}
+          If only one of both is passed, the missing parameter will be ignored.
+        type: string
+        required: true
+      oci-platforms:
+        description: |
+          The (comma-separated) OCI Platforms to build for. Only linux/arm64 and linux/amd64 are
+          currently supported for being run natively on arm/x86_64-runners respectively.
+        type: string
+        default: 'linux/arm64,linux/amd64'
+      tag:
+        description: |
+          The image-tag to set. Occurrences of `{version}` will be replaced by `version` input
+          (which is the default).
+        type: string
+        default: '{version}'
+        required: false
+      target:
+        description: |
+          The (optional) target to build (passed to `docker build` as --target).
+        type: string
+        required: false
+      dockerfile:
+        type: string
+        required: false
+      build-ctx-artefact:
+        description: |
+          If passed, this value is interpreted as an GitHub Actions Artifact name. It is downloaded
+          into the default working directory after doing a repository-checkout.
+
+          Note that thus-imported files will overwrite existing ones from repository-checkout.
+          Contained files will be merged recursively into existing directories.
+        type: string
+        required: false
+      untar-build-ctx-artefact:
+        description: |
+          If passed, along w/ build-ctx-artefact, the downloaded artefact is assumed to contain
+          a tarfile, and will be extracted. This parameter's name is used to specify the
+          filename of said tarfile. This is useful, as GitHubActions choose to use ZIP by default,
+          so wrapping in TAR is a recommended practise, e.g. to preserve executable bits.
+        type: string
+        required: false
+      name:
+        description: |
+          The Image's name (used as OCM-Resource-Name)
+        type: string
+        required: true
+      version:
+        description: |
+          The Image's version (used as OCM-Resource-Version). Will by default also used as `tag`.
+          Must be a valid "relaxed semver".
+        type: string
+        required: true
+      ocm-labels:
+        description: |
+          optional OCM-Labels to add to the OCM Resource fragment. May either be a single label,
+          or a list of labels in either YAML or JSON format.
+
+          Example (single label):
+            ```
+            name: my-label
+            value: my-label-value
+            ```
+          Example (list of labels):
+            ```
+            - name: first-label
+              value: value1
+            - name: second-label
+              value: value2
+            ```
+        type: string
+
+    outputs:
+      ocm-resource:
+        description: |
+          OCM Resource fragment describing the published image.
+        value: ${{ jobs.collect-images.outputs.ocm-resource }}
+
+jobs:
+  preprocess:
+    runs-on: ubuntu-latest
+    outputs:
+      args: ${{ steps.preprocess.outputs.args }}
+      target-image-ref: ${{ steps.preprocess.outputs.target-image-ref }}
+    steps:
+      - name: preprocess
+        shell: python
+        id: preprocess
+        run: |
+          import json
+          import os
+          import pprint
+
+          platform_names = '${{ inputs.oci-platforms }}'.split(',')
+          ref_parts = []
+          if (oci_registry := '${{ inputs.oci-registry }}'):
+            ref_parts.append(oci_registry.strip('/'))
+          if (oci_repository := '${{ inputs.oci-repository }}'):
+            ref_parts.append(oci_repository.strip('/'))
+
+          image_ref_base = '/'.join(ref_parts)
+
+          # todo: validate version
+          version = '${{ inputs.version }}'
+
+          # note: `version` must be in scope to resolve occurrences of `{version}`
+          tag = f'${{ inputs.tag }}'
+
+          runners_by_platform = {
+            'linux/arm64': 'ubuntu-24.04-arm',
+            'linux/amd64': 'ubuntu-latest',
+          }
+
+          args = []
+
+          for platform_name in platform_names:
+            if not platform_name in runners_by_platform:
+              print(f'WARNING: no runner for {platform_name=}')
+            platform_tag = f'${{ inputs.tag }}-{platform_name.replace("/", "_")}'
+            args.append({
+              'platform-name': platform_name,
+              'runner': runners_by_platform.get(platform_name, 'ubuntu-latest'),
+              'tag': platform_tag,
+              'image-reference': f'{image_ref_base}:{platform_tag}',
+            })
+
+          pprint.pprint(args)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'args={json.dumps(args)}')
+            f.write('\n')
+
+            f.write(f'target-image-ref={image_ref_base}:${{ inputs.tag }}')
+            f.write('\n')
+
+  build-images:
+    needs: preprocess
+    runs-on: ${{ matrix.args.runner }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        args: ${{ fromJSON(needs.preprocess.outputs.args) }}
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        with:
+          oci-image-reference: ${{ matrix.args.image-reference }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+      - name: retrieve build-ctx-artefact
+        if: ${{ inputs.build-ctx-artefact }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.build-ctx-artefact }}
+          merge-multiple: true
+      - name: untar build-ctx-artefact
+        if: ${{ inputs.build-ctx-artefact && inputs.untar-build-ctx-artefact }}
+        run: |
+          fname="${{ inputs.untar-build-ctx-artefact }}"
+          echo "untarring ${fname}"
+          tar xf "${fname}"
+      - name: 'build ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
+        uses: docker/build-push-action@v6
+        id: build
+        with:
+          push: true
+          tags: ${{ matrix.args.image-reference }}
+          context: '.'
+          target: ${{ inputs.target }}
+          file: ${{ inputs.dockerfile }}
+
+  collect-images:
+    needs:
+      - build-images
+      - preprocess
+    outputs:
+      ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        with:
+          oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: collect-images
+        shell: python
+        run: |
+          import dataclasses
+          import json
+          import os
+          import pprint
+          import textwrap
+
+          import yaml
+
+          import oci.auth
+          import oci.client
+          import oci.merge
+          import oci.model
+          import ocm
+
+          args = json.loads('''
+            ${{ needs.preprocess.outputs.args }}
+          ''')
+          pprint.pprint(args)
+
+          src_image_refs = [
+            a['image-reference'] for a in args
+          ]
+
+          tgt_image_ref = '${{ needs.preprocess.outputs.target-image-ref }}'
+
+          oci_client = oci.client.Client(
+            credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+
+          print(f'merging {src_image_refs=} into {tgt_image_ref=}')
+          oci.merge.into_image_index(
+            src_image_refs=src_image_refs,
+            tgt_image_ref=tgt_image_ref,
+            oci_client=oci_client,
+          )
+
+          print(f'published to {tgt_image_ref=}')
+
+          labels_str = '''${{ inputs.ocm-labels }}'''
+          if labels_str:
+            labels = yaml.safe_load(labels_str)
+            if isinstance(labels, dict):
+              labels = [labels]
+            elif isinstance(labels, list):
+              pass
+            else:
+              raise ValueError(f'label must either be a dict or a list - saw: {type(labels)=}')
+          else:
+            labels = []
+
+          resource = ocm.Resource(
+            name='${{ inputs.name }}',
+            version='${{ inputs.version }}',
+            type=ocm.ArtefactType.OCI_IMAGE,
+            access=ocm.OciAccess(
+              imageReference=tgt_image_ref,
+            ),
+            relation=ocm.ResourceRelation.LOCAL,
+            labels=labels,
+          )
+
+          resource_str = yaml.dump(
+            data=dataclasses.asdict(resource),
+            Dumper=ocm.EnumValueYamlDumper,
+          )
+
+          print('ocm-resource:')
+          print(resource_str)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write('ocm-resource<<EOF\n')
+            f.write(resource_str)
+            f.write('EOF\n')
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(textwrap.dedent(f'''\
+            ## OCM OCI Image Build Summary
+            pushed to: `{tgt_image_ref}`
+            platforms: `${{ inputs.oci-platforms }}`
+
+            *OCM Resource Fragment*
+            ```
+            {resource_str}
+            ```
+            '''))
