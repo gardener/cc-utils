@@ -33,7 +33,7 @@ outputs:
   release-notes:
     description: |
       the collected release-notes in markdown format
-  value: ${{ steps.release-notes.outputs.release-notes }}
+    value: ${{ steps.release-notes.outputs.release-notes }}
 
 runs:
   using: composite
