@@ -184,7 +184,7 @@ def process_version(
     if operation is VersionOperation.NOOP:
         return version
     parsed_version = version_mod.parse_to_semver(version)
-    parsed_version.replace(
+    parsed_version = parsed_version.replace(
         prerelease=prerelease,
     )
 
