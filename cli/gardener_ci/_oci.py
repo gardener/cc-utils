@@ -17,6 +17,7 @@ import ctx
 import delivery.client
 import delivery.util
 import oci
+import oci.merge
 import oci.model as om
 import oci.workarounds as ow
 import tarutil
@@ -467,6 +468,19 @@ def blob(
         write(chunk)
 
     outfh.flush()
+
+
+def merge(
+    src_image_refs: list[str],
+    tgt_image_ref: str,
+):
+    oci_client = ccc.oci.oci_client()
+
+    oci.merge.into_image_index(
+        src_image_refs=src_image_refs,
+        tgt_image_ref=tgt_image_ref,
+        oci_client=oci_client,
+    )
 
 
 def sanitise(image_reference: str):
