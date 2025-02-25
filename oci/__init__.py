@@ -14,10 +14,8 @@ import requests
 import oci.auth as oa
 import oci.client as oc
 import oci.convert as oconv
-import oci.kaniko as ok
 import oci.model as om
 import oci.platform as op
-import oci.util as ou
 
 logger = logging.getLogger(__name__)
 
@@ -488,44 +486,6 @@ def replicate_blobs(
         config=replicate_blob(src_oci_manifest.config),
         layers=[replicate_blob(blob) for blob in src_oci_manifest.layers],
     )
-
-
-def publish_container_image_from_kaniko_tarfile(
-    image_tarfile_path: str,
-    oci_client: oc.Client,
-    image_reference: str,
-    additional_tags: list[str]=(),
-    manifest_mimetype: str=om.OCI_MANIFEST_SCHEMA_V2_MIME,
-):
-    image_reference = ou.normalise_image_reference(image_reference=image_reference)
-    image_name = image_reference.rsplit(':', 1)[0]
-    image_references = (image_reference,) + tuple([f'{image_name}:{tag}' for tag in additional_tags])
-
-    with ok.read_kaniko_image_tar(tar_path=image_tarfile_path) as image:
-        chunk_size = 1024 * 1024
-        for kaniko_blob in image.blobs():
-            oci_client.put_blob(
-                image_reference=image_reference,
-                digest=kaniko_blob.digest_str(),
-                octets_count=kaniko_blob.size,
-                data=kaniko_blob,
-                max_chunk=chunk_size,
-            )
-
-        # optionally patch manifest's mimetype (e.g. required for docker-hub)
-        manifest_dict = image.oci_manifest().as_dict()
-        manifest_dict['mediaType'] = manifest_mimetype
-
-        manifest_bytes = json.dumps(
-            manifest_dict,
-        ).encode('utf-8')
-
-        for tgt_ref in image_references:
-            logger.info(f'publishing manifest {tgt_ref=}')
-            oci_client.put_manifest(
-                image_reference=tgt_ref,
-                manifest=manifest_bytes,
-            )
 
 
 def image_layers_as_tarfile_generator(
