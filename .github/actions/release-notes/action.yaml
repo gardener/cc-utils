@@ -33,6 +33,7 @@ outputs:
   release-notes:
     description: |
       the collected release-notes in markdown format
+  value: ${{ steps.release-notes.outputs.release-notes }}
 
 runs:
   using: composite
@@ -51,6 +52,7 @@ runs:
         fetch-depth: 0 # release-notes code needs full commit-history and tags
         fetch-tags: 0
     - name: Retrieve Release-Notes
+      id: release-notes
       shell: bash
       run: |
         set -eu
