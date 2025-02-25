@@ -162,6 +162,7 @@ class ComponentArtefactId:
     artefact: LocalArtefactId | None = None
     artefact_kind: ArtefactKind | None = None
     references: list[typing.Self] = dataclasses.field(default_factory=list)
+    group_id: str | None = None
 
     @property
     def key(self) -> str:
@@ -179,6 +180,22 @@ class ComponentArtefactId:
             artefact_key,
             self.artefact_kind,
             references_key,
+        )
+
+    @property
+    def effective_group_id(self) -> str:
+        '''
+        If the `group_id` was not explicitly set, this function uses the previous calculation of
+        the "group-id" as default fallback, which is comprised of the component-name, artefact-kind,
+        artefact-name as well as artefact-type, e.g.
+        "github.com/gardener/cc-utilsresourcejob-imageociImage".
+        '''
+        if self.group_id:
+            return self.group_id
+
+        return (
+            self.component_name + self.artefact_kind
+            + self.artefact.artefact_name + self.artefact.artefact_type
         )
 
     def __hash__(self) -> int:
