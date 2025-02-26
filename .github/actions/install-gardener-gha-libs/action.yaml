@@ -39,19 +39,27 @@ runs:
           echo "${version}" | .ci/write-version
         fi
 
+        function build_package() {
+          setup_file="${1}"
+          if ! python3 "${setup_file}" bdist_wheel \
+            --dist-dir dist &>/tmp/build.log; then
+            echo package-build returned an error - dumping log:
+            cat /tmp/build.log
+            echo ----
+            echo will now exit
+            exit 1
+          fi
+        }
         echo 'building gardener-gha-libs'
-        if ! python3 setup.gha.py bdist_wheel \
-          --dist-dir dist &>/tmp/build.log; then
-          echo package-build returned an error - dumping log:
-          cat /tmp/build.log
-          echo ----
-          echo will now exit
-          exit 1
-        fi
+        build_package setup.gha.py
+        build_package setup.oci.py
+        build_package setup.ocm.py
 
         echo "building w/ effective version ${version}"
 
         if ! pip install --find-links dist \
+          gardener-oci=="${version}" \
+          gardener-ocm=="${version}" \
           gardener-gha-libs=="${version}" &> /tmp/pip-install.log; then
             echo 'An error occured while tring to run pip install:'
             cat /tmp/pip-install.log
