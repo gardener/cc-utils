@@ -45,6 +45,17 @@ on:
       dockerfile:
         type: string
         required: false
+      prebuild-hook:
+        description: |
+          if set, value will be executed as a bash-expression _after_ repository-checkout and
+          (if configured) artefact-import, but _before_ running build.
+
+          This can be useful, e.g. to conveniently pass-in some dynamic values from other build-jobs,
+          or to run some pre-generation steps.
+
+          The value will _not_ be quoted, so any valid bash-script can be passed.
+        type: string
+        required: false
       build-ctx-artefact:
         description: |
           If passed, this value is interpreted as an GitHub Actions Artifact name. It is downloaded
@@ -184,6 +195,10 @@ jobs:
           fname="${{ inputs.untar-build-ctx-artefact }}"
           echo "untarring ${fname}"
           tar xf "${fname}"
+      - name: prebuild-hook
+        if: ${{ inputs.prebuild-hook }}
+        run: |
+          ${{ inputs.prebuild-hook }}
       - name: 'build ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
         uses: docker/build-push-action@v6
         id: build
