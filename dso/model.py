@@ -53,6 +53,7 @@ class Datasource:
     CC_UTILS = 'cc-utils'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
+    FALCO = 'falco'
 
     @staticmethod
     def datasource_to_datatypes(datasource: str) -> tuple[str]:
@@ -88,6 +89,10 @@ class Datasource:
             Datasource.DIKI: (
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.DIKI_FINDING,
+            ),
+            Datasource.FALCO: (
+                Datatype.FALCO_FINDING,
+                Datatype.FALCO_DEBUG_SESSION,
             ),
         }[datasource]
 
@@ -235,6 +240,8 @@ class Datatype:
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
+    FALCO_FINDING = 'finding/falco'
+    FALCO_DEBUG_SESSION = 'finding/falco_debug_session'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -246,6 +253,8 @@ class Datatype:
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST_LINT_CHECK,
+            Datatype.FALCO_FINDING: Datasource.FALCO,
+            Datatype.FALCO_DEBUG_SESSION: Datasource.FALCO,
         }[datatype]
 
 
@@ -536,6 +545,90 @@ class ComplianceSnapshot:
 
             self.state.remove(state)
 
+# Falco
+
+@dataclasses.dataclass(frozen=True)
+class FalcoEvent:
+    message: str
+    cluster: str
+    hostname: str
+    time: datetime.datetime
+    rule: str
+    priority: enum.StrEnum
+    output: dict
+
+@dataclasses.dataclass(frozen=True)
+class ExceptionTemplate:
+    template: str
+
+@dataclasses.dataclass(frozen=True)
+class ClusterNode:
+    cluster: str
+    node: str
+    count: int
+
+@dataclasses.dataclass(frozen=True)
+class FalcoEventGroup(Finding):
+    """
+    FalcoEventGroup represents a group of Falco events that are similar in
+    nature. In almost all cases those are false posities and can be ignored.
+    Falco exceptions can be defined but they can be silenced here.
+    """
+    rule: str
+    message: str
+    nodes: list[ClusterNode]
+    landscape: str
+    project: str
+    priority: enum.StrEnum
+    """Falco priority, one of EMERGENCY, ALERT, CRITICAL, ERROR, WARNING,
+    NOTICE, INFORMATIONAL, DEBUG
+    """
+    first_event: datetime.datetime
+    last_event: datetime.datetime
+    count: int
+    """number of events in this group"""
+    group_hash: str
+    """hash of the group (event fiields and values that form the group),
+    can be reconstructed from a sample event and the fields property."""
+    fields: list[str]
+    """Identical fields that form the group"""
+    events: list[FalcoEvent]
+    """list of events in this group (possibly truncated)."""
+    exception: ExceptionTemplate
+    """exception template for this group"""
+
+    @property
+    def key(self) -> str:
+        return self.group_hash
+
+@dataclasses.dataclass(frozen=True)
+class FalcoDebugEventGroup(Finding):
+    """
+    Group of events that - most likely - are a result of a single debug
+    session. It might however also be an indication of an attack. These 
+    events must be reviewed and ideally be linked to some legal activity.
+    """
+    count: int
+    cluster: str
+    hostname: str
+    project: str
+    landscape: str
+    group_hash: str
+    """reproducible group hash to avoid double reporting should the reporting
+    job run multiple times on the same data."""
+    first_event: datetime.datetime
+    last_event: datetime.datetime
+    events: list[FalcoEvent]
+    """ List of all events. The goal is not to truncate this list but it might
+    have to be done if it gets too large.
+    """
+
+    @property
+    def key(self) -> str:
+        return self.group_hash
+
+
+
 
 @dataclasses.dataclass
 class ArtefactMetadata:
@@ -566,6 +659,8 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
+        | FalcoEventGroup
+        | FalcoDebugEventGroup
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
