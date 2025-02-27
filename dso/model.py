@@ -53,6 +53,7 @@ class Datasource:
     CC_UTILS = 'cc-utils'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
+    FALCO = 'falco'
 
     @staticmethod
     def datasource_to_datatypes(datasource: str) -> tuple[str]:
@@ -235,6 +236,8 @@ class Datatype:
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
+    FALCO_FINDING = 'finding/falco'
+    FALCO_DEBUG_SESSION = 'finding/falco_debug_session'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -246,6 +249,8 @@ class Datatype:
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST,
+            Datatype.FALCO_FINDING: Datasource.FALCO,
+            Datatype.FALCO_DEBUG_SESSION: Datasource.FALCO,
         }[datatype]
 
 
@@ -536,6 +541,42 @@ class ComplianceSnapshot:
 
             self.state.remove(state)
 
+# Falco
+
+@dataclasses.dataclass(frozen=True)
+class FalcoEvent:
+    message: str
+
+@dataclasses.dataclass(frozen=True)
+class ExceptionTemplate:
+    exc: str
+
+@dataclasses.dataclass(frozen=True)
+class FalcoFinding(Finding):
+    group: str
+    first_event: str
+    last_event: str   # to datetime
+    count: int
+    _hash: str
+    event: FalcoEvent
+    exception: ExceptionTemplate
+
+    @property
+    def key(self) -> str:
+        return self._hash
+
+@dataclasses.dataclass(frozen=True)
+class FalcoDebugSession(Finding):
+    count: int
+    _hash: str
+    event: list[FalcoEvent]
+
+    @property
+    def key(self) -> str:
+        return self._hash
+
+
+
 
 @dataclasses.dataclass
 class ArtefactMetadata:
@@ -566,6 +607,8 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
+        | FalcoFinding
+        | FalcoDebugSession
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
