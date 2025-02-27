@@ -90,6 +90,10 @@ class Datasource:
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.DIKI_FINDING,
             ),
+            Datasource.FALCO: (
+                Datatype.FALCO_FINDING,
+                Datatype.FALCO_DEBUG_SESSION,
+            ),
         }[datasource]
 
     @staticmethod
@@ -546,30 +550,78 @@ class ComplianceSnapshot:
 @dataclasses.dataclass(frozen=True)
 class FalcoEvent:
     message: str
+    cluster: str
+    hostname: str
+    time: datetime.datetime
+    rule: str
+    priority: str
+    output: dict
 
 @dataclasses.dataclass(frozen=True)
 class ExceptionTemplate:
-    exc: str
+    template: str
 
 @dataclasses.dataclass(frozen=True)
-class FalcoFinding(Finding):
-    group: str
-    first_event: str
-    last_event: str   # to datetime
+class ClusterNode:
+    cluster: str
+    node: str
     count: int
-    _hash: str
-    event: FalcoEvent
+
+@dataclasses.dataclass(frozen=True)
+class FalcoEventGroup(Finding):
+    """
+    FalcoEventGroup represents a group of Falco events that are similar in
+    nature. In almost all cases those are false posities and can be ignored.
+    Falco exceptions can be defined but they can be silenced here.
+    """
+    rule: str
+    message: str
+    nodes: list[ClusterNode]
+    landscape: str
+    project: str
+    priority: str
+    """Falco priority, one of EMERGENCY, ALERT, CRITICAL, ERROR, WARNING,
+    NOTICE, INFORMATIONAL, DEBUG
+    """
+    first_event: datetime.datetime
+    last_event: datetime.datetime
+    count: int
+    """number of events in this group"""
+    group_hash: str
+    """hash of the group (event fiields and values that form the group),
+    can be reconstructed from a sample event and the fields property."""
+    fields: list[str]
+    """Identical fields that form the group"""
+    events: list[FalcoEvent]
+    """list of events in this group (possibly truncated)."""
     exception: ExceptionTemplate
+    """exception template for this group"""
 
     @property
     def key(self) -> str:
-        return self._hash
+        return self.group_hash
 
 @dataclasses.dataclass(frozen=True)
-class FalcoDebugSession(Finding):
+class FalcoDebugEventGroup(Finding):
+    """
+    Group of events that - most likely - are a result of a single debug
+    session. It might however also be an indication of an attack. These 
+    events must be reviewed and ideally be linked to some legal activity.
+    """
     count: int
-    _hash: str
-    event: list[FalcoEvent]
+    cluster: str
+    hostname: str
+    project: str
+    landscape: str
+    group_hash: str
+    """reproducible group hash to avoid double reporting should the reporting
+    job run multiple times on the same data."""
+    first_event: datetime.datetime
+    last_event: datetime.datetime
+    events: list[FalcoEvent]
+    """ List of all events. The goal is not to truncate this list but it might
+    have to be done if it gets too large.
+    """
 
     @property
     def key(self) -> str:
@@ -607,8 +659,8 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
-        | FalcoFinding
-        | FalcoDebugSession
+        | FalcoEventGroup
+        | FalcoDebugEventGroup
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
