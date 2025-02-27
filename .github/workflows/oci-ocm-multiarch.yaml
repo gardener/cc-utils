@@ -108,6 +108,10 @@ on:
         description: |
           OCM Resource fragment describing the published image.
         value: ${{ jobs.collect-images.outputs.ocm-resource }}
+      oci-reference:
+        description: |
+          The OCI-Image-Reference to which the built Image-Index was pushed to
+        value: ${{ jobs.collect-images.outputs.oci-reference }}
 
 jobs:
   preprocess:
@@ -215,6 +219,7 @@ jobs:
       - preprocess
     outputs:
       ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
+      oci-reference: ${{ steps.collect-images.outputs.oci-reference }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -227,6 +232,7 @@ jobs:
           oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
       - name: collect-images
+        id: collect-images
         shell: python
         run: |
           import dataclasses
@@ -299,6 +305,7 @@ jobs:
           print(resource_str)
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'oci-reference={tgt_image_ref}\n')
             f.write('ocm-resource<<EOF\n')
             f.write(resource_str)
             f.write('EOF\n')
