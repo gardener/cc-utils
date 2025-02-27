@@ -451,17 +451,6 @@ for validation_error in cnudie.validate.iter_violations(
 ):
   logger.warning(f'{validation_error=}')
 
-tgt_ref = cnudie.util.target_oci_ref(component=component)
-logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
-uploaded_oci_manifest_bytes = ocm.upload.upload_component_descriptor(
-  component_descriptor=component_descriptor,
-  oci_client=oci_client,
-)
-try:
-  print(f'{uploaded_oci_manifest_bytes=}')
-except:
-  pass
-
 % if release_trait.release_on_github():
 repo = github_helper.repository
 try:
@@ -493,6 +482,43 @@ except:
 %   else:
 release_notes_md = None
 %   endif
+
+tgt_ref = cnudie.util.target_oci_ref(component=component)
+
+if release_notes_md:
+  release_notes_octets = release_notes_md.encode('utf-8')
+  release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
+  oci_client.put_blob(
+    image_reference=tgt_ref,
+    digest=release_notes_digest,
+    octets_count=len(release_notes_octets),
+    data=release_notes_octets,
+  )
+
+  component.resources.append(
+    ocm.Resource(
+      name='release-notes',
+      version=component.version,
+      type='text/markdown.release-notes',
+      access=ocm.LocalBlobAccess(
+        localReference=release_notes_digest,
+        size=len(release_notes_octets),
+        mediaType='text/markdown.release-notes',
+      ),
+    ),
+  )
+  logger.info('added release-notes to component-descriptor:')
+  logger.info(f'{component.resources[-1]}')
+
+logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
+uploaded_oci_manifest_bytes = ocm.upload.upload_component_descriptor(
+  component_descriptor=component_descriptor,
+  oci_client=oci_client,
+)
+try:
+  print(f'{uploaded_oci_manifest_bytes=}')
+except:
+  pass
 
 release_tag = tags[0].removeprefix('refs/tags/')
 draft_tag = f'{version_str}-draft'
