@@ -554,7 +554,7 @@ class FalcoEvent:
     hostname: str
     time: datetime.datetime
     rule: str
-    priority: str
+    priority: enum.StrEnum
     output: dict
 
 @dataclasses.dataclass(frozen=True)
@@ -579,7 +579,7 @@ class FalcoEventGroup(Finding):
     nodes: list[ClusterNode]
     landscape: str
     project: str
-    priority: str
+    priority: enum.StrEnum
     """Falco priority, one of EMERGENCY, ALERT, CRITICAL, ERROR, WARNING,
     NOTICE, INFORMATIONAL, DEBUG
     """
@@ -625,7 +625,7 @@ class FalcoDebugEventGroup(Finding):
 
     @property
     def key(self) -> str:
-        return self._hash
+        return self.group_hash
 
 
 
