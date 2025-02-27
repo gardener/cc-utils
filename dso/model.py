@@ -507,12 +507,11 @@ class ComplianceSnapshotState:
 @dataclasses.dataclass(frozen=True)
 class ComplianceSnapshot:
     latest_processing_date: datetime.date
-    correlation_id: str
     state: list[ComplianceSnapshotState]
 
     @property
     def key(self) -> str:
-        return self.correlation_id
+        return self.latest_processing_date.isoformat()
 
     def current_state(
         self,
