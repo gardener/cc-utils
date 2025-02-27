@@ -218,10 +218,11 @@ jobs:
         cp "${resources_file}" dist/ocm_resources.yaml
         echo "ocm_resources=dist/ocm_resources.yaml" >> "${GITHUB_OUTPUT}"
         find "${pkg_dir}"
+        tar czf distribution-packages.tar.gz dist
     - uses: actions/upload-artifact@v4
       with:
         name: distribution-packages
-        path: dist/
+        path: distribution-packages.tar.gz
 
   base-component-descriptor:
     name: Generate Base-OCM-Component-Descriptor
@@ -287,7 +288,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: distribution-packages
-          path: /tmp/dist
       - name: Retrieve Linting Logs
         uses: actions/download-artifact@v4
         with:
@@ -305,6 +305,9 @@ jobs:
           set -eu
           version=${{ needs.version.outputs.version }}
           ocm_repo=${{ needs.params.outputs.ocm_repository }}
+
+          tar xf distribution-packages.tar.gz -C /tmp
+
           echo "importing base-component-descriptor"
           echo "${{ needs.base-component-descriptor.outputs.component-descriptor }}" \
             > component-descriptor.yaml
@@ -377,7 +380,6 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: distribution-packages
-        path: /tmp/dist
     - name: lint
       run: |
         # debug
@@ -390,6 +392,7 @@ jobs:
           cat /tmp/apk.log
           exit 1
         fi
+        tar xf distribution-packages.tar.gz -C /tmp
         echo "installing linters"
         export CFLAGS='-Wno-int-conversion'
         if ! pip3 install --upgrade --break-system-packages \
@@ -437,13 +440,13 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: distribution-packages
-        path: /tmp/dist
     - name: run-tests
       run: |
         set -eu
         echo "install dependencies for python-packages"
         apk add --no-cache $(cat gardener-cicd-libs.apk-packages)
         echo "install packages"
+        tar xf distribution-packages.tar.gz -C /tmp
         export CFLAGS='-Wno-int-conversion'
         if ! pip3 install --break-system-packages \
           --find-links /tmp/dist \
@@ -487,6 +490,7 @@ jobs:
       prebuild-hook: |
         echo "${{ needs.version.outputs.setuptools-version }}" | .ci/write-version
       build-ctx-artefact: distribution-packages
+      untar-build-ctx-artefact: distribution-packages.tar.gz
       ocm-labels: |
         - name: cloud.gardener.cnudie/dso/scanning-hints/package-versions
           value:
