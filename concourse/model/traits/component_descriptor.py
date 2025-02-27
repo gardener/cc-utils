@@ -12,11 +12,9 @@ import dacite
 
 from ci.util import not_none
 from ocm import Label
-import ci.util
 import cnudie.retrieve
 import ocm
 import model.base
-import version
 
 from concourse.model.job import (
     JobVariant,
@@ -89,60 +87,14 @@ ATTRIBUTES = (
     AttributeSpec.optional(
         name='retention_policy',
         default=None,
-        type=typing.Union[version.VersionRetentionPolicies, str],
-        doc='''
-            specifies how (old) component-descriptors and their referenced resources should be
-            handled. This is foremostly intended as an option for automated cleanup for
-            components with frequent (shortlived) releases and/or frequent (shortlived) snapshots.
-
-            if no retention_policy is defined, no cleanup will be done.
-
-            retention policy may either be defined "inline" (as a mapping value) or by referencing
-            a pre-defined policy by name (see `retentions_policies` attribute). In the latter case,
-            use the policie's name as (string) attribute value.
-        ''',
+        type=str,
+        doc='obsolete',
     ),
     AttributeSpec.optional(
         name='retention_policies',
-        default=[
-            version.VersionRetentionPolicies(
-                name='clean-snapshots',
-                rules=[
-                    version.VersionRetentionPolicy(
-                        name='clean-snapshots',
-                        keep=64,
-                        match=version.VersionType.SNAPSHOT,
-                    ),
-                    version.VersionRetentionPolicy(
-                        name='keep-releases',
-                        keep='all',
-                        match=version.VersionType.RELEASE,
-                    ),
-                ],
-                dry_run=False,
-            ),
-            version.VersionRetentionPolicies(
-                name='clean-snapshots-and-releases',
-                rules=[
-                    version.VersionRetentionPolicy(
-                        name='clean-snapshots',
-                        keep=64,
-                        match=version.VersionType.SNAPSHOT,
-                    ),
-                    version.VersionRetentionPolicy(
-                        name='clean-releases',
-                        keep=128,
-                        match=version.VersionType.RELEASE,
-                    ),
-                ],
-                dry_run=False,
-            ),
-        ],
-        type=typing.List[version.VersionRetentionPolicies],
-        doc='''
-            predefined retention policies (see default value). may be referenced via
-            `retention_policy` attribute (adding additional policies here has no immediate effect)
-        '''
+        default=[],
+        type=typing.List[str],
+        doc='obsolete'
     ),
     AttributeSpec.deprecated(
         name='validation_policies',
@@ -228,45 +180,6 @@ class ComponentDescriptorTrait(Trait):
     @property
     def upload(self) -> UploadMode:
         return UploadMode(self.raw['upload'])
-
-    def retention_policy(self, raw=True) -> version.VersionRetentionPolicies | None:
-        if not (policy := self.raw.get('retention_policy', None)):
-            return None
-
-        if isinstance(policy, str):
-            # lookup name
-            for candidate in self.raw.get('retention_policies', ()):
-                if isinstance(candidate, dict):
-                    name = candidate['name']
-                elif isinstance(candidate, version.VersionRetentionPolicies):
-                    name = candidate.name
-                else:
-                    raise ValueError(candidate)
-
-                if name == policy:
-                    policy = candidate
-                    break
-            else:
-                raise ValueError(f'did not find {policy=} in retention_policies')
-
-        if raw:
-            if isinstance(policy, version.VersionRetentionPolicies):
-                policy = dataclasses.asdict(
-                    policy,
-                    dict_factory=ci.util.dict_factory_enum_serialisiation,
-                )
-            return policy
-
-        if isinstance(policy, version.VersionRetentionPolicies):
-            return policy
-
-        return dacite.from_dict(
-            data_class=version.VersionRetentionPolicies,
-            data=policy,
-            config=dacite.Config(
-                cast=(enum.Enum,),
-            ),
-        )
 
     def resolve_dependencies(self):
         return self.raw['resolve_dependencies']

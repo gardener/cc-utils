@@ -24,7 +24,6 @@ if descriptor_trait.ocm_repository:
   ocm_repository_url = descriptor_trait.ocm_repository.oci_ref
 else:
   ocm_repository_url = None
-retention_policy = descriptor_trait.retention_policy()
 ocm_repository_mappings = descriptor_trait.ocm_repository_mappings()
 
 # label main repo as main
@@ -333,60 +332,6 @@ else:
   )
   with open(dependencies_path) as f:
     print(f.read())
-% if retention_policy:
-
-logger.info('will honour retention-policy')
-retention_policy = dacite.from_dict(
-  data_class=version.VersionRetentionPolicies,
-  data=${retention_policy},
-  config=dacite.Config(cast=(enum.Enum,)),
-)
-pprint.pprint(retention_policy)
-
-if retention_policy.dry_run:
-  logger.info('dry-run - will only print versions to remove, but not actually remove them')
-else:
-  logger.info('!! will attempt to remove listed component-versions, according to policy')
-
-logger.info('the following versions were identified for being purged')
-component = descriptor_v2.component
-
-
-for idx, component_id in enumerate(cnudie.purge.iter_componentversions_to_purge(
-    component=component,
-    policy=retention_policy,
-    oci_client=oci_client,
-)):
-  if idx >= 64:
-    print('will abort the purge, considering there seem to be more than 64 versions to cleanup')
-    print('this is done to limit execution-time - the purge will continue on next execution')
-    exit(0)
-  print(f'{idx} {component_id.name}:{component_id.version}')
-  if retention_policy.dry_run:
-   continue
-  component_to_purge = component_descriptor_lookup(
-    ocm.ComponentIdentity(
-      name=component.name,
-      version=component_id.version,
-    )
-  )
-  if not component_to_purge:
-    logger.warning(f'{component.name}:{component_id.version} was not found - ignore')
-    continue
-
-  try:
-   cnudie.purge.remove_component_descriptor_and_referenced_artefacts(
-    component=component_to_purge,
-    oci_client=oci_client,
-    lookup=component_descriptor_lookup,
-    recursive=False,
-   )
-  except Exception as e:
-   logger.warning(f'error occurred while trying to purge {component_id}: {e}')
-   traceback.print_exc()
-% else:
-logger.info('no retention-policy was defined - will not purge component-descriptors')
-% endif
 </%def>
 
 <%def
