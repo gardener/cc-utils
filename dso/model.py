@@ -53,9 +53,10 @@ class Datasource:
     CC_UTILS = 'cc-utils'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
+    INVENTORY = 'inventory'
 
     @staticmethod
-    def datasource_to_datatypes(datasource: str) -> tuple[str]:
+    def datasource_to_datatypes(datasource: str) -> tuple[str, ...]:
         return {
             Datasource.ARTEFACT_ENUMERATOR: (
                 Datatype.COMPLIANCE_SNAPSHOTS,
@@ -88,6 +89,10 @@ class Datasource:
             Datasource.DIKI: (
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.DIKI_FINDING,
+            ),
+            Datasource.INVENTORY: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.INVENTORY_FINDING,
             ),
         }[datasource]
 
@@ -230,6 +235,7 @@ class Datatype:
     MALWARE_FINDING = 'finding/malware'
     SAST_FINDING = 'finding/sast'
     DIKI_FINDING = 'finding/diki'
+    INVENTORY_FINDING = 'finding/inventory'
     CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     OS_IDS = 'os_ids'
     RESCORING = 'rescorings'
@@ -246,6 +252,7 @@ class Datatype:
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST_LINT_CHECK,
+            Datatype.INVENTORY_FINDING: Datasource.INVENTORY,
         }[datatype]
 
 
@@ -432,6 +439,29 @@ class DikiFinding(Finding):
 
 
 @dataclasses.dataclass(frozen=True)
+class InventoryFinding(Finding):
+    """
+    Represents a finding from the gardener/inventory system
+    """
+    # Name of provider, where orphan resources originate from, e.g. AWS, Azure,
+    # GCP, OpenStack, etc.
+    provider_name: str
+
+    # Kind of the orphan resource, e.g. Virtual Machine, Public IP address, etc.
+    resource_kind: str
+
+    # Short summary of the finding
+    summary: str
+
+    # Resources identified by gardener/inventory as being orphan
+    resources: list[dict]
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.provider_name, self.resource_kind)
+
+
+@dataclasses.dataclass(frozen=True)
 class User:
     username: str
     type: str = 'user'
@@ -566,6 +596,7 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
+        | InventoryFinding
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
