@@ -352,7 +352,7 @@ jobs:
             --file component-descriptor.yaml
 
           echo "adding image-resource"
-          echo "${{ needs.images.outputs.ocm_resources }} " | \
+          echo "${{ needs.images.outputs.ocm-resource }} " | \
           python3 -m ocm append resource \
             --file component-descriptor.yaml
 
@@ -471,65 +471,39 @@ jobs:
         .ci/test
 
   images:
-    name: Build OCI Images
+    name: Build Job-Image
     needs:
       - version
-      - package
+      - package # needed indirectly (distribution-packages-artefact)
       - params
-    outputs:
-      oci_image_ref: ${{ steps.image-build.outputs.image_reference }}
-      ocm_resources: ${{ steps.image-build.outputs.ocm_resource }}
-    runs-on: ubuntu-latest
-    environment: build
     permissions:
       contents: read
       packages: write
       id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Retrieve Distribution Packages
-        uses: actions/download-artifact@v4
-        with:
-          name: distribution-packages
-          path: /tmp/dist
-
-      - name: prepare build-filesystem
-        id: prepare
-        run: |
-          cp -r /tmp/dist .
-          ls -lta
-
-          setuptools_version=${{ needs.version.outputs.setuptools-version }}
-          # workaround: set repository-version to setuptools-version so installation of
-          #             packages will succeed
-          echo "${setuptools_version}" | .ci/write-version
-      - name: Authenticate against OCI-Registry
-        uses: ./.github/actions/oci-auth
-        with:
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
-          oci-image-reference: ${{ needs.params.outputs.oci_repository }}
-      - name: Build OCI Image (using ocm-oci-build-action)
-        uses: ./.github/actions/ocm-oci-build
-        id: image-build
-        with:
-          name: job-image
-          repository: ${{ needs.params.outputs.oci_repository }}/cicd/job-image
-          version: ${{ needs.version.outputs.version }}
-          oci_platforms: ${{ needs.params.outputs.oci_platforms }}
-          context: . # pass modified path rather than clean checkout
-          ocm_labels: |
-            - name: cloud.gardener.cnudie/dso/scanning-hints/package-versions
-              value:
-                - name: containerd
-                  version: v1.6.15
-            - name: gardener.cloud/cve-categorisation
-              value:
-                authentication_enforced: true
-                availability_requirement: low
-                confidentiality_requirement: high
-                integrity_requirement: high
-                network_exposure: protected
-                user_interaction: gardener-operator
+    uses: ./.github/workflows/oci-ocm-multiarch.yaml
+    with:
+      name: job-image
+      oci-registry: ${{ needs.params.outputs.oci_repository }}
+      oci-repository: cicd/job-image
+      oci-platforms: ${{ needs.params.outputs.oci_platforms }}
+      version: ${{ needs.version.outputs.version }}
+      # workaround: we need to use a deviating version for setuptools
+      prebuild-hook: |
+        echo "${{ needs.version.outputs.setuptools-version }}" | .ci/write-version
+      build-ctx-artefact: distribution-packages
+      ocm-labels: |
+        - name: cloud.gardener.cnudie/dso/scanning-hints/package-versions
+          value:
+            - name: containerd
+              version: v1.6.15
+        - name: gardener.cloud/cve-categorisation
+          value:
+            authentication_enforced: true
+            availability_requirement: low
+            confidentiality_requirement: high
+            integrity_requirement: high
+            network_exposure: protected
+            user_interaction: gardener-operator
 
   documentation:
     name: Generate Documentation
@@ -545,7 +519,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
     - name: Generate Documentation
       run: |
-        image_ref=${{ needs.images.outputs.oci_image_ref }}
+        image_ref=${{ needs.images.outputs.oci-reference }}
         mkdir documentation-out.d
         docker run -v$PWD:/src \
           -e GH_PAGES_PATH=/src/documentation-out.d \
