@@ -129,6 +129,14 @@ class LocalArtefactId:
             self.normalised_artefact_extra_id,
         )
 
+    def as_dict_repr(self) -> dict:
+        return {
+            **({'Artefact': self.artefact_name} if self.artefact_name else {}),
+            **({'Artefact-Version': self.artefact_version} if self.artefact_version else {}),
+            **({'Artefact-Type': self.artefact_type} if self.artefact_type else {}),
+            **self.artefact_extra_id,
+        }
+
     def __hash__(self) -> int:
         return hash(self.key)
 
@@ -180,6 +188,14 @@ class ComponentArtefactId:
             self.artefact_kind,
             references_key,
         )
+
+    def as_dict_repr(self) -> dict:
+        return {
+            **({'Component': self.component_name} if self.component_name else {}),
+            **({'Component-Version': self.component_version} if self.component_version else {}),
+            **({'Artefact-Kind': self.artefact_kind} if self.artefact_kind else {}),
+            **(self.artefact.as_dict_repr() if self.artefact else {}),
+        }
 
     def __hash__(self) -> int:
         return hash(self.key)
