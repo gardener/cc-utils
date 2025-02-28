@@ -47,7 +47,7 @@ class ScanArtifact:
 class Datasource:
     ARTEFACT_ENUMERATOR = 'artefact-enumerator'
     BDBA = 'bdba'
-    SAST_LINT_CHECK = 'sast-lint-check'
+    SAST = 'sast'
     CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
@@ -67,7 +67,7 @@ class Datasource:
                 Datatype.STRUCTURE_INFO,
                 Datatype.RESCORING,
             ),
-            Datasource.SAST_LINT_CHECK: (
+            Datasource.SAST: (
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.SAST_FINDING,
                 Datatype.RESCORING,
@@ -245,7 +245,7 @@ class Datatype:
             Datatype.CODECHECKS_AGGREGATED: Datasource.CHECKMARX,
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
-            Datatype.SAST_FINDING: Datasource.SAST_LINT_CHECK,
+            Datatype.SAST_FINDING: Datasource.SAST,
         }[datatype]
 
 
