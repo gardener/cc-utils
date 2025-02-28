@@ -3,8 +3,8 @@ import collections.abc
 import dataclasses
 import enum
 import functools
+import typing
 
-import cfg_mgmt.model as cmm
 import cnudie.iter
 import ocm
 import unixutil.model
@@ -75,7 +75,7 @@ class ScanState(enum.Enum):
     FAILED = 'failed'
 
 
-Target = cnudie.iter.ResourceNode | cnudie.iter.SourceNode | cmm.CfgElementStatusReport
+Target = typing.Union[cnudie.iter.ResourceNode, cnudie.iter.SourceNode, 'cmm.CfgElementStatusReport']
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -97,7 +97,7 @@ class OsIdScanResult(ScanResult):
 
 @dataclasses.dataclass
 class CfgScanResult(ScanResult):
-    evaluation_result: cmm.CfgStatusEvaluationResult
+    evaluation_result: 'cmm.CfgStatusEvaluationResult'
 
 
 FindingsCallback = collections.abc.Callable[[ScanResult], bool]
@@ -241,10 +241,8 @@ class ScanResultGroupCollection:
                 c = result.scanned_element.component
                 a = artifact_from_node(result.scanned_element)
                 group_name = f'{c.name}:{a.name}'
-            elif isinstance(result.scanned_element, cmm.CfgElementStatusReport):
-                group_name = result.scanned_element.name
             else:
-                raise TypeError(result)
+                group_name = result.scanned_element.name
 
             grouped_results[group_name].append(result)
 

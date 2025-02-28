@@ -18,7 +18,6 @@ import ocm.util
 import requests
 
 import checkmarx.model
-import cfg_mgmt.model as cmm
 import ci.util
 import delivery.client
 import delivery.model
@@ -290,16 +289,13 @@ def _template_vars(
             delivery_dashboard_url=delivery_dashboard_url,
         )
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
+    else:
         template_variables = {
             'cfg_element_name': scanned_element.element_name,
             'cfg_element_type': scanned_element.element_type,
             'cfg_element_storage': scanned_element.element_storage,
             'cfg_element_qualified_name': scanned_element.name,
         }
-
-    else:
-        raise TypeError(result_group)
 
     if issue_type == _compliance_label_os_outdated:
         template_variables |= _os_info_template_vars(result_group)
@@ -338,7 +334,7 @@ def _scanned_element_repository(
 
         return gh_api.repository(org, name)
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
+    else:
         gh_api = github_api_lookup(scanned_element.element_storage)
 
         parsed_url = ci.util.urlparse(scanned_element.element_storage)
@@ -346,9 +342,6 @@ def _scanned_element_repository(
         org, repo = path.split('/')
 
         return gh_api.repository(org, repo)
-
-    else:
-        raise TypeError(scanned_element)
 
 
 def _scanned_element_assignees(
@@ -371,17 +364,17 @@ def _scanned_element_assignees(
 
     def iter_gh_usernames_from_responsibles_mapping(
         gh_api: github3.GitHub | github3.GitHubEnterprise,
-        responsibles_mapping: cmm.CfgResponsibleMapping,
+        responsibles_mapping: 'cmm.CfgResponsibleMapping',
     ) -> typing.Generator[github.codeowners.Username, None, None]:
         unique_usernames = set()
         for responsible in responsibles_mapping.responsibles:
-            if responsible.type == cmm.CfgResponsibleType.EMAIL:
+            if responsible.type == 'email':
                 for username in github.codeowners.usernames_from_email_address(
                     email_address=responsible.name,
                     gh_api=gh_api,
                 ):
                     unique_usernames.add(username)
-            elif responsible.type == cmm.CfgResponsibleType.GITHUB:
+            elif responsible.type == 'github':
                 parsed = github.codeowners.parse_codeowner_entry(responsible.name)
                 for username in github.codeowners.resolve_usernames(
                     codeowners_entries=[parsed],
@@ -429,7 +422,7 @@ def _scanned_element_assignees(
             else:
                 raise
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
+    else:
         if not scanned_element.responsible:
             return assignees, statuses
 
@@ -444,9 +437,6 @@ def _scanned_element_assignees(
             )
         )
 
-    else:
-        raise TypeError(scanned_element)
-
     return assignees, statuses
 
 
@@ -460,11 +450,8 @@ def _scanned_element_title(
 
         return f'[{issue_type}] - {c.name}:{a.name}'
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
-        return f'[{issue_type}] - {scanned_element.name}'
-
     else:
-        raise TypeError(scanned_element)
+        return f'[{issue_type}] - {scanned_element.name}'
 
 
 def _scanned_element_ctx_label(
@@ -473,15 +460,12 @@ def _scanned_element_ctx_label(
     if gcm.is_ocm_artefact_node(scanned_element):
         return ()
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
+    else:
         digest_label = github.compliance.issue.digest_label(
             prefix=_ctx_label_prefix,
             digest_str=scanned_element.element_storage,
         )
         return (digest_label, )
-
-    else:
-        raise TypeError(scanned_element)
 
 
 @functools.cache
