@@ -13,7 +13,6 @@ import github3.issues.issue
 import github3.issues.milestone
 import github3.repos
 
-import cfg_mgmt.model as cmm
 import ci.log
 import delivery.model
 import github.compliance.model as gcm
@@ -55,11 +54,8 @@ def prefix_for_element(
     if gcm.is_ocm_artefact_node(scanned_element):
         return _label_prefix_ocm_artefact
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
-        return _label_prefix_cicd_cfg_element
-
     else:
-        raise TypeError(scanned_element)
+        return _label_prefix_cicd_cfg_element
 
 
 def unique_name_for_element(
@@ -69,11 +65,8 @@ def unique_name_for_element(
         artifact = gcm.artifact_from_node(scanned_element)
         return f'{scanned_element.component.name}:{artifact.name}'
 
-    elif isinstance(scanned_element, cmm.CfgElementStatusReport):
-        return scanned_element.name
-
     else:
-        raise TypeError(scanned_element)
+        return scanned_element.name
 
 
 def digest_label(
