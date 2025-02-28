@@ -69,7 +69,7 @@ inputs:
     description: |
       the release-notes to publish as body for GitHub-Release (release-notes action might be
       handy to collect those)
-    required: true
+    required: false
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub.
@@ -106,10 +106,69 @@ runs:
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
 
+    - name: attach-release-notes-to-component-descriptor
+      if: ${{ inputs.release-notes }}
+      shell: python
+      run: |
+        import hashlib
+        import json
+
+        import yaml
+
+        import oci.client
+        import oci.auth
+        import ocm
+
+        component_descriptor = ocm.ComponentDescriptor.from_dict(
+          yaml.safe_load('''${{ inputs.component-descriptor }}''')
+        )
+        component = component_descriptor.component
+        tgt_ocm_repo = component.current_ocm_repo
+        tgt_oci_ref = tgt_ocm_repo.component_version_oci_ref(
+          name=component.name,
+          version=component.version,
+        )
+
+        oci_client = oci.client.Client(
+          credentials_lookup=oci.auth.docker_credentials_lookup(),
+        )
+
+        release_notes_markdown = '''${{ inputs.release-notes }}'''
+        release_notes_octets = release_notes_markdown.encode('utf-8')
+        release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
+
+        oci_client.put_blob(
+          image_reference=tgt_oci_ref,
+          digest=release_notes_digest,
+          octets_count=len(release_notes_octets),
+          data=release_notes_octets,
+        )
+
+        component.resources.append(
+          ocm.Resource(
+            name='release-notes',
+            version=component.version,
+            type='text/markdown.release-notes',
+            access=ocm.LocalBlobAccess(
+              localReference=release_notes_digest,
+              size=len(release_notes_octets),
+              mediaType='text/markdown.release-notes',
+            ),
+          ),
+        )
+
+        # pass modified component-descriptor to subsequent steps
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
+          yaml.dump(
+            data=component_descriptor,
+            Dumper=ocm.EnumValueYamlDumper,
+            stream=f,
+          )
+
+
     - name: publish OCM Component-Descriptor
       shell: bash
       run: |
-        echo "${{ inputs.component-descriptor }}" > /tmp/component-descriptor.yaml
         python -m ocm upload \
           --file /tmp/component-descriptor.yaml
 
