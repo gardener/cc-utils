@@ -562,10 +562,14 @@ class ExceptionTemplate:
     template: str
 
 @dataclasses.dataclass(frozen=True)
-class ClusterNode:
-    cluster: str
-    node: str
+class Node:
+    name: str
     count: int
+
+@dataclasses.dataclass(frozen=True)
+class Cluster:
+    name: str
+    nodes: list[Node]
 
 @dataclasses.dataclass(frozen=True)
 class FalcoEventGroup(Finding):
@@ -574,9 +578,8 @@ class FalcoEventGroup(Finding):
     nature. In almost all cases those are false posities and can be ignored.
     Falco exceptions can be defined but they can be silenced here.
     """
-    rule: str
     message: str
-    nodes: list[ClusterNode]
+    clusters: list[Cluster]
     landscape: str
     project: str
     priority: enum.StrEnum
