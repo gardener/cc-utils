@@ -451,20 +451,7 @@ for validation_error in cnudie.validate.iter_violations(
 ):
   logger.warning(f'{validation_error=}')
 
-% if release_trait.release_on_github():
-repo = github_helper.repository
-try:
-  for releases, succeeded in github.release.delete_outdated_draft_releases(repo):
-    if succeeded:
-      logger.info(f'deleted {release.name=}')
-    else:
-      logger.warn(f'failed to delete {release.name=}')
-except:
-  logger.warning('An Error occurred whilst trying to remove draft-releases')
-  traceback.print_exc()
-  # keep going
-
-%   if process_release_notes:
+% if process_release_notes:
 release_notes_md = None
 try:
   release_notes_md = collect_release_notes(
@@ -479,9 +466,9 @@ except:
   logger.warning('an error occurred whilst trying to collect release-notes')
   logger.warning('release will continue')
   traceback.print_exc()
-%   else:
+% else:
 release_notes_md = None
-%   endif
+% endif
 
 tgt_ref = cnudie.util.target_oci_ref(component=component)
 
@@ -515,6 +502,20 @@ uploaded_oci_manifest_bytes = ocm.upload.upload_component_descriptor(
   component_descriptor=component_descriptor,
   oci_client=oci_client,
 )
+
+% if release_trait.release_on_github():
+repo = github_helper.repository
+try:
+  for releases, succeeded in github.release.delete_outdated_draft_releases(repo):
+    if succeeded:
+      logger.info(f'deleted {release.name=}')
+    else:
+      logger.warn(f'failed to delete {release.name=}')
+except:
+  logger.warning('An Error occurred whilst trying to remove draft-releases')
+  traceback.print_exc()
+  # keep going
+
 try:
   print(f'{uploaded_oci_manifest_bytes=}')
 except:
