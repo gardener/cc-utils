@@ -545,7 +545,17 @@ class ComplianceSnapshot:
 
             self.state.remove(state)
 
-# Falco
+
+class FalcoPriority(enum.StrEnum):
+    EMERGENCY = 'Emergency'
+    ALERT = 'Alert'
+    CRITICAL = 'Critical'
+    ERROR = 'Error'
+    WARNING = 'Warning'
+    NOTICE = 'Notice'
+    INFORMATIONAL = 'Informational'
+    DEBUG = 'Debug'
+
 
 @dataclasses.dataclass(frozen=True)
 class FalcoEvent:
@@ -554,22 +564,26 @@ class FalcoEvent:
     hostname: str
     time: datetime.datetime
     rule: str
-    priority: enum.StrEnum
-    output: dict
+    priority: FalcoPriority
+    output: dict[str, typing.Any]
+
 
 @dataclasses.dataclass(frozen=True)
 class ExceptionTemplate:
     template: str
+
 
 @dataclasses.dataclass(frozen=True)
 class Node:
     name: str
     count: int
 
+
 @dataclasses.dataclass(frozen=True)
 class Cluster:
     name: str
     nodes: list[Node]
+
 
 @dataclasses.dataclass(frozen=True)
 class FalcoEventGroup(Finding):
@@ -582,7 +596,8 @@ class FalcoEventGroup(Finding):
     clusters: list[Cluster]
     landscape: str
     project: str
-    priority: enum.StrEnum
+    rule: str
+    priority: FalcoPriority
     """Falco priority, one of EMERGENCY, ALERT, CRITICAL, ERROR, WARNING,
     NOTICE, INFORMATIONAL, DEBUG
     """
@@ -593,7 +608,7 @@ class FalcoEventGroup(Finding):
     group_hash: str
     """hash of the group (event fiields and values that form the group),
     can be reconstructed from a sample event and the fields property."""
-    fields: list[str]
+    fields: dict[str, str]
     """Identical fields that form the group"""
     events: list[FalcoEvent]
     """list of events in this group (possibly truncated)."""
@@ -604,11 +619,12 @@ class FalcoEventGroup(Finding):
     def key(self) -> str:
         return self.group_hash
 
+
 @dataclasses.dataclass(frozen=True)
 class FalcoDebugEventGroup(Finding):
     """
     Group of events that - most likely - are a result of a single debug
-    session. It might however also be an indication of an attack. These 
+    session. It might however also be an indication of an attack. These
     events must be reviewed and ideally be linked to some legal activity.
     """
     count: int
@@ -629,8 +645,6 @@ class FalcoDebugEventGroup(Finding):
     @property
     def key(self) -> str:
         return self.group_hash
-
-
 
 
 @dataclasses.dataclass
@@ -685,6 +699,7 @@ class ArtefactMetadata:
                     SastSubType,
                     SastStatus,
                     MatchCondition,
+                    FalcoPriority,
                 ],
                 strict=True,
             ),
