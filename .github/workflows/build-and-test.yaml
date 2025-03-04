@@ -45,7 +45,7 @@ jobs:
     outputs:
       ocm_repository: ${{ steps.params.outputs.ocm_repository }}
       ocm_releases_repository: ${{ steps.params.outputs.ocm_releases_repository }}
-      oci_repository: ${{ steps.params.outputs.oci_repository }}
+      oci-registry: ${{ steps.params.outputs.oci-registry }}
       oci_platforms: ${{ steps.params.outputs.oci_platforms }}
     steps:
       - uses: actions/checkout@v4
@@ -79,19 +79,19 @@ jobs:
 
           if ${{ inputs.release || false }}; then
             ocm_repository=${releases_repo}
-            oci_repository=${releases_repo}
+            oci_registry=${releases_repo}
           else
             ocm_repository=${snapshots_repo}
-            oci_repository=${snapshots_repo}
+            oci_registry=${snapshots_repo}
           fi
 
           echo "ocm_releases_repository=${releases_repo}"
           echo "ocm_repository=${ocm_repository}"
-          echo "oci_repository=${oci_repository}"
+          echo "oci-registry=${oci_registry}"
 
           echo "ocm_releases_repository=${releases_repo}" >> "${GITHUB_OUTPUT}"
           echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
-          echo "oci_repository=${oci_repository}" >> "${GITHUB_OUTPUT}"
+          echo "oci-registry=${oci_registry}" >> "${GITHUB_OUTPUT}"
           echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
 
   version:
@@ -486,7 +486,7 @@ jobs:
     uses: ./.github/workflows/oci-ocm-multiarch.yaml
     with:
       name: job-image
-      oci-registry: ${{ needs.params.outputs.oci_repository }}
+      oci-registry: ${{ needs.params.outputs.oci-registry }}
       oci-repository: cicd/job-image
       oci-platforms: ${{ needs.params.outputs.oci_platforms }}
       version: ${{ needs.version.outputs.version }}
