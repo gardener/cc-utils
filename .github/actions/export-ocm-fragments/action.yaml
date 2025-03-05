@@ -1,0 +1,180 @@
+name: export-ocm-fragments
+description: |
+  Exports passed OCM-fragments into GitHub-Action-Artefacts. This is particularly useful to collect
+  OCM-Component-Descriptors from multiple jobs and/or matrix-builds (see
+  https://github.com/orgs/community/discussions/17245 for more context).
+
+  Exported artefacts are layed-out like so:
+
+  [<ctx>-]<hexdigest>.ocm-artefacts
+  blobs.d/<filename>
+
+  The single file w/ `.ocm-artefacs`-extension will contain a mapping with two toplevel attributes
+  `sources`, `resources`, which are lists containing any artefacts passed to this action.
+  Contents from `blobs-directory` (blobs.d) will be kept as-are.
+
+  The aforementioned directory-tree will be TARed into a file named
+  [<ctx>-]<hexdigest>.ocm-artefacts.tar.gz and uploaded into a artefact named
+  [<ctx>-]<hexdigest>-ocm-artefacts
+
+  Therefore, it is possible to use `download-artifact`'s globbing to retrieve _all_ artefacts:
+  `*-ocm-artefacts` # regardless of ctx, or if ctx is not set
+  `<ctx>-*-ocm-artefacts` # specific for given ctx
+
+  `hexdigests` are calculated from included contents. The way digests are calculated is intended
+  to be opaque to users of this action. They are added such to avoid name-clashes, and to allow
+  merging multiple exported fragment-artefacts without conflicts.
+
+inputs:
+  ocm-resources:
+    required: false
+    type: string
+    description: |
+      a YAML document, or a sequence of multiple YAML documents containing the OCM-Resources to
+      export. Each YAML document may either be mapping (in which case it is interpreted as a single
+      resource), or a list of mappings (in which case each list-entry is interpreted as a single
+      resource).
+  ocm-resources-file:
+    required: false
+    type: string
+    description: |
+      a path to a YAML-file containing OCM-Resources (interpreted the same way as `ocm-resources`
+      input).
+  ocm-sources:
+    required: false
+    type: string
+    description: |
+      a YAML document, or a sequence of multiple YAML documents containing the OCM-Sources to
+      export. Each YAML document may either be mapping (in which case it is interpreted as a single
+      Source), or a list of mappings (in which case each list-entry is interpreted as a single
+      Source).
+  ocm-sources-file:
+    required: false
+    type: string
+    description: |
+      a path to a YAML-file containing OCM-Sources (interpreted the same way as `ocm-sources`
+      input).
+  blobs-directory:
+    required: false
+    default: blobs.d
+    type: string
+    description: |
+      path to a directory containing local-blobs referenced by any of the passed ocm-artefacts.
+      blobfiles are expected to be regular files residing immediately below this directory, with
+      a naming-schema matching local-blob-ref (`<algorithm>:<hexdigest>`). For example:
+      `blobs.d/sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b`
+
+  ctx:
+    required: false
+    type: string
+    description: |
+      an optional ctx that will be added into artefact-name, and filenames. Useful if multiple
+      component-descriptors are to be created in the same workflow.
+
+outputs:
+  artefact-name:
+    description: |
+      the name of the uploaded artefact
+    value: ${{ steps.merge.outputs.artefact-name }}
+
+  tarfile-name:
+    description: |
+      the name of the tarfile contained in the uploaded artefact
+    value: ${{ steps.merge.outputs.artefact-tarfile }}
+
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: merge-ocm-fragments
+      id: merge
+      shell: python
+      run: |
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import hashlib
+        import io
+        import tarfile
+        import tempfile
+        import pprint
+
+        import yaml
+
+        import export_ocm
+
+        resources = list(
+          export_ocm.iter_artefacts(
+            artefacts_yaml='''${{ inputs.ocm-resources }}''',
+            artefacts_file='${{ inputs.ocm-resources-file }}',
+          ),
+        )
+        sources = list(
+          export_ocm.iter_artefacts(
+            artefacts_yaml='''${{ inputs.ocm-sources }}''',
+            artefacts_file='${{ inputs.ocm-sources-file }}',
+          ),
+        )
+
+        ocm_artefacts = {
+          'sources': sources,
+          'resources': resources,
+        }
+
+        pprint.pprint(ocm_artefacts)
+
+        ocm_artefacts_yaml_bytes = yaml.safe_dump(ocm_artefacts).encode('utf-8')
+        ocm_artefacts_digest = hashlib.sha1(ocm_artefacts_yaml_bytes).hexdigest()
+        ocm_artefacts_fname = f'{ocm_artefacts_digest}.ocm-artefacts'
+        if ctx := '${{ inputs.ctx }}':
+          ocm_artefacts_fname = f'{ctx}-{ocm_artefacts_fname}'
+
+        ocm_tar = tarfile.open(
+          name=tempfile.NamedTemporaryFile(delete=False).name,
+          mode='w:gz',
+        )
+
+        ocm_artefacts_info = tarfile.TarInfo(name=ocm_artefacts_fname)
+        ocm_artefacts_info.size = len(ocm_artefacts_yaml_bytes)
+        buf = io.BytesIO(ocm_artefacts_yaml_bytes)
+        ocm_tar.addfile(ocm_artefacts_info, buf)
+
+        # add blobs
+        if os.path.isdir(blobs_dir := '${{ inputs.blobs-directory }}'):
+          for fname in os.listdir(blobs_dir):
+            fpath = os.path.join(blobs_dir, fname)
+            if not os.path.isfile(fpath):
+              continue
+
+            ocm_tar.add(
+              name=fpath,
+              arcname=f'blobs.d/{fname}',
+            )
+
+        ocm_tar.close()
+        with open(ocm_tar.name, 'rb') as ocm_tar_fh:
+          tarhash = hashlib.sha1()
+          while (chunk := ocm_tar_fh.read(4096)):
+            tarhash.update(chunk)
+
+        ocm_tar_outfname = f'{tarhash.hexdigest()}.ocm-artefacts.tar.gz'
+        if ctx:
+          ocm_tar_outfname = f'{ctx}-{ocm_tar_outfname}'
+
+        os.link(ocm_tar.name, ocm_tar_outfname)
+
+        print(f'wrote {ocm_tar_outfname=}')
+        print(f'will upload as artefact: {ocm_artefacts_fname}')
+
+        with open(os.environ['GITHUB_OUTPUT'], 'w') as f:
+          f.write(f'artefact-name={ocm_artefacts_fname}\n')
+          f.write(f'artefact-tarfile={ocm_tar_outfname}\n')
+
+    - name: upload-ocm-fragments-artefact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ steps.merge.outputs.artefact-name }}
+        path: ${{ steps.merge.outputs.artefact-tarfile }}
