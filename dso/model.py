@@ -422,8 +422,10 @@ class DikiCheck:
 class DikiFinding(Finding):
     provider_id: str
     ruleset_id: str
+    ruleset_name: str
     ruleset_version: str
     rule_id: str
+    rule_name: str
     checks: list[DikiCheck]
 
     @property
