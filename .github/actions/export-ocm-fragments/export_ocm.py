@@ -4,11 +4,10 @@ import yaml
 
 
 def iter_artefacts(
-    artefacts_yaml: str,
-    artefacts_file: str,
+    artefacts_files: collections.abc.Iterable[str],
 ) -> collections.abc.Generator[dict, None, None]:
     '''
-    iterate over dicts found in either of artefacts_yaml or artefacts_file (both are interpreted
+    iterate over dicts found in artefacts_files (interpreted
     as YAML-Documents). If toplevel element is a list, list-items are yielded.
     '''
     def iter_artefact(obj: list | dict):
@@ -19,11 +18,7 @@ def iter_artefacts(
         else:
             raise RuntimeError(f'exepected either a list, or a dict, got: {obj=}')
 
-    if artefacts_yaml:
-        for obj in yaml.safe_load_all(artefacts_yaml):
-            yield from iter_artefact(obj)
-
-    if artefacts_file:
+    for artefacts_file in artefacts_files:
         with open(artefacts_file) as f:
             for obj in yaml.safe_load_all(f):
                 yield from iter_artefact(obj)

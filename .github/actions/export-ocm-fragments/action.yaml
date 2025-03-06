@@ -88,6 +88,17 @@ runs:
   steps:
     - name: install-gardener-gha-libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: preprocess
+      shell: bash
+      run: |
+        # pass via filesystem, as YAML-documents might break python's multiline-str-literals
+        echo '${{ inputs.ocm-resources }}' > /tmp/ocm-resources
+        echo '${{ inputs.ocm-sources }}' > /tmp/ocm-sources
+        for f in /tmp/ocm-resources /tmp/ocm-sources; do
+          if [ $(stat --format %s $f) == 0 ]; then
+            unlink $f
+          fi
+        done
     - name: merge-ocm-fragments
       id: merge
       shell: python
@@ -106,16 +117,34 @@ runs:
 
         import export_ocm
 
+        with open('/tmp/ocm-resources') as f:
+          ocm_resources = f.read()
+
+        with open('/tmp/ocm-sources') as f:
+          ocm_sources = f.read()
+
+        resources_files = [
+          f for f in (
+            '/tmp/ocm-resources',
+            '${{ inputs.ocm-resources-file }}',
+          ) if os.path.isfile(f)
+        ]
+
+        sources_files = [
+          f for f in (
+            '/tmp/ocm-sources',
+            '${{ inputs.ocm-sources-file }}',
+          ) if os.path.isfile(f)
+        ]
+
         resources = list(
           export_ocm.iter_artefacts(
-            artefacts_yaml='''${{ inputs.ocm-resources }}''',
-            artefacts_file='${{ inputs.ocm-resources-file }}',
+            artefacts_files=resources_files,
           ),
         )
         sources = list(
           export_ocm.iter_artefacts(
-            artefacts_yaml='''${{ inputs.ocm-sources }}''',
-            artefacts_file='${{ inputs.ocm-sources-file }}',
+            artefacts_files=sources_files,
           ),
         )
 
