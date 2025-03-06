@@ -102,6 +102,11 @@ on:
               value: value2
             ```
         type: string
+      ctx:
+        description: |
+          will be passed to `export-ocm-fragments` for exporting OCM-Resource-Fragment
+        type: string
+        required: false
 
     outputs:
       ocm-resource:
@@ -321,3 +326,8 @@ jobs:
             {resource_str}
             ```
             '''))
+      - name: export-ocm-fragments
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
+          ctx: ${{ inputs.ctx }}
