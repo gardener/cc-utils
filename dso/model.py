@@ -422,10 +422,10 @@ class DikiCheck:
 class DikiFinding(Finding):
     provider_id: str
     ruleset_id: str
-    ruleset_name: str
+    ruleset_name: str | None
     ruleset_version: str
     rule_id: str
-    rule_name: str
+    rule_name: str | None
     checks: list[DikiCheck]
 
     @property
