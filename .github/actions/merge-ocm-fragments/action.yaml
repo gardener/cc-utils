@@ -1,0 +1,145 @@
+name: merge-ocm-fragments
+description: |
+  Imports OCM-fragments (as exported from `export-ocm-fragments` action), and a
+  base-OCM-Component-Descriptor, and merges them into a resulting OCM-Component-Descriptor.
+
+  The output-directory (`outdir`) will be populated like so:
+
+  ```
+  component-descriptor.yaml
+  blobs.d/<alg>:<hexdigest>
+  ```
+
+  `component-descriptor.yaml` will contain merged contents from all imported ocm-artefact-fragments,
+  as well as any contents from passed `base-component-descriptor`, whereas `blobs.d` will contain
+  combined imported blob-files (if any).
+
+inputs:
+  base-component-descriptor:
+    required: false
+    type: string
+    description: |
+      The base-component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
+      one will be created.
+  ctx:
+    required: false
+    type: string
+    description: |
+      an optional ctx used for filtering which ocm-fragment-artefacts to import.
+      counterpart to `import-ocm-fragments`'s `ctx`-input.
+
+  outdir:
+    required: false
+    type: string
+    default: /tmp/ocm
+    description: |
+      the directory into which the merged component-descriptor, as well as the imported blobs
+      are to be written.
+
+outputs:
+  component-descriptor:
+    description: |
+      the resulting component-descriptor
+    value: ${{ steps.merge.outputs.component-descriptor }}
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: preprocess
+      id: preprocess
+      shell: bash
+      run: |
+        ctx="${{ inputs.ctx }}"
+        if [ -n "${ctx}" ]; then
+          artefact_name="${ctx}-*.ocm-artefacts"
+        else
+          artefact_name="*.ocm-artefacts"
+        fi
+        echo "artefact-name=${artefact_name}" >> "${GITHUB_OUTPUT}"
+        mkdir -p "${{ inputs.outdir }}"
+    - name: import-base-component-descriptor
+      shell: bash
+      if: ${{ inputs.base-component-descriptor }}
+      run: |
+        echo '${{ inputs.base-component-descriptor }}' \
+          > ${{ inputs.outdir }}/base-component-descriptor.yaml
+    - name: prepare-component-descriptor
+      shell: bash
+      run: |
+        base=${{ inputs.outdir }}/base-component-descriptor.yaml
+        component_descriptor=${{ inputs.outdir }}/component-descriptor.yaml
+        if [ -f ${base} ]; then
+          mv "${base}" "${component_descriptor}"
+        else
+          # create minimal base component-descriptor
+          python -m ocm create \
+           --out "${component_descriptor}"
+        fi
+    - name: import-ocm-fragments
+      uses: actions/download-artifact@v4
+      with:
+        pattern: ${{ steps.preprocess.outputs.artefact-name }}
+        path: ${{ inputs.outdir }}
+        merge-multiple: true
+    - name: extract-ocm-fragments
+      shell: bash
+      run: |
+        set -eu
+        cd "${{ inputs.outdir }}"
+        for tf in $(ls *.tar.gz); do
+          echo "extracting ${tf} into $PWD"
+          tar xf "${tf}"
+          unlink "${tf}"
+        done
+    - name: merge-fragments
+      id: merge
+      shell: python
+      run: |
+        import os
+        import pprint
+
+        import yaml
+
+        out_dir = '${{ inputs.outdir }}'
+        with open(component_descriptor_path := '{out_dir}/component-descriptor.yaml') as f:
+          component_descriptor = yaml.safe_load(f)
+
+        component = component_descriptor['component']
+
+        # TODO: might extend `ocm/__main__.py` to deduplicate; also, we should improve validation
+        for fname in os.listdir(out_dir):
+          path = os.path.join(out_dir, fname)
+          if not os.path.isfile(path):
+            continue
+          if not fname.endswith('.ocm-artefacts'):
+            continue
+
+          print(f'adding artefacts from {path}')
+          with open(path) as f:
+            artefacts = yaml.safe_load(f)
+
+          if ( resources := artefacts.get('resources', None)):
+            if not 'resources' in component:
+              component['resources'] = resources
+            else:
+              component['resources'].extend(resources)
+
+          if ( sources := artefacts.get('sources', None)):
+            if not 'sources' in component:
+              component['sources'] = sources
+            else:
+              component['sources'].extend(sources)
+
+          os.unlink(path)
+
+        pprint.pprint(component_descriptor)
+
+        with open(component_descriptor_path, 'w') as f:
+          yaml.safe_dump(component_descriptor, f)
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write('component-descriptor<<EOF\n')
+          yaml.safe_dump(component_descriptor, f)
+          f.write('EOF\n')
