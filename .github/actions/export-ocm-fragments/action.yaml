@@ -15,11 +15,11 @@ description: |
 
   The aforementioned directory-tree will be TARed into a file named
   [<ctx>-]<hexdigest>.ocm-artefacts.tar.gz and uploaded into a artefact named
-  [<ctx>-]<hexdigest>-ocm-artefacts
+  [<ctx>-]<hexdigest>.ocm-artefacts
 
   Therefore, it is possible to use `download-artifact`'s globbing to retrieve _all_ artefacts:
-  `*-ocm-artefacts` # regardless of ctx, or if ctx is not set
-  `<ctx>-*-ocm-artefacts` # specific for given ctx
+  `*.ocm-artefacts` # regardless of ctx, or if ctx is not set
+  `<ctx>-*.ocm-artefacts` # specific for given ctx
 
   `hexdigests` are calculated from included contents. The way digests are calculated is intended
   to be opaque to users of this action. They are added such to avoid name-clashes, and to allow
