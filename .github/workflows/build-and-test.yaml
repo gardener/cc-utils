@@ -127,17 +127,9 @@ jobs:
     environment: build
     needs:
       - version
-    container:
-      image: python:alpine
     steps:
-    - name: Install git, setuptools, node (for upload-artifact)
+    - name: Install setuptools
       run: |
-        apk add \
-          bash \
-          file \
-          git \
-          nodejs \
-          xz
         pip3 install --root-user-action ignore \
           setuptools \
           pyyaml
