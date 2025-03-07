@@ -92,8 +92,14 @@ runs:
       shell: bash
       run: |
         # pass via filesystem, as YAML-documents might break python's multiline-str-literals
-        echo '${{ inputs.ocm-resources }}' > /tmp/ocm-resources
-        echo '${{ inputs.ocm-sources }}' > /tmp/ocm-sources
+        cat <<EOF > /tmp/ocm-resources
+        ${{ inputs.ocm-resources }}
+        EOF
+
+        cat <<EOF > /tmp/ocm-sources
+        ${{ inputs.ocm-sources }}
+        EOF
+
         for f in /tmp/ocm-resources /tmp/ocm-sources; do
           if [ $(stat --format %s $f) == 0 ]; then
             unlink $f
