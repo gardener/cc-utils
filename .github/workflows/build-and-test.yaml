@@ -265,7 +265,7 @@ jobs:
       ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
 
   component-descriptor:
-    name: Generate + Publish OCM-Component-Descriptor
+    name: Generate OCM-Component-Descriptor
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -362,10 +362,6 @@ jobs:
           echo "component-descriptor to be uploaded:"
           cat component-descriptor.yaml
 
-          echo "uploading component-descriptor"
-          python -m ocm upload \
-            --file component-descriptor.yaml \
-            --blobs-dir /tmp/dist/blobs.d
           echo 'component-descriptor<<EOF' >> ${GITHUB_OUTPUT}
           cat component-descriptor.yaml >> ${GITHUB_OUTPUT}
           echo EOF >> ${GITHUB_OUTPUT}
