@@ -11,15 +11,15 @@ description: |
   ```
 
   `component-descriptor.yaml` will contain merged contents from all imported ocm-artefact-fragments,
-  as well as any contents from passed `base-component-descriptor`, whereas `blobs.d` will contain
+  as well as any contents from passed `component-descriptor`, whereas `blobs.d` will contain
   combined imported blob-files (if any).
 
 inputs:
-  base-component-descriptor:
+  component-descriptor:
     required: false
     type: string
     description: |
-      The base-component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
+      The (base) component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
       one will be created.
   ctx:
     required: false
@@ -59,12 +59,12 @@ runs:
         fi
         echo "artefact-name=${artefact_name}" >> "${GITHUB_OUTPUT}"
         mkdir -p "${{ inputs.outdir }}"
-    - name: import-base-component-descriptor
+    - name: import-component-descriptor
       shell: bash
-      if: ${{ inputs.base-component-descriptor }}
+      if: ${{ inputs.component-descriptor }}
       run: |
         cat <<EOF > "${{ inputs.outdir }}/base-component-descriptor.yaml"
-        ${{ inputs.base-component-descriptor }}
+        ${{ inputs.component-descriptor }}
         EOF
     - name: prepare-component-descriptor
       shell: bash
