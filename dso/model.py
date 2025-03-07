@@ -53,6 +53,7 @@ class Datasource:
     CC_UTILS = 'cc-utils'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
+    FALCO = 'falco'
 
     @staticmethod
     def datasource_to_datatypes(datasource: str) -> tuple[str]:
@@ -88,6 +89,9 @@ class Datasource:
             Datasource.DIKI: (
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.DIKI_FINDING,
+            ),
+            Datasource.FALCO: (
+                Datatype.FALCO_FINDING,
             ),
         }[datasource]
 
@@ -251,6 +255,7 @@ class Datatype:
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
+    FALCO_FINDING = 'finding/falco'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -262,6 +267,7 @@ class Datatype:
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST,
+            Datatype.FALCO_FINDING: Datasource.FALCO,
         }[datatype]
 
 
@@ -554,6 +560,123 @@ class ComplianceSnapshot:
             self.state.remove(state)
 
 
+class FalcoPriority(enum.StrEnum):
+    EMERGENCY = 'Emergency'
+    ALERT = 'Alert'
+    CRITICAL = 'Critical'
+    ERROR = 'Error'
+    WARNING = 'Warning'
+    NOTICE = 'Notice'
+    INFORMATIONAL = 'Informational'
+    DEBUG = 'Debug'
+
+
+@dataclasses.dataclass(frozen=True)
+class FalcoEvent:
+    message: str
+    cluster: str
+    hostname: str
+    time: datetime.datetime
+    rule: str
+    priority: FalcoPriority
+    output: dict[str, typing.Any]
+
+
+@dataclasses.dataclass(frozen=True)
+class ExceptionTemplate:
+    template: str
+
+
+@dataclasses.dataclass(frozen=True)
+class Node:
+    name: str
+    count: int
+
+
+@dataclasses.dataclass(frozen=True)
+class Cluster:
+    name: str
+    nodes: list[Node]
+
+
+@dataclasses.dataclass(frozen=True)
+class FalcoEventGroup:
+    '''
+    FalcoEventGroup represents a group of Falco events that are similar in
+    nature. In almost all cases those are false posities and can be ignored.
+    Falco exceptions can be defined but they can be silenced here.
+
+    :param count int:
+        number of events in this group.
+    :param group_hash str:
+        hash of the group (event fiields and values that form the group),
+        can be reconstructed from a sample event and the fields property.
+    :param fields dict[str, str]:
+        Identical fields that form the group
+    :param events list[FalcoEvent]:
+        list of events in this group (possibly truncated).
+    :param exception ExceptionTemplate:
+        exception template for this group
+    '''
+    message: str
+    clusters: list[Cluster]
+    landscape: str
+    project: str
+    rule: str
+    priority: FalcoPriority
+    first_event: datetime.datetime
+    last_event: datetime.datetime
+    count: int
+    group_hash: str
+    fields: dict[str, str]
+    events: list[FalcoEvent]
+    exception: ExceptionTemplate
+
+    @property
+    def key(self) -> str:
+        return self.group_hash
+
+
+@dataclasses.dataclass(frozen=True)
+class FalcoDebugEventGroup:
+    '''
+    Group of events that - most likely - are a result of a single debug
+    session. It might however also be an indication of an attack. These
+    events must be reviewed and ideally be linked to some legal activity.
+
+    :param group_hash str:
+        reproducible group hash to avoid double reporting should the reporting
+        job run multiple times on the same data.
+    :param events list[FalcoEvent]:
+        List of all events. The goal is not to truncate this list but it might
+        have to be done if it gets too large.
+    '''
+    count: int
+    cluster: str
+    hostname: str
+    project: str
+    landscape: str
+    group_hash: str
+    first_event: datetime.datetime
+    last_event: datetime.datetime
+    events: list[FalcoEvent]
+
+    @property
+    def key(self) -> str:
+        return self.group_hash
+
+
+class FalcoFindingSubType(enum.StrEnum):
+    EVENT_GROUP = 'event-group'
+    DEBUG_EVENT_GROUP = 'debug-event-group'
+
+
+@dataclasses.dataclass(frozen=True)
+class FalcoFinding(Finding):
+    subtype: FalcoFindingSubType
+    finding: FalcoDebugEventGroup | FalcoEventGroup
+
+
 @dataclasses.dataclass
 class ArtefactMetadata:
     '''
@@ -583,6 +706,7 @@ class ArtefactMetadata:
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
+        | FalcoFinding
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
@@ -604,6 +728,7 @@ class ArtefactMetadata:
                     SastSubType,
                     SastStatus,
                     MatchCondition,
+                    FalcoPriority,
                 ],
                 strict=True,
             ),
