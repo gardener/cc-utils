@@ -125,8 +125,6 @@ jobs:
   package:
     runs-on: ubuntu-latest
     environment: build
-    outputs:
-      ocm_resources: ${{ steps.package.outputs.ocm_resources }}
     needs:
       - version
     container:
@@ -217,6 +215,11 @@ jobs:
         echo "ocm_resources=dist/ocm_resources.yaml" >> "${GITHUB_OUTPUT}"
         find "${pkg_dir}"
         tar czf distribution-packages.tar.gz dist
+    - name: export-ocm-fragments
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      with:
+        ocm-resources-file: dist/ocm_resources.yaml
+        blobs-directory: dist/blobs.d
     - uses: actions/upload-artifact@v4
       with:
         name: distribution-packages
@@ -271,7 +274,7 @@ jobs:
       - base-component-descriptor
       - version
       - params
-      - package
+      - package # needed indirectly (ocm-fragments exported as artfact)
       - images
       - lint
       - unittests
@@ -282,10 +285,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-      - name: Retrieve Distribution Packages
-        uses: actions/download-artifact@v4
+      - name: import-and-merge-ocm-fragments
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
         with:
-          name: distribution-packages
+          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+          outdir: .
       - name: Retrieve Linting Logs
         uses: actions/download-artifact@v4
         with:
@@ -304,27 +308,15 @@ jobs:
           version=${{ needs.version.outputs.version }}
           ocm_repo=${{ needs.params.outputs.ocm_repository }}
 
-          tar xf distribution-packages.tar.gz -C /tmp
-
-          echo "importing base-component-descriptor"
-          echo "${{ needs.base-component-descriptor.outputs.component-descriptor }}" \
-            > component-descriptor.yaml
-
-          echo "base-component-descriptor:"
+          echo "debug: printing imported component-descriptor"
           cat component-descriptor.yaml
           echo "------------------------------------"
-
-          echo "adding resources"
-          ocm_resources=${{ needs.package.outputs.ocm_resources }}
-          echo "ocm-resources-file: /tmp/${ocm_resources}"
-          cat "/tmp/${ocm_resources}" | \
-          python3 -m ocm append resource \
-            --file component-descriptor.yaml
+          echo ""
 
           echo "adding linting-evidence resource"
           linting_evidence=/tmp/linting-logs/bandit.tar.gz
           linting_digest=$(sha256sum ${linting_evidence} | cut -d' ' -f1)
-          cp ${linting_evidence} /tmp/dist/blobs.d/${linting_digest}
+          cp ${linting_evidence} blobs.d/${linting_digest}
 
           cat << EOF > linting_evidence.ocm-resource
           name: sast-linting-evidence
