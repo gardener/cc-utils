@@ -103,7 +103,7 @@ runs:
         import yaml
 
         out_dir = '${{ inputs.outdir }}'
-        with open(component_descriptor_path := '{out_dir}/component-descriptor.yaml') as f:
+        with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
           component_descriptor = yaml.safe_load(f)
 
         component = component_descriptor['component']
