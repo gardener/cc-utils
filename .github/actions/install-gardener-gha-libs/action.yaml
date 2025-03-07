@@ -28,7 +28,11 @@ runs:
 
         python3 --version
 
-        pip install setuptools >/dev/null
+        pip=pip
+        if not which pip &>/dev/null; then
+          pip=pip3
+        fi
+        $pip install setuptools >/dev/null
 
         version=$(.ci/read-version)
         if [[ "${version}" == *-* ]]; then
