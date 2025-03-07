@@ -144,8 +144,6 @@ jobs:
           setuptools \
           pyyaml
     - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4 # required by upload-artifact / `act`
-      # see: https://github.com/nektos/act/issues/973
     - name: create distribution package
       id: package
       run: |
