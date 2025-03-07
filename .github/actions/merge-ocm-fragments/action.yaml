@@ -63,8 +63,9 @@ runs:
       shell: bash
       if: ${{ inputs.base-component-descriptor }}
       run: |
-        echo '${{ inputs.base-component-descriptor }}' \
-          > ${{ inputs.outdir }}/base-component-descriptor.yaml
+        cat <<EOF > "${{ inputs.outdir }}/base-component-descriptor.yaml"
+        ${{ inputs.base-component-descriptor }}
+        EOF
     - name: prepare-component-descriptor
       shell: bash
       run: |
