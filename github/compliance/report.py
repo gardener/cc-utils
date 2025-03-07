@@ -79,33 +79,6 @@ def _pluralise(prefix: str, count: int):
     return f'{prefix}s'
 
 
-def _artifact_url(
-    component: ocm.Component,
-    artifact: ocm.Artifact,
-) -> str | None:
-    access = artifact.access
-
-    if isinstance(access, ocm.OciAccess):
-        return access.imageReference
-
-    elif isinstance(access, ocm.S3Access):
-        return f'http://{access.bucketName}.s3.amazonaws.com/{access.objectKey}'
-
-    elif isinstance(access, ocm.GithubAccess):
-        return access.repoUrl
-
-    elif isinstance(access, ocm.LocalBlobAccess):
-        ocm_repo = component.current_ocm_repo
-        image_reference = ocm_repo.component_oci_ref(component.name)
-        return f'{image_reference}@{access.localReference}'
-
-    elif isinstance(access, ocm.LocalBlobGlobalAccess):
-        return access.ref
-
-    else:
-        raise NotImplementedError(artifact.access)
-
-
 def _compliance_status_summary(
     component: ocm.Component,
     artifacts: typing.Sequence[ocm.Artifact],
@@ -124,7 +97,7 @@ def _compliance_status_summary(
         url
         for artefact in artifacts
         if (
-            url := _artifact_url(
+            url := ocm.util.artifact_url(
                 component=component,
                 artifact=artefact,
             )
