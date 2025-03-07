@@ -119,9 +119,10 @@ runs:
         import oci.auth
         import ocm
 
-        component_descriptor = ocm.ComponentDescriptor.from_dict(
-          yaml.safe_load('''${{ inputs.component-descriptor }}''')
-        )
+        with open('/tmp/component-descriptor') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f.read())
+          )
         component = component_descriptor.component
         tgt_ocm_repo = component.current_ocm_repo
         tgt_oci_ref = tgt_ocm_repo.component_version_oci_ref(
