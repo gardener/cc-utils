@@ -106,6 +106,36 @@ runs:
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
 
+    - name: read-target-oci-ref:
+      id: read-oci-ref
+      shell: python
+      run: |
+        import os
+
+        import yaml
+
+        import ocm
+
+        with open('/tmp/component-descriptor') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f.read())
+          )
+        component = component_descriptor.component
+        tgt_ocm_repo = component.current_ocm_repo
+        tgt_oci_ref = tgt_ocm_repo.component_version_oci_ref(
+          name=component.name,
+          version=component.version,
+        )
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write(f'ocm-target-oci-ref={tgt_oci_ref}\n')
+
+
+    - name: authenticate-against-oci-registry
+      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      with:
+        oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
+        gh-token: ${{ inputs.github-token }}
+
     - name: attach-release-notes-to-component-descriptor
       if: ${{ inputs.release-notes }}
       shell: python
@@ -165,7 +195,6 @@ runs:
             Dumper=ocm.EnumValueYamlDumper,
             stream=f,
           )
-
 
     - name: publish OCM Component-Descriptor
       shell: bash
