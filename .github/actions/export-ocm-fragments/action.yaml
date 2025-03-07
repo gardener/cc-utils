@@ -11,7 +11,10 @@ description: |
 
   The single file w/ `.ocm-artefacs`-extension will contain a mapping with two toplevel attributes
   `sources`, `resources`, which are lists containing any artefacts passed to this action.
-  Contents from `blobs-directory` (blobs.d) will be kept as-are.
+  Contents from `blobs-directory` (blobs.d) will be processed:
+    - only regular files are honoured
+    - unless already the filename, a symlink named `sha256:<sha256-hexdigest>` pointing to fname is
+      created and added
 
   The aforementioned directory-tree will be TARed into a file named
   [<ctx>-]<hexdigest>.ocm-artefacts.tar.gz and uploaded into a artefact named
@@ -183,6 +186,20 @@ runs:
             fpath = os.path.join(blobs_dir, fname)
             if not os.path.isfile(fpath):
               continue
+
+            fhash = hashlib.sha256()
+            with open(fpath, 'rb') as f:
+              while chunk := f.read(4096):
+                fhash.update(chunk)
+
+            # symlink, unless file already is named according to its content-hash-digest
+            fhashname = f'sha256:{fhash.hexdigest()}'
+            if fname != fhashname:
+              os.symlink(fname, fhashname)
+              ocm_tar.add(
+                name=fhashname,
+                arcname=f'blobs.d/{fhashname}',
+              )
 
             ocm_tar.add(
               name=fpath,
