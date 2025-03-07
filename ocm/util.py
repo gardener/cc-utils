@@ -44,3 +44,32 @@ def main_source(
         return component.sources[0]
 
     raise ValueError('could not umambiguously determine main-source', component)
+
+
+def artifact_url(
+    component: ocm.Component,
+    artifact: ocm.Resource | ocm.Source,
+) -> str:
+    access = artifact.access
+
+    if isinstance(access, ocm.GithubAccess):
+        return access.repoUrl
+
+    elif isinstance(access, ocm.LocalBlobAccess):
+        image_reference = component.current_ocm_repo.component_oci_ref(component.name)
+        return f'{image_reference}@{access.localReference}'
+
+    elif isinstance(access, ocm.OciAccess):
+        return access.imageReference
+
+    elif isinstance(access, ocm.RelativeOciAccess):
+        return access.reference
+
+    elif isinstance(access, ocm.S3Access):
+        return f'http://{access.bucketName}.s3.amazonaws.com/{access.objectKey}'
+
+    elif isinstance(access, ocm.LocalBlobGlobalAccess):
+        return access.ref
+
+    else:
+        raise ValueError(access)
