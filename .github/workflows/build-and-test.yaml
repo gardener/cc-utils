@@ -167,9 +167,7 @@ jobs:
          python3 ${path} \
             bdist_wheel \
             --dist-dir ${pkg_dir}
-         set -x
          rm -rf build
-         set +x
         done
 
         # special-case: cli-package (need to chdir in order to not confuse setuptools)
