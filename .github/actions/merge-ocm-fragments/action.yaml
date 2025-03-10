@@ -108,6 +108,10 @@ runs:
           component_descriptor = yaml.safe_load(f)
 
         component = component_descriptor['component']
+        if not 'sources' in component:
+          component['sources'] = []
+        if not 'resources' in component:
+          component['resources'] = []
 
         # TODO: might extend `ocm/__main__.py` to deduplicate; also, we should improve validation
         for fname in os.listdir(out_dir):
@@ -122,16 +126,10 @@ runs:
             artefacts = yaml.safe_load(f)
 
           if ( resources := artefacts.get('resources', None)):
-            if not 'resources' in component:
-              component['resources'] = resources
-            else:
-              component['resources'].extend(resources)
+            component['resources'].extend(resources)
 
           if ( sources := artefacts.get('sources', None)):
-            if not 'sources' in component:
-              component['sources'] = sources
-            else:
-              component['sources'].extend(sources)
+            component['sources'].extend(sources)
 
           os.unlink(path)
 
