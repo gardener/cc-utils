@@ -282,11 +282,6 @@ jobs:
         with:
           component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
           outdir: .
-      - name: Retrieve Linting Logs
-        uses: actions/download-artifact@v4
-        with:
-          name: linting-logs # targetpath: bandit.tar.gz
-          path: /tmp/linting-logs
       - name: OCI-Auth
         id: auth
         uses: ./.github/actions/oci-auth
@@ -304,35 +299,6 @@ jobs:
           cat component-descriptor.yaml
           echo "------------------------------------"
           echo ""
-
-          echo "adding linting-evidence resource"
-          linting_evidence=/tmp/linting-logs/bandit.tar.gz
-          linting_digest=$(sha256sum ${linting_evidence} | cut -d' ' -f1)
-          cp ${linting_evidence} blobs.d/${linting_digest}
-
-          cat << EOF > linting_evidence.ocm-resource
-          name: sast-linting-evidence
-          version: ${version}
-          type: application/gzip
-          relation: local
-          access:
-            type: localBlob
-            localReference: sha256:${linting_digest}
-            size: $(stat -c"%s" ${linting_evidence})
-          labels:
-            - name: gardener.cloud/purposes
-              value:
-                - lint
-                - sast
-                - pybandit
-            - name: gardener.cloud/comment
-              value: |
-                we use bandit (linter) for SAST scans
-                see: https://bandit.readthedocs.io/en/latest/
-          EOF
-          cat linting_evidence.ocm-resource | \
-          python3 -m ocm append resource \
-            --file component-descriptor.yaml
 
           echo "adding image-resource"
           echo "${{ needs.images.outputs.ocm-resource }} " | \
@@ -391,8 +357,10 @@ jobs:
         fi
 
         echo "running linters"
+        blobs_dir=blobs.d
+        mkdir $blobs_dir
         bandit_logfile=bandit.log
-        bandit_evidence=bandit.tar.gz
+        bandit_evidence="${blobs_dir}/bandit.tar.gz"
 
         bandit_extra_args="-f txt -o ${bandit_logfile}" \
           .ci/lint
@@ -400,10 +368,25 @@ jobs:
         # pass bandit.log + used cfg (pyproject.toml) as evidence
         tar czf $bandit_evidence $bandit_logfile pyproject.toml
 
-    - uses: actions/upload-artifact@v4
+    - uses: ./.github/actions/export-ocm-fragments
       with:
-        name: linting-logs
-        path: bandit.tar.gz
+        ocm-resources: |
+          name: sast-linting-evidence
+          relation: local
+          access:
+            type: localBlob
+            localReference: bandit.tar.gz
+          labels:
+            - name: gardener.cloud/purposes
+              value:
+                - lint
+                - sast
+                - pybandit
+            - name: gardener.cloud/comment
+              value: |
+                we use bandit (linter) for SAST-Scans.
+                See: https://bandit.readthedocs.io/en/latest/
+        blobs-directory: blobs.d
 
   unittests:
     needs:
