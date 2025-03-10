@@ -8,10 +8,6 @@ description: |
 runs:
   using: composite
   steps:
-    - name: install python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
     - uses: actions/checkout@v4
       with:
         repository: gardener/cc-utils
