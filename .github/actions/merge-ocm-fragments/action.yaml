@@ -125,13 +125,24 @@ runs:
           with open(path) as f:
             artefacts = yaml.safe_load(f)
 
-          if ( resources := artefacts.get('resources', None)):
+          if ( resources := artefacts.get('resources')):
             component['resources'].extend(resources)
 
-          if ( sources := artefacts.get('sources', None)):
+          if ( sources := artefacts.get('sources')):
             component['sources'].extend(sources)
 
           os.unlink(path)
+
+        # preprocess: patch-in versions for local artefacts
+        cversion = component.get('version')
+        for artefact in component['sources'] + component['resources']:
+          if not cversion:
+            continue
+          if artefact.get('version'):
+            continue # existing data has precedence
+          if artefact.get('relation') != 'local':
+            continue # we only patch-in version for local artefacts
+          artefact['version'] = cversion
 
         pprint.pprint(component_descriptor)
 
