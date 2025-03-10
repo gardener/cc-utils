@@ -28,6 +28,10 @@ description: |
   to be opaque to users of this action. They are added such to avoid name-clashes, and to allow
   merging multiple exported fragment-artefacts without conflicts.
 
+  Any artefacts w/ a access of type `localBlob`, where `localReference` is a filepath found relative
+  to `blobs-directory`, with a filename not matching `<alg>:<hexdigest>` will be patched to
+  content-addressing (i.e. aforementioned scheme).
+
 inputs:
   ocm-resources:
     required: false
@@ -122,9 +126,11 @@ runs:
         import tempfile
         import pprint
 
+        import magic
         import yaml
 
         import export_ocm
+        import ocm
 
         with open('/tmp/ocm-resources') as f:
           ocm_resources = f.read()
@@ -164,22 +170,12 @@ runs:
 
         pprint.pprint(ocm_artefacts)
 
-        ocm_artefacts_yaml_bytes = yaml.safe_dump(ocm_artefacts).encode('utf-8')
-        ocm_artefacts_digest = hashlib.sha1(ocm_artefacts_yaml_bytes).hexdigest()
-        ocm_artefacts_fname = f'{ocm_artefacts_digest}.ocm-artefacts'
-        if ctx := '${{ inputs.ctx }}':
-          ocm_artefacts_fname = f'{ctx}-{ocm_artefacts_fname}'
-
         ocm_tar = tarfile.open(
           name=tempfile.NamedTemporaryFile(delete=False).name,
           mode='w:gz',
         )
 
-        ocm_artefacts_info = tarfile.TarInfo(name=ocm_artefacts_fname)
-        ocm_artefacts_info.size = len(ocm_artefacts_yaml_bytes)
-        buf = io.BytesIO(ocm_artefacts_yaml_bytes)
-        ocm_tar.addfile(ocm_artefacts_info, buf)
-
+        orig_name_to_digest_names = dict()
         # add blobs
         if os.path.isdir(blobs_dir := '${{ inputs.blobs-directory }}'):
           for fname in os.listdir(blobs_dir):
@@ -196,6 +192,7 @@ runs:
             fhashname = f'sha256:{fhash.hexdigest()}'
             if fname != fhashname:
               os.symlink(fname, fhashname)
+              orig_name_to_digest_names[fname] = fhashname
               ocm_tar.add(
                 name=fhashname,
                 arcname=f'blobs.d/{fhashname}',
@@ -205,6 +202,46 @@ runs:
               name=fpath,
               arcname=f'blobs.d/{fname}',
             )
+
+        # patch local-access if referencing local-files using non-digest-filename
+        for artefact in sources + resources:
+          if not (access := artefact.get('access')):
+            continue
+          if ocm.AccessType(access.get('type')) is not ocm.AccessType.LOCAL_BLOB:
+            continue
+          if not (local_ref := access.get('localReference')):
+            continue
+          if local_ref.startswith('sha256:'):
+            continue
+          if not os.path.exists(local_fpath := os.path.join(blobs_dir, local_ref)):
+            continue
+          # local file exists, and it does not meet content-addresssing scheme (
+          # <alg>:<hexdigest>). We should find it from previous step where we calculated
+          # digests, and created symlinks.
+          hashname = orig_name_to_digest_names.get(local_ref)
+          if not hashname:
+            print(f'WARNING: did not find local blobfile for {artefact=}')
+            continue
+          access['localReference'] = hashname
+          access['size'] = os.stat(local_fpath).st_size
+          print(f'INFO: patched {artefact["name"]}\'s access to {hashname=} (was: {local_ref=})')
+
+          if not 'type' in artefact:
+            artefact['type'] = magic.detect_from_filename(
+              os.path.join(blobs_dir, local_ref),
+            ).mime_type
+
+        ocm_artefacts_yaml_bytes = yaml.safe_dump(ocm_artefacts).encode('utf-8')
+        ocm_artefacts_digest = hashlib.sha1(ocm_artefacts_yaml_bytes).hexdigest()
+        ocm_artefacts_fname = f'{ocm_artefacts_digest}.ocm-artefacts'
+        if ctx := '${{ inputs.ctx }}':
+          ocm_artefacts_fname = f'{ctx}-{ocm_artefacts_fname}'
+
+        ocm_artefacts_info = tarfile.TarInfo(name=ocm_artefacts_fname)
+        ocm_artefacts_info.size = len(ocm_artefacts_yaml_bytes)
+
+        buf = io.BytesIO(ocm_artefacts_yaml_bytes)
+        ocm_tar.addfile(ocm_artefacts_info, buf)
 
         ocm_tar.close()
         with open(ocm_tar.name, 'rb') as ocm_tar_fh:
