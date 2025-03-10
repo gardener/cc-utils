@@ -52,7 +52,6 @@ def requirements():
         'pylint',
         'python-gitlab',
         'python-keystoneclient',
-        'python-magic',
         'python-swiftclient',
         'pytimeparse',
         'ruamel.yaml',
