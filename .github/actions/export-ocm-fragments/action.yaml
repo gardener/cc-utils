@@ -171,7 +171,10 @@ runs:
         pprint.pprint(ocm_artefacts)
 
         ocm_tar = tarfile.open(
-          name=tempfile.NamedTemporaryFile(delete=False).name,
+          name=tempfile.NamedTemporaryFile(
+            delete=False,
+            dir='.', # do not use /tmp to avoid unnecessary copy after finalised
+          ).name,
           mode='w:gz',
         )
 
