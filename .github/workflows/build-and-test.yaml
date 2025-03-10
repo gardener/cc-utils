@@ -292,20 +292,8 @@ jobs:
         id: component-descriptor
         run: |
           set -eu
-          version=${{ needs.version.outputs.version }}
-          ocm_repo=${{ needs.params.outputs.ocm_repository }}
 
-          echo "debug: printing imported component-descriptor"
-          cat component-descriptor.yaml
-          echo "------------------------------------"
-          echo ""
-
-          echo "adding image-resource"
-          echo "${{ needs.images.outputs.ocm-resource }} " | \
-          python3 -m ocm append resource \
-            --file component-descriptor.yaml
-
-          echo "component-descriptor to be uploaded:"
+          echo "collected component-descriptor:"
           cat component-descriptor.yaml
 
           echo 'component-descriptor<<EOF' >> ${GITHUB_OUTPUT}
