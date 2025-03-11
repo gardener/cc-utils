@@ -430,7 +430,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: ./.github/workflows/oci-ocm-multiarch.yaml
+    uses: ./.github/workflows/oci-ocm.yaml
     with:
       name: job-image
       oci-registry: ${{ needs.params.outputs.oci-registry }}
