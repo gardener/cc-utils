@@ -201,15 +201,25 @@ def upload(parsed):
             absent_ok=True,
         ):
             continue # no need to upload again
-        blob_path = os.path.join(
-            parsed.blobs_dir,
-            access.localReference.removeprefix('sha256:')
+        blob_path_candidates = (
+            os.path.join(
+                parsed.blobs_dir,
+                access.localReference.removeprefix('sha256:')
+            ),
+            os.path.join(
+                parsed.blobs_dir,
+                access.localReference,
+            ),
         )
-        if not os.path.exists(blob_path):
-            print(f'error: did not find expected blob at {blob_path=}')
+        for candidate in blob_path_candidates:
+            if not os.path.exists(candidate):
+                continue
+
+        if not os.path.exists(candidate):
+            print(f'error: did not find expected blob at {candidate=}')
             print(f'this blob was expected for {artefact=}')
             exit(1)
-        with open(blob_path, 'rb') as f:
+        with open(candidate, 'rb') as f:
             oci_client.put_blob(
                 image_reference=oci_target_ref,
                 digest=access.localReference,
