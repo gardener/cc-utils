@@ -27,15 +27,21 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v4
+      - name: collect-component-descriptor
+        id: component-descriptor
+        uses: ./.github/actions/merge-ocm-fragments
+        with:
+          component-descriptor: ${{ needs.build.outputs.base-component-descriptor }}
+          output: /tmp/ocm
       - uses: ./.github/actions/release-notes
         id: release-notes
         with:
-          component-descriptor: ${{ needs.build.outputs.component-descriptor }}
+          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
       - uses: ./.github/actions/release
         with:
-          component-descriptor: ${{ needs.build.outputs.component-descriptor }}
+          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
           release-commit-digest: ${{ needs.build.outputs.version-commit-digest }}
           release-commit-target: branch
