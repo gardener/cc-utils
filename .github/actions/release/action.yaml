@@ -106,7 +106,7 @@ runs:
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
 
-    - name: read-target-oci-ref:
+    - name: read-target-oci-ref
       id: read-oci-ref
       shell: python
       run: |
