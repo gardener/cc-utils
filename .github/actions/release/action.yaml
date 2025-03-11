@@ -19,6 +19,11 @@ inputs:
       Effective Component-Descriptor to publish. Any local-blobs are assumed to already be
       present in target-OCI-Repository.
     required: true
+  component-descriptor-blobs-dir:
+    description: |
+      Directory containing blobfiles referenced as local-blobs in component-descriptor
+      (name-scheme: <algorithm>:<hexdigest>).
+    required: false
   release-commit-objects:
     description: |
       release-commit in serialised form (as output by `capture-commit` action)
@@ -202,6 +207,7 @@ runs:
       run: |
         python -m ocm upload \
           --file /tmp/component-descriptor.yaml
+          --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}'
 
     - name: push release-tag
       shell: bash
