@@ -33,11 +33,11 @@ on:
       effective-version:
         description: effective version used during build
         value: ${{ jobs.version.outputs.version }}
-      component-descriptor:
+      base-component-descriptor:
         description: |
-          the OCM Component-Descriptor in YAML-format (referenced inline-blobs and resources
-          are guaranteed to already have been published)
-        value: ${{ jobs.component-descriptor.outputs.component-descriptor }}
+          the base OCM Component-Descriptor in YAML-format (use `merge-ocm-fragments`-action
+          to collect full component-descriptor):
+        value: ${{ jobs.base-component-descriptor.outputs.component-descriptor }}
 
 jobs:
   params:
@@ -254,51 +254,6 @@ jobs:
     with:
       component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
       ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
-
-  component-descriptor:
-    name: Generate OCM-Component-Descriptor
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-      packages: write
-    needs:
-      - base-component-descriptor
-      - version
-      - params
-      - package # needed indirectly (ocm-fragments exported as artfact)
-      - images
-      - lint
-      - unittests
-      - documentation
-    outputs:
-      ocm_repository: ${{ steps.params.outputs.ocm_repository }}
-      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-      - name: import-and-merge-ocm-fragments
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
-        with:
-          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
-          outdir: .
-      - name: OCI-Auth
-        id: auth
-        uses: ./.github/actions/oci-auth
-        with:
-          oci-image-reference: ${{ needs.params.outputs.ocm_repository }}
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: component-descriptor
-        id: component-descriptor
-        run: |
-          set -eu
-
-          echo "collected component-descriptor:"
-          cat component-descriptor.yaml
-
-          echo 'component-descriptor<<EOF' >> ${GITHUB_OUTPUT}
-          cat component-descriptor.yaml >> ${GITHUB_OUTPUT}
-          echo EOF >> ${GITHUB_OUTPUT}
 
   lint:
     runs-on: ubuntu-latest
