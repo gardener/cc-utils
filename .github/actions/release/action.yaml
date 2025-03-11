@@ -206,7 +206,7 @@ runs:
       shell: bash
       run: |
         python -m ocm upload \
-          --file /tmp/component-descriptor.yaml
+          --file /tmp/component-descriptor.yaml \
           --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}'
 
     - name: push release-tag
