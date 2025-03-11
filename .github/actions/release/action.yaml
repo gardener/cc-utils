@@ -140,6 +140,7 @@ runs:
       if: ${{ inputs.release-notes }}
       shell: python
       run: |
+        import dataclasses
         import hashlib
         import json
 
@@ -191,7 +192,7 @@ runs:
         # pass modified component-descriptor to subsequent steps
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=component_descriptor,
+            data=dataclasses.asdict(component_descriptor),
             Dumper=ocm.EnumValueYamlDumper,
             stream=f,
           )
