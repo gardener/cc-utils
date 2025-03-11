@@ -9,3 +9,14 @@ jobs:
       release: false
       version-prerelease: "${commit_digest}"
       version-commit-message: "build ${version}"
+  component-descriptor:
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: collect-component-descriptor
+        uses: ./.github/actions/merge-ocm-fragments
+        with:
+          component-descriptor: ${{ needs.build-and-test.outputs.base-component-descriptor }}
+          outdir: /tmp/ocm
