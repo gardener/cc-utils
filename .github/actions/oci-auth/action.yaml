@@ -87,6 +87,7 @@ runs:
         project_id: ${{ inputs.gcp-project }}
         service_account: ${{ inputs.gcp-service-account }}
         workload_identity_provider: ${{ inputs.gcp-workload-identity-provider }}
+        create_credentials_file: false
 
     - name: Export Access-Token and docker-cfg
       id: export
