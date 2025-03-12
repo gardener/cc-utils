@@ -125,6 +125,8 @@ def append(parsed):
         attr = component['resources']
     elif parsed.type in ('s', 'source'):
         attr = component['sources']
+    elif parsed.type in ('c', 'component-reference'):
+        attr = component['componentReferences']
 
     if _have_yaml:
         obj = yaml.safe_load(sys.stdin)
@@ -257,9 +259,16 @@ def main():
     add_parser = maincmd_parsers.add_parser(
         'append',
         aliases=('a',),
-        help='appends resources or sources to component-descriptor',
+        help='appends resources, sources, or component-references to component-descriptor',
     )
-    add_parser.add_argument('type', choices=('r', 'resource', 's', 'source'))
+    add_parser.add_argument(
+        'type',
+        choices=(
+            'r', 'resource',
+            's', 'source',
+            'c', 'component-reference',
+        )
+    )
     add_parser.add_argument('--file', '-f', required=True)
     add_parser.add_argument(
         '--label',
