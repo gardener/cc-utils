@@ -92,7 +92,7 @@ runs:
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - uses: actions/checkout@v4
     - name: import-release-commit
-      uses: ./.github/actions/import-commit
+      uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
         commit-objects: ${{ inputs.release-commit-objects }}
         commit-digest: ${{ inputs.release-commit-digest }}
