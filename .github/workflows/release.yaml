@@ -23,6 +23,10 @@ jobs:
 
   release-to-github-and-bump:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
     needs:
       - build
     steps:
