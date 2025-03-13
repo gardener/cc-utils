@@ -16,12 +16,12 @@ runs:
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
     - uses: actions/checkout@v4
-      if: ${{ steps.check.outputs.already-installed }}
+      if: ${{ ! steps.check.outputs.already-installed }}
       with:
         repository: gardener/cc-utils
         path: cc-utils
     - name: install-gardener-gha-libs
-      if: ${{ steps.check.outputs.already-installed }}
+      if: ${{ ! steps.check.outputs.already-installed }}
       shell: bash
       run: |
         set -eu
