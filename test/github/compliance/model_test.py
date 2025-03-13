@@ -1,7 +1,6 @@
 import dataclasses
 
 import cnudie.iter
-import github.compliance.issue as gci
 import github.compliance.model as gcm
 
 
@@ -198,7 +197,7 @@ def test_ScanResultGroupCollection_result_groups():
 
     srgc = gcm.ScanResultGroupCollection(
         results=results,
-        issue_type=gci._label_bdba,
+        issue_type='dont/care',
         classification_callback=None,
         findings_callback=None,
     )
