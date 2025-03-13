@@ -12,7 +12,7 @@ runs:
       id: check
       shell: bash
       run: |
-        if pip show gardener-gha-libs &>/dev/null;
+        if pip show gardener-gha-libs &>/dev/null; then
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
     - uses: actions/checkout@v4
