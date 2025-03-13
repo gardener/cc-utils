@@ -28,7 +28,7 @@ inputs:
        GCP Workload Identity Provider. Default is configured for GitHub-Actions for
        github.com/gardener organisation.
     required: false
-    default: projects/694386720375/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
+    default: projects/694386720375/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions
   gcp-project:
     description: |
       The GCP Project to authenticate against
