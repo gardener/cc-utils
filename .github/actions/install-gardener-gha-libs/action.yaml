@@ -8,11 +8,19 @@ description: |
 runs:
   using: composite
   steps:
+    - name: check-if-installed
+      id: check
+      shell: bash
+      run: |
+        if pip show gardener-gha-libs &>/dev/null;
+          echo "already-installed=true" >> ${GITHUB_OUTPUT}
     - uses: actions/checkout@v4
+      if: ${{ steps.check.outputs.already-installed }}
       with:
         repository: gardener/cc-utils
         path: cc-utils
     - name: install-gardener-gha-libs
+      if: ${{ steps.check.outputs.already-installed }}
       shell: bash
       run: |
         set -eu

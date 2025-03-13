@@ -22,13 +22,13 @@ inputs:
   gcp-service-account:
     description: The GCP-Service-Account to impersonate
     required: false
-    default: ci-opensource-operator@gardener-project.iam.gserviceaccount.com
+    default: ci-opensource-operator-2@gardener-project.iam.gserviceaccount.com
   gcp-workload-identity-provider:
     description: |
        GCP Workload Identity Provider. Default is configured for GitHub-Actions for
        github.com/gardener organisation.
     required: false
-    default: projects/694386720375/locations/global/workloadIdentityPools/github-actions/providers/github-actions-provider
+    default: projects/694386720375/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider
   gcp-project:
     description: |
       The GCP Project to authenticate against
