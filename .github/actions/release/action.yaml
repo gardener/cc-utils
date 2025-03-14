@@ -327,7 +327,7 @@ runs:
 
     - name: create-bump-commit
       id: bump
-      uses: ./.github/actions/version
+      uses: gardener/cc-utils/.github/actions/version@master
       with:
         read-callback: ${{ inputs.version-read-callback }}
         write-callback: ${{ inputs.version-write-callback }}
