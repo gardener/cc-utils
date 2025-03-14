@@ -123,13 +123,6 @@ class DeliveryServiceRoutes:
             'cache',
         )
 
-    def scan_cfgs(self):
-        return ci.util.urljoin(
-            self._base_url,
-            'service-extensions',
-            'scan-configurations',
-        )
-
     def backlog_items(self):
         return ci.util.urljoin(
             self._base_url,
@@ -757,7 +750,6 @@ class DeliveryServiceClient:
     def create_backlog_item(
         self,
         service: str,
-        cfg_name: str,
         artefacts: collections.abc.Iterable[dso.model.ComponentArtefactId]=(),
         priority: str | None=None, # see delivery-service k8s/backlog for allowed priorities
     ):
@@ -765,10 +757,9 @@ class DeliveryServiceClient:
             'Content-Type': 'application/json',
         }
 
-        params = dict()
-
-        params['service'] = service
-        params['cfg_name'] = cfg_name
+        params = {
+            'service': service,
+        }
 
         if priority:
             params['priority'] = priority
@@ -789,14 +780,6 @@ class DeliveryServiceClient:
             params=params,
         )
         res.raise_for_status()
-
-    def scan_cfgs(self) -> list:
-        res = self.request(
-            url=self._routes.scan_cfgs(),
-            method='GET',
-        )
-        res.raise_for_status()
-        return res.json()
 
 
 def _normalise_github_hostname(github_url: str):
