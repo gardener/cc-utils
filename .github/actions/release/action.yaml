@@ -103,8 +103,8 @@ runs:
       shell: bash
       run: |
         # pass to next steps
-        echo "${{ inputs.component-descriptor }}" > /tmp/component-descriptor
-        version=$(yq .component.version /tmp/component-descriptor)
+        echo "${{ inputs.component-descriptor }}" > /tmp/component-descriptor.yaml
+        version=$(yq .component.version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
         tag_name="${version}"
         tag_ref="refs/tags/${tag_name}"
@@ -121,7 +121,7 @@ runs:
 
         import ocm
 
-        with open('/tmp/component-descriptor') as f:
+        with open('/tmp/component-descriptor.yaml') as f:
           component_descriptor = ocm.ComponentDescriptor.from_dict(
             yaml.safe_load(f.read())
           )
@@ -155,7 +155,7 @@ runs:
         import oci.auth
         import ocm
 
-        with open('/tmp/component-descriptor') as f:
+        with open('/tmp/component-descriptor.yaml') as f:
           component_descriptor = ocm.ComponentDescriptor.from_dict(
             yaml.safe_load(f.read())
           )
