@@ -18,24 +18,12 @@ FROM $BASE_IMAGE
 
 ARG TARGETARCH
 
-COPY --from=builder /pkgs/usr /usr
 COPY --from=ocm-cli /bin/ocm /bin/ocm
-COPY --from=builder /cc/utils/bin/component-cli /bin/component-cli
+
+COPY --from=builder /pkgs/usr /usr
+COPY --from=builder /cc/utils/bin /cc/utils/bin
 COPY --from=builder /usr/lib/libmagic.so.1 /usr/lib/libmagic.so.1
 COPY --from=builder /usr/lib/libmagic.so.1.0.0 /usr/lib/libmagic.so.1.0.0
 COPY --from=builder /usr/share/misc/magic.mgc /usr/share/misc/magic.mgc
 
-# path is hardcoded in our trait
-COPY --from=builder /cc/utils/bin/launch-dockerd.sh /cc/utils/bin/launch-dockerd.sh
 ENV PATH=$PATH:/cc/utils/bin
-
-# place version file into container's filesystem to make it easier to
-# determine the image version during runtime
-COPY VERSION /metadata/VERSION
-
-ENV HELM_V3_VERSION=v3.12.2
-ENV HELM_ARCH="${TARGETARCH}"
-# copy to where helm is expected
-COPY --from=builder /cc/utils/bin/helm /usr/local/bin/helm
-# backwards-compatibility
-RUN ln -sf /usr/local/bin/helm /usr/local/bin/helm3
