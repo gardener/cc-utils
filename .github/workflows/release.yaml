@@ -100,7 +100,9 @@ jobs:
       - name: prepare build-filesystem
         id: prepare
         run: |
-          cp -r /tmp/dist .
+          ls -lta /tmp/dist
+          mv /tmp/dist/distribution-packages.tar.gz .
+          tar xf distribution-packages.tar.gz
           ls -lta dist/
           rm -rf dist/blobs.d dist/ocm_resources.yaml
           ls -lta dist/
