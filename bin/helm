@@ -3,13 +3,12 @@
 set -eu
 set -o pipefail
 
-HELM_ARCH="${HELM_ARCH:-amd64}"
-DOWNLOAD_URL="https://get.helm.sh/helm-${HELM_V3_VERSION}-linux-${HELM_ARCH}.tar.gz"
-HELM_PATH=/bin/helm_binary
+helm_path=/usr/local/bin/helm
 
-if [ ! -f "${HELM_PATH}" ]; then
-    tmp="$(mktemp -d)"
-    curl $DOWNLOAD_URL -L | tar -xz -C "${tmp}" && mv "${tmp}/linux-amd64/helm" "${HELM_PATH}"
+if [ ! -f "${helm_path}" ]; then
+    export VERIFY_CHECKSUM=false
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    unset VERIFY_CHECKSUM
 fi
 
-exec ${HELM_PATH} "$@"
+exec ${helm_path} "$@"
