@@ -21,7 +21,7 @@ ARG DOCKER_VERSION=28.0.1
 ENV PATH=$PATH:/opt/docker
 ARG TARGETARCH
 
-ARG DOCKER_BUILDX_VERSION=v0.21.2
+ARG DOCKER_BUILDX_VERSION=v0.21.3
 
 COPY apk-packages.blacklist .
 COPY --from=builder /pkgs/usr /usr
