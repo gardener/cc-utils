@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 ci.log.configure_default_logging()
 
 
-_label_checkmarx = 'vulnerabilities/checkmarx'
 _label_os_outdated = 'os/outdated'
 
 _label_no_responsible = 'cfg/policy-violation/no-responsible'

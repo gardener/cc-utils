@@ -17,7 +17,6 @@ import ocm
 import ocm.util
 import requests
 
-import checkmarx.model
 import ci.util
 import delivery.client
 import delivery.model
@@ -35,7 +34,6 @@ import model.delivery
 logger = logging.getLogger(__name__)
 
 _compliance_label_os_outdated = github.compliance.issue._label_os_outdated
-_compliance_label_checkmarx = github.compliance.issue._label_checkmarx
 _compliance_label_credentials_outdated = github.compliance.issue._label_outdated_credentials
 _compliance_label_no_responsible = github.compliance.issue._label_no_responsible
 _compliance_label_no_rule = github.compliance.issue._label_no_rule
@@ -183,39 +181,6 @@ def _os_info_template_vars(
     }
 
 
-def _checkmarx_template_vars(
-    result_group: gcm.ScanResultGroup,
-) -> dict:
-
-    def iter_report_urls():
-        for r in results:
-            name = f'{r.scanned_element.source.name}:{r.scanned_element.source.version}'
-            yield f'[Assessments for {name}]({r.report_url})'
-            yield f'[Summary for {name}]({r.overview_url})'
-
-    results: tuple[checkmarx.model.ScanResult] = result_group.results_with_findings
-    worst_result: checkmarx.model.ScanResult = result_group.worst_result
-    stat = worst_result.scan_statistic
-    summary_str = (f'Findings: High: {stat.highSeverity}, Medium: {stat.mediumSeverity}, '
-        f'Low: {stat.lowSeverity}, Info: {stat.infoSeverity}')
-    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
-    component = result_group.component
-
-    crit = (f'Risk: {worst_result.scan_response.scanRisk}, '
-        f'Risk Severity: {worst_result.scan_response.scanRiskSeverity}')
-
-    return {
-        'summary': _compliance_status_summary(
-            component=component,
-            artifacts=artifacts,
-            issue_value=summary_str,
-            issue_description='Checkmarx Scan Summary',
-            report_urls=tuple(iter_report_urls()),
-        ),
-        'criticality_classification': crit,
-    }
-
-
 def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> dict:
     results: tuple[gcm.CfgScanResult] = result_group.results_with_findings
     result = results[0]
@@ -272,9 +237,6 @@ def _template_vars(
 
     if issue_type == _compliance_label_os_outdated:
         template_variables |= _os_info_template_vars(result_group)
-
-    elif issue_type == _compliance_label_checkmarx:
-        template_variables |= _checkmarx_template_vars(result_group)
 
     elif issue_type in (
         _compliance_label_credentials_outdated,

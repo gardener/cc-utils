@@ -70,27 +70,6 @@ class PackageVersionHintLabel(Label):
 
 
 @dataclasses.dataclass(frozen=True)
-class SourceProjectLabel(Label):
-    name = 'cloud.gardener.cnudie/dso/scanning-hints/checkmarx-project-name/v1'
-    value: str
-
-
-@dataclasses.dataclass(frozen=True)
-class SourceScanHint(ScanningHint):
-    pass
-
-
-@dataclasses.dataclass(frozen=True)
-class BinaryScanHint(ScanningHint):
-    pass
-
-
-@dataclasses.dataclass(frozen=True)
-class SourceIdHint(ScanningHint):
-    pass
-
-
-@dataclasses.dataclass(frozen=True)
 class CveCategorisationLabel(Label):
     name = 'gardener.cloud/cve-categorisation'
     value: dso.cvss.CveCategorisation
