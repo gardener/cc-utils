@@ -196,6 +196,7 @@ runs:
             if fname != fhashname:
               os.symlink(fname, fhashname)
               orig_name_to_digest_names[fname] = fhashname
+              orig_name_to_digest_names[os.path.join(blobs_dir, fname)] = fhashname
               ocm_tar.add(
                 name=fhashname,
                 arcname=f'blobs.d/{fhashname}',
@@ -205,6 +206,14 @@ runs:
               name=fpath,
               arcname=f'blobs.d/{fname}',
             )
+
+        def find_local_blobfile(local_ref):
+          # allow path to be relative either to blobs-dir or relative to pwd
+          candidate = os.path.join(blobs_dir, local_ref)
+          if os.path.isfile(candidate):
+            return candidate
+          if os.path.isfile(local_ref):
+            return local_ref
 
         # patch local-access if referencing local-files using non-digest-filename
         for artefact in sources + resources:
@@ -216,7 +225,7 @@ runs:
             continue
           if local_ref.startswith('sha256:'):
             continue
-          if not os.path.exists(local_fpath := os.path.join(blobs_dir, local_ref)):
+          if not (local_fpath := find_local_blobfile(local_ref)):
             continue
           # local file exists, and it does not meet content-addresssing scheme (
           # <alg>:<hexdigest>). We should find it from previous step where we calculated
