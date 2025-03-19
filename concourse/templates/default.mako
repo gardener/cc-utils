@@ -110,7 +110,6 @@ component_descriptor_step = concourse.steps.step_def('component_descriptor')
 update_component_deps_step = concourse.steps.step_def('update_component_deps')
 draft_release_step = concourse.steps.step_def('draft_release')
 os_id_step = concourse.steps.step_def('os_id')
-scan_sources_step = concourse.steps.step_def('scan_sources')
 replicate_secrets_step = concourse.steps.step_def('replicate_secrets')
 cfg_reporting_step = concourse.steps.step_def('cfg_reporting')
 %>
@@ -534,8 +533,6 @@ else:
         ${draft_release_step(job_step=job_step, job_variant=job_variant, github_cfg=github, indent=8)}
 % elif job_step.name == 'os-id-scan':
         ${os_id_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
-% elif job_step.name == 'scan_sources':
-        ${scan_sources_step(job_step=job_step, job_variant=job_variant, cfg_set=config_set, indent=8)}
 % elif job_step.name == 'replicate_pipelines':
         ${replicate_pipelines_step(step=job_step, job=job_variant, job_mapping=job_mapping, indent=8)}
 % elif job_step.name == 'replicate_secrets':

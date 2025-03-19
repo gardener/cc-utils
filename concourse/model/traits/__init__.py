@@ -25,7 +25,6 @@ def _traits():
     from .slack import SlackTrait
     from .update_component_deps import UpdateComponentDependenciesTrait
     from .version import VersionTrait
-    from .scan_sources import SourceScanTrait
     TRAITS = {
         'component_descriptor': ComponentDescriptorTrait,
         'cronjob': CronTrait,
@@ -40,7 +39,6 @@ def _traits():
         'slack': SlackTrait,
         'update_component_deps': UpdateComponentDependenciesTrait,
         'version': VersionTrait,
-        'scan_sources': SourceScanTrait,
     }
 
     return TRAITS

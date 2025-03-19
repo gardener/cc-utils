@@ -117,7 +117,6 @@ def packages():
     omit_packages = (
         'ccc',
         'cfg_mgmt',
-        'checkmarx',
         'concourse',
         'container',
         'ctt',

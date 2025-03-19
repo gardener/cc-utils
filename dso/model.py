@@ -48,7 +48,6 @@ class Datasource:
     ARTEFACT_ENUMERATOR = 'artefact-enumerator'
     BDBA = 'bdba'
     SAST = 'sast'
-    CHECKMARX = 'checkmarx'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
     CRYPTO = 'crypto'
@@ -73,9 +72,6 @@ class Datasource:
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.SAST_FINDING,
                 Datatype.RESCORING,
-            ),
-            Datasource.CHECKMARX: (
-                Datatype.CODECHECKS_AGGREGATED,
             ),
             Datasource.CLAMAV: (
                 Datatype.ARTEFACT_SCAN_INFO,
@@ -256,7 +252,6 @@ class Datatype:
     MALWARE_FINDING = 'finding/malware'
     SAST_FINDING = 'finding/sast'
     DIKI_FINDING = 'finding/diki'
-    CODECHECKS_AGGREGATED = 'codechecks/aggregated'
     OS_IDS = 'os_ids'
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
@@ -271,7 +266,6 @@ class Datatype:
             Datatype.LICENSE: Datasource.BDBA,
             Datatype.VULNERABILITY: Datasource.BDBA,
             Datatype.OS_IDS: Datasource.CC_UTILS,
-            Datatype.CODECHECKS_AGGREGATED: Datasource.CHECKMARX,
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST,
@@ -292,23 +286,6 @@ class Metadata:
 @dataclasses.dataclass(frozen=True)
 class OsID:
     os_info: unixutil.model.OperatingSystemId
-
-
-@dataclasses.dataclass(frozen=True)
-class CodecheckFindings:
-    high: int
-    medium: int
-    low: int
-    info: int
-
-
-@dataclasses.dataclass(frozen=True)
-class CodecheckSummary:
-    findings: CodecheckFindings
-    risk_rating: int
-    risk_severity: int
-    overview_url: str
-    report_url: str | None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -836,7 +813,6 @@ class ArtefactMetadata:
         | ClamAVMalwareFinding
         | SastFinding
         | DikiFinding
-        | CodecheckSummary
         | OsID
         | CustomRescoring
         | ComplianceSnapshot
