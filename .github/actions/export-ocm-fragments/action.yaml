@@ -232,8 +232,8 @@ runs:
           # digests, and created symlinks.
           hashname = orig_name_to_digest_names.get(local_ref)
           if not hashname:
-            print(f'WARNING: did not find local blobfile for {artefact=}')
-            continue
+            print(f'ERROR: did not find local blobfile for {artefact=}')
+            exit(1)
           access['localReference'] = hashname
           access['size'] = os.stat(local_fpath).st_size
           print(f'INFO: patched {artefact["name"]}\'s access to {hashname=} (was: {local_ref=})')
