@@ -16,7 +16,7 @@ jobs:
   build:
     uses: ./.github/workflows/build-and-test.yaml
     with:
-      release: true
+      mode: 'release'
       version-prerelease: ''
       version-commit-message: "release ${version}"
 

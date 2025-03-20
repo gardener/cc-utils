@@ -3,10 +3,12 @@ run-name: Building and testing
 on:
   workflow_call:
     inputs:
-      release:
-        required: false
-        type: boolean
-        default: false
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the "mode" to use. passed to `params` (currently for selecting  target-registries)
       version-prerelease:
         required: true
         type: string
@@ -43,56 +45,18 @@ jobs:
   params:
     runs-on: ubuntu-latest
     outputs:
-      ocm_repository: ${{ steps.params.outputs.ocm_repository }}
-      ocm_releases_repository: ${{ steps.params.outputs.ocm_releases_repository }}
+      ocm-repository: ${{ steps.params.outputs.ocm-repository }}
+      ocm-releases-repository: ${{ steps.params.outputs.ocm-releases-repository }}
       oci-registry: ${{ steps.params.outputs.oci-registry }}
-      oci_platforms: ${{ steps.params.outputs.oci_platforms }}
+      is-fork: ${{ steps.params.outputs.is-fork }}
     steps:
       - uses: actions/checkout@v4
-      - name: Retrieve repository metadata
-        id: repo-metadata
-        uses: ./.github/actions/repo-metadata
-        with:
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
       - name: params
         id: params
-        run: |
-          set -eu
-          set -o pipefail
-
-          is_fork=${{ steps.repo-metadata.outputs.fork }}
-          echo "repo is a fork: ${is_fork}"
-
-          if [ "${is_fork}" == true ]; then
-            # avoid interference w/ images or component-descriptors from forked repositories
-            # (also: do not require forks to have permissions for gardener's registries)
-            repo_base=ghcr.io/${{ github.repository }}
-          elif [ "${is_fork}" == false ]; then
-            repo_base=europe-docker.pkg.dev/gardener-project
-          else
-            echo "unexpected value for is_fork: ${is_fork}"
-            exit 1
-          fi
-
-          snapshots_repo="${repo_base}/snapshots"
-          releases_repo="${repo_base}/releases"
-
-          if ${{ inputs.release || false }}; then
-            ocm_repository=${releases_repo}
-            oci_registry=${releases_repo}
-          else
-            ocm_repository=${snapshots_repo}
-            oci_registry=${snapshots_repo}
-          fi
-
-          echo "ocm_releases_repository=${releases_repo}"
-          echo "ocm_repository=${ocm_repository}"
-          echo "oci-registry=${oci_registry}"
-
-          echo "ocm_releases_repository=${releases_repo}" >> "${GITHUB_OUTPUT}"
-          echo "ocm_repository=${ocm_repository}" >> "${GITHUB_OUTPUT}"
-          echo "oci-registry=${oci_registry}" >> "${GITHUB_OUTPUT}"
-          echo "oci_platforms=linux/amd64,linux/arm64" >> "${GITHUB_OUTPUT}"
+        uses: ./.github/actions/params
+        with:
+          mode: ${{ inputs.mode }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
 
   version:
     runs-on: ubuntu-latest
@@ -226,7 +190,7 @@ jobs:
     with:
       version: ${{ needs.version.outputs.version }}
       component-name: 'github.com/gardener/cc-utils'
-      ocm-repo: ${{ needs.params.outputs.ocm_repository }}
+      ocm-repo: ${{ needs.params.outputs.ocm-repository }}
       commit-digest: ${{ needs.version.outputs.version-commit-digest }}
       labels: |
         name: cloud.gardener.cnudie/responsibles
@@ -246,14 +210,17 @@ jobs:
             see: https://bandit.readthedocs.io/en/latest/
 
   update-draft-relase:
-    if: ${{ ! inputs.release && github.ref_name == github.event.repository.default_branch }}
+    if: ${{ inputs.mode != 'release' &&
+          github.ref_name == github.event.repository.default_branch &&
+          ! fromJSON(needs.params.outputs.is-fork)
+      }}
     needs:
       - params
       - base-component-descriptor
     uses: ./.github/workflows/draft-release.yaml
     with:
       component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
-      ocm-repositories: ${{ needs.params.outputs.ocm_releases_repository }}
+      ocm-repositories: ${{ needs.params.outputs.ocm-releases-repository }}
 
   lint:
     runs-on: ubuntu-latest
@@ -390,7 +357,7 @@ jobs:
       name: job-image
       oci-registry: ${{ needs.params.outputs.oci-registry }}
       oci-repository: cicd/job-image
-      oci-platforms: ${{ needs.params.outputs.oci_platforms }}
+      oci-platforms: 'linux/amd64,linux/arm64'
       version: ${{ needs.version.outputs.version }}
       # workaround: we need to use a deviating version for setuptools
       prebuild-hook: |
