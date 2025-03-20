@@ -125,6 +125,8 @@ def append(parsed):
         attr = component['resources']
     elif parsed.type in ('s', 'source'):
         attr = component['sources']
+    elif parsed.type in ('c', 'component-reference'):
+        attr = component['componentReferences']
 
     if _have_yaml:
         obj = yaml.safe_load(sys.stdin)
@@ -234,6 +236,37 @@ def upload(parsed):
     )
 
 
+def add_cref(parsed):
+    raw = _parse_yaml_or_json(parsed.file)
+    component = raw['component']
+    component_references: list = component['componentReferences']
+
+    name = parsed.name or parsed.cname.split('/')[-1]
+    version = parsed.version
+    if not version:
+        parts = parsed.cname.split(':')
+        if len(parts) != 2:
+            print('error: unable to extract `:<version>`-suffix from component-name')
+            exit(1)
+        version = parts[-1]
+
+    labels = [dataclasses.asdict(l) for l in _iter_parsed_labels(labels=parsed.labels)]
+
+    component_ref = ocm.ComponentReference(
+        name=name,
+        componentName=parsed.cname.split(':')[0],
+        version=version,
+        labels=labels,
+    )
+    component_references.append(dataclasses.asdict(component_ref))
+
+    with open(parsed.file, 'w') as f:
+        if _have_yaml:
+            yaml.safe_dump(raw, f)
+        else:
+            json.dump(raw, f)
+
+
 def main():
     parser = argparse.ArgumentParser()
     maincmd_parsers = parser.add_subparsers(
@@ -255,20 +288,64 @@ def main():
     create_parser.set_defaults(callable=create)
 
     add_parser = maincmd_parsers.add_parser(
+        'add',
+    )
+    add_subparsers = add_parser.add_subparsers(
+        title='add ocm references',
+        required=True,
+    )
+    add_cref_parser = add_subparsers.add_parser(
+        'component-ref',
+        help='add component-reference',
+    )
+
+    add_cref_parser.add_argument('--file', '-f', required=True)
+    add_cref_parser.add_argument(
+        '--name', '-n',
+        help='name of the component-reference, defaults to last part of component-name',
+    )
+    add_cref_parser.add_argument(
+        '--component-name', '-c',
+        dest='cname',
+        required=True,
+        help='might optionally contain `:<version>`-suffix',
+    )
+    add_cref_parser.add_argument(
+        '--component-version', '-v',
+        dest='version',
+    )
+    add_cref_parser.add_argument(
+        '--label',
+        dest='labels',
+        action='append',
+        default=[],
+        help='labels to set for passed component-reference (for convenience)',
+    )
+    add_cref_parser.set_defaults(callable=add_cref)
+
+    append_parser = maincmd_parsers.add_parser(
         'append',
         aliases=('a',),
-        help='appends resources or sources to component-descriptor',
+        help='appends resources, sources, or component-references to component-descriptor',
     )
-    add_parser.add_argument('type', choices=('r', 'resource', 's', 'source'))
-    add_parser.add_argument('--file', '-f', required=True)
-    add_parser.add_argument(
+
+    append_parser.add_argument(
+        'type',
+        choices=(
+            'r', 'resource',
+            's', 'source',
+            'c', 'component-reference',
+        )
+    )
+    append_parser.add_argument('--file', '-f', required=True)
+    append_parser.add_argument(
         '--label',
         dest='labels',
         action='append',
         default=[],
         help='labels to set for passed artefact (for convenience)',
     )
-    add_parser.set_defaults(callable=append)
+    append_parser.set_defaults(callable=append)
 
     upload_parser = maincmd_parsers.add_parser(
         'upload',
