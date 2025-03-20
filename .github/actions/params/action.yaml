@@ -1,0 +1,96 @@
+name: Params
+description: |
+  An opinionated action that will emit parameters, such as OCI- and OCM-Target-Repositories, based
+  on input-parameters, such as:
+  - whether running on a forked repository vs. upstream
+  - `mode` (snapshot vs. release)
+
+inputs:
+  mode:
+    required: true
+    type: choice
+    default: snapshot
+    options:
+      - snapshot
+      - release
+    description: |
+      "mode" will influence target-repositories to be returned.
+  gh-token:
+    required: true
+    type: string
+    description: |
+      Pass-in GITHUB_TOKEN. Needs permissions to read-contents (for accessing metadata about current
+      repository).
+
+outputs:
+  oci-registry:
+    description: |
+      the OCI-Registry to use for publishing OCI-Artefacts to, considering the chosen `mode`
+    value: ${{ steps.params.outputs.oci-registry }}
+  ocm-repository:
+    description: |
+      the OCM-Repository to use for both publishing, and looking-up of OCM-Components
+    value: ${{ steps.params.outputs.ocm-repository }}
+  ocm-releases-repository:
+    description: |
+      the OCM-Repository hosting (final) release-versions (returned independent from chosen mode)
+  is-fork:
+    description: |
+      true if current repository is a fork, else false
+
+runs:
+  using: composite
+  steps:
+    - id: repo-metadata
+      uses: gardener/cc-utils/.github/actions/repo-metadata@master
+      with:
+        gh-token: ${{ inputs.gh-token }}
+    - name: params
+      id: params
+      shell: bash
+      run: |
+        set -eu
+
+        is_fork=${{ steps.repo-metadata.outputs.fork }}
+        echo "repo is a fork: ${is_fork}"
+
+        if [ "${is_fork}" == true ]; then
+          # avoid interference w/ images or component-descriptors from forked repositories
+          # (also: do not require forks to have permissions for gardener's registries)
+          repo_base=ghcr.io/${{ github.repository }}
+        elif [ "${is_fork}" == false ]; then
+          repo_base=europe-docker.pkg.dev/gardener-project
+        else
+          echo "unexpected value for is_fork: ${is_fork}"
+          exit 1
+        fi
+
+        ocm_releases_repository=${repo_base}/releases
+
+        case "${{ inputs.mode }}" in
+          snapshot)
+            ocm_repository="${repo_base}/snapshots"
+            oci_registry="${repo_base}/snapshots"
+            ;;
+          release)
+            ocm_repository="${ocm_releases_repository}"
+            oci_registry="${repo_base}/releases"
+            ;;
+          *)
+            echo "Error: unknown mode: ${{ inputs.mode }}"
+            ;;
+        esac
+
+        echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
+        echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
+        echo "ocm-releases-repository=${ocm_releases_repository}" >> ${GITHUB_OUTPUT}
+        echo "is-fork=${is_fork}" >> ${GITHUB_OUTPUT}
+
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        ## Pipeline-Params-Summary
+
+        | mode | ${{ inputs.mode }} |
+        | oci-registry | ${oci_registry} |
+        | ocm-repository | ${ocm_repository} |
+        | is-fork | ${is_fork} |
+        EOF

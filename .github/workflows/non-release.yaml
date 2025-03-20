@@ -6,7 +6,7 @@ jobs:
   build-and-test:
     uses: ./.github/workflows/build-and-test.yaml
     with:
-      release: false
+      mode: snapshot
       version-prerelease: "${commit_digest}"
       version-commit-message: "build ${version}"
   component-descriptor:
