@@ -787,6 +787,10 @@ class FalcoFinding(Finding):
     subtype: FalcoFindingSubType
     finding: FalcoDebugEventGroup | FalcoEventGroup
 
+    @property
+    def key(self) -> str:
+        return self.finding.key
+
 
 @dataclasses.dataclass
 class ArtefactMetadata:
