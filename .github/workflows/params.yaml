@@ -1,0 +1,42 @@
+name: Params
+description: |
+  A re-usable, and strongly opinionated workflow wrapping equally-named action.
+on:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the "mode" to use. passed to `params` (currently for selecting  target-registries)
+    outputs:
+      ocm-repository:
+        description: the ocm-repository to use for publishing to for the selected mode.
+        value: ${{ jobs.params.outputs.ocm-repository }}
+      ocm-releases-repository:
+        description: the ocm-releases-repository (independent of chosen mode)
+        value: ${{ jobs.params.outputs.ocm-releases-repository }}
+      oci-registry:
+        description: the oci-registry to use for publishing to for the selected mode
+        value: ${{ jobs.params.outputs.oci-registry }}
+      is-fork:
+        description: boolean indicating whether or not current repository is a fork
+        value: ${{ jobs.params.outputs.is-fork }}
+
+jobs:
+  params:
+    runs-on: ubuntu-latest
+    outputs:
+      ocm-repository: ${{ steps.params.outputs.ocm-repository }}
+      ocm-releases-repository: ${{ steps.params.outputs.ocm-releases-repository }}
+      oci-registry: ${{ steps.params.outputs.oci-registry }}
+      is-fork: ${{ steps.params.outputs.is-fork }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: params
+        id: params
+        uses: ./.github/actions/params
+        with:
+          mode: ${{ inputs.mode }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
