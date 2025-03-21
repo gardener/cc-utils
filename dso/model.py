@@ -36,6 +36,18 @@ class MatchCondition:
     component_name: str
 
 
+class OsStatus(enum.StrEnum):
+    NO_BRANCH_INFO = 'noBranchInfo'
+    NO_RELEASE_INFO = 'noReleaseInfo'
+    UNABLE_TO_COMPARE_VERSION = 'unableToCompareVersion'
+    BRANCH_REACHED_EOL = 'branchReachedEol'
+    UPDATE_AVAILABLE_FOR_BRANCH = 'updateAvailableForBranch'
+    EMPTY_OS_ID = 'emptyOsId'
+    AT_MOST_ONE_PATCHLEVEL_BEHIND = 'atMostOnePatchlevelBehind'
+    MORE_THAN_ONE_PATCHLEVEL_BEHIND = 'moreThanOnePatchlevelBehind'
+    UP_TO_DATE = 'upToDate'
+
+
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
