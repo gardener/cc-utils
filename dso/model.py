@@ -36,6 +36,19 @@ class MatchCondition:
     component_name: str
 
 
+class OsStatus(enum.StrEnum):
+    NO_BRANCH_INFO = 'noBranchInfo'
+    NO_RELEASE_INFO = 'noReleaseInfo'
+    UNABLE_TO_COMPARE_VERSION = 'unableToCompareVersion'
+    BRANCH_REACHED_EOL = 'branchReachedEol'
+    UPDATE_AVAILABLE_FOR_BRANCH = 'updateAvailableForBranch'
+    GREATEST_BRANCH_VERSION = 'greatestBranchVersion'
+    EMPTY_OS_ID = 'emptyOsId'
+    AT_MOST_ONE_PATCHLEVEL_BEHIND = 'atMostOnePatchlevelBehind'
+    MORE_THAN_ONE_PATCHLEVEL_BEHIND = 'moreThanOnePatchlevelBehind'
+    UP_TO_DATE = 'upToDate'
+
+
 @dataclasses.dataclass
 class ScanArtifact:
     name: str
@@ -50,6 +63,7 @@ class Datasource:
     SAST = 'sast'
     CLAMAV = 'clamav'
     CC_UTILS = 'cc-utils'
+    OS_ID = 'os-id'
     CRYPTO = 'crypto'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
     DIKI = 'diki'
@@ -79,6 +93,12 @@ class Datasource:
             ),
             Datasource.CC_UTILS: (
                 Datatype.OS_IDS,
+            ),
+            Datasource.OS_ID: (
+                Datatype.OS_ID,
+                Datatype.OS_ID_FINDING,
+                Datatype.RESCORING,
+                Datatype.ARTEFACT_SCAN_INFO,
             ),
             Datasource.CRYPTO: (
                 Datatype.ARTEFACT_SCAN_INFO,
@@ -253,6 +273,8 @@ class Datatype:
     SAST_FINDING = 'finding/sast'
     DIKI_FINDING = 'finding/diki'
     OS_IDS = 'os_ids'
+    OS_ID_FINDING = 'finding/os_id'
+    OS_ID = 'os_id'
     RESCORING = 'rescorings'
     COMPLIANCE_SNAPSHOTS = 'compliance/snapshots'
     ARTEFACT_SCAN_INFO = 'meta/artefact_scan_info'
@@ -266,9 +288,11 @@ class Datatype:
             Datatype.LICENSE: Datasource.BDBA,
             Datatype.VULNERABILITY: Datasource.BDBA,
             Datatype.OS_IDS: Datasource.CC_UTILS,
+            Datatype.OS_ID: Datasource.OS_ID,
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
             Datatype.SAST_FINDING: Datasource.SAST,
+            Datatype.OS_ID_FINDING: Datasource.OS_ID,
             Datatype.CRYPTO_ASSET: Datasource.CRYPTO,
             Datatype.CRYPTO: Datasource.CRYPTO,
             Datatype.FALCO_FINDING: Datasource.FALCO,
@@ -419,6 +443,27 @@ class RescoreSastFinding:
     @property
     def key(self) -> str:
         return _as_key(self.sast_status, self.sub_type)
+
+
+@dataclasses.dataclass(frozen=True)
+class OsIDFinding(Finding):
+    os_id: unixutil.model.OperatingSystemId
+    os_status: OsStatus
+    greatest_version: str | None
+    eol_date: datetime.datetime | None
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.os_id.ID)
+
+
+@dataclasses.dataclass(frozen=True)
+class RescoreOsIDFinding:
+    os_id: unixutil.model.OperatingSystemId
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.os_id.ID)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -608,6 +653,7 @@ class CustomRescoring:
         | MalwareFindingDetails
         | RescoreSastFinding
         | RescoringCryptoFinding
+        | RescoreOsIDFinding
     )
     referenced_type: str
     severity: str
@@ -818,6 +864,7 @@ class ArtefactMetadata:
         | SastFinding
         | DikiFinding
         | OsID
+        | OsIDFinding
         | CustomRescoring
         | ComplianceSnapshot
         | CryptoAsset
