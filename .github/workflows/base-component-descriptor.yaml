@@ -138,6 +138,12 @@ jobs:
             ref: ${{ github.ref }}
           EOF
 
+          echo "adding bdba component-reference"
+          python3 -m ocm add component-ref \
+            --file component-descriptor.yaml \
+            -c ocm.software/ocm-gear/bdba-client \
+            -v 0.2.0
+
           echo "Component-Descriptor:"
           cat component-descriptor.yaml
 
