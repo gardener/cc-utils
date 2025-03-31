@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 
 import git
 import smtplib
@@ -11,6 +12,7 @@ import ocm
 import ocm.util
 
 from model.email import EmailConfig
+import ci.log
 from ci.util import (
     existing_dir,
     not_empty,
@@ -23,6 +25,10 @@ from mail import template_mailer as mailer
 import ccc.github
 import github.codeowners
 import version
+
+
+ci.log.configure_default_logging()
+logger = logging.getLogger(__name__)
 
 
 def send_mail(
@@ -119,6 +125,11 @@ def _send_mail(
 
     recipients.update(cc_recipients)
     recipients = email_cfg.filter_recipients(recipients)
+    recipients = list(recipients) # ensure it is a container
+
+    if len(recipients) > 50:
+        logger.warning('max recipients exceeded, will limit to 50')
+        recipients = recipients[:50]
 
     smtp_server.send_message(msg=mail, to_addrs=recipients)  # from_addr is taken from header
 
