@@ -5,44 +5,52 @@ set -eu
 
 src_dir="${1:-"$(readlink -f "$(dirname "${0}")/..")"}"
 
-echo 'Running flake8 for all python modules..'
-error=0
+linters_with_findings=()
 
 export PYTHONPATH="${src_dir}"
 
 echo 'running pylama for all modules (errors only)'
-(
-    pushd "${src_dir}"
-    set -x
-    if pylama -iW,R,C  -lpylint --options "${src_dir}/pylama.ini" "${src_dir}"; then
-        echo 'pylama succeeded'
-    else
-        ((error|=1))
-    fi
 
-    if "${src_dir}/.ci/lint-flake8"; then
-        echo 'pyflake8 succeeded'
-    else
-        ((error|=1))
-    fi
+pushd "${src_dir}"
+if pylama -iW,R,C  -lpylint --options "${src_dir}/pylama.ini" "${src_dir}"; then
+    echo 'pylama succeeded'
+else
+    echo 'pylama yielded findings (see above)'
+    linters_with_findings+=('pylama')
+fi
 
-    if [ $error -eq 0 ]; then
-        exit 0
-    elif [ $error -gt 0 ]; then
-        exit 1
-    fi
-    popd
-)
+if "${src_dir}/.ci/lint-flake8"; then
+    echo 'pyflake8 succeeded'
+else
+    echo 'pyflake8 yielded findings (see above)'
+    linters_with_findings+=('pyflake8')
+fi
+
 
 if ! which bandit &>/dev/null; then
     pip3 install bandit &>/dev/null
 fi
 
 
-echo 'running bandit (sast-linter) - extra-args: ${bandit_extra_args:-}'
-bandit \
+echo "running bandit (sast-linter) - extra-args: ${bandit_extra_args:-}"
+if bandit \
     --configfile "${src_dir}/pyproject.toml" \
     --recursive \
-    "${src_dir}" ${bandit_extra_args:-}
+    "${src_dir}" ${bandit_extra_args:-}; then
+    echo "bandit exited without error"
+else
+    linters_with_findings+=('bandit')
+fi
 
-exit $?
+if [ ${#linters_with_findings[@]} == 0 ]; then
+    echo "all linters exited without findings"
+    exit 0
+else
+    echo "Error: the following linters yielded findings"
+    echo ""
+    for l in "${linters_with_findings[@]}"; do
+        echo " - ${l}"
+    done
+
+    exit 1
+fi
