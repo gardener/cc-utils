@@ -6,6 +6,7 @@ import json
 import os
 import sys
 
+import cnudie.retrieve
 import ocm
 import ocm.upload
 
@@ -236,6 +237,111 @@ def upload(parsed):
     )
 
 
+def download(parsed):
+    cname, cversion = parsed.component.split(':')
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(),
+    )
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+            parsed.ocm_repository,
+        ),
+        oci_client=oci_client,
+    )
+    component_descriptor = component_descriptor_lookup((cname, cversion))
+    component = component_descriptor.component
+
+    if parsed.outfile == '-':
+        outfh = sys.stdout.buffer
+    else:
+        outfh = open(parsed.outfile, 'wb')
+
+    if (t := parsed.type) in ('component-descriptor', 'c'):
+        yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            stream=outfh,
+            Dumper=ocm.EnumValueYamlDumper,
+        )
+        exit(0)
+    elif t in ('resource', 'r'):
+        artefacts = component.resources
+    elif t in ('source', 's'):
+        artefacts = component.sources
+    else:
+        raise ValueError(f'unexpected {parsed.type=} - this is a bug')
+
+    artefact = None
+    if len(artefacts) < 1:
+        print(f'Error: {cname}:{cversion} has no {type}s')
+        exit(1)
+    elif len(artefacts) == 1:
+        artefact = artefacts[0]
+
+    name = parsed.name
+    id_attrs = {}
+    for attrspec in parsed.artefact_ids:
+        name, value = attrspec.split('=')
+        id_attrs[name] = value
+
+    have_id = bool(name or id_attrs)
+
+    if not have_id and len(artefacts) > 1:
+        print('Error: must specify artefact-id')
+        exit(1)
+
+    matches = 0
+    if have_id:
+        for a in artefacts:
+            if name != a.name:
+                continue
+
+            for k,v in id_attrs.values():
+                if hasattr(a, k):
+                    if getattr(a, k) != v:
+                        break
+                else:
+                    if not k in a.extraIdentity:
+                        break
+                    if a.extraIdentity[k] != v:
+                        break
+            else:
+                # if there was no break, we have a candidate
+                matches += 1
+                artefact = a
+
+    if not artefact:
+        print(f'Error: did not find artefact {name=} {id_attrs=}')
+        exit(1)
+
+    if matches > 1:
+        print(f'Error: artefact was not specified unambiguously: {name=} {id_attrs=}')
+        exit(1)
+
+    # at this point, we have one single, and unambiguously specified artefact
+    access = artefact.access
+
+    if not access.type is ocm.AccessType.LOCAL_BLOB:
+        print(f'Error: {access.type=} not implemented')
+        exit(1)
+
+    access: ocm.LocalBlobAccess
+
+    oci_reference = component.current_ocm_repo.component_version_oci_ref(
+        name=cname,
+        version=cversion,
+    )
+
+    blob_rq = oci_client.blob(
+        image_reference=oci_reference,
+        digest=access.localReference,
+    )
+
+    for chunk in blob_rq.iter_content(chunk_size=4096):
+        outfh.write(chunk)
+
+    outfh.flush()
+
+
 def main():
     parser = argparse.ArgumentParser()
     maincmd_parsers = parser.add_subparsers(
@@ -292,6 +398,43 @@ def main():
     )
     upload_parser.add_argument('--ocm-repo', default=None)
     upload_parser.set_defaults(callable=upload)
+
+    download_parser = maincmd_parsers.add_parser(
+        'download',
+        aliases=('d',),
+    )
+    download_parser.add_argument(
+        'type',
+        choices=(
+            'component-descriptor', 'c',
+            'source', 's',
+            'resource', 'r',
+        ),
+    )
+    download_parser.add_argument(
+        '--component', '-c',
+        required=True,
+        help='component: <component>:<version>',
+    )
+    download_parser.add_argument(
+        '--ocm-repository', '-O',
+        required=True,
+    )
+    download_parser.add_argument(
+        '--name',
+    )
+    download_parser.add_argument(
+        '--id',
+        dest='artefact_ids',
+        help='artefact-id - format: --id <attr-name>=<value>',
+        action='append',
+        default=[],
+    )
+    download_parser.add_argument(
+        '--outfile', '-o',
+        default='-',
+    )
+    download_parser.set_defaults(callable=download)
 
     if len(sys.argv) < 2:
         parser.print_usage()
