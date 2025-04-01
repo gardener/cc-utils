@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: params
         id: params
-        uses: ./.github/actions/params
+        uses: gardener/cc-utils/.github/actions/params@master
         with:
           mode: ${{ inputs.mode }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
