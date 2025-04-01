@@ -342,9 +342,9 @@ def process_upload_request(
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     oci_client: oci.client.Client=None,
 ) -> str:
-    global uploaded_image_refs_to_digests
-    global uploaded_image_refs_to_ready_events
-    global upload_image_lock
+    uploaded_image_refs_to_digests
+    uploaded_image_refs_to_ready_events
+    upload_image_lock
 
     if not oci_client:
         oci_client = ccc.oci.oci_client()
