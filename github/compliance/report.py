@@ -448,7 +448,6 @@ def create_or_update_github_issues(
         result_group: gcm.ScanResultGroup,
         action: PROCESSING_ACTION,
     ):
-        nonlocal gh_api
         nonlocal err_count
         nonlocal max_processing_days
         issue_type = result_group.issue_type
