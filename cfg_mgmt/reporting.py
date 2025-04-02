@@ -3,8 +3,6 @@ import typing
 
 import dateutil.parser as dp
 
-import ccc.elasticsearch
-import cfg_mgmt.metrics
 import cfg_mgmt.model as cmm
 import cfg_mgmt.util as cmu
 import ci.log
@@ -86,107 +84,6 @@ def evaluate_cfg_element_status(
     )
 
 
-def cfg_element_statuses_responsible_summaries(
-    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
-) -> typing.Generator[cmm.CfgResponsibleSummary, None, None]:
-
-    responsible_summaries = dict()
-
-    def responsible_summary(responsible: cmm.CfgResponsible, url: str) -> cmm.CfgResponsibleSummary:
-        if (summary := responsible_summaries.get(responsible)):
-            return summary
-
-        cfg_responsible_summary = cmm.CfgResponsibleSummary(
-            url=url,
-            responsible=responsible,
-            compliantElementsCount=0,
-            noncompliantElementsCount=0,
-        )
-        responsible_summaries[responsible] = cfg_responsible_summary
-        return cfg_responsible_summary
-
-    for cfg_element_status in cfg_element_statuses:
-        local_responsible_summaries: typing.List[cmm.CfgResponsibleSummary] = []
-
-        if not cfg_element_status.responsible:
-            continue
-
-        for responsible in cfg_element_status.responsible.responsibles:
-            cfg_responsible_summary = responsible_summary(
-                responsible=responsible,
-                url=cfg_element_status.element_storage,
-            )
-            local_responsible_summaries.append(cfg_responsible_summary)
-
-        evaluation_result = evaluate_cfg_element_status(cfg_element_status)
-
-        for summary in local_responsible_summaries:
-            if evaluation_result.fullyCompliant:
-                summary.compliantElementsCount += 1
-            else:
-                summary.noncompliantElementsCount += 1
-
-    yield from responsible_summaries.values()
-
-
-def cfg_element_statuses_storage_summaries(
-    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
-) -> typing.Generator[cmm.CfgStorageSummary, None, None]:
-
-    storage_summaries = dict()
-
-    def storage_summary(element_storage: str) -> cmm.CfgStorageSummary:
-        if (summary := storage_summaries.get(element_storage)):
-            return summary
-
-        cfg_storage_summary = cmm.CfgStorageSummary(
-            url=element_storage,
-            noRuleAssigned=[],
-            noStatus=[],
-            assignedRuleRefersToUndefinedPolicy=[],
-            noResponsibleAssigned=[],
-            credentialsOutdated=[],
-            credentialsNotOutdated=[],
-            fullyCompliant=[],
-        )
-        storage_summaries[element_storage] = cfg_storage_summary
-        return cfg_storage_summary
-
-    for cfg_element_status in cfg_element_statuses:
-        cfg_storage_summary = storage_summary(cfg_element_status.element_storage)
-        evaluation_result = evaluate_cfg_element_status(cfg_element_status)
-
-        if not evaluation_result.hasResponsible:
-            cfg_storage_summary.noResponsibleAssigned.append(cfg_element_status)
-
-        if not evaluation_result.hasRule:
-            cfg_storage_summary.noRuleAssigned.append(cfg_element_status)
-
-        elif evaluation_result.assignedRuleRefersToUndefinedPolicy:
-            cfg_storage_summary.assignedRuleRefersToUndefinedPolicy.append(cfg_element_status)
-
-        else:
-            if evaluation_result.requiresStatus:
-                if not evaluation_result.hasStatus:
-                    cfg_storage_summary.noStatus.append(cfg_element_status)
-
-                else:
-                    if evaluation_result.credentialsOutdated:
-                        cfg_storage_summary.credentialsOutdated.append(cfg_element_status)
-
-                    else:
-                        cfg_storage_summary.credentialsNotOutdated.append(cfg_element_status)
-
-        if evaluation_result.fullyCompliant:
-            cfg_storage_summary.fullyCompliant.append(cfg_element_status)
-            cfg_storage_summary.compliantElementsCount += 1
-
-        else:
-            cfg_storage_summary.noncompliantElementsCount += 1
-
-    yield from storage_summaries.values()
-
-
 def create_report(
     cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
 ):
@@ -263,69 +160,6 @@ def create_report(
         header='Fully compliant cfg-elements *.*',
         statuses=fully_compliant,
     )
-
-
-def cfg_compliance_status_to_es(
-    es_client: ccc.elasticsearch.ElasticSearchClient,
-    cfg_report_summary_gen: typing.Generator[cmm.CfgStorageSummary, None, None],
-):
-    for cfg_report_summary in cfg_report_summary_gen:
-        cc_cfg_compliance_status = cfg_mgmt.metrics.CcCfgComplianceStatus.create(
-            url=cfg_report_summary.url,
-            compliant_count=cfg_report_summary.compliantElementsCount,
-            non_compliant_count=cfg_report_summary.noncompliantElementsCount,
-        )
-
-        ccc.elasticsearch.metric_to_es(
-            es_client=es_client,
-            metric=cc_cfg_compliance_status,
-            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_status),
-        )
-
-
-def cfg_compliance_storage_responsibles_to_es(
-    es_client: ccc.elasticsearch.ElasticSearchClient,
-    cfg_responsible_summary_gen: typing.Generator[cmm.CfgResponsibleSummary, None, None],
-):
-    for cfg_responsible_sum in cfg_responsible_summary_gen:
-        cc_cfg_compliance_storage_responsibles = \
-            cfg_mgmt.metrics.CcCfgComplianceStorageResponsibles.create(
-            url=cfg_responsible_sum.url,
-            compliant_count=cfg_responsible_sum.compliantElementsCount,
-            non_compliant_count=cfg_responsible_sum.noncompliantElementsCount,
-            responsible=cfg_responsible_sum.responsible,
-        )
-
-        ccc.elasticsearch.metric_to_es(
-            es_client=es_client,
-            metric=cc_cfg_compliance_storage_responsibles,
-            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_storage_responsibles),
-        )
-
-
-def cfg_compliance_responsibles_to_es(
-    es_client: ccc.elasticsearch.ElasticSearchClient,
-    cfg_element_statuses: typing.Iterable[cmm.CfgElementStatusReport],
-):
-    for cfg_element_status in cfg_element_statuses:
-
-        status_evaluation = evaluate_cfg_element_status(cfg_element_status)
-
-        cc_cfg_compliance_responsible = cfg_mgmt.metrics.CcCfgComplianceResponsible.create(
-            element_name=cfg_element_status.element_name,
-            element_type=cfg_element_status.element_type,
-            element_storage=cfg_element_status.element_storage,
-            is_compliant=status_evaluation.fullyCompliant,
-            responsible=cfg_element_status.responsible,
-            rotation_method=cfg_element_status.policy.rotation_method,
-            non_compliant_reasons=status_evaluation.nonCompliantReasons,
-        )
-
-        ccc.elasticsearch.metric_to_es(
-            es_client=es_client,
-            metric=cc_cfg_compliance_responsible,
-            index_name=cfg_mgmt.metrics.index_name(cc_cfg_compliance_responsible),
-        )
 
 
 def iter_cfg_elements_requiring_rotation(

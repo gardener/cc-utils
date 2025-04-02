@@ -1,13 +1,10 @@
 import collections.abc
-import datetime
-import functools
 import logging
 import random
 import time
 import typing
 
 import ccc.concourse
-import ccc.elasticsearch
 import ccc.github
 import ccc.secrets_server
 import ci.util
@@ -38,7 +35,6 @@ from .model import (
     PullRequestAction,
     PullRequestEvent,
 )
-import whd.metric
 import whd.util
 
 
@@ -52,8 +48,6 @@ def process_pr_event(
     cfg_set: model.ConfigurationSet,
     whd_cfg: model.webhook_dispatcher.WebhookDispatcherConfig,
     pr_event: PullRequestEvent,
-    es_client: ccc.elasticsearch.ElasticSearchClient,
-    dispatch_start_time: datetime.datetime,
 ):
     if not (github_helper := github_api_for_pr_event(pr_event, cfg_set)):
         logger.error(
@@ -135,25 +129,10 @@ def process_pr_event(
             concourse_api=concourse_api,
             pr_event=pr_event,
             resources=resources,
-            es_client=es_client,
         )
         # Give concourse a chance to react
         time.sleep(random.randint(5,10))
         handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
-
-    webhook_delivery_metric = whd.metric.WebhookDelivery.create(
-        delivery_id=pr_event.delivery(),
-        event_type='pull_request',
-        repository=pr_event.repository().repository_path(),
-        hostname=pr_event.hostname(),
-        process_total_seconds=(datetime.datetime.now() - dispatch_start_time).total_seconds(),
-    )
-    if es_client:
-        ccc.elasticsearch.metric_to_es(
-            es_client=es_client,
-            metric=webhook_delivery_metric,
-            index_name=whd.metric.index_name(webhook_delivery_metric),
-        )
 
 
 def matching_resources(
@@ -420,7 +399,6 @@ def ensure_pr_resource_updates(
     concourse_api,
     pr_event: PullRequestEvent,
     resources: typing.List[concourse.client.model.PipelineConfigResource],
-    es_client: ccc.elasticsearch.ElasticSearchClient,
     retries=10,
     sleep_seconds=3,
 ):
@@ -428,33 +406,8 @@ def ensure_pr_resource_updates(
 
     retries -= 1
     if retries < 0:
-        try:
-            log_outdated_resources(
-                cfg_set=cfg_set,
-                outdated_resources=resources,
-            )
-        # ignore logging errors
-        except BaseException:
-            pass
-
         outdated_resources_names = [r.name for r in resources]
         logger.info(f'could not update resources {outdated_resources_names} - giving up')
-        if es_client:
-            resource_update_failed_metric = whd.metric.WebhookResourceUpdateFailed.create(
-                delivery_id=pr_event.delivery(),
-                repository=pr_event.repository().repository_path(),
-                hostname=pr_event.hostname(),
-                event_type='pull_request',
-                outdated_resources_names=outdated_resources_names,
-                pr_id=pr_event.pr_id(),
-                pr_action=pr_event.action().value,
-            )
-            ccc.elasticsearch.metric_to_es(
-                es_client=es_client,
-                metric=resource_update_failed_metric,
-                index_name=whd.metric.index_name(resource_update_failed_metric),
-            )
-        return
 
     def resource_versions(resource):
         return concourse_api.resource_versions(
@@ -501,7 +454,6 @@ def ensure_pr_resource_updates(
         resources=outdated_resources,
         retries=retries,
         sleep_seconds=sleep_seconds*1.2,
-        es_client=es_client,
     )
 
 
@@ -540,33 +492,3 @@ def pr_modified_pipeline_definitions(
     changed_files = (f.filename for f in github_helper.repository.pull_request(pr_number).files())
 
     return '.ci/pipeline_definitions' in changed_files
-
-
-@functools.lru_cache()
-def els_client(
-    cfg_set,
-):
-    elastic_cfg = cfg_set.elasticsearch()
-    elastic_client = ccc.elasticsearch.from_cfg(elasticsearch_cfg=elastic_cfg)
-    return elastic_client
-
-
-def log_outdated_resources(
-    cfg_set,
-    outdated_resources,
-):
-    els_index = cfg_set.webhook_dispatcher_deployment().logging_els_index()
-    elastic_client = els_client(cfg_set=cfg_set)
-
-    date = datetime.datetime.utcnow().isoformat()
-    elastic_client.store_documents(
-        index=els_index,
-        body=[
-            {
-                'date': date,
-                'resource_name': resource.name,
-                'pipeline_name': resource.pipeline_name(),
-            }
-            for resource in outdated_resources
-        ],
-    )

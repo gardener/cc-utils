@@ -107,7 +107,6 @@ def configure_default_logging(
 
     # both too verbose ...
     logging.getLogger('github3').setLevel(logging.WARNING)
-    logging.getLogger('elasticsearch').setLevel(logging.WARNING)
 
 
 def default_fmt_string(print_thread_id: bool=False):

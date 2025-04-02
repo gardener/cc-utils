@@ -39,7 +39,6 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
             'kubernetes_config',
             'webhook_dispatcher_config',
             'container_port',
-            'logging_els_index',
             'job_mapping_name',
         }
 
@@ -81,7 +80,3 @@ class WebhookDispatcherDeploymentConfig(NamedModelElement):
 
     def image_config(self):
         return DockerImageConfig(self.raw.get('whd_image'))
-
-    def logging_els_index(self):
-        '''Name of the elastic-search index to log into'''
-        return self.raw['logging_els_index']

@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import datetime
 import logging
 import threading
 import typing
@@ -11,7 +10,6 @@ import typing
 import requests
 
 import ccc.concourse
-import ccc.elasticsearch
 import ccc.github
 import ccc.secrets_server
 import ci.util
@@ -45,7 +43,6 @@ from .model import (
     PushEvent,
     RefType,
 )
-import whd.metric
 
 
 logger = logging.getLogger(__name__)
@@ -79,11 +76,6 @@ class GithubWebhookDispatcher:
     def dispatch_create_event(
         self,
         create_event,
-        delivery_id: str,
-        repository: str,
-        hostname: str,
-        es_client: ccc.elasticsearch.ElasticSearchClient,
-        dispatch_start_time: datetime.datetime,
     ):
         ref_type = create_event.ref_type()
         if not ref_type == RefType.BRANCH:
@@ -94,11 +86,6 @@ class GithubWebhookDispatcher:
             target=self._update_pipeline_definition,
             kwargs={
                 'event': create_event,
-                'delivery_id': delivery_id,
-                'repository': repository,
-                'hostname': hostname,
-                'es_client': es_client,
-                'dispatch_start_time': dispatch_start_time,
             }
         )
         thread.start()
@@ -106,31 +93,11 @@ class GithubWebhookDispatcher:
     def dispatch_push_event(
         self,
         push_event,
-        delivery_id: str,
-        repository: str,
-        hostname: str,
-        es_client: ccc.elasticsearch.ElasticSearchClient,
-        dispatch_start_time: datetime.datetime,
     ):
-        def process_push_event(
-            delivery_id,
-            hostname,
-            es_client,
-            repository,
-            dispatch_start_time,
-            event,
-            event_type,
-        ):
+        def process_push_event(event):
             if self._pipeline_definition_changed(event):
                 try:
-                    self._update_pipeline_definition(
-                        event=event,
-                        delivery_id=delivery_id,
-                        repository=repository,
-                        hostname=hostname,
-                        es_client=es_client,
-                        dispatch_start_time=dispatch_start_time,
-                    )
+                    self._update_pipeline_definition(event=event)
                 except ValueError as e:
                     logger.warning(
                         f'Received error updating pipeline-definitions: "{e}". '
@@ -148,35 +115,9 @@ class GithubWebhookDispatcher:
                 logger.debug('triggering resource-check')
                 whd.util.trigger_resource_check(concourse_api=concourse_api, resources=resources)
 
-            process_end_time = datetime.datetime.now()
-            process_total_seconds = (
-                process_end_time - dispatch_start_time
-            ).total_seconds()
-            webhook_delivery_metric = whd.metric.WebhookDelivery.create(
-                delivery_id=delivery_id,
-                event_type=event_type,
-                repository=repository,
-                hostname=hostname,
-                process_total_seconds=process_total_seconds,
-            )
-            if not es_client:
-                return
-
-            ccc.elasticsearch.metric_to_es(
-                es_client=es_client,
-                metric=webhook_delivery_metric,
-                index_name=whd.metric.index_name(webhook_delivery_metric),
-            )
-
         thread = threading.Thread(
             target=process_push_event,
             kwargs={
-                'delivery_id': delivery_id,
-                'hostname': hostname,
-                'es_client': es_client,
-                'repository': repository,
-                'event_type': 'push',
-                'dispatch_start_time': dispatch_start_time,
                 'event': push_event,
             }
         )
@@ -185,20 +126,8 @@ class GithubWebhookDispatcher:
     def _update_pipeline_definition(
         self,
         event,
-        delivery_id: str,
-        repository: str,
-        hostname: str,
-        es_client: ccc.elasticsearch.ElasticSearchClient,
-        dispatch_start_time: datetime.datetime,
     ):
-        def _do_update(
-            delivery_id: str,
-            event_type: str,
-            repository: str,
-            hostname: str,
-            dispatch_start_time: datetime.datetime,
-            es_client: ccc.elasticsearch.ElasticSearchClient,
-        ):
+        def _do_update():
             repo_url = event.repository().repository_url()
             job_mapping_set = self.cfg_set.job_mapping()
             job_mapping = job_mapping_set.job_mapping_for_repo_url(repo_url, self.cfg_set)
@@ -209,31 +138,8 @@ class GithubWebhookDispatcher:
                 whd_cfg=self.whd_cfg,
             )
 
-            process_end_time = datetime.datetime.now()
-            process_total_seconds = (process_end_time - dispatch_start_time).total_seconds()
-            webhook_delivery_metric = whd.metric.WebhookDelivery.create(
-                delivery_id=delivery_id,
-                event_type=event_type,
-                repository=repository,
-                hostname=hostname,
-                process_total_seconds=process_total_seconds,
-            )
-            if es_client:
-                ccc.elasticsearch.metric_to_es(
-                    es_client=es_client,
-                    metric=webhook_delivery_metric,
-                    index_name=whd.metric.index_name(webhook_delivery_metric),
-                )
-
         try:
-            _do_update(
-                delivery_id=delivery_id,
-                event_type='create',
-                repository=repository,
-                hostname=hostname,
-                dispatch_start_time=dispatch_start_time,
-                es_client=es_client,
-            )
+            _do_update()
         except (JobMappingNotFoundError, ConfigElementNotFoundError) as e:
             # A config element was missing or o JobMapping for the given repository was present.
             # Print warning, reload and try again
@@ -245,14 +151,7 @@ class GithubWebhookDispatcher:
             self.cfg_factory = ConfigFactory.from_dict(raw_dict)
             self.cfg_set = self.cfg_factory.cfg_set(self.cfg_set.name())
             # retry
-            _do_update(
-                delivery_id=delivery_id,
-                event_type='create',
-                repository=repository,
-                hostname=hostname,
-                dispatch_start_time=dispatch_start_time,
-                es_client=es_client,
-            )
+            _do_update()
 
     def _pipeline_definition_changed(self, push_event):
         if '.ci/pipeline_definitions' in push_event.modified_paths():
@@ -369,8 +268,6 @@ class GithubWebhookDispatcher:
     def dispatch_pullrequest_event(
         self,
         pr_event: whd.model.PullRequestEvent,
-        es_client: ccc.elasticsearch.ElasticSearchClient,
-        dispatch_start_time: datetime.datetime,
     ) -> bool:
         '''Process the given push event.
 
@@ -393,8 +290,6 @@ class GithubWebhookDispatcher:
                 'whd_cfg': self.whd_cfg,
                 'cfg_set': self.cfg_set,
                 'pr_event': pr_event,
-                'es_client': es_client,
-                'dispatch_start_time': dispatch_start_time,
             }
         )
         thread.start()
