@@ -6,12 +6,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      - dependency-name: 'elasticsearch'
-        # Currently, we run ELS 7.9. Minor version updates should be fine, but
-        # upgrading past 8.0.0 requires additional effort. See
-        # https://www.elastic.co/guide/en/elasticsearch/client/python-api/current/migration.html
-        versions: ['>=8.0.0']
+    ignore: []
   - package-ecosystem: "pip"
     directory: "/cli/gardener_ci"
     schedule:

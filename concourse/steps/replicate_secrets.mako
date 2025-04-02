@@ -4,7 +4,6 @@ from makoutil import indent_func
 from concourse.steps import step_lib
 
 extra_args = step._extra_args
-reporting_els_config_name = extra_args['reporting_els_config_name']
 concourse_target_team_name = extra_args['concourse_target_team_name']
 cfg_repo_relpath = extra_args['cfg_repo_relpath']
 config_repo_org = extra_args['config_repo_org']
@@ -18,7 +17,6 @@ do_rotate_secrets = bool(extra_args.get('rotate_secrets', False))
 
 ${step_lib('replicate_secrets')}
 
-import ccc.elasticsearch
 import ccc.github
 try:
   import cfg_mgmt.reporting as cmr
@@ -35,8 +33,6 @@ config_repo_org = '${config_repo_org}'
 config_repo_repo = '${config_repo_repo}'
 config_repo_github_cfg ='${config_repo_github_cfg}'
 config_repo_url = '${config_repo_url}'
-
-reporting_els_config_name = '${reporting_els_config_name}'
 
 
 % if do_rotate_secrets:
@@ -90,26 +86,6 @@ status_reports = cmr.generate_cfg_element_status_reports(
     element_storage=config_repo_url,
 )
 cmr.create_report(status_reports)
-cfg_report_summary_gen = cmr.cfg_element_statuses_storage_summaries(status_reports)
-cfg_responsible_summary_gen = cmr.cfg_element_statuses_responsible_summaries(status_reports)
-
-if reporting_els_config_name:
-    es_client = ccc.elasticsearch.from_cfg(cfg_factory.elasticsearch(reporting_els_config_name))
-    logger.info('writing cfg metrics to elasticsearch')
-    cmr.cfg_compliance_status_to_es(
-        es_client=es_client,
-        cfg_report_summary_gen=cfg_report_summary_gen,
-    )
-    cmr.cfg_compliance_responsibles_to_es(
-        es_client=es_client,
-        cfg_element_statuses=status_reports,
-    )
-    cmr.cfg_compliance_storage_responsibles_to_es(
-        es_client=es_client,
-        cfg_responsible_summary_gen=cfg_responsible_summary_gen,
-    )
-else:
-    logger.warning('not writing cfg status to elasticsearch, no client available')
 
 % if do_rotate_secrets:
 try:

@@ -37,7 +37,6 @@ def requirements():
         'cryptography',
         'dockerfile-parse',
         'docutils',
-        'elasticsearch',
         'google-api-core',
         'google-api-python-client',
         'google-auth',
