@@ -73,6 +73,12 @@ inputs:
       that it is possible to generate a valid `values.yaml` document so that all references to
       OCI-Registries are specified (thus localising the helm-chart).
 
+  gh-token:
+    required: true
+    type: string
+    description: |
+      an auth-token to authenticate against GitHub. Pass-in secrets.GITHUB_TOKEN
+
 runs:
   using: composite
   steps:
@@ -91,6 +97,7 @@ runs:
       uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
+        gh-token: ${{ inputs.gh-token }}
     - name: helmchart
       shell: python
       run: |
