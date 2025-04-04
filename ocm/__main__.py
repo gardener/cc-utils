@@ -6,6 +6,8 @@ import json
 import os
 import sys
 
+import dacite
+
 import cnudie.retrieve
 import ocm
 import ocm.upload
@@ -124,41 +126,37 @@ def append(parsed):
 
     if parsed.type in ('r', 'resource'):
         attr = component['resources']
+        ocm_cls = ocm.Resource
+
     elif parsed.type in ('s', 'source'):
         attr = component['sources']
+        ocm_cls = ocm.Source
+
     elif parsed.type in ('c', 'component-reference'):
         attr = component['componentReferences']
+        ocm_cls = ocm.ComponentReference
 
     if _have_yaml:
         obj = yaml.safe_load(sys.stdin)
     else:
         obj = json.load(sys.stdin)
 
-    if not (labels := parsed.labels):
-        labels = []
-    else:
-        labels = [dataclasses.asdict(l) for l in _iter_parsed_labels(labels=labels)]
+    obj = obj if isinstance(obj, list) else [obj]
 
-    def inject_labels(artefact: dict, labels):
-        if not 'labels' in artefact:
-            artefact['labels'] = labels
-        else:
-            artefact['labels'].extend(labels)
-
-    if isinstance(obj, list):
-        for o in obj:
-            inject_labels(
-                artefact=o,
-                labels=labels,
-            )
-
-        attr.extend(obj)
-    else:
-        inject_labels(
-            artefact=obj,
-            labels=labels,
+    artefacts = [
+        dacite.from_dict(
+            data_class=ocm_cls,
+            data=o
         )
-        attr.append(obj)
+        for o in obj
+    ]
+
+    labels = list(_iter_parsed_labels(labels=labels)) if (labels := parsed.labels) else []
+    for artefact in artefacts:
+        artefact.labels = list(artefact.labels) + labels
+
+    attr: list
+    attr.extend([dataclasses.asdict(a) for a in artefacts])
 
     with open(parsed.file, 'w') as f:
         if _have_yaml:
