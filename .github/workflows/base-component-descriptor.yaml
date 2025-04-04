@@ -26,6 +26,24 @@ on:
         required: false
         type: string
         default: SAP SE
+      component-references-file:
+        required: false
+        type: string
+        description: |
+          relative path (to repo root) to YAML-form file containing definition of
+          component-references added to base-component-descriptor, defaults to
+          `.ocm/component-references.yaml`.
+          action will only fail on absence of file if an explicit value is given.
+
+          Example contents of '.ocm/component-references.yaml'
+          ```
+          - componentName: github.com/gardener/gardener
+            version: v1.110.0
+            name: gardener
+          ```
+          for full specification, see:
+          https://github.com/open-component-model/ocm-spec/blob/main/doc/01-model/02-elements-toplevel.md#references
+
       labels:
         required: false
         type: string
@@ -33,18 +51,23 @@ on:
           Labels to set for the component in YAML-form (caveat: need to quote). May either be a
           single object, or an array.
           Example:
+
             # single label
+            ```
             name: cloud.gardener.cnudie/responsibles
             value:
               - type: githubTeam
                 teamname: gardener/maintainers
                 github_hostname: github.com
+            ```
 
             # list of labels
+            ```
             - name: label1
               value: value1
             - name: label2
               value: value2
+            ```
       src-labels:
         required: false
         type: string
@@ -137,6 +160,27 @@ jobs:
             commit: ${commit}
             ref: ${{ github.ref }}
           EOF
+
+          fail_if_absent=false
+          component_references_path='.ocm/component-references.yaml'
+
+          if [ -n "${{ inputs.component-references-file }}" ]; then
+            fail_if_absent=true
+            component_references_path="${{ inputs.component-references-file }}"
+          fi
+
+          if [ -f "$component_references_path" ]; then
+            echo "adding component-references from ${component_references_path}"
+            cat $component_references_path | python3 -m ocm append component-reference \
+              --file component-descriptor.yaml
+
+          else
+            if [ "$fail_if_absent" = true ]; then
+              echo "error: ${{ inputs.component-references-file }} not found"
+              exit 1
+            fi
+
+          fi
 
           echo "Component-Descriptor:"
           cat component-descriptor.yaml
