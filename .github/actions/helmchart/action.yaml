@@ -45,6 +45,7 @@ inputs:
     description: |
       An OCM-Component-Descriptor in YAML form. It may be incomplete, but must contain at least:
       - component.version attribute
+      - component.name attribute
       - all resources referenced in helmchart
 
   mappings:
