@@ -33,7 +33,9 @@ on:
           relative path (to repo root) to YAML-form file containing definition of
           component-references added to base-component-descriptor, defaults to
           `.ocm/component-references.yaml`.
-          action will only fail on absence of file if an explicit value is given.
+
+          Component-References-File is optional. However, if an input is passed, absence of
+          specified file is handled as an error.
 
           Example contents of '.ocm/component-references.yaml'
           ```
