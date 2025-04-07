@@ -23,17 +23,15 @@ ARG TARGETARCH
 
 ARG DOCKER_BUILDX_VERSION=v0.22.0
 
-COPY apk-packages.blacklist .
 COPY --from=builder /pkgs/usr /usr
 
-RUN if [ -z "${TARGETARCH}" ]; then TARGETARCH="amd64"; fi \
+RUN --mount=source=apk-packages.blacklist,target=/apk-packages.blacklist \
+    --mount=source=gardener-cicd-libs.apk-packages,target=/gardener-cicd-libs.apk-packages \
+if [ -z "${TARGETARCH}" ]; then TARGETARCH="amd64"; fi \
 &&  if [ "${TARGETARCH}" == "arm64" ]; then DOCKER_ARCH="aarch64"; \
       elif [ "${TARGETARCH}" == "amd64" ]; then DOCKER_ARCH="x86_64"; fi \
-&& apk add --no-cache \
-  py3-pip \
-  curl \
-&& curl -L https://github.com/gardener/cc-utils/raw/master/gardener-cicd-libs.apk-packages \
-    | grep -v -f apk-packages.blacklist \
+&& cat /gardener-cicd-libs.apk-packages \
+    | grep -v -f /apk-packages.blacklist \
     | xargs apk add --no-cache \
 && mkdir -p $HOME/.config/pip \
 && echo -e "[global]\nbreak-system-packages = true" >> $HOME/.config/pip/pip.conf \
