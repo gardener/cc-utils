@@ -174,6 +174,9 @@ component_v2.resources.append(
       imageReference='${target_spec.image}' + ':' + effective_version,
     ),
     labels=${image_descriptor.resource_labels()}
+    extraIdentity={
+      'version': effective_version,
+    }
   ),
 )
 %   endfor
