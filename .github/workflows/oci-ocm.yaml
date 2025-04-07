@@ -294,6 +294,9 @@ jobs:
             name='${{ inputs.name }}',
             version='${{ inputs.version }}',
             type=ocm.ArtefactType.OCI_IMAGE,
+            extraIdentity={
+              'version': '${{ inputs.version }}',
+            },
             access=ocm.OciAccess(
               imageReference=tgt_image_ref,
             ),
