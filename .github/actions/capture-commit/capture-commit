@@ -40,7 +40,7 @@ object_paths=$(
   cd "$(dirname "$GIT_DIR")"
   find .git/objects -type f -neweraa "${ref}" | grep -v pack
 )
-object_paths+=('refs/capture-commit')
+object_paths+=('.git/refs/capture-commit')
 
 # objects are already gzipped - there is no point in compressing them again
 tar cf "${archive}" -b1 -C $(dirname "${GIT_DIR}") ${object_paths[*]}
