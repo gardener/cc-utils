@@ -160,6 +160,9 @@ def _determine_blocks_to_include(
         f'Found {(commit_count := len(filter_in_commits))} relevant commits for release notes '
         f'({len(filter_out_commits)} filtered out).'
     )
+    logger.info('the following commit-digests will be checked:')
+    for commit in filter_in_commits:
+        logger.info(f'{commit.hexsha}')
 
     commit_processing_group_size = 200
     processing_group_min_seconds = 200
