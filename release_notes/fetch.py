@@ -199,6 +199,8 @@ def _determine_blocks_to_include(
         logger.info(f'Found {len(commit_pulls)} commits with associated pull requests.')
         for sha, pr_list in commit_pulls.items():
             logger.info(f"\t{sha:.6} -> {','.join(str(pr.number) for pr in pr_list)}")
+    else:
+        logger.info('Did not find any associated pullrequests')
 
     source_blocks_to_be_included: set[rnm.SourceBlock] = set()
     for filter_in_commit in filter_in_commits:
