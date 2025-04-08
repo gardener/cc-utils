@@ -825,9 +825,9 @@ class FalcoEventGroup:
 
 
 @dataclasses.dataclass(frozen=True)
-class FalcoDebugEventGroup:
+class FalcoInteractiveEventGroup:
     '''
-    Group of events that - most likely - are a result of a single debug
+    Group of events that - most likely - are a result of a single interactive
     session. It might however also be an indication of an attack. These
     events must be reviewed and ideally be linked to some legal activity.
 
@@ -855,13 +855,13 @@ class FalcoDebugEventGroup:
 
 class FalcoFindingSubType(enum.StrEnum):
     EVENT_GROUP = 'event-group'
-    DEBUG_EVENT_GROUP = 'debug-event-group'
+    INTERACTIVE_EVENT_GROUP = 'interactive-event-group'
 
 
 @dataclasses.dataclass(frozen=True)
 class FalcoFinding(Finding):
     subtype: FalcoFindingSubType
-    finding: FalcoDebugEventGroup | FalcoEventGroup
+    finding: FalcoInteractiveEventGroup | FalcoEventGroup
 
     @property
     def key(self) -> str:
