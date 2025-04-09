@@ -5,8 +5,8 @@
 
 import logging
 
-import slack
-import slack.errors
+import slack_sdk
+import slack_sdk.errors
 
 import ci.log
 import ci.util
@@ -29,13 +29,12 @@ class SlackHelper:
         channel: str,
         title: str,
         message: str,
-        filetype: str='post'
     ):
         if not (api_token := self.slack_cfg.api_token()):
             raise RuntimeError("can't post to slack as there is no slack api token in config")
 
         logger.info(f'posting message {title=} to slack {channel=} using {self.slack_cfg.name()}')
-        client = slack.WebClient(token=api_token)
+        client: slack_sdk.web.client.WebClient = slack_sdk.WebClient(token=api_token)
         # We expect rather long messages, so we do not use incoming webhooks etc. to post
         # messages as those get truncated, see
         # https://api.slack.com/changelog/2018-04-truncating-really-long-messages
@@ -44,20 +43,19 @@ class SlackHelper:
         response = self._post_with_retry(
             client=client,
             retries=5,
-            channels=channel,
+            channel=channel,
             content=message,
             title=title,
-            filetype=filetype,
         )
         if not response['ok']:
             raise RuntimeError(f"failed to post to slack channel '{channel}': {response['error']}")
         return response
 
-    def _post_with_retry(self, client, retries=5, **kwargs):
+    def _post_with_retry(self, client: slack_sdk.web.client.WebClient, retries=5, **kwargs):
         try:
-            response = client.files_upload(**kwargs)
+            response = client.files_upload_v2(**kwargs)
             return response
-        except slack.errors.SlackApiError as sae:
+        except slack_sdk.errors.SlackApiError as sae:
             error_code = sae.response.get('error')
             error_status = sae.response.get('status')
             if retries < 1:
@@ -80,7 +78,7 @@ class SlackHelper:
         if not api_token:
             raise RuntimeError("can't post to slack as there is no slack api token in config")
         logger.info(f"deleting file with id '{file_id}' from Slack")
-        client = slack.WebClient(token=api_token)
+        client = slack_sdk.WebClient(token=api_token)
         response = client.files_delete(
             file=file_id,
         )
@@ -131,7 +129,7 @@ def post_to_slack(
             i += 1
             idx += max_msg_size_bytes
 
-    except (RuntimeError, slack.errors.SlackApiError) as e:
+    except (RuntimeError, slack_sdk.errors.SlackApiError) as e:
         logger.warning(
             f'Unable to post release notes to Slack: {e}. Will dump generated notes next to '
             'enable manually posting them.'
