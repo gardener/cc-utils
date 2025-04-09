@@ -437,3 +437,14 @@ def post_to_slack(
         else:
             raise RuntimeError('Unable to get file id from Slack response')
     logger.info('successfully posted contents to slack')
+
+def invoke_post_release_callback(
+        git_helper,
+        version: str,
+        post_release_callback: str=None,
+):
+    _invoke_callback(
+        callback_script_path=post_release_callback,
+        repo_dir=git_helper.repo.working_tree_dir,
+        effective_version=version,
+    )

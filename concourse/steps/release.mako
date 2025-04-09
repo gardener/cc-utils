@@ -57,6 +57,7 @@ ocm_repository_mappings = component_descriptor_trait.ocm_repository_mappings()
 
 release_callback_path = release_trait.release_callback_path()
 next_version_callback_path = release_trait.next_version_callback_path()
+post_release_callback_path = release_trait.post_release_callback_path()
 
 release_notes_policy = release_trait.release_notes_policy()
 if release_notes_policy is ReleaseNotesPolicy.DEFAULT:
@@ -636,5 +637,13 @@ except:
   logger.warning('An error occurred whilst trying to post release-notes to slack')
   traceback.print_exc()
   % endfor
+% endif
+
+% if post_release_callback_path:
+invoke_post_release_callback(
+  git_helper,
+  version_str,
+  '${post_release_callback_path}',
+)
 % endif
 </%def>
