@@ -119,8 +119,6 @@ def patch_values_yaml(
     # will succeed (at least our OCI-Client cannot properly handle uploading empty blobs)
     if values is None:
         values = {}
-        with open(values_yaml_path, 'w') as f:
-            yaml.safe_dump(values, f)
 
     for mapping in mappings:
         image_name, image_attr = mapping.referenced_resource_and_attribute
@@ -145,6 +143,9 @@ def patch_values_yaml(
         attribute_path = jsonpath_ng.parse(attribute)
 
         attribute_path.update_or_create(values, value)
+
+    with open(values_yaml_path, 'w') as f:
+        yaml.safe_dump(values, f)
 
 
 def to_ocm_mapping(
