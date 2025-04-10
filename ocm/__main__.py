@@ -270,7 +270,7 @@ def download(parsed):
 
     artefact = None
     if len(artefacts) < 1:
-        print(f'Error: {cname}:{cversion} has no {type}s')
+        print(f'Error: {cname}:{cversion} has no artefacts of {parsed.type=}')
         exit(1)
     elif len(artefacts) == 1:
         artefact = artefacts[0]
