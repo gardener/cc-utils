@@ -20,6 +20,25 @@ import model.base
 logger = logging.getLogger(__name__)
 
 
+class CredentialWritebackError(Exception):
+    def __init__(self, message, new_secret=None, original_exception=None):
+        super().__init__(message)
+        self.new_secret = new_secret
+        self.original_exception = original_exception
+
+    def __str__(self):
+        base_msg = super().__str__()
+        if self.new_secret and not self._secret_logged:
+            return f'{base_msg} [UNPERSISTED_SECRET_REDACTED]'
+        return base_msg
+
+    def log_secret(self):
+        if self.new_secret and not self._secret_logged:
+            logger.critical(
+                f'UNPERSISTED_SECRET for {type(self).__name__}: {self.new_secret}'
+            )
+
+
 def iter_cfg_elements(
     cfg_factory: typing.Union[model.ConfigFactory, model.ConfigurationSet],
     cfg_target: typing.Optional[cmm.CfgTarget] = None,
@@ -250,7 +269,13 @@ def _push_with_retry(
                 If we lose the new key, we cannot recover the old one.
                 So we log it to allow manual intervention if needed
                 '''
-                logger.info(f'NEW BDBA API KEY: {secret_id.get("api_key")}')
+                error = CredentialWritebackError(
+                    message='Failed to push changes to GitHub after max retries',
+                    new_secret=secret_id.get('api_key'),
+                    original_exception=e,
+                )
+                error.log_secret()
+                raise error
             raise RuntimeError(f'Failed to push changes to GitHub after {max_retries} attempts')
 
         # calculate the delay using exponential backoff, but ensure it doesn't exceed the max_delay
