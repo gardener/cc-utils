@@ -244,7 +244,7 @@ jobs:
           gardener-cicd-libs \
           gardener-cicd-cli \
           gardener-cicd-cfg-mgmt \
-          gardener-oci \
+          'gardener-oci[async]' \
           gardener-ocm \
           bandit \
           flake8 \
