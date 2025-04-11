@@ -239,7 +239,7 @@ jobs:
         tar xf distribution-packages.tar.gz -C /tmp
         echo "installing linters"
         export CFLAGS='-Wno-int-conversion'
-        if ! pip3 install --upgrade --break-system-packages \
+        if ! pip3 install --pre --upgrade --break-system-packages \
           --find-links /tmp/dist \
           gardener-cicd-libs \
           gardener-cicd-cli \
@@ -255,10 +255,6 @@ jobs:
           echo "error while trying to install packages:"
           cat /tmp/pip3-install.log
         fi
-
-        # debug
-        echo "installed python-packages:"
-        pip3 list
 
         echo "running linters"
         blobs_dir=blobs.d
@@ -314,7 +310,7 @@ jobs:
         echo "install packages"
         tar xf distribution-packages.tar.gz -C /tmp
         export CFLAGS='-Wno-int-conversion'
-        if ! pip3 install --break-system-packages \
+        if ! pip3 install --pre --break-system-packages \
           --find-links /tmp/dist \
           gardener-cicd-libs \
           gardener-cicd-cli \
