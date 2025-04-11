@@ -272,7 +272,7 @@ ATTRIBUTES = (
         doc='''
         an optional callback that is called after release creation. The callback is passed
         the absolute path to the main repository's work tree via environment variable `REPO_DIR`.
-        No changes in the worktree are possible.
+        Changes in the worktree are discarded, in contrast to `release_callback`
         ''',
     ),
     AttributeSpec.optional(
