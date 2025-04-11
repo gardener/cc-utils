@@ -641,9 +641,9 @@ except:
 
 % if post_release_callback_path:
 invoke_post_release_callback(
-  git_helper,
-  version_str,
-  '${post_release_callback_path}',
+  git_helper=git_helper,
+  version=version_str,
+  post_release_callback='${post_release_callback_path}',
 )
 % endif
 </%def>
