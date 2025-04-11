@@ -256,6 +256,10 @@ jobs:
           cat /tmp/pip3-install.log
         fi
 
+        # debug
+        echo "installed python-packages:"
+        pip3 list
+
         echo "running linters"
         blobs_dir=blobs.d
         mkdir $blobs_dir
