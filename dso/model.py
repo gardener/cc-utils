@@ -125,7 +125,7 @@ class Datasource:
 
 
 def normalise_artefact_extra_id(
-    artefact_extra_id: dict[str, str],
+    artefact_extra_id: dict[str, any],
 ) -> str:
     '''
     generate stable representation of `artefact_extra_id`
@@ -133,7 +133,8 @@ def normalise_artefact_extra_id(
     sorted by key in alphabetical order and concatinated following pattern:
     key1:value1_key2:value2_ ...
     '''
-    s = sorted(artefact_extra_id.items(), key=lambda items: items[0])
+    items = [(k, str(v)) for k, v in artefact_extra_id.items()]
+    s = sorted(items, key=lambda items: items[0])
     return '_'.join([':'.join(values) for values in s])
 
 
