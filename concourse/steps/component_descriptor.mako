@@ -173,10 +173,10 @@ component_v2.resources.append(
       type=ocm.AccessType.OCI_REGISTRY,
       imageReference='${target_spec.image}' + ':' + effective_version,
     ),
-    labels=${image_descriptor.resource_labels()}
+    labels=${image_descriptor.resource_labels()},
     extraIdentity={
       'version': effective_version,
-    }
+    },
   ),
 )
 %   endfor
