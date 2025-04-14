@@ -908,7 +908,7 @@ class ArtefactMetadata:
 
     @staticmethod
     def from_dict(raw: dict):
-        return dacite.from_dict(
+        result = dacite.from_dict(
             data_class=ArtefactMetadata,
             data=raw,
             config=dacite.Config(
@@ -923,6 +923,13 @@ class ArtefactMetadata:
                 strict=True,
             ),
         )
+        if result.artefact.artefact.artefact_extra_id:
+            normalized_extra_id = {}
+            for k, v in result.artefact.artefact.artefact_extra_id.items():
+                normalized_extra_id[k] = str(v)
+            result.artefact.artefact.artefact_extra_id = normalized_extra_id
+
+        return result
 
     @property
     def key(self) -> str:
