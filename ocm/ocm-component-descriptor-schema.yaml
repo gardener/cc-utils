@@ -11,11 +11,28 @@ definitions:
       schemaVersion:
         type: 'string'
 
+  mergeSpec:
+    type: 'object'
+    properties:
+      algorithm:
+        pattern: '^[a-z][a-z0-9/_-]+$'
+      config: {}
+
   label:
     type: 'object'
     required:
       - 'name'
       - 'value'
+    properties:
+      name:
+        type: 'string'
+      value: {}
+      version:
+        pattern: '^v[0-9]+$'
+      signing:
+        type: 'boolean'
+      merge:
+        $ref: '#/definitions/mergeSpec'
 
   componentName:
     type: 'string'
@@ -152,6 +169,15 @@ definitions:
         description: 'The media type of the signature value'
         type: string
 
+  timestampSpec:
+    type: 'object'
+    properties:
+      value:
+        type: 'string'
+      time:
+        type: 'string'
+        format: 'date-time'
+
   signature:
     type: 'object'
     required:
@@ -165,6 +191,8 @@ definitions:
         $ref: '#/definitions/digestSpec'
       signature:
         $ref: '#/definitions/signatureSpec'
+      timestamp:
+        $ref: '#/definitions/timestampSpec'
 
   srcRef:
     type: 'object'
@@ -428,6 +456,37 @@ definitions:
 
     componentReferences: {}
 
+  nestedDigestSpec:
+    type: 'object'
+    required:
+      - 'name'
+    properties:
+      name:
+        type: 'string'
+      version:
+        type: 'string'
+      extraIdentity:
+        $ref: '#/definitions/identityAttribute'
+      digest:
+        $ref: '#/definitions/digestSpec'
+
+  nestedComponentDigests:
+    type: 'object'
+    required:
+      - 'name'
+      - 'version'
+    properties:
+      name:
+        $ref: '#/definitions/componentName'
+      version:
+        $ref: '#/definitions/relaxedSemver'
+      digest:
+        $ref: '#/definitions/digestSpec'
+      resourceDigests:
+        type: 'array'
+        items:
+          $ref: '#/definitions/nestedDigestSpec'
+
 
 type: 'object'
 required:
@@ -442,3 +501,7 @@ properties:
     type: 'array'
     items:
       $ref: '#/definitions/signature'
+  nestedDigests:
+    type: 'array'
+    items:
+      $ref: '#/definitions/nestedComponentDigests'
