@@ -640,10 +640,10 @@ except:
 % endif
 
 % if post_release_callback_path:
-invoke_post_release_callback(
-  git_helper=git_helper,
-  version=version_str,
-  post_release_callback='${post_release_callback_path}',
+_invoke_callback(
+  repo_dir=git_helper.repo.working_tree_dir,
+  effective_version=version_str,
+  callback_script_path='${post_release_callback_path}',
 )
 % endif
 </%def>
