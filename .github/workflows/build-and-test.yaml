@@ -216,6 +216,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - package
+      - params
     container:
       image: python:3.12-alpine
     steps:
@@ -255,6 +256,17 @@ jobs:
           echo "error while trying to install packages:"
           cat /tmp/pip3-install.log
         fi
+
+        pkg_dir=dist
+        mkdir -p ${pkg_dir}
+        echo "downloading bdba package"
+        bdba_version=$(sed -n "/componentName: ocm.software\/ocm-gear\/bdba-client/{n;s/^[[:space:]]*version:[[:space:]]*//p;}" .ocm/component-references.yaml)
+        ocm_repo="${{ needs.params.outputs.ocm-releases-repository }}"
+        python -m ocm download resource \
+          --ocm-repository "${ocm_repo}" \
+          --component "ocm.software/ocm-gear/bdba-client:${bdba_version}" \
+          --name bdba \
+          | tar xJ -C "${pkg_dir}"
 
         echo "running linters"
         blobs_dir=blobs.d
