@@ -244,7 +244,6 @@ jobs:
           --find-links /tmp/dist \
           gardener-cicd-libs \
           gardener-cicd-cli \
-          gardener-cicd-cfg-mgmt \
           'gardener-oci[async]' \
           gardener-ocm \
           bandit \
@@ -267,6 +266,14 @@ jobs:
           --component "ocm.software/ocm-gear/bdba-client:${bdba_version}" \
           --name bdba \
           | tar xJ -C "${pkg_dir}"
+
+        if ! pip3 install --pre --upgrade --break-system-packages \
+          --find-links dist \
+          gardener-cicd-cfg-mgmt \
+          > /tmp/pip3-install-cfg.log; then
+          echo "error while trying to install gardener-cicd-cfg-mgmt:"
+          cat /tmp/pip3-install-cfg.log
+        fi
 
         echo "running linters"
         blobs_dir=blobs.d
