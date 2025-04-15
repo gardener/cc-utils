@@ -224,6 +224,7 @@ class Label:
     version: str | None = None # OCM schema requires /^v[0-9]+$/
     signing: bool = False
     # merge: MergeSpec | None = None # `null` aka. `None` is not allowed by JSON-schema
+    # TODO when re-enabling: remove from normalisation again
 
 
 _no_default = object()

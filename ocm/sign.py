@@ -36,8 +36,6 @@ def normalise_label(
 
     if not label.version:
         del label_raw['version']
-    if not label.merge:
-        del label_raw['merge']
 
     return normalise_obj(label_raw)
 
