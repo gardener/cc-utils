@@ -238,7 +238,7 @@ def upload(parsed):
 def download(parsed):
     cname, cversion = parsed.component.split(':')
     oci_client = oci.client.Client(
-        credentials_lookup=oci.auth.docker_credentials_lookup(),
+        credentials_lookup=oci.auth.docker_credentials_lookup(absent_ok=True),
     )
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
