@@ -256,8 +256,7 @@ jobs:
           cat /tmp/pip3-install.log
         fi
 
-        pkg_dir=dist
-        mkdir -p ${pkg_dir}
+        pkg_dir=/tmp/dist
         echo "downloading bdba package"
         bdba_version=$(sed -n "/componentName: ocm.software\/ocm-gear\/bdba-client/{n;s/^[[:space:]]*version:[[:space:]]*//p;}" .ocm/component-references.yaml)
         ocm_repo="${{ needs.params.outputs.ocm-releases-repository }}"
@@ -268,7 +267,7 @@ jobs:
           | tar xJ -C "${pkg_dir}"
 
         if ! pip3 install --pre --upgrade --break-system-packages \
-          --find-links dist \
+          --find-links "${pkg_dir}" \
           gardener-cicd-cfg-mgmt \
           > /tmp/pip3-install-cfg.log; then
           echo "error while trying to install gardener-cicd-cfg-mgmt:"
