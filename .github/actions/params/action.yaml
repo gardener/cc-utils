@@ -34,9 +34,11 @@ outputs:
   ocm-releases-repository:
     description: |
       the OCM-Repository hosting (final) release-versions (returned independent from chosen mode)
+    value: ${{ steps.params.outputs.ocm-releases-repository }}
   is-fork:
     description: |
       true if current repository is a fork, else false
+    value: ${{ steps.params.outputs.is-fork }}
 
 runs:
   using: composite
