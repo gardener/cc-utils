@@ -50,8 +50,6 @@ def requirements():
         'pylama',
         'pylint',
         'python-gitlab',
-        'python-keystoneclient',
-        'python-swiftclient',
         'pytimeparse',
         'ruamel.yaml',
         'slackclient',
