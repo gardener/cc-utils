@@ -181,10 +181,14 @@ def normalise_component_descriptor(
     properties, calculating missing digests and converting properties to the format expected by the
     OCM-cli (i.e. extra-identity handling and datetime-format).
 
+    @param component_descriptor:
+        the component descriptor of which a normalised representation should be created
     @param component_descriptor_lookup:
         lookup for component descriptors by their identity
-    @param image_ref_to_digest_lookup:
-        used to retrieve the digest of an oci-resource by its image reference
+    @param access_to_digest_lookup:
+        used to retrieve the digest of an resource by its access specification
+    @param normalisation:
+        the algorithm used to create a normalised representation of the component descriptor
     '''
     component_descriptor_raw = dataclasses.asdict(component_descriptor)
 
@@ -209,14 +213,17 @@ def component_descriptor_digest(
     normalisation: ocm.NormalisationAlgorithm=ocm.NormalisationAlgorithm.JSON_NORMALISATION,
 ) -> str:
     '''
-    Calculates the hexdigest of the recursively normalised component descriptor. If an already
-    existing digest for a component reference or resource is found, this is assumed to be valid and
-    no re-calculation is performed. This must be done as part of the validation though.
+    Calculates the hexdigest of the recursively normalised component descriptor.
 
+    @param component_descriptor:
+        the component descriptor of which the digest should be calculated
     @param component_descriptor_lookup:
         lookup for component descriptors by their identity
-    @param image_ref_to_digest_lookup:
-        used to retrieve the digest of an oci-resource by its image reference
+    @param access_to_digest_lookup:
+        used to retrieve the digest of an resource by its access specification
+    @param normalisation:
+        the algorithm used to create a normalised representation of the component descriptor as
+        input for the digest calculation
     '''
     normalised_component_descriptor = normalise_component_descriptor(
         component_descriptor=component_descriptor,
