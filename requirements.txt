@@ -3,7 +3,6 @@ GitPython
 Mako<2.0.0
 Sphinx
 awesomeversion
-bcrypt<5.0.0
 cachecontrol<1
 cachetools
 cryptography
@@ -26,9 +25,7 @@ pylint
 pytest
 python-dateutil
 python-gitlab
-python-keystoneclient
 python-magic
-python-swiftclient
 pytimeparse
 pyyaml
 requests
