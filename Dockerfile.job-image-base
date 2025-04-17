@@ -50,8 +50,6 @@ if [ -z "${TARGETARCH}" ]; then TARGETARCH="amd64"; fi \
 &&  curl http://aia.pki.co.sap.com/aia/SAP%20Global%20Root%20CA.crt -o \
   /usr/local/share/ca-certificates/SAP_Global_Root_CA.crt \
 && echo "before second aia" \
-&& curl http://aia.pki.co.sap.com/aia/SAPNetCA_G2.crt -o \
-    /usr/local/share/ca-certificates/SAPNetCA_G2.crt \
 && curl -Lo /usr/local/share/ca-certificates/SAPNetCA_G2_2.crt \
     http://aia.pki.co.sap.com/aia/SAPNetCA_G2_2.crt \
 && update-ca-certificates \
