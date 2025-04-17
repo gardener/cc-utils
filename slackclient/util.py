@@ -132,6 +132,7 @@ def post_to_slack(
     except (RuntimeError, slack_sdk.errors.SlackApiError) as e:
         logger.warning(
             f'Unable to post release notes to Slack: {e}. Will dump generated notes next to '
-            'enable manually posting them.'
+            'enable manually posting them. hint: Slack disabled slack-bots, did you migrate to '
+            'slack-app already?'
         )
         print(release_notes_markdown)
