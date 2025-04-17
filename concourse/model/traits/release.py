@@ -267,6 +267,15 @@ ATTRIBUTES = (
         ''',
     ),
     AttributeSpec.optional(
+        name='post_release_callback',
+        default=None,
+        doc='''
+        an optional callback that is called after release creation. The callback is passed
+        the absolute path to the main repository's work tree via environment variable `REPO_DIR`.
+        Changes in the worktree are discarded, in contrast to `release_callback`
+        ''',
+    ),
+    AttributeSpec.optional(
         name='release_notes_policy',
         default=ReleaseNotesPolicy.DEFAULT.value,
         doc='''
@@ -400,6 +409,9 @@ class ReleaseTrait(Trait):
 
     def next_version_callback_path(self):
         return self.raw['next_version_callback']
+
+    def post_release_callback_path(self):
+        return self.raw['post_release_callback']
 
     def rebase_before_release(self):
         return self.raw['rebase_before_release']
