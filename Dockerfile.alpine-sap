@@ -1,4 +1,4 @@
-FROM alpine:3
+FROM alpine:edge
 
 RUN --mount=type=bind,source=ALPINE_SAP_VERSION,target=/ALPINE_SAP_VERSION \
     apk add --no-cache \
