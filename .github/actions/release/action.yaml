@@ -77,9 +77,14 @@ inputs:
     required: false
   github-token:
     description: |
-      the github-auth-token to use for authenticating against GitHub.
+      the github-auth-token to use for authenticating against GitHub and OCI-Registry.
       Use `secrets.GITHUB_TOKEN`
     required: true
+  git-push-token:
+    description: |
+      an auth-token to use for pushing release- and bump-commits. Must grant the privilege to
+      bypass branch-protection-rules, if present.
+    required: false
 
 defaults:
   run:
@@ -91,6 +96,8 @@ runs:
     - name: install-gardener-gha-libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - uses: actions/checkout@v4
+      with:
+        token: ${{ git-push-token || github-token }}
     - name: import-release-commit
       uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
