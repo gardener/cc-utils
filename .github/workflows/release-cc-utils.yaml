@@ -22,41 +22,25 @@ jobs:
 
 
   release-to-github-and-bump:
+    uses: ./.github/workflows/release.yaml
+    needs:
+      - build
+    with:
+      component-descriptor: ${{ needs.build.outputs.base-component-descriptor }}
+      release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
+      release-commit-target: branch
+      next-version: bump-minor
+
+  publish-documentation:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
-      id-token: write
+      packages: read
     needs:
       - build
+
     steps:
       - uses: actions/checkout@v4
-      - name: collect-component-descriptor
-        id: component-descriptor
-        uses: ./.github/actions/merge-ocm-fragments
-        with:
-          component-descriptor: ${{ needs.build.outputs.base-component-descriptor }}
-          output: /tmp/ocm
-      - uses: ./.github/actions/release-notes
-        id: release-notes
-        with:
-          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-      - uses: ./.github/actions/release
-        with:
-          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
-          component-descriptor-blobs-dir: /tmp/ocm/blobs.d
-          release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
-          release-commit-digest: ${{ needs.build.outputs.version-commit-digest }}
-          release-commit-target: branch
-          version-read-callback: .ci/read-version
-          version-write-callback: .ci/write-version
-          next-version: bump-minor
-          next-version-commit-message: "next version: ${version}"
-          release-notes: ${{ steps.release-notes.outputs.release-notes }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Retrieve Documentation
         uses: actions/download-artifact@v4
         with:
