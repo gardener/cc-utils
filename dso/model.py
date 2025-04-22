@@ -460,6 +460,24 @@ class OsIdFinding(Finding):
     def key(self) -> str:
         return _as_key(self.osid.ID)
 
+    @property
+    def status_description(self) -> str:
+        if self.os_status is OsStatus.BRANCH_REACHED_EOL:
+            return 'Branch has reached end-of-life'
+        elif self.os_status is OsStatus.MORE_THAN_ONE_PATCHLEVEL_BEHIND:
+            return 'Image is more than one patchlevel behind'
+        elif self.os_status is OsStatus.AT_MOST_ONE_PATCHLEVEL_BEHIND:
+            return 'Image is at most one patchlevel behind'
+        elif self.os_status in (
+            OsStatus.EMPTY_OS_ID,
+            OsStatus.NO_BRANCH_INFO,
+            OsStatus.NO_RELEASE_INFO,
+            OsStatus.UNABLE_TO_COMPARE_VERSION,
+        ):
+            return f'No valid OS scan result ({self.os_status})'
+        else:
+            return 'Unknown OSID status'
+
 
 @dataclasses.dataclass(frozen=True)
 class RescoreOsIdFinding:
