@@ -1,0 +1,91 @@
+name: Release
+description: |
+  An opinionated re-usable workflow for Gardener-Release-Pipelines. Release-Pipelines based on
+  this workflow:
+
+    - publish OCM-Component-Descriptors
+    - push tags, GitHub-Releases, and "bump-commits"
+    - collect release-notes (based on `gardener/cc-utils/.github/actions/release-notes` action)
+
+  Note: This workflow assumes there is a GitHub-App granting the privileges to "write contents" (
+  for "git-push"), in addition to declared privileges for GitHub-Action-Token. Said application is
+  also required to be added to `bypassers` for any configured branch-protection-rules (or, to be more
+  precise: rulesets, as "classic" branch-protections do not allow this).
+
+  The GitHub-App's ID is read from `vars.GARDENER_GITHUB_ACTIONS_APP_ID` (org-variable), and its
+  private-key is read from `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`).
+
+on:
+  workflow_call:
+    inputs:
+      component-descriptor:
+        required: true
+        type: string
+        description: |
+          A base-component-descriptor, as output from `base-component-descriptor.yaml` workflow.
+          Additional Component-Descriptor-Fragments as exported from the `export-ocm-fragments`
+          action will be merged into it (i.e. callers do not need to take care of this).
+      release-commit-objects:
+        required: true
+        type: string
+        description: |
+          The release-commit (created from build-job) to publish. The expected format matches the
+          one emitted by the `capture-commit` action; i.e. the value is expected to be a base64
+          encoded TARchive containing all objects belonging to the commit, as taken from `.git`
+          directory after commit was created.
+      release-commit-target:
+        required: false
+        default: branch
+        type: string
+        description: |
+          Where the relase-commit should be published to. Passed to `release` action's equally-named
+          input. Allowed values are:
+            - branch # will push to same branch the workflow was run for
+            - tag # will push release-commit to release-tag
+      next-version:
+        required: false
+        default: bump-minor
+        type: string
+        description: |
+          How the next version (from bump-commit) should be calculated. Will be passed to `version`
+          action. (some) allowed values are:
+            - bump-major
+            - bump-minor
+            - bump-patch
+jobs:
+  release-and-bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+
+    steps:
+      - name: collect-component-descriptor
+        id: component-descriptor
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        with:
+          component-descriptor: ${{ inputs.component-descriptor }}
+          output: /tmp/ocm
+      - uses: gardener/cc-utils/.github/actions/release-notes@master
+        id: release-notes
+        with:
+          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+      - uses: gardener/cc-utils/.github/actions/release@master
+        with:
+          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+          component-descriptor-blobs-dir: /tmp/ocm/blobs.d
+          release-commit-objects: ${{ inputs.release-commit-objects }}
+          release-commit-target: ${{ inputs.release-commit-target }}
+          next-version: ${{ inputs.next-version }}
+          next-version-commit-message: "next version: ${version}"
+          release-notes: ${{ steps.release-notes.outputs.release-notes }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          git-push-token: ${{ steps.app-token.outputs.token }}
