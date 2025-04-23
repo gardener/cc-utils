@@ -7,8 +7,6 @@ jobs:
     uses: ./.github/workflows/build-and-test.yaml
     with:
       mode: snapshot
-      version-prerelease: "${commit_digest}"
-      version-commit-message: "build ${version}"
   component-descriptor:
     runs-on: ubuntu-latest
     needs:

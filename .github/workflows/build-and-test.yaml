@@ -9,21 +9,6 @@ on:
         default: snapshot
         description: |
           the "mode" to use. passed to `prepare` (currently for selecting  target-registries)
-      version-prerelease:
-        required: true
-        type: string
-        description: |
-          the prerelease-version to set for effective version (see version-action)
-
-          reasonable values:
-          one of:
-          - '' (empty string): -> finalise version
-          - "${commit_digest}" -> current head-commit-digest (for head-update / pullrequest-builds)
-          - "${epoch}" -> unix-epoch in seconds
-      version-commit-message:
-        required: false
-        type: string
-        default: "build ${version}"
 
     outputs:
       version-commit-objects:
