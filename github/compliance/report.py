@@ -516,7 +516,7 @@ def create_or_update_github_issues(
                     f'issue. Remaining assignees: {assignees}'
                 )
 
-            latest_processing_date = None
+            due_date = None
             target_milestone = None
             failed_milestones = []
 
@@ -524,16 +524,12 @@ def create_or_update_github_issues(
                 try:
                     if not max_processing_days:
                         max_processing_days = gcm.MaxProcessingTimesDays()
-                    max_days = max_processing_days.for_severity(
-                        criticality_classification,
-                    )
-                    latest_processing_date = datetime.date.today() + datetime.timedelta(
-                        days=max_days,
-                    )
+                    max_days = max_processing_days.for_severity(criticality_classification)
+                    due_date = datetime.date.today() + datetime.timedelta(days=max_days)
 
                     target_sprints = gcmi.target_sprints(
                         delivery_svc_client=delivery_svc_client,
-                        latest_processing_date=latest_processing_date,
+                        due_date=due_date,
                         sprints_count=2,
                     )
                     target_milestone, failed_milestones = gcmi.find_or_create_sprint_milestone(
@@ -542,7 +538,7 @@ def create_or_update_github_issues(
                     )
 
                     if target_milestone:
-                        latest_processing_date = target_milestone.due_on.date()
+                        due_date = target_milestone.due_on.date()
                 except Exception as e:
                     import traceback
                     traceback.print_exc()
@@ -581,7 +577,7 @@ def create_or_update_github_issues(
                     assignees_statuses=assignees_statuses,
                     milestone=target_milestone,
                     failed_milestones=failed_milestones,
-                    latest_processing_date=latest_processing_date,
+                    due_date=due_date,
                     ctx_labels=ctx_labels,
                     preserve_labels_regexes=preserve_labels_regexes,
                     known_issues=known_issues,

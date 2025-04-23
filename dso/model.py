@@ -738,12 +738,12 @@ class ComplianceSnapshotState:
 
 @dataclasses.dataclass(frozen=True)
 class ComplianceSnapshot:
-    latest_processing_date: datetime.date
+    due_date: datetime.date
     state: list[ComplianceSnapshotState]
 
     @property
     def key(self) -> str:
-        return self.latest_processing_date.isoformat()
+        return self.due_date.isoformat()
 
     def current_state(
         self,
