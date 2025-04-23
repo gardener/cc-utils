@@ -25,6 +25,8 @@ jobs:
     uses: ./.github/workflows/release.yaml
     needs:
       - build
+    secrets:
+      github-app-secret-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
     with:
       component-descriptor: ${{ needs.build.outputs.base-component-descriptor }}
       release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
