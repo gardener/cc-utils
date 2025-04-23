@@ -157,7 +157,7 @@ def _create_issue(
     assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
     failed_milestones: list[github3.issues.milestone.Milestone]=[],
-    latest_processing_date: datetime.date|datetime.datetime=None,
+    due_date: datetime.date|datetime.datetime=None,
 ) -> github3.issues.issue.ShortIssue:
     assignees = tuple(assignees)
 
@@ -176,9 +176,9 @@ def _create_issue(
             labels=sorted(labels),
         )
 
-        if latest_processing_date:
-            latest_processing_date = latest_processing_date.isoformat()
-            issue.create_comment(f'{latest_processing_date=}')
+        if due_date:
+            due_date = due_date.isoformat()
+            issue.create_comment(f'{due_date=}')
 
         if assignees_statuses:
             comment_body = textwrap.dedent('''\
@@ -294,7 +294,7 @@ def create_or_update_issue(
     assignees_statuses: set[delivery.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
     failed_milestones: list[github3.issues.milestone.Milestone]=[],
-    latest_processing_date: datetime.date=None,
+    due_date: datetime.date=None,
     extra_labels: typing.Iterable[str]=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     ctx_labels: typing.Iterable[str]=(),
@@ -341,7 +341,7 @@ def create_or_update_issue(
             assignees_statuses=assignees_statuses,
             milestone=milestone,
             failed_milestones=failed_milestones,
-            latest_processing_date=latest_processing_date,
+            due_date=due_date,
         )
     elif issues_count == 1:
 
