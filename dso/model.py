@@ -695,6 +695,12 @@ class MetaRescoringRules(enum.StrEnum):
 
 @dataclasses.dataclass(frozen=True)
 class CustomRescoring:
+    '''
+    The `allowed_processing_time` is stored relatively to allow the rescoring to apply to findings
+    with different discovery dates, i.e. in case the rescoring is of scope "global" or "component".
+    Alternatively, the explicit `due_date` can be set in case the `due_date` is independent of the
+    individual discovery dates (for example, this might be the case if exceptions apply).
+    '''
     finding: (
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
@@ -712,6 +718,8 @@ class CustomRescoring:
     )
     matching_rules: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
+    allowed_processing_time: str | None = None
+    due_date: datetime.date | None = None
 
     @property
     def key(self) -> str:
@@ -721,6 +729,8 @@ class CustomRescoring:
             self.user.key,
             self.comment,
             self.finding.key,
+            self.allowed_processing_time,
+            self.due_date.strftime('%Y-%m-%d') if self.due_date else None,
         )
 
 
@@ -922,6 +932,7 @@ class ArtefactMetadata:
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
+    allowed_processing_time: str | None = None
 
     @staticmethod
     def from_dict(raw: dict):
