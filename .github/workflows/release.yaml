@@ -72,7 +72,7 @@ jobs:
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
-          output: /tmp/ocm
+          outdir: /tmp/ocm
       - uses: gardener/cc-utils/.github/actions/release-notes@master
         id: release-notes
         with:
