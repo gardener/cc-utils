@@ -108,6 +108,7 @@ runs:
         base_component = base_component_descriptor.fill_in_defaults(
           component=base_component,
           name=f'{server_host}/{repo_path}',
+          version=version,
           provider='${{ inputs.provider }}',
           ocm_repo='${{ inputs.ocm-repository }}',
           main_source=ocm.Source(

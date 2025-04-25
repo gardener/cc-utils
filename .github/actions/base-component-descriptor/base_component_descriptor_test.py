@@ -66,6 +66,7 @@ def test_fill_in_defaults():
     component = bcd.fill_in_defaults(
         component=component,
         name='other-name',
+        version='other-version',
         provider='other-provider',
         ocm_repo='other-ocm-repo',
         main_source=dummy_source2,
@@ -87,6 +88,7 @@ def test_fill_in_defaults():
     component = bcd.fill_in_defaults(
         component=component,
         name='other-name',
+        version='other-version',
         provider='other-provider',
         ocm_repo='other-ocm-repo',
         main_source=dummy_source2,

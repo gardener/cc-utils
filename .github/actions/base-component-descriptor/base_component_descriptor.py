@@ -80,11 +80,14 @@ def load_base_component(
 def fill_in_defaults(
     component: BaseComponent,
     name: str,
+    version: str,
     provider: str,
     ocm_repo: str,
     main_source: ocm.Source,
     creation_time: datetime.datetime,
 ) -> BaseComponent:
+    if not component.version:
+        component.version = version
     if not component.name:
         component.name = name
 
