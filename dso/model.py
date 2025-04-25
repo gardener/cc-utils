@@ -11,7 +11,6 @@ import cnudie.iter
 import dso.cvss
 import dso.labels
 import ocm
-import unixutil.model
 
 
 def _as_key(
@@ -61,7 +60,6 @@ class Datasource:
     BDBA = 'bdba'
     SAST = 'sast'
     CLAMAV = 'clamav'
-    CC_UTILS = 'cc-utils'
     OSID = 'osid'
     CRYPTO = 'crypto'
     DELIVERY_DASHBOARD = 'delivery-dashboard'
@@ -90,9 +88,6 @@ class Datasource:
             Datasource.CLAMAV: (
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.MALWARE_FINDING,
-            ),
-            Datasource.CC_UTILS: (
-                Datatype.OS_IDS,
             ),
             Datasource.OSID: (
                 Datatype.OSID,
@@ -274,7 +269,6 @@ class Datatype:
     MALWARE_FINDING = 'finding/malware'
     SAST_FINDING = 'finding/sast'
     DIKI_FINDING = 'finding/diki'
-    OS_IDS = 'os_ids'
     OSID_FINDING = 'finding/osid'
     OSID = 'osid'
     RESCORING = 'rescorings'
@@ -290,7 +284,6 @@ class Datatype:
         return {
             Datatype.LICENSE: Datasource.BDBA,
             Datatype.VULNERABILITY: Datasource.BDBA,
-            Datatype.OS_IDS: Datasource.CC_UTILS,
             Datatype.OSID: Datasource.OSID,
             Datatype.MALWARE_FINDING: Datasource.CLAMAV,
             Datatype.DIKI_FINDING: Datasource.DIKI,
@@ -311,9 +304,28 @@ class Metadata:
     last_update: datetime.datetime | str | None = None
 
 
-@dataclasses.dataclass(frozen=True)
-class OsID:
-    os_info: unixutil.model.OperatingSystemId
+@dataclasses.dataclass
+class OperatingSystemId:
+    '''
+    Operating System identification, as specified in:
+    https://www.freedesktop.org/software/systemd/man/os-release.html
+    '''
+    NAME: str | None = None
+    ID: str | None = None
+    PRETTY_NAME: str | None = None
+    CPE_NAME: str | None = None
+    VARIANT: str | None = None
+    VARIANT_ID: str | None = None
+    VERSION: str | None = None
+    VERSION_ID: str | None = None
+    VERSION_CODENAME: str | None = None
+    BUILD_ID: str | None = None
+    IMAGE_ID: str | None = None
+    IMAGE_VERSION: str | None = None
+
+    @property
+    def is_distroless(self) -> bool:
+        return self.PRETTY_NAME == 'Distroless'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -451,7 +463,7 @@ class RescoreSastFinding:
 
 @dataclasses.dataclass(frozen=True)
 class OsIdFinding(Finding):
-    osid: unixutil.model.OperatingSystemId
+    osid: OperatingSystemId
     os_status: OsStatus
     greatest_version: str | None
     eol_date: datetime.datetime | None
@@ -481,7 +493,7 @@ class OsIdFinding(Finding):
 
 @dataclasses.dataclass(frozen=True)
 class RescoreOsIdFinding:
-    osid: unixutil.model.OperatingSystemId
+    osid: OperatingSystemId
 
     @property
     def key(self) -> str:
@@ -921,7 +933,6 @@ class ArtefactMetadata:
         | ClamAVMalwareFinding
         | SastFinding
         | DikiFinding
-        | OsID
         | OsIdFinding
         | CustomRescoring
         | ComplianceSnapshot

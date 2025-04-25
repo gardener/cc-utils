@@ -102,14 +102,6 @@ class DeliveryServiceRoutes:
             'query',
         )
 
-    def os_branches(self, os_id: str):
-        return ci.util.urljoin(
-            self._base_url,
-            'os',
-            os_id,
-            'branches',
-        )
-
     def components_metadata(self):
         return ci.util.urljoin(
             self._base_url,
@@ -598,22 +590,6 @@ class DeliveryServiceClient:
             dso.model.ArtefactMetadata.from_dict(raw)
             for raw in artefact_metadata_raw
         )
-
-    def os_release_infos(self, os_id: str, absent_ok=False) -> list[dm.OsReleaseInfo]:
-        url = self._routes.os_branches(os_id=os_id)
-
-        res = self.request(
-            url=url,
-        )
-
-        if not absent_ok:
-            res.raise_for_status()
-        elif not res.ok:
-            return None
-
-        return [
-            dm.OsReleaseInfo.from_dict(ri) for ri in res.json()
-        ]
 
     def components_metadata(
         self,

@@ -7,7 +7,6 @@ import typing
 
 import cnudie.iter
 import ocm
-import unixutil.model
 
 
 class Severity(enum.IntEnum):
@@ -87,12 +86,6 @@ class ScanResult:
     @property
     def scan_succeeded(self) -> bool:
         return self.state in [ScanState.SUCCEEDED, ScanState.SKIPPED]
-
-
-@dataclasses.dataclass
-class OsIdScanResult(ScanResult):
-    os_id: unixutil.model.OperatingSystemId
-    skip_upload_to_deliverydb: bool = False
 
 
 @dataclasses.dataclass

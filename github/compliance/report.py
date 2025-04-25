@@ -160,27 +160,6 @@ def _ocm_result_group_template_vars(
     }
 
 
-def _os_info_template_vars(
-    result_group: gcm.ScanResultGroup,
-) -> dict:
-    worst_result = result_group.worst_result
-    worst_result: gcm.OsIdScanResult
-    os_info = worst_result.os_id
-    os_name_and_version = f'{os_info.ID}:{os_info.VERSION_ID}'
-    component = result_group.component
-    artifacts = [gcm.artifact_from_node(res.scanned_element) for res in result_group.results]
-
-    return {
-        'summary': _compliance_status_summary(
-            component=component,
-            artifacts=artifacts,
-            issue_value=os_name_and_version,
-            issue_description='Outdated OS-Version',
-            report_urls=(),
-        ),
-    }
-
-
 def _cfg_policy_violation_template_vars(result_group: gcm.ScanResultGroup) -> dict:
     results: tuple[gcm.CfgScanResult] = result_group.results_with_findings
     result = results[0]
@@ -235,10 +214,7 @@ def _template_vars(
             'cfg_element_qualified_name': scanned_element.name,
         }
 
-    if issue_type == _compliance_label_os_outdated:
-        template_variables |= _os_info_template_vars(result_group)
-
-    elif issue_type in (
+    if issue_type in (
         _compliance_label_credentials_outdated,
         _compliance_label_no_responsible,
         _compliance_label_no_rule,
