@@ -149,6 +149,6 @@ runs:
             ## Base-Component-Descriptor
 
             ```
-            {component_descriptor_str}
+            {textwrap.indent(component_descriptor_str, '  ')}
             ```
           '''))
