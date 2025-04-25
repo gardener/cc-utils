@@ -1,0 +1,154 @@
+name: OCM Base-Component-Descriptor
+description: |
+  Creates a base-component-descriptor, using metadata available from repository, default values,
+  as well as configuration read from an optional "Base Component" file, which is by default
+  expected at `.ocm/base-component.yaml`.
+
+  From said file, if present, values for Base-Component-Descriptor can be specified. With the
+  exception of `version`, and `creationTime`, all attributes valid for OCM Components can be
+  specified.
+
+  In addition, there is a shorthand for defining values for "main source" (which holds a reference
+  to repository-snapshot of current pipeline-run), named `main-source`.
+
+  A Base-Component-File might look like so:
+
+  ```
+  # set a custom component-name (defaults to repo-url if not specified)
+  name: acme.org/my-custom/component-name
+
+  # set a custom label for main-source using short-hand
+  main-source:
+    labels:
+      - name: my-custom-label
+        value: 42
+  ```
+
+inputs:
+  base-component:
+    required: false
+    type: string
+    default: .ocm/base-component.yaml
+    description: |
+      path to an optional base-component-file.
+
+      If a path different from default is passed, this is considered an error, otherwise presence
+      of base-component file is optional.
+  version:
+    required: true
+    type: string
+    description: |
+      the effective version to use
+  ocm-repository:
+    required: true
+    type: string
+    description: |
+      the OCM-Repository the Component-Descriptor is intended to be published to. Will be added
+      as first (and only) entry into the `repositoryContexts` attribute, unless there is already
+      an entry in base-component YAML document (which has predecence).
+  commit-digest:
+    required: false
+    type: string
+    description: |
+      the commit-digest for the commit the resulting component-descriptor should be published for.
+      if not passed-in, defaults to current HEAD.
+  provider:
+    required: false
+    type: string
+    default: SAP SE
+
+outputs:
+  component-descriptor:
+    description: |
+      the base-component-descriptor
+    value: ${{ steps.base-component-descriptor.outputs.component-descriptor }}
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: base-component-descriptor
+      id: base-component-descriptor
+      shell: python
+      run: |
+        import os
+        import sys
+
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import datetime
+        import textwrap
+        import urllib.parse
+
+        import yaml
+
+        import ocm
+
+        import base_component_descriptor
+
+        base_component_path = '${{ inputs.base-component }}'
+        version = '${{ inputs.version }}'
+        server_host = urllib.parse.urlparse('${{ github.server_url }}').hostname
+        repo_path = '${{ github.repository }}'
+
+        commit = '${{ inputs.commit-digest || github.sha }}'
+
+        if not os.path.isfile(base_component_path):
+          if base_component_path == '.ocm/base-component.yaml':
+            print(f'not a file: {base_component_path=} (will continue w/o custom values)')
+          else:
+            print(f'Error: {base_component_path=} is not a file')
+            exit(1)
+
+        base_component = base_component_descriptor.load_base_component(
+          path=base_component_path,
+          absent_ok=True,
+        )
+
+        base_component = base_component_descriptor.fill_in_defaults(
+          component=base_component,
+          name=f'{server_host}/{repo_path}',
+          provider='${{ inputs.provider }}',
+          ocm_repo='${{ inputs.ocm-repository }}',
+          main_source=ocm.Source(
+            name='main-source',
+            version=version,
+            type=ocm.ArtefactType.GIT,
+            access=ocm.GithubAccess(
+              repoUrl=f'{server_host}/{repo_path}',
+              commit=commit,
+              ref='${{ github.ref }}',
+            ),
+            labels=[
+              ocm.Label(
+                name='cloud.gardener/cicd/source',
+                value={
+                  'repository-classification': 'main',
+                },
+              ),
+            ],
+          ),
+          creation_time=datetime.datetime.now(),
+        )
+
+        base_component_dict = base_component_descriptor.as_component_descriptor_dict(
+          component=base_component,
+        )
+        component_descriptor_str = yaml.dump(
+            data=base_component_dict,
+            Dumper=ocm.EnumValueYamlDumper,
+        )
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write('component-descriptor<<EOF\n')
+          f.write(component_descriptor_str)
+          f.write('EOF\n')
+
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+          f.write(textwrap.dedent(f'''\
+            ## Base-Component-Descriptor
+
+            ```
+            {component_descriptor_str}
+            ```
+          '''))
