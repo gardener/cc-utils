@@ -102,13 +102,6 @@ class DeliveryServiceRoutes:
             'query',
         )
 
-    def components_metadata(self):
-        return ci.util.urljoin(
-            self._base_url,
-            'components',
-            'metadata',
-        )
-
     def cache(self):
         return ci.util.urljoin(
             self._base_url,
@@ -590,112 +583,6 @@ class DeliveryServiceClient:
             dso.model.ArtefactMetadata.from_dict(raw)
             for raw in artefact_metadata_raw
         )
-
-    def components_metadata(
-        self,
-        component_name: str,
-        component_version: str=None,
-        metadata_types: list[str]=[], # empty list returns _all_ metadata-types
-        select: str=None, # either `greatestVersion` or `latestDate`
-    ) -> list[dso.model.ArtefactMetadata]:
-        '''
-        returns a list of artifact-metadata for the given component
-
-        One of 'select' and 'component_version' must be given. However, if 'select' is given as
-        `greatestVersion`, 'version' must _not_ be given.
-        '''
-        url = self._routes.components_metadata()
-
-        resp = self.request(
-            url=url,
-            params={
-                'name': component_name,
-                'version': component_version,
-                'type': metadata_types,
-                'select': select,
-            },
-            timeout=(4, 121),
-        )
-
-        resp.raise_for_status()
-
-        return [
-            dso.model.ArtefactMetadata.from_dict(raw)
-            for raw in resp.json()
-        ]
-
-    def artefact_metadata_for_resource_node(
-        self,
-        resource_node: 'cnudie.iter.ResourceNode',
-        types: list[str],
-    ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
-        '''Return an iterable that contains all stored `ArtefactMetadata` of the given type for the
-        given resource node.
-
-        For possible values for `type` see `dso.model.Datatype`.
-        '''
-
-        component = resource_node.component
-        resource = resource_node.resource
-
-        for component_metadata in self.components_metadata(
-            component_name=component.name,
-            metadata_types=types,
-            component_version=component.version,
-        ):
-            if not component_metadata.artefact.component_name == component.name:
-                continue
-            if not component_metadata.artefact.artefact.artefact_name == resource.name:
-                continue
-            if not component_metadata.artefact.artefact.artefact_version == resource.version:
-                continue
-
-            yield component_metadata
-
-    def metadata(
-        self,
-        component: cnudie.retrieve.ComponentName=None,
-        artefact: str=None,
-        node: cnudie.iter.Node=None,
-        types: collections.abc.Iterable[str]=None,
-    ) -> collections.abc.Generator[dso.model.ArtefactMetadata, None, None]:
-        if component:
-            component = cnudie.util.to_component_id(component)
-
-        if types:
-            types = tuple(types)
-
-        if not (bool(component) ^ bool(node)):
-            raise ValueError('exactly one of component, node must be passed')
-
-        if node:
-            component = node.component
-            artefact = node.artefact
-
-        if isinstance(artefact, ocm.Artifact):
-            artefact_name = artefact.name
-            artefact_version = artefact.version
-        elif isinstance(artefact, str):
-            artefact_name = artefact
-            artefact_version = None
-
-        for metadata in self.components_metadata(
-            component_name=component.name,
-            component_version=component.version,
-            metadata_types=types,
-        ):
-            if not artefact:
-                yield metadata
-                continue
-
-            # todo: also check for artefact-type + consider version is an optional attr
-            #       + consider extra-id (keep it simple for now)
-            artefact_id = metadata.artefact.artefact
-            if artefact_name and artefact_id.artefact_name != artefact_name:
-                continue
-            if artefact_version and artefact_id.artefact_version != artefact_version:
-                continue
-            yield metadata
 
     def mark_cache_for_deletion(
         self,
