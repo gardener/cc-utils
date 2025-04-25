@@ -41,16 +41,21 @@ on:
 
       version:
         description: the effective version
-        value: ${{ jobs.version.outputs.version }}
+        value: ${{ jobs.version-and-ocm.outputs.version }}
 
       version-commit-objects:
         description: |
           The created version-change-commit in serialised form as output by `capture-commit`.
-        value: ${{ jobs.version.outputs.commit-objects }}
+        value: ${{ jobs.version-and-ocm.outputs.commit-objects }}
       version-commit-digest:
         description: |
           The commit-digest of the version-change-commit.
-        value: ${{ jobs.version.outputs.commit-digest }}
+        value: ${{ jobs.version-and-ocm.outputs.commit-digest }}
+
+      component-descriptor:
+        description: |
+          A base-component-descriptor, as output by `base-component-descriptor` action.
+        value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
 
 jobs:
   params:
@@ -68,7 +73,7 @@ jobs:
           mode: ${{ inputs.mode }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
 
-  version:
+  version-and-ocm:
     runs-on: ubuntu-latest
     needs:
       - params
@@ -76,7 +81,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       commit-objects: ${{ steps.version.outputs.commit-objects }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
-      base-component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
       - uses: actions/checkout@v4
       - name: preprocess-params

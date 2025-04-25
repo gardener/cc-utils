@@ -24,7 +24,7 @@ on:
         description: |
           the base OCM Component-Descriptor in YAML-format (use `merge-ocm-fragments`-action
           to collect full component-descriptor):
-        value: ${{ jobs.base-component-descriptor.outputs.component-descriptor }}
+        value: ${{ jobs.prepare.outputs.component-descriptor }}
 
 jobs:
   prepare:
@@ -146,34 +146,6 @@ jobs:
         name: distribution-packages
         path: distribution-packages.tar.gz
 
-  base-component-descriptor:
-    name: Generate Base-OCM-Component-Descriptor
-    needs:
-      - prepare
-    uses: ./.github/workflows/base-component-descriptor.yaml
-    with:
-      version: ${{ needs.prepare.outputs.version }}
-      component-name: 'github.com/gardener/cc-utils'
-      ocm-repo: ${{ needs.prepare.outputs.ocm-repository }}
-      commit-digest: ${{ needs.prepare.outputs.version-commit-digest }}
-      labels: |
-        name: cloud.gardener.cnudie/responsibles
-        value:
-          - type: githubTeam
-            teamname: gardener/ci-maintainers
-            github_hostname: github.com
-      src-labels: |
-        - name: gardener.cloud/purposes
-          value:
-            - lint
-            - sast
-            - pybandit
-        - name: gardener.cloud/comment
-          value: |
-            we use bandit (linter) for SAST scans
-            see: https://bandit.readthedocs.io/en/latest/
-      component-references-file: '.ocm/component-references.yaml'
-
   update-draft-relase:
     if: ${{ inputs.mode != 'release' &&
           github.ref_name == github.event.repository.default_branch &&
@@ -181,10 +153,9 @@ jobs:
       }}
     needs:
       - prepare
-      - base-component-descriptor
     uses: ./.github/workflows/draft-release.yaml
     with:
-      component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+      component-descriptor: ${{ needs.prepare.outputs.component-descriptor }}
       ocm-repositories: ${{ needs.prepare.outputs.ocm-releases-repository }}
 
   lint:
@@ -212,6 +183,7 @@ jobs:
           cat /tmp/apk.log
           exit 1
         fi
+        apk add yq
         tar xf distribution-packages.tar.gz -C /tmp
         echo "installing linters"
         export CFLAGS='-Wno-int-conversion'
@@ -233,7 +205,11 @@ jobs:
 
         pkg_dir=/tmp/dist
         echo "downloading bdba package"
-        bdba_version=$(sed -n "/componentName: ocm.software\/ocm-gear\/bdba-client/{n;s/^[[:space:]]*version:[[:space:]]*//p;}" .ocm/component-references.yaml)
+        bdba_version=$(
+          yq \
+          '.componentReferences[] | select(.name == "bdba" ).version' \
+          .ocm/base-component.yaml
+        )
         ocm_repo="${{ needs.prepare.outputs.ocm-releases-repository }}"
         python -m ocm download resource \
           --ocm-repository "${ocm_repo}" \
