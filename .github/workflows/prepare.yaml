@@ -1,7 +1,9 @@
 name: Prepare
 description: |
-  An opinionated workflow that will output target OCI Registries / OCM Repositories, as well as
-  calculate an effective version (and create a commit for switching to this version).
+  An opinionated workflow that will
+  - output target OCI Registries / OCM Repositories
+  - calculate an effective version (and create a commit for switching to this version)
+  - create a base OCM Component-Descriptor
 
 on:
   workflow_call:
@@ -68,10 +70,13 @@ jobs:
 
   version:
     runs-on: ubuntu-latest
+    needs:
+      - params
     outputs:
       version: ${{ steps.version.outputs.version }}
       commit-objects: ${{ steps.version.outputs.commit-objects }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
+      base-component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
       - uses: actions/checkout@v4
       - name: preprocess-params
@@ -95,3 +100,10 @@ jobs:
         with:
           prerelease: ${{ steps.pre.outputs.prerelease }}
           commit-message: ${{ steps.pre.outputs.commit-message }}
+      - uses: ./.github/actions/base-component-descriptor
+        id: component-descriptor
+        with:
+          base-component: .ocm/base-component.yaml
+          version: ${{ steps.version.outputs.version }}
+          ocm-repository: ${{ needs.params.outputs.ocm-repository }}
+          commit-digest: ${{ steps.version.outputs.commit-digest }}
