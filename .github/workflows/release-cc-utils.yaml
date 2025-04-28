@@ -25,7 +25,6 @@ jobs:
     secrets:
       github-app-secret-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
     with:
-      release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
       release-commit-target: branch
       next-version: bump-minor
 

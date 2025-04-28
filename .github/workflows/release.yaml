@@ -35,13 +35,17 @@ on:
           If not passed, an artefact named `base-component-descriptor` will be assumed to
           exist, and used as default / fallback.
       release-commit-objects:
-        required: true
+        required: false
         type: string
         description: |
           The release-commit (created from build-job) to publish. The expected format matches the
           one emitted by the `capture-commit` action; i.e. the value is expected to be a base64
           encoded TARchive containing all objects belonging to the commit, as taken from `.git`
           directory after commit was created.
+
+          If not passed, the action will fallback to expecting the commit-objects having been
+          uploaded into an artefact named `release-commit-objects` (which the `prepare.yaml`)
+          workflow does by default.
       release-commit-target:
         required: false
         default: branch
@@ -92,6 +96,7 @@ jobs:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           component-descriptor-blobs-dir: /tmp/ocm/blobs.d
           release-commit-objects: ${{ inputs.release-commit-objects }}
+          release-commit-objects-artefact: release-commit-objects
           release-commit-target: ${{ inputs.release-commit-target }}
           next-version: ${{ inputs.next-version }}
           next-version-commit-message: "next version: ${version}"
