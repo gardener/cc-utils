@@ -21,6 +21,17 @@ inputs:
     description: |
       The (base) component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
       one will be created.
+  component-descriptor-artefact:
+    required: false
+    type: string
+    description: |
+      If passed, the passed name is assumed to refer to an (existing) artefact of this name,
+      containing a (base) component-descriptor, as output by the `base-component-descriptor`
+      action.
+
+      I.e. it must contain (at least) a file named `component-descriptor.tar.gz`, which in turn
+      must (at least) contain a file `component-descriptor.yaml`, which is used as base
+      component-descriptor.
   ctx:
     required: false
     type: string
@@ -66,6 +77,29 @@ runs:
         cat <<EOF > "${{ inputs.outdir }}/base-component-descriptor.yaml"
         ${{ inputs.component-descriptor }}
         EOF
+    - name: import-component-descriptor-artefact
+      if: ${{ inputs.component-descriptor-artefact }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.component-descriptor-artefact }}
+    - name: extract-component-descriptor-artefact
+      if: ${{ inputs.component-descriptor-artefact }}
+      shell: bash
+      run: |
+        archive=component-descriptor.tar.gz
+        if [ ! -f "${archive}" ]; then
+          echo "Error: expected file not present: ${archive}"
+          exit 1
+        fi
+        tar xf ${archive}
+        component_descriptor_path='component-descriptor.yaml'
+        if [ ! -f "${component_descriptor_path}" ]; then
+          echo "Error: archive did not contain expected ${component_descriptor_path} file"
+          exit 1
+        fi
+        echo "<<EOF" >> "${GITHUB_OUTPUT}"
+        cat "${component_descriptor_path}" >> ${GITHUB_OUTPUT}
+        echo EOF >> "${GITHUB_OUTPUT}"
     - name: prepare-component-descriptor
       shell: bash
       run: |
