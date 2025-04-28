@@ -102,9 +102,11 @@ jobs:
           echo "commit-message=${commit_msg}" >> ${GITHUB_OUTPUT}
       - uses: gardener/cc-utils/.github/actions/version@master
         id: version
+        name: create-release-commit
         with:
           prerelease: ${{ steps.pre.outputs.prerelease }}
           commit-message: ${{ steps.pre.outputs.commit-message }}
+          commit-objects-artefact: release-commit-objects
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
         id: component-descriptor
         with:

@@ -83,6 +83,12 @@ inputs:
 
       If `noop` is set as `version-operation`, passed values are ignored.
       Setting prerelease to the empty string (which is the default) will "finalise" version.
+  commit-objects-artefact:
+    required: false
+    type: string
+    description: |
+      if passed, captured commit (as output by `capture-commit` action) will (also) be uploaded
+      as an artefat of the passed name.
 
   repository-operation:
     required: true
@@ -183,6 +189,7 @@ runs:
       uses: gardener/cc-utils/.github/actions/capture-commit@master
       with:
         timestamp-reference: /tmp/timestamp-ref
+        to-artefact: ${{ inputs.commit-objects-artefact }}
     - name: reset-repository
       if: ${{ inputs.repository-operation == 'capture-commit' }}
       shell: bash
