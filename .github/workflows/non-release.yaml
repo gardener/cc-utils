@@ -16,5 +16,4 @@ jobs:
       - name: collect-component-descriptor
         uses: ./.github/actions/merge-ocm-fragments
         with:
-          component-descriptor: ${{ needs.build-and-test.outputs.base-component-descriptor }}
           outdir: /tmp/ocm

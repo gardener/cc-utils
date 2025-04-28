@@ -25,12 +25,15 @@ on:
           Pass-in `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
     inputs:
       component-descriptor:
-        required: true
+        required: false
         type: string
         description: |
           A base-component-descriptor, as output from `base-component-descriptor` action.
           Additional Component-Descriptor-Fragments as exported from the `export-ocm-fragments`
           action will be merged into it (i.e. callers do not need to take care of this).
+
+          If not passed, an artefact named `base-component-descriptor` will be assumed to
+          exist, and used as default / fallback.
       release-commit-objects:
         required: true
         type: string
