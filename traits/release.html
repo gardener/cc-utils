@@ -153,39 +153,47 @@ variable <code class="code docutils literal notranslate"><span class="pre">REPO_
 Any changes left inside the worktree are added to the commit bumping the version
 immediately after the release-commit.</p></td>
 </tr>
-<tr class="row-even"><td><p>release_notes_policy</p></td>
+<tr class="row-even"><td><p>post_release_callback</p></td>
+<td><p>no</p></td>
+<td><p>None</p></td>
+<td><p>str</p></td>
+<td><p>an optional callback that is called after release creation. The callback is passed
+the absolute path to the main repository’s work tree via environment variable <code class="code docutils literal notranslate"><span class="pre">REPO_DIR</span></code>.
+Changes in the worktree are discarded, in contrast to <code class="code docutils literal notranslate"><span class="pre">release_callback</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>release_notes_policy</p></td>
 <td><p>no</p></td>
 <td><p>default</p></td>
 <td><p>ReleaseNotesPolicy</p></td>
 <td><p>configures the release notes handling policy</p></td>
 </tr>
-<tr class="row-odd"><td><p>release_commit_publishing_policy</p></td>
+<tr class="row-even"><td><p>release_commit_publishing_policy</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">push_to_branch</span></code></p></td>
 <td><p>ReleaseCommitPublishingPolicy</p></td>
 <td><p>configures how the release commit should be published</p></td>
 </tr>
-<tr class="row-even"><td><p>commit_message_prefix</p></td>
+<tr class="row-odd"><td><p>commit_message_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for release commit messages</p></td>
 </tr>
-<tr class="row-odd"><td><p>next_version_commit_message_prefix</p></td>
+<tr class="row-even"><td><p>next_version_commit_message_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for the commit message of the commit bumping the release version
 immediately after the release-commit</p></td>
 </tr>
-<tr class="row-even"><td><p>merge_release_to_default_branch_commit_message_prefix</p></td>
+<tr class="row-odd"><td><p>merge_release_to_default_branch_commit_message_prefix</p></td>
 <td><p>no</p></td>
 <td><p>None</p></td>
 <td><p>str</p></td>
 <td><p>an optional prefix for the merge-commit message when merging back release-commit from tag
 to default branch</p></td>
 </tr>
-<tr class="row-odd"><td><p>git_tags</p></td>
+<tr class="row-even"><td><p>git_tags</p></td>
 <td><p>no</p></td>
 <td><p><div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">ref_template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">refs/tags/{VERSION}</span>
 </pre></div>
@@ -200,13 +208,13 @@ placeholders are available:</p>
 <p>The first tag will be used to create the GitHub-release.</p>
 </p></td>
 </tr>
-<tr class="row-even"><td><p>release_on_github</p></td>
+<tr class="row-odd"><td><p>release_on_github</p></td>
 <td><p>no</p></td>
 <td><p>True</p></td>
 <td><p>bool</p></td>
 <td><p>if true, a github release is published.</p></td>
 </tr>
-<tr class="row-odd"><td><p>on_tag_conflict</p></td>
+<tr class="row-even"><td><p>on_tag_conflict</p></td>
 <td><p>no</p></td>
 <td><p><code class="code docutils literal notranslate"><span class="pre">ignore</span></code></p></td>
 <td><p>TagConflictAction</p></td>
@@ -479,8 +487,8 @@ avoid a conflict)</p></td>
 <h2>Dependencies<a class="headerlink" href="#trait-release" title="Link to this heading"></a></h2>
 <p>This trait requires the following traits to be declared:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 <li><p><a class="reference internal" href="component_descriptor.html#trait-component-descriptor"><span class="std std-ref">component_descriptor trait</span></a></p></li>
+<li><p><a class="reference internal" href="version.html#trait-version"><span class="std std-ref">version trait</span></a></p></li>
 </ul>
 </section>
 <p>This trait add release job semantics to the declaring build job.</p>
