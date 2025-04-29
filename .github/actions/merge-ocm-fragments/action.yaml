@@ -83,7 +83,7 @@ runs:
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-component-descriptor-artefact
-      if: ${{ inputs.component-descriptor-artefact }}
+      if: ${{ inputs.component-descriptor-artefact != '' }}
       shell: bash
       run: |
         archive=component-descriptor.tar.gz
