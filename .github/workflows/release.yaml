@@ -78,6 +78,7 @@ jobs:
         id: component-descriptor
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
         with:
+          component-descriptor-artefact: base-component-descriptor
           component-descriptor: ${{ inputs.component-descriptor }}
           outdir: /tmp/ocm
       - uses: gardener/cc-utils/.github/actions/release-notes@master
