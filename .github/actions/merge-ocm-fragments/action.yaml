@@ -72,13 +72,13 @@ runs:
         mkdir -p "${{ inputs.outdir }}"
     - name: import-component-descriptor
       shell: bash
-      if: ${{ inputs.component-descriptor }}
+      if: ${{ inputs.component-descriptor != '' }}
       run: |
         cat <<EOF > "${{ inputs.outdir }}/base-component-descriptor.yaml"
         ${{ inputs.component-descriptor }}
         EOF
     - name: import-component-descriptor-artefact
-      if: ${{ inputs.component-descriptor-artefact }}
+      if: ${{ inputs.component-descriptor-artefact != '' }}
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.component-descriptor-artefact }}
