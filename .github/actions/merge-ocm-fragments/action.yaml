@@ -97,7 +97,7 @@ runs:
           echo "Error: archive did not contain expected ${component_descriptor_path} file"
           exit 1
         fi
-        echo "<<EOF" >> "${GITHUB_OUTPUT}"
+        echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
         cat "${component_descriptor_path}" >> ${GITHUB_OUTPUT}
         echo EOF >> "${GITHUB_OUTPUT}"
     - name: prepare-component-descriptor
