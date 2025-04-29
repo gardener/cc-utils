@@ -1,25 +1,16 @@
 import base64
 import logging
 import random
+
+import kubernetes.client
+import kubernetes.config
 import urllib3.exceptions
 
-try:
-    import kubernetes.client
-    import kubernetes.config
-except:
-    print('unable to import kubernetes package, have you tried installing "gardener-cicd-cfg-mgmt"?')
-    raise
-
-import ccc.delivery
 import ccc.github
 import ccc.secrets_server
-try:
-    import cfg_mgmt.model as cmm
-    import cfg_mgmt.reporting as cmr
-    import cfg_mgmt.util as cmu
-except:
-    print('unable to import cfg_mgmt package, have you tried installing "gardener-cicd-cfg-mgmt"?')
-    raise
+import cfg_mgmt.model as cmm
+import cfg_mgmt.reporting as cmr
+import cfg_mgmt.util as cmu
 import ci.log
 import ci.util
 import model

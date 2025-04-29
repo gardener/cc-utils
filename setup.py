@@ -29,7 +29,6 @@ def modules():
     module_names.remove('setup.oci')
     module_names.remove('setup.ocm')
     module_names.remove('setup.whd')
-    module_names.remove('setup.cfg_mgmt')
 
     return module_names
 
@@ -41,7 +40,6 @@ def packages():
     package_names.remove('whd')
     package_names.remove('oci')
     package_names.remove('ocm')
-    package_names.remove('cfg_mgmt')
     return package_names
 
 

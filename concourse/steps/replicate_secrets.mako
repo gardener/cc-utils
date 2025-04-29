@@ -18,11 +18,7 @@ do_rotate_secrets = bool(extra_args.get('rotate_secrets', False))
 ${step_lib('replicate_secrets')}
 
 import ccc.github
-try:
-  import cfg_mgmt.reporting as cmr
-except:
-  print('unable to import cfg_mgmt package, have you tried installing "gardener-cicd-cfg-mgmt"?')
-  raise
+import cfg_mgmt.reporting as cmr
 import model
 import model.concourse
 import model.config_repo

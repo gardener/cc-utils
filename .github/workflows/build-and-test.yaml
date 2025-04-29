@@ -80,7 +80,6 @@ jobs:
           setup.oci.py \
           setup.ocm.py \
           setup.whd.py \
-          setup.cfg_mgmt.py \
         ; do
          echo "building distribution package from ${path}"
          python3 ${path} \
@@ -106,7 +105,6 @@ jobs:
           gardener-cicd-whd \
           gardener-cicd-cli \
           gardener-cicd-libs \
-          gardener-cicd-cfg-mgmt \
           gardener-gha-libs \
           gardener-oci \
           gardener-ocm \
@@ -213,14 +211,6 @@ jobs:
           --name bdba \
           | tar xJ -C "${pkg_dir}"
 
-        if ! pip3 install --pre --upgrade --break-system-packages \
-          --find-links "${pkg_dir}" \
-          gardener-cicd-cfg-mgmt \
-          > /tmp/pip3-install-cfg.log; then
-          echo "error while trying to install gardener-cicd-cfg-mgmt:"
-          cat /tmp/pip3-install-cfg.log
-        fi
-
         echo "running linters"
         blobs_dir=blobs.d
         mkdir $blobs_dir
@@ -279,7 +269,6 @@ jobs:
           --find-links /tmp/dist \
           gardener-cicd-libs \
           gardener-cicd-cli \
-          gardener-cicd-cfg-mgmt \
           gardener-oci \
           gardener-ocm \
           pytest \
