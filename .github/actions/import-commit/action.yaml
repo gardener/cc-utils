@@ -68,6 +68,7 @@ runs:
         set -eu
         echo "${{ inputs.commit-objects }}" | base64 -d | tar x
     - name: import-commit-objects-from-artefact
+      shell: bash
       if: ${{ inputs.commit-objects-artefact != '' }}
       uses: actions/download-artifact@v4
       with:
