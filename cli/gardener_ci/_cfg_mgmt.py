@@ -1,16 +1,13 @@
 import logging
 import re
 
-try:
-    import cfg_mgmt.gcp
-    import cfg_mgmt.reporting as cmr
-    import cfg_mgmt.rotate
-    import cfg_mgmt.model
-    import cfg_mgmt.util as cmu
-except:
-    print('unable to import cfg_mgmt package, have you tried installing "gardener-cicd-cfg-mgmt"?')
-    raise
 import model
+
+import cfg_mgmt.gcp
+import cfg_mgmt.reporting as cmr
+import cfg_mgmt.rotate
+import cfg_mgmt.model
+import cfg_mgmt.util as cmu
 
 
 __cmd_name__ = 'cfg_mgmt'

@@ -103,7 +103,6 @@ def modules():
     module_names.remove('setup.oci')
     module_names.remove('setup.ocm')
     module_names.remove('setup.whd')
-    module_names.remove('setup.cfg_mgmt')
     return module_names
 
 
@@ -113,7 +112,6 @@ def packages():
     # avoid packages that would introduce undesired dependencies
     omit_packages = (
         'ccc',
-        'cfg_mgmt',
         'concourse',
         'container',
         'ctt',

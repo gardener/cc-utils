@@ -213,12 +213,6 @@ class GcrCredentials(BasicCredentials):
         except json.decoder.JSONDecodeError:
             return False
 
-    def service_account_credentials(self): # -> 'google.oauth2.service_account.Credentials':
-        import google.oauth2.service_account
-        return google.oauth2.service_account.Credentials.from_service_account_info(
-            json.loads(self.passwd())
-        )
-
 
 def find_config(
     image_reference: typing.Union[str, om.OciImageReference],
