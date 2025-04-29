@@ -3,9 +3,7 @@ import re
 
 import model
 
-import cfg_mgmt.gcp
 import cfg_mgmt.reporting as cmr
-import cfg_mgmt.rotate
 import cfg_mgmt.model
 import cfg_mgmt.util as cmu
 
