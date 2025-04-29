@@ -100,6 +100,7 @@ runs:
         echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
         cat "${component_descriptor_path}" >> ${GITHUB_OUTPUT}
         echo EOF >> "${GITHUB_OUTPUT}"
+        mv "${component_descriptor_path}" "${{ inputs.outdir }}/base-component-descriptor.yaml"
     - name: prepare-component-descriptor
       shell: bash
       run: |
