@@ -64,11 +64,11 @@ runs:
   steps:
     - name: import-commit-objects-from-input
       if: ${{ inputs.commit-objects != '' }}
+      shell: bash
       run: |
         set -eu
         echo "${{ inputs.commit-objects }}" | base64 -d | tar x
     - name: import-commit-objects-from-artefact
-      shell: bash
       if: ${{ inputs.commit-objects-artefact != '' }}
       uses: actions/download-artifact@v4
       with:
