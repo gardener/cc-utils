@@ -516,18 +516,20 @@ class DikiFinding(Finding):
 
 @dataclasses.dataclass(frozen=True)
 class GitHubSecretFinding(Finding):
+    secret: str
     secret_type: str
-    path: str
-    line: int
+    secret_type_display_name: str
+    html_url: str
+    number: int
     state: str
     created_at: str
     updated_at: str
     repository: str
 
-    # every finding has a key with repo+path+line+secret type
+    # every finding has a key with repo + alert url + secret name + secret type
     @property
     def key(self) -> str:
-        return _as_key(self.repository, self.path, str(self.line), self.secret_type)  
+        return _as_key(self.repository, self.html_url, self.secret, self.secret_type)  
 
 
 class CryptoAssetTypes(enum.StrEnum):
