@@ -79,11 +79,13 @@ runs:
         name: ${{ inputs.commit-objects-artefact }}
     - name: extract-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
+      shell: bash
       run: |
         set -eu
         tar xf commit-objects.tar.gz
         unlink commit-objects.tar.gz
     - name: import-commit
+      shell: bash
       run: |
         echo 'importing objects into .git-dir'
         if [ -n "${{ inputs.commit-digest }}" ]; then
@@ -109,4 +111,3 @@ runs:
           exit 1
           ;;
         esac
-      shell: bash
