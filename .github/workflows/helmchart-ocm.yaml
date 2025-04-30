@@ -98,5 +98,6 @@ jobs:
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
           component-descriptor: ${{ steps.fetch-ocm.outputs.component-descriptor }}
+          component-descriptor-artefact: base-component-descriptor
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
