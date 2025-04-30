@@ -46,6 +46,7 @@ class OsStatus(enum.StrEnum):
     AT_MOST_ONE_PATCHLEVEL_BEHIND = 'atMostOnePatchlevelBehind'
     MORE_THAN_ONE_PATCHLEVEL_BEHIND = 'moreThanOnePatchlevelBehind'
     UP_TO_DATE = 'upToDate'
+    DISTROLESS = 'distroless'
 
 
 @dataclasses.dataclass
