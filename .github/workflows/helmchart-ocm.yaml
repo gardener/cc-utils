@@ -88,6 +88,7 @@ jobs:
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
+          component-descriptor-artefact: base-component-descriptor
           ctx: ${{ inputs.ocm-ctx }}
       - uses: actions/checkout@v4
       - name: build-helmchart
@@ -98,6 +99,5 @@ jobs:
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
           component-descriptor: ${{ steps.fetch-ocm.outputs.component-descriptor }}
-          component-descriptor-artefact: base-component-descriptor
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
