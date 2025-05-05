@@ -180,7 +180,7 @@ def parse_to_semver(
     return semver_version_info
 
 
-def _parse_to_semver_and_prefix(version: str) -> semver.VersionInfo:
+def _parse_to_semver_and_prefix(version: str) -> tuple[semver.VersionInfo, str | None]:
     def raise_invalid():
         raise ValueError(f'not a valid (semver) version: `{version}`')
 
