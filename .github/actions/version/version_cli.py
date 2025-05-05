@@ -183,29 +183,30 @@ def process_version(
 ):
     if operation is VersionOperation.NOOP:
         return version
-    parsed_version = version_mod.parse_to_semver(version)
+    parsed_version, prefix = version_mod._parse_to_semver_and_prefix(version)
+    prefix = prefix or ''
     parsed_version = parsed_version.replace(
         prerelease=prerelease,
     )
 
     if operation is VersionOperation.SET_PRERELEASE:
-        return str(parsed_version)
+        return f'{prefix}{parsed_version}'
 
     if operation is VersionOperation.BUMP_MAJOR:
         bumped = parsed_version.bump_major()
         if prerelease:
             bumped = f'{bumped}-{prerelease}'
-        return bumped
+        return f'{prefix}{bumped}'
     if operation is VersionOperation.BUMP_MINOR:
         bumped = parsed_version.bump_minor()
         if prerelease:
             bumped = f'{bumped}-{prerelease}'
-        return bumped
+        return f'{prefix}{bumped}'
     if operation is VersionOperation.BUMP_PATCH:
         bumped = parsed_version.bump_patch()
         if prerelease:
             bumped = f'{bumped}-{prerelease}'
-        return bumped
+        return f'{prefix}{bumped}'
 
     raise ValueError('unexpected version-operation', operation)
 
