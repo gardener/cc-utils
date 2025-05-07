@@ -652,10 +652,10 @@ def _normalise_github_hostname(github_url: str):
     return github_hostname.lower()
 
 
-def github_users_from_responsibles(
+def github_usernames_from_responsibles(
     responsibles: collections.abc.Iterable[dict],
     github_url: str=None,
-) -> collections.abc.Generator[dm.GithubUser, None, None]:
+) -> collections.abc.Generator[str, None, None]:
     '''
     returns a generator yielding all github-users from the given `responsibles`.
     use `DeliveryServiceClient.component_responsibles` to retrieve responsibles
@@ -679,4 +679,4 @@ def github_users_from_responsibles(
             if target_github_hostname and target_github_hostname != github_hostname:
                 continue
 
-            yield dm.GithubUser(username=username, github_hostname=github_hostname)
+            yield username
