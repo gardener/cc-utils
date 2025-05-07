@@ -116,7 +116,6 @@ def packages():
         'container',
         'ctt',
         'delivery',
-        'dso',
         'mail',
         'model',
         'slackclient',
