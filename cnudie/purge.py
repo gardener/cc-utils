@@ -40,6 +40,7 @@ def remove_component_descriptor_and_referenced_artefacts(
     lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
     recursive: bool=False,
     on_error: str='abort', # todo: implement, e.g. patch-component-descriptor-and-abort
+    absent_ok: bool=False,
 ):
     if isinstance(component, ocm.ComponentDescriptor):
         component = component.component
@@ -63,6 +64,7 @@ def remove_component_descriptor_and_referenced_artefacts(
                 _remove_component_descriptor(
                     component=current_component,
                     oci_client=oci_client,
+                    absent_ok=absent_ok,
                 )
             current_component = node.component
             continue
@@ -78,6 +80,7 @@ def remove_component_descriptor_and_referenced_artefacts(
                 did_remove = _remove_resource(
                     node=node,
                     oci_client=oci_client,
+                    absent_ok=absent_ok,
                 )
                 if not did_remove:
                     logger.info(f'do not know how to remove {node.resource=}')
@@ -97,12 +100,14 @@ def remove_component_descriptor_and_referenced_artefacts(
         _remove_component_descriptor(
             component=component,
             oci_client=oci_client,
+            absent_ok=absent_ok,
         )
 
 
 def _remove_component_descriptor(
     component: ocm.Component,
     oci_client: oc.Client,
+    absent_ok: bool=False,
 ):
     oci_ref = cnudie.util.oci_ref(
         component=component,
@@ -111,12 +116,14 @@ def _remove_component_descriptor(
     oci_client.delete_manifest(
         image_reference=oci_ref,
         purge=True,
+        absent_ok=absent_ok,
     )
 
 
 def _remove_resource(
     node: cnudie.iter.ResourceNode,
     oci_client: oc.Client,
+    absent_ok: bool=False,
 ) -> bool:
     resource = node.resource
     if not resource.type in (ocm.ArtefactType.OCI_IMAGE, 'ociImage'):
@@ -151,6 +158,7 @@ def _remove_resource(
         image_reference=image_reference,
         purge=purge,
         accept=om.MimeTypes.prefer_multiarch,
+        absent_ok=absent_ok,
     )
 
     if isinstance(manifest, om.OciImageManifest):
@@ -181,6 +189,7 @@ def _remove_resource(
         oci_client.delete_manifest(
             image_reference=ref,
             purge=True,
+            absent_ok=absent_ok,
         )
 
     return True

@@ -814,6 +814,7 @@ class Client:
         image_reference: om.OciImageReference | str,
         purge: bool=False,
         accept: str=om.MimeTypes.prefer_multiarch,
+        absent_ok: bool=False,
     ):
         '''
         deletes the specified manifest. Depending on whether the passed image_reference contains
@@ -839,7 +840,7 @@ class Client:
             else:
                 headers = {}
 
-            return self._request(
+            res = self._request(
                 url=self.routes.manifest_url(
                     image_reference=image_reference,
                     tag_preprocessing_callback=self.tag_preprocessing_callback,
@@ -848,7 +849,15 @@ class Client:
                 scope=scope,
                 headers=headers,
                 method='DELETE',
+                raise_for_status=False,
             )
+
+            if absent_ok and res.status_code == 404:
+                return res
+
+            res.raise_for_status()
+
+            return res
         elif image_reference.has_symbolical_tag:
             manifest_raw = self.manifest_raw(
                 image_reference=image_reference,
@@ -860,11 +869,13 @@ class Client:
                 image_reference=image_reference,
                 purge=False,
                 accept=accept,
+                absent_ok=absent_ok,
             )
             res.raise_for_status()
             return self.delete_manifest(
                 image_reference=f'{image_reference.ref_without_tag}@{manifest_digest}',
                 purge=False,
+                absent_ok=absent_ok,
             )
         else:
             raise RuntimeError('this case should not occur (this is a bug)')
