@@ -14,6 +14,8 @@ import logging
 import os
 import threading
 
+import dacite
+
 import ccc.delivery
 import ccc.oci
 import ci.util
@@ -21,7 +23,6 @@ import ctt.replicate
 import cnudie.iter
 import cnudie.retrieve
 import container.util
-import dso.labels
 import ocm
 import oci
 import oci.client
@@ -268,11 +269,13 @@ def determine_changed_components(
     if not (
         reftype_filter and reftype_filter(cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL)
     ) and (
-        label := component.find_label(dso.labels.ExtraComponentReferencesLabel.name)
+        extra_crefs_label := component.find_label(cnudie.iter.ExtraComponentReferencesLabel.name)
     ):
-        extra_crefs_label = dso.labels.deserialise_label(label)
-
-        for extra_cref in extra_crefs_label.value:
+        for extra_cref_raw in extra_crefs_label.value:
+            extra_cref = dacite.from_dict(
+                data_class=cnudie.iter.ExtraComponentReference,
+                data=extra_cref_raw,
+            )
             extra_cref_id = extra_cref.component_reference
             referenced_component_descriptor = component_descriptor_lookup(extra_cref_id)
 
@@ -475,7 +478,7 @@ def process_images(
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
 
     reftype_filter = None
-    if remove_label and remove_label(dso.labels.ExtraComponentReferencesLabel.name):
+    if remove_label and remove_label(cnudie.iter.ExtraComponentReferencesLabel.name):
         def filter_extra_component_refs(reftype: cnudie.iter.NodeReferenceType) -> bool:
             return reftype is cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL
 

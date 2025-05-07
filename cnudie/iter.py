@@ -3,13 +3,24 @@ import dataclasses
 import enum
 
 import cnudie.retrieve
-import dso.labels
 import ocm
+
+
+@dataclasses.dataclass
+class ExtraComponentReference:
+    component_reference: ocm.ComponentIdentity
+    purpose: list[str] | None
+
+
+@dataclasses.dataclass
+class ExtraComponentReferencesLabel:
+    name = 'ocm.software/ocm-gear/extra-component-references'
+    value: list[ExtraComponentReference]
 
 
 class NodeReferenceType(enum.StrEnum):
     COMPONENT_REFERENCE = 'componentReference'
-    EXTRA_COMPONENT_REFS_LABEL = f'label:{dso.labels.ExtraComponentReferencesLabel.name}'
+    EXTRA_COMPONENT_REFS_LABEL = f'label:{ExtraComponentReferencesLabel.name}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -195,16 +206,15 @@ def iter(
             )
 
         if not (extra_crefs_label := component.find_label(
-            name=dso.labels.ExtraComponentReferencesLabel.name,
+            name=ExtraComponentReferencesLabel.name,
         )):
             return
 
-        extra_crefs_label: dso.labels.ExtraComponentReferencesLabel = dso.labels.deserialise_label(
-            label=extra_crefs_label,
-        )
-
         for extra_cref in extra_crefs_label.value:
-            extra_cref_id = extra_cref.component_reference
+            extra_cref_id = ocm.ComponentIdentity(
+                name=extra_cref['component_reference']['name'],
+                version=extra_cref['component_reference']['version'],
+            )
 
             if ocm_repo:
                 referenced_component_descriptor = lookup(extra_cref_id, ocm_repo)

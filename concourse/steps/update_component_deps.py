@@ -6,6 +6,8 @@ import tempfile
 import time
 import traceback
 
+import dacite
+
 import ocm
 import ocm.util
 import github3.exceptions
@@ -13,12 +15,12 @@ import github3.repos.repo
 
 import ccc.github
 import ci.util
+import cnudie.iter
 import cnudie.util
 import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
-import dso.labels
 import github.util as gu
 import gitutil
 import model.container_registry as cr
@@ -232,9 +234,13 @@ def greatest_references(
 
 
 def deserialise_extra_component_references(
-    extra_crefs_label: dso.labels.ExtraComponentReferencesLabel,
+    extra_crefs_label: ocm.Label,
 ) -> collections.abc.Generator[ocm.ComponentReference, None, None]:
-    for extra_cref in extra_crefs_label.value:
+    for extra_cref_raw in extra_crefs_label.value:
+        extra_cref = dacite.from_dict(
+            data_class=cnudie.iter.ExtraComponentReference,
+            data=extra_cref_raw,
+        )
         extra_cref_id = extra_cref.component_reference
 
         yield ocm.ComponentReference(
@@ -260,9 +266,8 @@ def determine_upgrade_prs(
     # don't use the deserialisation within `cnudie.iter.iter` here to avoid unnecessary lookups of
     # component references and keep `ComponentReference` instances (!= `Component` instances)
     if extra_crefs_label := component.find_label(
-        name=dso.labels.ExtraComponentReferencesLabel.name,
+        name=cnudie.iter.ExtraComponentReferencesLabel.name,
     ):
-        extra_crefs_label = dso.labels.deserialise_label(extra_crefs_label)
         extra_component_references = list(deserialise_extra_component_references(extra_crefs_label))
         component_references = component_references + extra_component_references
 
