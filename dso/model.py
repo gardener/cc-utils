@@ -118,7 +118,7 @@ class Datasource:
             Datasource.INVENTORY: (
                 Datatype.INVENTORY_FINDING,
             ),
-        }[datasource]
+        }.get(datasource, tuple())
 
     @staticmethod
     def has_scan_info(datasource: str) -> bool:
