@@ -11,12 +11,9 @@ import dacite
 import ocm
 
 import ci.util
-import cnudie.iter
-import cnudie.retrieve
 import cnudie.util
 import delivery.jwt
 import delivery.model as dm
-import dso.model
 import http_requests
 
 
@@ -337,7 +334,7 @@ class DeliveryServiceClient:
 
     def update_metadata(
         self,
-        data: collections.abc.Iterable[dso.model.ArtefactMetadata],
+        data: collections.abc.Iterable[typing.Union[dict, 'ArtefactMetadata']],
     ):
         headers = {
             'Content-Type': 'application/json',
@@ -348,7 +345,8 @@ class DeliveryServiceClient:
                 dataclasses.asdict(
                     artefact_metadata,
                     dict_factory=ci.util.dict_to_json_factory,
-                ) for artefact_metadata in data
+                ) if dataclasses.is_dataclass(artefact_metadata) else artefact_metadata
+                for artefact_metadata in data
             ]},
             headers=headers,
         )
@@ -365,7 +363,7 @@ class DeliveryServiceClient:
 
     def delete_metadata(
         self,
-        data: collections.abc.Iterable[dso.model.ArtefactMetadata],
+        data: collections.abc.Iterable[typing.Union[dict, 'ArtefactMetadata']],
     ):
         headers = {
             'Content-Type': 'application/json',
@@ -376,7 +374,8 @@ class DeliveryServiceClient:
                 dataclasses.asdict(
                     artefact_metadata,
                     dict_factory=ci.util.dict_to_json_factory,
-                ) for artefact_metadata in data
+                ) if dataclasses.is_dataclass(artefact_metadata) else artefact_metadata
+                for artefact_metadata in data
             ]},
             headers=headers,
         )
@@ -518,12 +517,12 @@ class DeliveryServiceClient:
     def query_metadata(
         self,
         components: collections.abc.Iterable[ocm.Component]=(),
-        artefacts: collections.abc.Iterable[dso.model.ComponentArtefactId]=(),
-        type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
-        referenced_type: dso.model.Datatype | tuple[dso.model.Datatype]=None,
-    ) -> tuple[dso.model.ArtefactMetadata]:
+        artefacts: collections.abc.Iterable[typing.Union[dict, 'ComponentArtefactId']]=(),
+        type: str | collections.abc.Sequence[str]=None,
+        referenced_type: str | collections.abc.Sequence[str]=None,
+    ) -> tuple[dict]:
         '''
-        Query artefact metadata from the delivery-db and parse it as `dso.model.ArtefactMetadata`.
+        Query artefact metadata from the delivery-db.
 
         @param components:      component identities used for filtering; if no identities are
                                 specified, no component filtering is done
@@ -557,7 +556,7 @@ class DeliveryServiceClient:
             ]
         else:
             entries = [
-                dataclasses.asdict(artefact)
+                dataclasses.asdict(artefact) if dataclasses.is_dataclass(artefact) else artefact
                 for artefact in artefacts
             ]
 
@@ -579,10 +578,7 @@ class DeliveryServiceClient:
 
         artefact_metadata_raw = res.json()
 
-        return tuple(
-            dso.model.ArtefactMetadata.from_dict(raw)
-            for raw in artefact_metadata_raw
-        )
+        return tuple(artefact_metadata_raw)
 
     def mark_cache_for_deletion(
         self,
@@ -613,7 +609,7 @@ class DeliveryServiceClient:
     def create_backlog_item(
         self,
         service: str,
-        artefacts: collections.abc.Iterable[dso.model.ComponentArtefactId]=(),
+        artefacts: collections.abc.Iterable[typing.Union[dict, 'ComponentArtefactId']]=(),
         priority: str | None=None, # see delivery-service k8s/backlog for allowed priorities
     ):
         headers = {
@@ -629,7 +625,7 @@ class DeliveryServiceClient:
 
         data, headers = http_requests.encode_request(
             json={'artefacts': [
-                dataclasses.asdict(artefact)
+                dataclasses.asdict(artefact) if dataclasses.is_dataclass(artefact) else artefact
                 for artefact in artefacts
             ]},
             headers=headers,
