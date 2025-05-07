@@ -311,15 +311,15 @@ def _scanned_element_assignees(
             )
             statuses = set(statuses)
 
-            gh_users = delivery.client.github_users_from_responsibles(
+            gh_usernames = delivery.client.github_usernames_from_responsibles(
                 responsibles=responsibles,
                 github_url=repository.url,
             )
 
             assignees = set(
-                gh_user.username for gh_user in gh_users
+                gh_username for gh_username in gh_usernames
                 if github.user.is_user_active(
-                    username=gh_user.username,
+                    username=gh_username,
                     github=gh_api,
                 )
             )
