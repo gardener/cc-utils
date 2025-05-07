@@ -2,7 +2,6 @@ import collections.abc
 
 import cnudie.iter
 import cnudie.retrieve_async
-import dso.labels
 import ocm
 
 
@@ -102,16 +101,15 @@ async def iter(
                 yield node
 
         if not (extra_crefs_label := component.find_label(
-            name=dso.labels.ExtraComponentReferencesLabel.name,
+            name=cnudie.iter.ExtraComponentReferencesLabel.name,
         )):
             return
 
-        extra_crefs_label: dso.labels.ExtraComponentReferencesLabel = dso.labels.deserialise_label(
-            label=extra_crefs_label,
-        )
-
         for extra_cref in extra_crefs_label.value:
-            extra_cref_id = extra_cref.component_reference
+            extra_cref_id = ocm.ComponentIdentity(
+                name=extra_cref['component_reference']['name'],
+                version=extra_cref['component_reference']['version'],
+            )
 
             if ocm_repo:
                 referenced_component_descriptor = await lookup(extra_cref_id, ocm_repo)
