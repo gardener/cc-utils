@@ -197,20 +197,6 @@ jobs:
           cat /tmp/pip3-install.log
         fi
 
-        pkg_dir=/tmp/dist
-        echo "downloading bdba package"
-        bdba_version=$(
-          yq \
-          '.componentReferences[] | select(.name == "bdba" ).version' \
-          .ocm/base-component.yaml
-        )
-        ocm_repo="${{ needs.prepare.outputs.ocm-releases-repository }}"
-        python -m ocm download resource \
-          --ocm-repository "${ocm_repo}" \
-          --component "ocm.software/ocm-gear/bdba-client:${bdba_version}" \
-          --name bdba \
-          | tar xJ -C "${pkg_dir}"
-
         echo "running linters"
         blobs_dir=blobs.d
         mkdir $blobs_dir
