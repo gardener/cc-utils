@@ -1,7 +1,4 @@
-componentReferences:
-  - componentName: ocm.software/ocm-gear/bdba-client
-    version: 0.4.0
-    name: bdba
+componentReferences: []
 labels:
   - name: cloud.gardener.cnudie/responsibles
     value:

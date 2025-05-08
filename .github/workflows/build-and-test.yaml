@@ -177,7 +177,6 @@ jobs:
           cat /tmp/apk.log
           exit 1
         fi
-        apk add yq
         tar xf distribution-packages.tar.gz -C /tmp
         echo "installing linters"
         export CFLAGS='-Wno-int-conversion'
