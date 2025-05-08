@@ -199,9 +199,6 @@ jobs:
           cat /tmp/pip3-install.log
         fi
 
-        # there is an issue with 3.0.0, see https://github.com/snowballstem/snowball/issues/229
-        pip3 install --force-reinstall snowballstemmer==2.2.0
-
         pkg_dir=/tmp/dist
         echo "downloading bdba package"
         bdba_version=$(
@@ -291,9 +288,6 @@ jobs:
           echo "error while trying to install packages:"
           cat /tmp/pip3-install.log
         fi
-
-        # there is an issue with 3.0.0, see https://github.com/snowballstem/snowball/issues/229
-        pip3 install --force-reinstall snowballstemmer==2.2.0
 
         pip3 list
 
