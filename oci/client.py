@@ -251,10 +251,17 @@ def _scope(image_reference: str | om.OciImageReference, action: str):
     return scope
 
 
+def no_credentials_lookup(**kwargs) -> None:
+    '''
+    useful to pass to oci-client when working with public images
+    '''
+    return None
+
+
 class Client:
     def __init__(
         self,
-        credentials_lookup: collections.abc.Callable,
+        credentials_lookup: collections.abc.Callable=no_credentials_lookup,
         routes: OciRoutes=OciRoutes(),
         disable_tls_validation: bool=False,
         timeout_seconds: int=None,
@@ -264,6 +271,7 @@ class Client:
     ):
         '''
         @param credentials_lookup <Callable>
+            defaults to no credentials, leading to anonymous-auth attempt
         @param routes <OciRoutes>
         @param disable_tls_validation <bool>
         @param timeout_seconds <int>
