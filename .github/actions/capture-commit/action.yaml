@@ -35,6 +35,12 @@ inputs:
     required: true
     description: |
       a filepath pointing to a file that was created before the head-commit
+  to-artefact:
+    required: false
+    description: |
+      if specified, the captured commits will also be uploaded as an artefact of the specified
+      name. The artefact will contain a single TARchive w/ the same contents as the `commit-objects`
+      output. Its name will be `commit-objects.tar.gz`
 
 outputs:
   commit-digest:
@@ -78,5 +84,10 @@ runs:
         commit-message:
         $(git show)
         EOF
-        git clean -dfx
+        gzip commit-objects.tar
       shell: bash
+    - uses: actions/upload-artifact@v4
+      if: ${{ inputs.to-artefact != '' }}
+      with:
+        name: ${{ inputs.to-artefact }}
+        path: commit-objects.tar.gz

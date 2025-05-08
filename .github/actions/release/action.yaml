@@ -27,7 +27,13 @@ inputs:
   release-commit-objects:
     description: |
       release-commit in serialised form (as output by `capture-commit` action)
-    required: true
+
+      Either this input, or `release-commit-objects-artefact` must be passed.
+    required: false
+  release-commit-objects-artefact:
+    description: |
+      name of artefact (as published from capture-commit action) to use.
+    required: false
   release-commit-digest:
     description: |
       release-commit-digest (necessary, unless capture-commit's special-ref is not present)
@@ -101,6 +107,7 @@ runs:
     - name: import-release-commit
       uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
+        commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         commit-objects: ${{ inputs.release-commit-objects }}
         commit-digest: ${{ inputs.release-commit-digest }}
         after-import: rebase

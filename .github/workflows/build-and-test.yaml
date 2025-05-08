@@ -8,67 +8,43 @@ on:
         type: string
         default: snapshot
         description: |
-          the "mode" to use. passed to `params` (currently for selecting  target-registries)
-      version-prerelease:
-        required: true
-        type: string
-        description: |
-          the prerelease-version to set for effective version (see version-action)
-
-          reasonable values:
-          one of:
-          - '' (empty string): -> finalise version
-          - "${commit_digest}" -> current head-commit-digest (for head-update / pullrequest-builds)
-          - "${epoch}" -> unix-epoch in seconds
-      version-commit-message:
-        required: false
-        type: string
-        default: "build ${version}"
+          the "mode" to use. passed to `prepare` (currently for selecting  target-registries)
 
     outputs:
       version-commit-objects:
         description: commit-objects (for importing commit changing to effective version)
-        value: ${{ jobs.version.outputs.commit-objects }}
+        value: ${{ jobs.prepare.outputs.version-commit-objects }}
       version-commit-digest:
         description: commit-digest for version-commit
-        value: ${{ jobs.version.outputs.commit-digest }}
+        value: ${{ jobs.prepare.outputs.version-commit-digest }}
       effective-version:
         description: effective version used during build
-        value: ${{ jobs.version.outputs.version }}
+        value: ${{ jobs.prepare.outputs.version }}
       base-component-descriptor:
         description: |
           the base OCM Component-Descriptor in YAML-format (use `merge-ocm-fragments`-action
           to collect full component-descriptor):
-        value: ${{ jobs.base-component-descriptor.outputs.component-descriptor }}
+        value: ${{ jobs.prepare.outputs.component-descriptor }}
 
 jobs:
-  params:
-    uses: ./.github/workflows/params.yaml
+  prepare:
+    uses: ./.github/workflows/prepare.yaml
     with:
       mode: ${{ inputs.mode }}
 
-  version:
+  setuptools-version:
     runs-on: ubuntu-latest
+    permissions: {}
+    needs:
+      - prepare
     outputs:
-      version: ${{ steps.version.outputs.version }}
       setuptools-version: ${{ steps.version-setuptools.outputs.setuptools-version }}
-      commit-objects: ${{ steps.version.outputs.commit-objects }}
-      commit-digest: ${{ steps.version.outputs.commit-digest }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./.github/actions/version
-      id: version
-      with:
-        read-callback: .ci/read-version
-        write-callback: .ci/write-version
-        commit-message: ${{ inputs.version-commit-message }}
-        prerelease: ${{ inputs.version-prerelease }}
-        repository-operation: capture-commit
     - name: version-setuptools
       id: version-setuptools
       run: |
         set -eu
-        version=${{ steps.version.outputs.version }}
+        version=${{ needs.prepare.outputs.version }}
         if [[ "${version}" == *-* ]]; then
           # version was non-final - add suffix compliant w/ pep-440
           version="${version%%-*}-dev0"
@@ -79,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: build
     needs:
-      - version
+      - setuptools-version
     steps:
     - name: Install setuptools
       run: |
@@ -91,7 +67,7 @@ jobs:
       id: package
       run: |
         set -eu
-        version=${{ needs.version.outputs.setuptools-version }}
+        version=${{ needs.setuptools-version.outputs.setuptools-version }}
         echo "version: ${version}"
         echo "${version}" | .ci/write-version
         pkg_dir=dist
@@ -170,53 +146,23 @@ jobs:
         name: distribution-packages
         path: distribution-packages.tar.gz
 
-  base-component-descriptor:
-    name: Generate Base-OCM-Component-Descriptor
-    needs:
-      - version
-      - params
-    uses: ./.github/workflows/base-component-descriptor.yaml
-    with:
-      version: ${{ needs.version.outputs.version }}
-      component-name: 'github.com/gardener/cc-utils'
-      ocm-repo: ${{ needs.params.outputs.ocm-repository }}
-      commit-digest: ${{ needs.version.outputs.version-commit-digest }}
-      labels: |
-        name: cloud.gardener.cnudie/responsibles
-        value:
-          - type: githubTeam
-            teamname: gardener/ci-maintainers
-            github_hostname: github.com
-      src-labels: |
-        - name: gardener.cloud/purposes
-          value:
-            - lint
-            - sast
-            - pybandit
-        - name: gardener.cloud/comment
-          value: |
-            we use bandit (linter) for SAST scans
-            see: https://bandit.readthedocs.io/en/latest/
-      component-references-file: '.ocm/component-references.yaml'
-
   update-draft-relase:
     if: ${{ inputs.mode != 'release' &&
           github.ref_name == github.event.repository.default_branch &&
-          ! fromJSON(needs.params.outputs.is-fork)
+          ! fromJSON(needs.prepare.outputs.is-fork)
       }}
     needs:
-      - params
-      - base-component-descriptor
+      - prepare
     uses: ./.github/workflows/draft-release.yaml
     with:
-      component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
-      ocm-repositories: ${{ needs.params.outputs.ocm-releases-repository }}
+      component-descriptor: ${{ needs.prepare.outputs.component-descriptor }}
+      ocm-repositories: ${{ needs.prepare.outputs.ocm-releases-repository }}
 
   lint:
     runs-on: ubuntu-latest
     needs:
       - package
-      - params
+      - prepare
     container:
       image: python:3.12-alpine
     steps:
@@ -227,16 +173,13 @@ jobs:
         name: distribution-packages
     - name: lint
       run: |
-        # debug
-        which python
-        which python3
-        python3 --version
         echo "install dependencies for python-packages"
         if ! apk add --no-cache $(cat gardener-cicd-libs.apk-packages) >/tmp/apk.log; then
           echo "error while trying to install apk-packages:"
           cat /tmp/apk.log
           exit 1
         fi
+        apk add yq
         tar xf distribution-packages.tar.gz -C /tmp
         echo "installing linters"
         export CFLAGS='-Wno-int-conversion'
@@ -258,8 +201,12 @@ jobs:
 
         pkg_dir=/tmp/dist
         echo "downloading bdba package"
-        bdba_version=$(sed -n "/componentName: ocm.software\/ocm-gear\/bdba-client/{n;s/^[[:space:]]*version:[[:space:]]*//p;}" .ocm/component-references.yaml)
-        ocm_repo="${{ needs.params.outputs.ocm-releases-repository }}"
+        bdba_version=$(
+          yq \
+          '.componentReferences[] | select(.name == "bdba" ).version' \
+          .ocm/base-component.yaml
+        )
+        ocm_repo="${{ needs.prepare.outputs.ocm-releases-repository }}"
         python -m ocm download resource \
           --ocm-repository "${ocm_repo}" \
           --component "ocm.software/ocm-gear/bdba-client:${bdba_version}" \
@@ -353,9 +300,9 @@ jobs:
   images:
     name: Build Job-Image
     needs:
-      - version
       - package # needed indirectly (distribution-packages-artefact)
-      - params
+      - prepare
+      - setuptools-version
     permissions:
       contents: read
       packages: write
@@ -363,13 +310,13 @@ jobs:
     uses: ./.github/workflows/oci-ocm.yaml
     with:
       name: job-image
-      oci-registry: ${{ needs.params.outputs.oci-registry }}
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
       oci-repository: cicd/job-image
       oci-platforms: 'linux/amd64,linux/arm64'
-      version: ${{ needs.version.outputs.version }}
+      version: ${{ needs.prepare.outputs.version }}
       # workaround: we need to use a deviating version for setuptools
       prebuild-hook: |
-        echo "${{ needs.version.outputs.setuptools-version }}" | .ci/write-version
+        echo "${{ needs.setuptools-version.outputs.setuptools-version }}" | .ci/write-version
       build-ctx-artefact: distribution-packages
       untar-build-ctx-artefact: distribution-packages.tar.gz
       ocm-labels: |

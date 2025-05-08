@@ -1,0 +1,116 @@
+name: Prepare
+description: |
+  An opinionated workflow that will
+  - output target OCI Registries / OCM Repositories
+  - calculate an effective version (and create a commit for switching to this version)
+  - create a base OCM Component-Descriptor
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        description: |
+          Selects the build's mode, which affects which OCI Registries / OCM Repositories to
+          select, as well as the default version operation.
+
+          Allowed values:
+            - snapshot
+            - release
+
+          In `snapshot` mode, snapshot-registries will be returned. Effective version will be
+          set to repository-version w/ `-${commit-digest}`-suffix.
+
+          In `release` mode, release-registries will be returned. Effective version will be
+          finalised version of repository-version.
+
+    outputs:
+      ocm-repository:
+        description: the ocm-repository to use for publishing to for the selected mode.
+        value: ${{ jobs.params.outputs.ocm-repository }}
+      ocm-releases-repository:
+        description: the ocm-releases-repository (independent of chosen mode)
+        value: ${{ jobs.params.outputs.ocm-releases-repository }}
+      oci-registry:
+        description: the oci-registry to use for publishing to for the selected mode
+        value: ${{ jobs.params.outputs.oci-registry }}
+      is-fork:
+        description: boolean indicating whether or not current repository is a fork
+        value: ${{ jobs.params.outputs.is-fork }}
+
+      version:
+        description: the effective version
+        value: ${{ jobs.version-and-ocm.outputs.version }}
+
+      version-commit-objects:
+        description: |
+          The created version-change-commit in serialised form as output by `capture-commit`.
+        value: ${{ jobs.version-and-ocm.outputs.commit-objects }}
+      version-commit-digest:
+        description: |
+          The commit-digest of the version-change-commit.
+        value: ${{ jobs.version-and-ocm.outputs.commit-digest }}
+
+      component-descriptor:
+        description: |
+          A base-component-descriptor, as output by `base-component-descriptor` action.
+        value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
+
+jobs:
+  params:
+    runs-on: ubuntu-latest
+    outputs:
+       ocm-repository: ${{ steps.params.outputs.ocm-repository }}
+       ocm-releases-repository: ${{ steps.params.outputs.ocm-releases-repository }}
+       oci-registry: ${{ steps.params.outputs.oci-registry }}
+       is-fork: ${{ steps.params.outputs.is-fork }}
+    steps:
+      - name: params
+        id: params
+        uses: gardener/cc-utils/.github/actions/params@master
+        with:
+          mode: ${{ inputs.mode }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+
+  version-and-ocm:
+    runs-on: ubuntu-latest
+    needs:
+      - params
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit-objects: ${{ steps.version.outputs.commit-objects }}
+      commit-digest: ${{ steps.version.outputs.commit-digest }}
+      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: preprocess-params
+        id: pre
+        run: |
+          mode="${{ inputs.mode }}"
+          if [ ${mode} == "release" ]; then
+            prerelease=''
+            commit_msg='release ${version}'
+          elif [ ${mode} == "snapshot" ]; then
+            prerelease='${commit_digest}'
+            commit_msg='build ${version}'
+          else
+            echo "unknown mode: ${mode}"
+            exit 1
+          fi
+          echo "prerelease=${prerelease}" >> ${GITHUB_OUTPUT}
+          echo "commit-message=${commit_msg}" >> ${GITHUB_OUTPUT}
+      - uses: gardener/cc-utils/.github/actions/version@master
+        id: version
+        name: create-release-commit
+        with:
+          prerelease: ${{ steps.pre.outputs.prerelease }}
+          commit-message: ${{ steps.pre.outputs.commit-message }}
+          commit-objects-artefact: release-commit-objects
+      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
+        id: component-descriptor
+        with:
+          base-component: .ocm/base-component.yaml
+          version: ${{ steps.version.outputs.version }}
+          ocm-repository: ${{ needs.params.outputs.ocm-repository }}
+          commit-digest: ${{ steps.version.outputs.commit-digest }}

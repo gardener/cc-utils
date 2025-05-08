@@ -12,10 +12,17 @@ description: |
 
 inputs:
   commit-objects:
-    required: true
+    required: false
     description: |
       a base64-encoded tarfile containing the objects to import into git-repository. The expected
       format matches the one output from `capture-commit` action.
+
+      Either this input, or `commit-objects-artefact` must be passed.
+  commit-objects-artefact:
+    required: false
+    description: |
+      name of artefact to use as alternative to directly passing objects as input via the
+      `commit-objects` input.
   commit-digest:
     required: false
     description: |
@@ -55,15 +62,28 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: install-git
-      run: |
-        if which git &>/dev/null; then exit 0; fi
-        apt-get install -y git
+    - name: import-commit-objects-from-input
+      if: ${{ inputs.commit-objects != '' }}
       shell: bash
+      run: |
+        set -eu
+        echo "${{ inputs.commit-objects }}" | base64 -d | tar x
+    - name: import-commit-objects-from-artefact
+      if: ${{ inputs.commit-objects-artefact != '' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.commit-objects-artefact }}
+    - name: extract-commit-objects-from-artefact
+      if: ${{ inputs.commit-objects-artefact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf commit-objects.tar.gz
+        unlink commit-objects.tar.gz
     - name: import-commit
+      shell: bash
       run: |
         echo 'importing objects into .git-dir'
-        echo "${{ inputs.commit-objects }}" | base64 -d | tar x
         if [ -n "${{ inputs.commit-digest }}" ]; then
           commit_digest="${{ inputs.commit-digest }}"
         else
@@ -87,4 +107,3 @@ runs:
           exit 1
           ;;
         esac
-      shell: bash

@@ -1,0 +1,103 @@
+name: Helmchart-Build (with OCM)
+description: |
+  Reusable Workflow for building relocatable Helmcharts accompanied with OCM-Resource-Fragments.
+
+  It wraps the `helmchart` action from the same repository (and hence accepts the same inputs).
+
+  By default, base-component-descriptor and ocm-fragments as emitted from `prepare` and `oci-ocm`
+  will be consumed, thus avoiding boilerplate for collecting those.
+
+  Note, that this workflow must declare a dependency towards both `prepare`, and `oci-ocm` actions,
+  such that all needed artefacts are in place when this workflow is run.
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        description: |
+          The Helmchart's name. This value will be injected into the Helm-Chart's `Chart.yaml` file
+          as `.name` attribute (if not identical). It will also be used as OCM-Resource-Name, and be
+          appended to the target-OCI-repository (the latter is mandated by Helm).
+        required: true
+        type: string
+      dir:
+        description: |
+          Path to Chart-Directory. Relative to repository-root.
+        required: true
+        type: string
+      oci-registry:
+        description: |
+          The OCI-Registry to publish the Helm-Chart to.
+        required: true
+        type: string
+      oci-repository:
+        description: |
+          If passed, this value is concateneted to `oci-registry`-input. Note that also in this
+          case, the `name` input will be appended to the end of the target-oci-reference.
+        type: string
+        required: false
+      component-descriptor:
+        description: |
+          Use to explicitly pass-in the OCM-Component-Descriptor containing referenced OCI-Images.
+          If not passed, component-descriptor will be collected from `prepare` action and any
+          `oci-ocm`-actions.
+        required: false
+        type: string
+      ocm-mappings:
+        description: |
+          A YAML document of mappings between OCM-Resources and Helm-Chart-Values that can be used
+          to generate localised Helm-Values.
+
+          Must be a list of the following form:
+
+          ```
+          - ref: ocm-resource:<resource-name>.<resource-attribute>
+            attribute: <jsonpath-to-helmvalues>
+          ```
+
+          Where:
+            `resource-name` is the name of a referenced OCM-Resource (typically an OCI-Image)
+            `resource-attribute` is one of: `repository`, `tag`, `image`
+          Where:
+            `repository` is the resource's OCI-Image-Reference w/o tag
+            `tag` is the resources's OCI-Image-Reference's tag (which may be a digest-tag)
+            `image` is the resource's full OCI-Image-Reference (including tag)
+
+          For all OCI-Images used by the given Helm-Chart, mapping-entries *must* be specified such
+          that it is possible to generate a valid `values.yaml` document so that all references to
+          OCI-Registries are specified (thus localising the helm-chart).
+        type: string
+        required: true
+      ocm-ctx:
+        description: |
+          An optional ctx for limiting the ocm-fragments that are collected.
+          passed as `ctx`-input to `merge-ocm-fragments` action.
+        required: false
+        type: string
+
+jobs:
+  helmchart:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: fetch-ocm-fragments
+        id: fetch-ocm
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        with:
+          component-descriptor: ${{ inputs.component-descriptor }}
+          component-descriptor-artefact: base-component-descriptor
+          ctx: ${{ inputs.ocm-ctx }}
+      - uses: actions/checkout@v4
+      - name: build-helmchart
+        uses: gardener/cc-utils/.github/actions/helmchart@master
+        with:
+          name: ${{ inputs.name }}
+          dir: ${{ inputs.dir }}
+          oci-registry: ${{ inputs.oci-registry }}
+          oci-repository: ${{ inputs.oci-repository }}
+          component-descriptor: ${{ steps.fetch-ocm.outputs.component-descriptor }}
+          mappings: ${{ inputs.ocm-mappings }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}

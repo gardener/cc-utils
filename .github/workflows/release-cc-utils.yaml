@@ -17,9 +17,6 @@ jobs:
     uses: ./.github/workflows/build-and-test.yaml
     with:
       mode: 'release'
-      version-prerelease: ''
-      version-commit-message: "release ${version}"
-
 
   release-to-github-and-bump:
     uses: ./.github/workflows/release.yaml
@@ -28,8 +25,6 @@ jobs:
     secrets:
       github-app-secret-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
     with:
-      component-descriptor: ${{ needs.build.outputs.base-component-descriptor }}
-      release-commit-objects: ${{ needs.build.outputs.version-commit-objects }}
       release-commit-target: branch
       next-version: bump-minor
 

@@ -212,7 +212,7 @@ def release_note_for_ocm_component(component: ocm.Component) -> str | None:
         }
 
         if resource_type is ocm.ArtefactType.OCI_IMAGE:
-            category_title = 'Docker Images'
+            category_title = 'Container (OCI) Images'
         elif resource_type is ocm.ArtefactType.HELM_CHART:
             category_title = 'Helm Charts'
         else:

@@ -46,6 +46,7 @@ class OsStatus(enum.StrEnum):
     AT_MOST_ONE_PATCHLEVEL_BEHIND = 'atMostOnePatchlevelBehind'
     MORE_THAN_ONE_PATCHLEVEL_BEHIND = 'moreThanOnePatchlevelBehind'
     UP_TO_DATE = 'upToDate'
+    DISTROLESS = 'distroless'
 
 
 @dataclasses.dataclass
@@ -122,7 +123,7 @@ class Datasource:
                 Datatype.ARTEFACT_SCAN_INFO,
                 Datatype.GHAS_FINDING,
             ),
-        }[datasource]
+        }.get(datasource, tuple())
 
     @staticmethod
     def has_scan_info(datasource: str) -> bool:
@@ -716,6 +717,12 @@ class MetaRescoringRules(enum.StrEnum):
 
 @dataclasses.dataclass(frozen=True)
 class CustomRescoring:
+    '''
+    The `allowed_processing_time` is stored relatively to allow the rescoring to apply to findings
+    with different discovery dates, i.e. in case the rescoring is of scope "global" or "component".
+    Alternatively, the explicit `due_date` can be set in case the `due_date` is independent of the
+    individual discovery dates (for example, this might be the case if exceptions apply).
+    '''
     finding: (
         RescoringVulnerabilityFinding
         | RescoringLicenseFinding
@@ -733,6 +740,8 @@ class CustomRescoring:
     )
     matching_rules: list[str] = dataclasses.field(default_factory=list)
     comment: str | None = None
+    allowed_processing_time: str | None = None
+    due_date: datetime.date | None = None
 
     @property
     def key(self) -> str:
@@ -742,6 +751,8 @@ class CustomRescoring:
             self.user.key,
             self.comment,
             self.finding.key,
+            self.allowed_processing_time,
+            self.due_date.strftime('%Y-%m-%d') if self.due_date else None,
         )
 
 
@@ -759,12 +770,12 @@ class ComplianceSnapshotState:
 
 @dataclasses.dataclass(frozen=True)
 class ComplianceSnapshot:
-    latest_processing_date: datetime.date
+    due_date: datetime.date
     state: list[ComplianceSnapshotState]
 
     @property
     def key(self) -> str:
-        return self.latest_processing_date.isoformat()
+        return self.due_date.isoformat()
 
     def current_state(
         self,
@@ -944,6 +955,7 @@ class ArtefactMetadata:
         | dict # fallback, there should be a type
     )
     discovery_date: datetime.date | None = None # required for finding specific SLA tracking
+    allowed_processing_time: str | None = None
 
     @staticmethod
     def from_dict(raw: dict):

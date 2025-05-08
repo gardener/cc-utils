@@ -92,6 +92,7 @@ runs:
         ## Pipeline-Params-Summary
 
         | mode | ${{ inputs.mode }} |
+        | ---- | ------------------ |
         | oci-registry | ${oci_registry} |
         | ocm-repository | ${ocm_repository} |
         | is-fork | ${is_fork} |

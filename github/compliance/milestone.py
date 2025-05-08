@@ -127,7 +127,7 @@ def _sprints(
 
 def target_sprints(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
-    latest_processing_date: datetime.date,
+    due_date: datetime.date,
     sprints_count: int=-1,
 ) -> tuple[dm.Sprint]:
     sprints = _sprints(
@@ -142,13 +142,13 @@ def target_sprints(
             break
 
         end_date = sprint.find_sprint_date(name='end_date').value.date()
-        if end_date >= latest_processing_date:
+        if end_date >= due_date:
             targets_sprints.append(sprint)
 
     if len(targets_sprints) < sprints_count:
         logger.warning(
             f'did not find {sprints_count} sprints starting from ' +
-            f'{latest_processing_date}, only found {len(targets_sprints)} sprints'
+            f'{due_date}, only found {len(targets_sprints)} sprints'
         )
 
     return tuple(targets_sprints)
