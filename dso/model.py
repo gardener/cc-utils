@@ -67,6 +67,7 @@ class Datasource:
     DIKI = 'diki'
     FALCO = 'falco'
     INVENTORY = 'inventory'
+    GHAS = 'ghas'
 
     @staticmethod
     def datasource_to_datatypes(datasource: str) -> tuple[str, ...]:
@@ -112,6 +113,10 @@ class Datasource:
             ),
             Datasource.INVENTORY: (
                 Datatype.INVENTORY_FINDING,
+            ),
+            Datasource.GHAS: (
+                Datatype.ARTEFACT_SCAN_INFO,
+                Datatype.GHAS_FINDING,
             ),
         }.get(datasource, tuple())
 
@@ -279,6 +284,7 @@ class Datatype:
     CRYPTO = 'finding/crypto'
     FALCO_FINDING = 'finding/falco'
     INVENTORY_FINDING = 'finding/inventory'
+    GHAS_FINDING = 'finding/ghas'
 
     @staticmethod
     def datatype_to_datasource(datatype: str) -> str:
@@ -294,6 +300,7 @@ class Datatype:
             Datatype.CRYPTO: Datasource.CRYPTO,
             Datatype.FALCO_FINDING: Datasource.FALCO,
             Datatype.INVENTORY_FINDING: Datasource.INVENTORY,
+            Datatype.GHAS_FINDING: Datasource.GHAS
         }[datatype]
 
 
@@ -520,6 +527,20 @@ class DikiFinding(Finding):
     @property
     def key(self) -> str:
         return _as_key(self.provider_id, self.ruleset_id, self.rule_id)
+
+@dataclasses.dataclass(frozen=True)
+class GitHubSecretFinding(Finding):
+    html_url: str
+    secret: str
+    secret_type: str
+    secret_type_display_name: str
+    path: str
+    line: int
+    state: str
+
+    @property
+    def key(self) -> str:
+        return _as_key(self.html_url)  
 
 
 class CryptoAssetTypes(enum.StrEnum):
@@ -940,6 +961,7 @@ class ArtefactMetadata:
         | CryptoAsset
         | CryptoFinding
         | FalcoFinding
+        | GitHubSecretFinding
         | InventoryFinding
         | dict # fallback, there should be a type
     )
