@@ -1,4 +1,4 @@
-import cfg_mgmt.model as cmm
+import cfg_mgmt.model as cmm # noqa: E0401
 import github.compliance.issue as gci
 import github.compliance.model as gcm
 
