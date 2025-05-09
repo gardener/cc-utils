@@ -12,12 +12,6 @@ def _parse_datetime_if_present(date: str):
     return dateutil.parser.isoparse(date)
 
 
-@dataclasses.dataclass # TODO: deduplicate w/ modelclass in delivery-service
-class GithubUser:
-    username: str
-    github_hostname: str
-
-
 @dataclasses.dataclass(frozen=True)
 class SprintDate:
     name: str
