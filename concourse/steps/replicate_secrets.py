@@ -2,15 +2,15 @@ import base64
 import logging
 import random
 
-import kubernetes.client
-import kubernetes.config
+import kubernetes.client # noqa: E0401
+import kubernetes.config # noqa: E0401
 import urllib3.exceptions
 
 import ccc.github
 import ccc.secrets_server
-import cfg_mgmt.model as cmm
-import cfg_mgmt.reporting as cmr
-import cfg_mgmt.util as cmu
+import cfg_mgmt.model as cmm # noqa: E0401
+import cfg_mgmt.reporting as cmr # noqa: E0401
+import cfg_mgmt.util as cmu # noqa: E0401
 import ci.log
 import ci.util
 import model
