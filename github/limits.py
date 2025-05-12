@@ -10,6 +10,7 @@ issue_body = 65536
 issue_title = 256
 pullrequest_body = 262144
 release_body = 125000
+label = 50
 
 
 def fits(
