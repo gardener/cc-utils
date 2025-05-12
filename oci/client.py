@@ -251,9 +251,11 @@ def _scope(image_reference: str | om.OciImageReference, action: str):
     return scope
 
 
-def no_credentials_lookup(**kwargs) -> None:
+def no_credentials_lookup(*args, **kwargs) -> None:
     '''
-    useful to pass to oci-client when working with public images
+    a lookup that never returns credentials, regardless of passed arguments.
+
+    Concenience-Shorthand for cases where no credentials are available.
     '''
     return None
 
