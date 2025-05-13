@@ -2,11 +2,12 @@ import collections.abc
 import dataclasses
 import datetime
 import logging
-import requests
 import time
 import typing
 
 import dacite
+import requests.exceptions
+import requests.sessions
 
 import ocm
 
@@ -398,7 +399,8 @@ class DeliveryServiceClient:
         version_filter: str | None=None,
         component: ocm.Component | ocm.ComponentDescriptor=None,
         artifact: ocm.Artifact | str=None,
-    ) -> tuple[dict, list[dm.Status]]:
+        absent_ok: bool=False,
+    ) -> tuple[list[dict] | None, list[dm.Status] | None]:
         '''
         retrieves component-responsibles and optional status info.
         Status info can be used to communicate additional information, e.g. that responsible-label
@@ -463,7 +465,14 @@ class DeliveryServiceClient:
                 break
             time.sleep(5)
 
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404 and absent_ok:
+                logger.warning(f'delivery service returned 404 for responsibles with {params=}')
+                return None, None
+            raise
+
         resp_json: dict = resp.json()
 
         responsibles = resp_json['responsibles']
