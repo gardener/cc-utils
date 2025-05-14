@@ -19,10 +19,11 @@ on:
   workflow_call:
     secrets:
       github-app-secret-key:
-        required: true
+        required: false
         description: |
           The secret-key for the `Gardener-GitHub-App` (`vars.GARDENER_GITHUB_ACTIONS_APP_ID`)
-          Pass-in `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
+          If not passed (in which case calling workflows need to set `secrets: inherit`), defaults
+          to `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
     inputs:
       component-descriptor:
         required: false
@@ -91,7 +92,7 @@ jobs:
         id: app-token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          private-key: ${{ secrets.github-app-secret-key }}
+          private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/release@master
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
