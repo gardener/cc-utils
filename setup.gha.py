@@ -52,7 +52,7 @@ def requirements():
         'python-gitlab',
         'pytimeparse',
         'ruamel.yaml',
-        'slackclient',
+        'slack-sdk',
         'sphinx_rtd_theme',
         'sseclient-py',
         'urllib3',
