@@ -52,6 +52,18 @@ outputs:
     description: |
       the resulting component-descriptor
     value: ${{ steps.merge.outputs.component-descriptor }}
+  name:
+    description: |
+      the component-name (for convenience)
+    value: ${{ steps.merge.outputs.name }}
+  version:
+    description: |
+      the component-version (for convenience)
+    value: ${{ steps.merge.outputs.version }}
+  component-version:
+    description: |
+      the {component-name}:{component-version} (for convenience)
+    value: ${{ steps.merge.outputs.component-version }}
 
 runs:
   using: composite
@@ -188,3 +200,9 @@ runs:
           f.write('component-descriptor<<EOF\n')
           yaml.safe_dump(component_descriptor, f)
           f.write('EOF\n')
+
+          name = component['name']
+          version = component['version']
+          f.write(f'name={name}\n')
+          f.write(f'version={version}\n')
+          f.write(f'component-version={name}:{version}\n')
