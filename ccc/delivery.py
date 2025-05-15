@@ -5,6 +5,7 @@ import ci.log
 import ci.util
 import ctx
 import delivery.client
+import model
 import model.base
 
 logger = logging.getLogger(__name__)
@@ -22,15 +23,24 @@ def _current_cfg_set(
     return cfg_set
 
 
-def auth_token_lookup(api_url: str, /):
-    '''
-    an implementation of delivery.client.AuthTokenLookup
-    '''
-    try:
-        github_cfg = ccc.github.github_cfg_for_repo_url(api_url)
-        return github_cfg.credentials().auth_token()
-    except model.base.ConfigElementNotFoundError:
-        return None
+def create_auth_token_lookup(
+    cfg_factory: model.ConfigFactory=None,
+) -> delivery.client.AuthTokenLookup:
+
+    def auth_token_lookup(api_url: str, /):
+        '''
+        an implementation of delivery.client.AuthTokenLookup
+        '''
+        try:
+            github_cfg = ccc.github.github_cfg_for_repo_url(
+                repo_url=api_url,
+                cfg_factory=cfg_factory,
+            )
+            return github_cfg.credentials().auth_token()
+        except model.base.ConfigElementNotFoundError:
+            return None
+
+    return auth_token_lookup
 
 
 def default_client_if_available(
@@ -63,7 +73,9 @@ def default_client_if_available(
     )
     return delivery.client.DeliveryServiceClient(
         routes=routes,
-        auth_token_lookup=auth_token_lookup,
+        auth_token_lookup=create_auth_token_lookup(
+            cfg_factory=cfg_factory,
+        ),
     )
 
 
@@ -86,7 +98,9 @@ def client(
 
     return delivery.client.DeliveryServiceClient(
         routes=routes,
-        auth_token_lookup=auth_token_lookup,
+        auth_token_lookup=create_auth_token_lookup(
+            cfg_factory=cfg_factory,
+        ),
     )
 
 
