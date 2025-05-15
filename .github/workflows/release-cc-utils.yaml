@@ -26,6 +26,7 @@ jobs:
     with:
       release-commit-target: branch
       next-version: bump-minor
+      slack-channel-id: C0170EXLULE # gardener-cicd channel
 
   publish-documentation:
     runs-on: ubuntu-latest
