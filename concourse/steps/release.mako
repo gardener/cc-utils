@@ -526,11 +526,11 @@ release_tag = tags[0].removeprefix('refs/tags/')
 draft_tag = f'{version_str}-draft'
 
 if release_notes_md is not None:
-  release_notes_md, truncated_release_notes  = github.release.body_or_replacement(
+  release_notes_md, is_full_release_notes  = github.release.body_or_replacement(
     body=release_notes_md,
   )
 else:
-  truncated_release_notes = False
+  is_full_release_notes = False
 
 
 gh_release = github.release.find_draft_release(
@@ -553,7 +553,7 @@ else:
     prerelease=False,
   )
 
-if truncated_release_notes:
+if not is_full_release_notes:
   gh_release.upload_asset(
     content_type='application/markdown',
     name='release-notes.md',
