@@ -66,6 +66,31 @@ on:
             - bump-major
             - bump-minor
             - bump-patch
+      slack-channel-id:
+        required: false
+        type: string
+        description: |
+          If passed, release-notes will be posted into slack-channel w/ specified ID.
+
+          Use `release-notes`-output if more control is desired.
+
+          Note: see `slack-token` for authentication options.
+      slack-token:
+        required: false
+        type: string
+        description: |
+          The auth-token to use to authenticate against slack. Only needed if `slack-channel-id` is
+          passed. For convenience, defaults to `secrets.SLACK_APP_TOKEN_GARDENER_CICD` (calling
+          workflows must set `secrets: inherit` for this to work.
+
+    outputs:
+      release-notes:
+        description: |
+          The release-notes accompanying this release (note that those will by default be
+          published as part of component-descriptor, as well as via slack, if `slack-channel-id`
+          input is specified).
+        value:
+          release-notes: ${{ jobs.release-and-bump.outputs.release-notes }}
 jobs:
   release-and-bump:
     runs-on: ubuntu-latest
@@ -73,6 +98,10 @@ jobs:
       contents: write
       packages: write
       id-token: write
+
+    outputs:
+      release-notes:
+        value: ${{ steps.release-notes.outputs.release-notes }}
 
     steps:
       - name: collect-component-descriptor
@@ -105,3 +134,20 @@ jobs:
           release-notes: ${{ steps.release-notes.outputs.release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
+
+      - name: write-release-notes-to-file
+        if: ${{ inputs.slack-channel-id != '' }}
+        run: |
+          cat <<EOF > release-notes.md
+          ${{ steps.release-notes.outputs.release-notes }}
+          EOF
+      - name: publish-release-notes-to-slack
+        if: ${{ inputs.slack-channel-id != '' }}
+        uses: slackapi/slack-github-action@v2
+        with:
+          method: files.uploadV2
+          token: ${{ secrets.slack-token || secrets.SLACK_APP_TOKEN_GARDENER_CICD }}
+          payload: |
+            channel_id: ${{ inputs.slack-channel-id }}
+            title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
+            file: ./release-notes.md
