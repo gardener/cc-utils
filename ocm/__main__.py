@@ -2,14 +2,15 @@ import argparse
 import collections.abc
 import dataclasses
 import datetime
+import io
 import json
 import os
 import sys
 
 import dacite
 
-import cnudie.retrieve
 import ocm
+import ocm.oci
 import ocm.upload
 
 
@@ -246,13 +247,52 @@ def download(parsed):
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(absent_ok=True),
     )
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
-            parsed.ocm_repository,
-        ),
-        oci_client=oci_client,
+
+    ocm_repo = ocm.OciOcmRepository(
+        baseUrl=parsed.ocm_repository,
     )
-    component_descriptor = component_descriptor_lookup((cname, cversion))
+
+    target_ref = ocm_repo.component_version_oci_ref(
+        name=cname,
+        version=cversion,
+    )
+
+    manifest = oci_client.manifest(
+        image_reference=target_ref,
+    )
+
+    try:
+        cfg_blob = oci_client.blob(
+            image_reference=target_ref,
+            digest=manifest.config.digest,
+        )
+        cfg_raw = json.loads(cfg_blob.text)
+        cfg = dacite.from_dict(
+            data_class=ocm.oci.ComponentDescriptorOciCfg,
+            data=cfg_raw,
+        )
+        layer_digest = cfg.componentDescriptorLayer.digest
+        layer_mimetype = cfg.componentDescriptorLayer.mediaType
+    except Exception as e:
+        print(f'Failed to retrieve component-descriptor-cfg: {e=}, falling back to first layer')
+
+        # by contract, the first layer must always be a tar w/ component-descriptor
+        layer_digest = manifest.layers[0].digest
+        layer_mimetype = manifest.layers[0].mediaType
+
+    if not layer_mimetype in ocm.oci.component_descriptor_mimetypes:
+        print(f'Error: {target_ref=} {layer_mimetype=} was unexpected')
+        exit(1)
+
+    raw = oci_client.blob(
+        image_reference=target_ref,
+        digest=layer_digest,
+        stream=False, # manifests are typically small - do not bother w/ streaming
+    ).content
+
+    component_descriptor = ocm.oci.component_descriptor_from_tarfileobj(
+        fileobj=io.BytesIO(raw),
+    )
     component = component_descriptor.component
 
     if parsed.outfile == '-':
