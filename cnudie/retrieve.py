@@ -364,7 +364,6 @@ def _raw_component_descriptor_from_oci(
     for ocm_repo in ocm_repos:
         if isinstance(ocm_repo, str):
             ocm_repo = ocm.OciOcmRepository(
-                type=ocm.OciAccess,
                 baseUrl=ocm_repo,
             )
 
