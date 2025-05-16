@@ -89,8 +89,7 @@ on:
           The release-notes accompanying this release (note that those will by default be
           published as part of component-descriptor, as well as via slack, if `slack-channel-id`
           input is specified).
-        value:
-          release-notes: ${{ jobs.release-and-bump.outputs.release-notes }}
+        value: ${{ jobs.release-and-bump.outputs.release-notes }}
 jobs:
   release-and-bump:
     runs-on: ubuntu-latest
