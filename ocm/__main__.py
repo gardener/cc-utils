@@ -238,6 +238,10 @@ def upload(parsed):
 
 
 def download(parsed):
+    if not _have_oci:
+        print('ERROR: `oci`-package is not available - cannot download')
+        exit(1)
+
     cname, cversion = parsed.component.split(':')
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(absent_ok=True),
