@@ -419,10 +419,8 @@ class DeliveryServiceClient:
         '''
 
         if any((name, version, ocm_repo_url)):
-            if not all((name, version)):
-                raise ValueError('either all or none of name and version must be set')
-            elif component:
-                raise ValueError('must pass either name, version (and ocm_repo_url) OR component')
+            if component:
+                raise ValueError('must pass either name (and version and ocm_repo_url) OR component')
         elif component and (component := cnudie.util.to_component(component)):
             name = component.name
             version = component.version
@@ -433,8 +431,9 @@ class DeliveryServiceClient:
 
         params = {
             'component_name': name,
-            'version': version,
         }
+        if version:
+            params['version'] = version
         if ocm_repo_url:
             params['ocm_repo_url'] = ocm_repo_url
         if version_filter is not None:
