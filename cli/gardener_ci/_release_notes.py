@@ -19,6 +19,7 @@ def print_release_notes(
     ocm_repo_base_url: str = None,
     version_whither: str = None,
     version_whence: str = None,
+    output_raw: bool = False,
 ):
     oci_client = ccc.oci.oci_client()
     if not ocm_repo_base_url:
@@ -96,5 +97,10 @@ def print_release_notes(
         version_whither=version_whither,
         version_whence=version_whence,
     )
+
+    if output_raw:
+        print('\n'.join(block.block_str for block in blocks))
+        return
+
     rendered_notes = release_notes.markdown.render(blocks)
     print('\n'.join(str(n) for n in rendered_notes))
