@@ -608,6 +608,12 @@ class Client:
 
         manifest_dict = res.json()
 
+        # workaround: not all manifests contain `mediaType`
+        # -> fallback to content-type header
+        if not 'mediaType' in manifest_dict:
+            if (media_type := res.headers.get('Content-Type')):
+                manifest_dict['mediaType'] = media_type
+
         if manifest_dict.get('mediaType') in (
             om.DOCKER_MANIFEST_LIST_MIME,
             om.OCI_IMAGE_INDEX_MIME,

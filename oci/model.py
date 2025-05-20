@@ -449,11 +449,16 @@ class OciImageManifestList:
 
 def as_manifest(
     manifest: str | bytes | dict | OciImageManifest | OciImageManifestList,
+    media_type: str=None,
 ) -> OciImageManifest | OciImageManifestList:
     '''
     returns a deserialised equivalent of the passed-in manifest. For convenience, if passed-in
     manifest is already an instance of either OciImageManifest or OciImageManifestList, the
     passed value is returned unchanged.
+
+    if the optional `media_type` parameter is given, it will overwrite the mediaType from given
+    manifest. This is useful in cases where the manifest either contains a wrong, or not
+    mediaType.
     '''
     if isinstance(manifest, (OciImageManifest, OciImageManifestList)):
         return manifest
@@ -461,7 +466,9 @@ def as_manifest(
     if isinstance(manifest, (str, bytes)):
         manifest = json.loads(manifest)
 
-    if (media_type := manifest.get('mediaType')) in (
+    media_type = media_type or manifest.get('mediaType')
+
+    if media_type in (
         DOCKER_MANIFEST_LIST_MIME,
         OCI_IMAGE_INDEX_MIME,
     ):
