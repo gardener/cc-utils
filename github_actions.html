@@ -1,0 +1,151 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub-Actions &mdash; cc-utils  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            cc-utils
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="pipeline.html">Pipeline Definition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline_job.html">Pipeline Job</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipeline_step.html">Pipeline Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="traits.html">Pipeline Definition Traits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes Process</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cc-utils</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">GitHub-Actions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/github_actions.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="github-actions">
+<h1>GitHub-Actions<a class="headerlink" href="#github-actions" title="Link to this heading"></a></h1>
+<p><a class="reference external" href="https://github.com/features/actions">GitHub-Actions</a> is a managed CI/CD offering integrated
+into GitHub. For standardisation and re-use within Gardener-Project, we maintain some re-usable
+Actions and Workflows (kept in
+<a class="reference external" href="https://github.com/gardener/cc-utils/tree/master/.github">cc-utils repository</a>). Those offer
+functionality similar to Concourse-Pipeline-Template. This includes integration with
+<a class="reference external" href="https://ocm.software">OCM (Open Component Model)</a>, as well as release (notes) handling.</p>
+<p>To improve security posture, we make use of trustbased-authentication, and avoid usage of static
+credentials where possible.</p>
+<section id="migration-from-concourse-pipelines">
+<h2>Migration from Concourse-Pipelines<a class="headerlink" href="#migration-from-concourse-pipelines" title="Link to this heading"></a></h2>
+<p>The default pipeline setup for Concourse-Pipelines consists of three pipelines:</p>
+<ul class="simple">
+<li><p>head-update (run for certain branches - typically default + release-branches)</p></li>
+<li><p>pull-request (run for pullrequests)</p></li>
+<li><p>release (manually triggered to publish new releases)</p></li>
+</ul>
+<p>This is migrated to workflows of the following layout:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">.</span><span class="n">github</span><span class="o">/</span><span class="n">workflows</span><span class="o">/</span><span class="n">build</span><span class="o">.</span><span class="n">yaml</span>       <span class="c1"># shared; called by other workflows</span>
+<span class="o">.</span><span class="n">github</span><span class="o">/</span><span class="n">workflows</span><span class="o">/</span><span class="n">release</span><span class="o">.</span><span class="n">yaml</span>     <span class="c1"># for manually triggering releases</span>
+<span class="o">.</span><span class="n">github</span><span class="o">/</span><span class="n">workflows</span><span class="o">/</span><span class="n">non</span><span class="o">-</span><span class="n">release</span><span class="o">.</span><span class="n">yaml</span> <span class="c1"># for triggering upon head-updates / pullrequests</span>
+</pre></div>
+</div>
+<section id="branch-protection-rulesets">
+<h3>Branch-Protection -&gt; Rulesets<a class="headerlink" href="#branch-protection-rulesets" title="Link to this heading"></a></h3>
+<p>Most repositories use branch-protections to forbid directly pushing to a branch. Some pipelines,
+most prominently release-pipelines (which push release- and “bump”-commits), need to circumvent
+those rules. As we want to avoid using static credentials (for Service-Accounts w/
+owner-permissions), we use a <a class="reference external" href="https://github.com/apps/gardener-github-actions">GitHub-App</a>
+for granting such permissions more fine-granular.</p>
+<p>However, as discussed <a class="reference external" href="https://github.com/orgs/community/discussions/13836">here</a>, it is only
+possible to grant exceptions (or “bypassers”, as GitHub Rulesets call them) to branch protections
+if using the more modern <code class="code docutils literal notranslate"><span class="pre">Rulesets</span></code>. Hence, as part of migration to GitHub-Actions, it is necessary
+to migrate branch-protections to rulesets.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is important to no longer use “classical” branch protections after migration of
+release-pipeline to GitHub-Actions. Configure any protection-rules using the more modern
+<code class="code docutils literal notranslate"><span class="pre">Rulesets</span></code>, instead. The latter are a superset to branch-protections w.r.t. configuration
+options.</p>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2020, SAP SE or an SAP affiliate company..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
