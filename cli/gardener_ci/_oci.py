@@ -307,9 +307,17 @@ def manifest(
         accept=accept,
     )
 
+    manifest_dict = manifest_raw.json()
+
+    media_type = manifest_dict.get(
+        'mediaType',
+        manifest_raw.headers.get('Content-Type')
+    )
+
     if pretty and not print_expr:
         manifest = oci.model.as_manifest(
             manifest=manifest_raw.text,
+            media_type=media_type,
         )
 
         if isinstance(manifest, om.OciImageManifest):
@@ -336,6 +344,7 @@ def manifest(
         manifest_bytes = manifest_raw.content
         manifest = oci.model.as_manifest(
             manifest=manifest_bytes,
+            media_type=media_type,
         )
 
         # expose to eval
