@@ -343,6 +343,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        ref: refs/heads/gh-pages
       - name: Retrieve Documentation
         uses: actions/download-artifact@v4
         with:
@@ -351,19 +352,12 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       - name: Publish Documentation
         run: |
-          git fetch origin gh-pages
-          git checkout -f gh-pages
-          git clean -dfx
-          git status
-          echo "let's hope our worktree is clean"
           tar c -C /tmp/documentation-out.d . | tar x -C.
           git status
           if [ -z "$(git status --porcelain)" ]; then
             echo "no changes in documentation - no need to update documentation"
-            git checkout master # needed for post-gar
             exit 0
           fi
           git add -A
           git commit -m "update documentation"
           git push origin refs/heads/gh-pages
-          git checkout master # needed for post-gar
