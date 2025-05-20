@@ -16,6 +16,12 @@ CC-Utils - Build Pipeline Reference Manual
     traits
     release_notes
 
+.. note::
+   There is an ongoing migration from Concourse-Pipeline-Template to
+   `GitHubActions <https://github.com/features/actions>`_
+
+   See :doc:`Migration to GHA <github_actions>` for details.
+
 
 Introduction
 ============
