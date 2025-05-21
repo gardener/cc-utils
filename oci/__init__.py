@@ -159,7 +159,6 @@ def replicate_artifact(
         need_uncompressed_layer_digests = True
         uncompressed_layer_digests = []
     elif schema_version == 2:
-        manifest = json.loads(raw_manifest)
         media_type = manifest.get('mediaType', om.DOCKER_MANIFEST_SCHEMA_V2_MIME)
 
         if media_type in (
