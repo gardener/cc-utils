@@ -553,7 +553,7 @@ else:
     prerelease=False,
   )
 
-if not is_full_release_notes:
+if release_notes_md is not None and not is_full_release_notes:
   gh_release.upload_asset(
     content_type='application/markdown',
     name='release-notes.md',
