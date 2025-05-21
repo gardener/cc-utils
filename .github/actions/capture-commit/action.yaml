@@ -72,7 +72,7 @@ runs:
             ${ts_ref} \
             ${commit_out}
 
-        tar tf commit-objects.tar
+        tar tf ${objects_out}
 
         echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
         echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
@@ -84,7 +84,8 @@ runs:
         commit-message:
         $(git show)
         EOF
-        gzip commit-objects.tar
+
+        gzip ${objects_out}
       shell: bash
     - uses: actions/upload-artifact@v4
       if: ${{ inputs.to-artefact != '' }}
