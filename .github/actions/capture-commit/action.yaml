@@ -41,6 +41,19 @@ inputs:
       if specified, the captured commits will also be uploaded as an artefact of the specified
       name. The artefact will contain a single TARchive w/ the same contents as the `commit-objects`
       output. Its name will be `commit-objects.tar.gz`
+  commit-summary:
+    description: |
+      controls the step-summary to be emitted by this action.
+
+      `short` will contain the changed files + commit-message
+      `full`  will also contain the full diff
+      `none`  will result in no summary
+    default: short
+    type: choice
+    options:
+      - short
+      - full
+      - none
 
 outputs:
   commit-digest:
@@ -76,6 +89,10 @@ runs:
 
         echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
         echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
+
+        summary_kind="${{ inputs.commit-summary }}"
+
+        if [ "${summary_kind}" == 'full' ]; then
         cat << EOF > ${GITHUB_STEP_SUMMARY}
         ## Capture-Commit Summary
         commit-digest: \`$(cat ${commit_out})\`
@@ -84,6 +101,20 @@ runs:
         commit-message:
         $(git show)
         EOF
+
+        elif [ "${summary_kind}" == 'short']; then
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        ## Capture-Commit Summary
+        commit-digest: \`$(cat ${commit_out})\`
+        objects-listing (tarfile):
+        EOF
+
+        elif [ "${summary_kind}" == 'none']; then
+          echo "will not print a summary"
+        else
+          echo "Error: unexpected summary-kind: ${summary_kind}"
+          exit 1
+        fi
 
         gzip ${objects_out}
       shell: bash
