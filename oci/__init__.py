@@ -123,7 +123,7 @@ def replicate_artifact(
     resp = client.manifest_raw(
         image_reference=src_image_reference,
         accept=accept,
-    ).text
+    )
     raw_manifest = resp.text
     manifest = json.loads(raw_manifest)
 
