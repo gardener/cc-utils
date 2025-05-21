@@ -91,9 +91,10 @@ runs:
         cat << EOF > ${GITHUB_STEP_SUMMARY}
         ## Pipeline-Params-Summary
 
-        | mode | ${{ inputs.mode }} |
-        | ---- | ------------------ |
-        | oci-registry | ${oci_registry} |
-        | ocm-repository | ${ocm_repository} |
-        | is-fork | ${is_fork} |
+        <table> <tbody>
+          <tr> <td>mode</td>           <td>${{ inputs.mode }}</td> </tr>
+          <tr> <td>oci-registry</td>   <td>${oci_registry}</td> </tr>
+          <tr> <td>ocm-repository</td> <td>${ocm_repository}</td> </tr>
+          <tr> <td>is-fork</td>        <td>${is_fork}</td> </tr>
+        </tbody> </table>
         EOF
