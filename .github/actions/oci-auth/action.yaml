@@ -44,6 +44,12 @@ inputs:
       The OCI-Image-Reference specifying the OCI-Registry to authenticate against. Must encompass
       at least a hostname.
     default: europe-docker.pkg.dev
+  print-summary:
+    default: false
+    type: boolean
+    description: |
+      If set to `true`, the action will print a summary about authentication result, as well as
+      additional output, such as written files.
 
 outputs:
   access-token:
@@ -134,6 +140,10 @@ runs:
 
         echo "docker-cfg=${docker_cfg}" >> ${GITHUB_OUTPUT}
         echo "access-token=${token}" >> ${GITHUB_OUTPUT}
+
+        if ! "${{ inputs.print-summary || 'false' }}"; then
+          exit 0
+        fi
 
         cat << EOF > ${GITHUB_STEP_SUMMARY}
         ## OCI-Auth Summary
