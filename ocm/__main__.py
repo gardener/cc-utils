@@ -258,6 +258,7 @@ def download(parsed):
         yaml.dump(
             data=dataclasses.asdict(component_descriptor),
             stream=outfh,
+            encoding='utf-8',
             Dumper=ocm.EnumValueYamlDumper,
         )
         exit(0)
