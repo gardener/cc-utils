@@ -107,6 +107,7 @@ runs:
         ## Capture-Commit Summary
         commit-digest: \`$(cat ${commit_out})\`
         objects-listing (tarfile):
+        $(tar tf ${objects_out})
         EOF
 
         elif [ "${summary_kind}" == 'none' ]; then
