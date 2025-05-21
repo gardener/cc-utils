@@ -102,14 +102,14 @@ runs:
         $(git show)
         EOF
 
-        elif [ "${summary_kind}" == 'short']; then
+        elif [ "${summary_kind}" == 'short' ]; then
         cat << EOF > ${GITHUB_STEP_SUMMARY}
         ## Capture-Commit Summary
         commit-digest: \`$(cat ${commit_out})\`
         objects-listing (tarfile):
         EOF
 
-        elif [ "${summary_kind}" == 'none']; then
+        elif [ "${summary_kind}" == 'none' ]; then
           echo "will not print a summary"
         else
           echo "Error: unexpected summary-kind: ${summary_kind}"
