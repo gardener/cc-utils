@@ -7,7 +7,7 @@ jobs:
     uses: ./.github/workflows/build-and-test.yaml
     with:
       mode: snapshot
-  component-descriptor:
+  post-build:
     needs:
       - build-and-test
-    uses: ./.github/workflows/component-descriptor.yaml
+    uses: ./.github/workflows/post-build.yaml

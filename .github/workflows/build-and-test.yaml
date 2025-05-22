@@ -144,18 +144,6 @@ jobs:
         name: distribution-packages
         path: distribution-packages.tar.gz
 
-  update-draft-relase:
-    if: ${{ inputs.mode != 'release' &&
-          github.ref_name == github.event.repository.default_branch &&
-          ! fromJSON(needs.prepare.outputs.is-fork)
-      }}
-    needs:
-      - prepare
-    uses: ./.github/workflows/draft-release.yaml
-    with:
-      component-descriptor: ${{ needs.prepare.outputs.component-descriptor }}
-      ocm-repositories: ${{ needs.prepare.outputs.ocm-releases-repository }}
-
   lint:
     runs-on: ubuntu-latest
     needs:
