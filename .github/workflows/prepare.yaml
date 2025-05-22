@@ -5,6 +5,11 @@ description: |
   - calculate an effective version (and create a commit for switching to this version)
   - create a base OCM Component-Descriptor
 
+  All outputs are also exposed as an artefact (name can be influenced via output-artefact input).
+  Said artefact contains a TARfile (name can be controlled via output-artefact-filename input),
+  which in turn contains regular files named like the respective output, containing the outputs'
+  values, prefixed with `prepare-values.d`
+
 on:
   workflow_call:
     inputs:
@@ -24,6 +29,14 @@ on:
 
           In `release` mode, release-registries will be returned. Effective version will be
           finalised version of repository-version.
+      output-artefact:
+        default: prepare-workflow-values
+        type: string
+        description: |
+          Specifies the artefact-name to which this workflow should upload its outputs to.
+      output-artefact-filename:
+        default: prepare-workflow-values.tar
+        type: string
 
     outputs:
       ocm-repository:
@@ -114,3 +127,38 @@ jobs:
           version: ${{ steps.version.outputs.version }}
           ocm-repository: ${{ needs.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
+
+  upload-artefact:
+    needs:
+      - params
+      - version-and-ocm
+    runs-on: ubuntu-latest
+    steps:
+      - name: prepare-artefact
+        run: |
+          set -eu
+
+          p=prepare-values.d
+          mkdir $p
+
+          # params
+          echo "${{ needs.params.outputs.ocm-repository }}" > $p/ocm-repository
+          echo "${{ needs.params.outputs.ocm-releases-repository }}" > $p/ocm-releases-repository
+          echo "${{ needs.params.outputs.oci-registry }}" > $p/oci-registry
+          echo "${{ needs.params.outputs.is-fork }}" > $p/is-fork
+
+          # version-and-ocm
+          echo "${{ needs.version-and-ocm.outputs.version }}" > $p/version
+          echo "${{ needs.version-and-ocm.outputs.commit-objects }}" > $p/commit-objects
+          echo "${{ needs.version-and-ocm.outputs.commit-digest }}" > $p/commit-digest
+          cat <<EOF > $p/component-descriptor
+          ${{ needs.version-and-ocm.outputs.component-descriptor }}
+          EOF
+
+          tar cf "${{ inputs.output-artefact-filename }}" $p
+          tar tf "${{ inputs.output-artefact-filename }}" # debug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.output-artefact }}
+          path: ${{ inputs.output-artefact-filename }}
