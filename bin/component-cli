@@ -135,44 +135,16 @@ def component_archive_resource_add(argv):
   log_argv(delegated=False)
 
 
-def image_vector(argv):
-  subcmd = argv[0]
-  if not subcmd in ('add',):
-    fail_and_notify_about_unsupported_command(
-      'only `add` subcommand is allowed',
-    )
-
-  # command `image-vector add`
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--comp-desc', required=True, dest='component_descriptor_path')
-  parser.add_argument('--image-vector', required=True,  dest='images_yaml_path')
-  parser.add_argument(
-    '--component-prefixes',
-    default='',
-    help='comma-separated image-prefixes (calculate component-names by stripping off)',
-  )
-  # todo: --generic-dependencies seems to have no effect in original component-cli
-  parser.add_argument(
-    '--generic-dependencies',
-    action='append',
-    required=False,
-    default=[],
-  )
-
-  parsed = parser.parse_args(argv[1:]) # strip subcommand (`add`)
-
-  with open(parsed.component_descriptor_path) as f:
-    component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
-
-  component = component_descriptor.component
-
+def _add_resources_from_imagevector(
+    component: ocm.Component,
+    images_yaml_path: str,
+    component_prefixes: list[str],
+) -> ocm.Component:
   # images_yaml_path, as found e.g. at github.com/gardener/gardener charts/images.yaml
   def iter_images():
-    images_yaml_path = parsed.images_yaml_path
     with open(images_yaml_path) as f:
       for part in yaml.safe_load_all(f):
         yield from part['images']
-
 
   imagevector_label_name = 'imagevector.gardener.cloud/images'
   imagevector_label = component.find_label(imagevector_label_name)
@@ -183,8 +155,6 @@ def image_vector(argv):
         value={'images': []}
       )
     )
-
-  component_prefixes = parsed.component_prefixes.split(',')
 
   for image_dict in iter_images():
     name = image_dict['name']
@@ -297,6 +267,44 @@ def image_vector(argv):
 
   if not imagevector_label.value['images']:
     component.labels.remove(imagevector_label)
+
+  return component
+
+
+def image_vector(argv):
+  subcmd = argv[0]
+  if not subcmd in ('add',):
+    fail_and_notify_about_unsupported_command(
+      'only `add` subcommand is allowed',
+    )
+
+  # command `image-vector add`
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--comp-desc', required=True, dest='component_descriptor_path')
+  parser.add_argument('--image-vector', required=True,  dest='images_yaml_path')
+  parser.add_argument(
+    '--component-prefixes',
+    default='',
+    help='comma-separated image-prefixes (calculate component-names by stripping off)',
+  )
+  # todo: --generic-dependencies seems to have no effect in original component-cli
+  parser.add_argument(
+    '--generic-dependencies',
+    action='append',
+    required=False,
+    default=[],
+  )
+
+  parsed = parser.parse_args(argv[1:]) # strip subcommand (`add`)
+
+  with open(parsed.component_descriptor_path) as f:
+    component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+  component_descriptor.component = _add_resources_from_imagevector(
+      component=component_descriptor.component,
+      images_yaml_path=parsed.images_yaml_path,
+      component_prefixes=parsed.component_prefixes.split(','),
+  )
 
   # "normalise" (match component-cli's behaviour)
   # this could (and should) be removed
