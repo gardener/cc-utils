@@ -151,7 +151,7 @@ def collect_release_notes(
 
     release_notes_markdown = '\n'.join(
         str(i) for i in release_notes.markdown.render(release_note_blocks)
-    ) or 'no release notes available'
+    ) or ''
 
     if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
         component=component,
