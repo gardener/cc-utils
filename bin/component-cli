@@ -165,7 +165,7 @@ def image_vector(argv):
 
   component_descriptor.component = ocm.gardener.add_resources_from_imagevector(
       component=component_descriptor.component,
-      image_dicts=ocm.gardener.iter_images_from_imagevector(
+      images=ocm.gardener.iter_images_from_imagevector(
           images_yaml_path=parsed.images_yaml_path,
       ),
       component_prefixes=parsed.component_prefixes.split(','),

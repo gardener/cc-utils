@@ -167,7 +167,7 @@ def test_add_resources_from_imagevector():
 
     component = ocm.gardener.add_resources_from_imagevector(
         component=component,
-        image_dicts=image_dicts,
+        images=image_dicts,
         component_prefixes=[
             'europe-docker.pkg.dev/gardener-project/releases',
             'some-other-prefix',

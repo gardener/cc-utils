@@ -42,7 +42,7 @@ def iter_images_from_imagevector(
 
 def add_resources_from_imagevector(
     component: ocm.Component,
-    image_dicts: collections.abc.Iterable[dict],
+    images: collections.abc.Iterable[dict],
     component_prefixes: list[str],
 ) -> ocm.Component:
   imagevector_label_name = 'imagevector.gardener.cloud/images'
@@ -55,7 +55,7 @@ def add_resources_from_imagevector(
       )
     )
 
-  for image_dict in image_dicts:
+  for image_dict in images:
     name = image_dict['name']
     resource_id = image_dict.get('resourceId', {'name': name})
     source_repo = image_dict.get('sourceRepository', None)
