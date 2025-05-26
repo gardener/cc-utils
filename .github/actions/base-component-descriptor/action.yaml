@@ -60,6 +60,13 @@ inputs:
     required: false
     type: string
     default: SAP SE
+  ocm-component-prefixes:
+    required: false
+    type: string
+    default: europe-docker.pkg.dev/gardener-project/releases/gardener,europe-docker.pkg.dev/gardener-project/snapshots/gardener
+    description: |
+      used while translating Gardener's imagevector-files into OCM-Resources or
+      OCM Component-References.
 
 outputs:
   component-descriptor:
@@ -88,6 +95,7 @@ runs:
         import yaml
 
         import ocm
+        import ocm.gardener
 
         import base_component_descriptor
 
@@ -136,6 +144,13 @@ runs:
           ),
           creation_time=datetime.datetime.now(),
         )
+
+        if imagevector_file := ocm.gardener.find_imagevector_file(repo_root=os.getcwd()):
+          base_component = base_component_descriptor.add_resources_from_imagevector(
+            imagevector_file=imagevector_file,
+            component=base_component,
+            component_prefixes='${{ inputs.ocm-component-prefixes }}'.split(','),
+          )
 
         base_component_dict = base_component_descriptor.as_component_descriptor_dict(
           component=base_component,

@@ -10,7 +10,7 @@ import ocm
 
 
 @dataclasses.dataclass(kw_only=True)
-class BaseComponent:
+class BaseComponent(ocm.LabelMethodsMixin):
     '''
     model-class for "base-component" expected (by default) at `.ocm/base-component.yaml`.
 
@@ -111,6 +111,21 @@ def fill_in_defaults(
     component.sources.append(main_source_raw)
 
     return component
+
+
+def add_resources_from_imagevector(
+    imagevector_file: str,
+    component: BaseComponent,
+    component_prefixes: list[str],
+) -> BaseComponent:
+    # wrap function-call so we have a hook for unittesting
+    return ocm.gardener.add_resources_from_imagevector(
+        component=component,
+        image_dicts=ocm.gardener.iter_images_from_imagevector(
+            images_yaml_path=imagevector_file,
+        ),
+        component_prefixes=component_prefixes,
+    )
 
 
 def as_component_descriptor_dict(
