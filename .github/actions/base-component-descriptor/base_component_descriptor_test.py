@@ -13,6 +13,7 @@ import yaml
 
 import base_component_descriptor as bcd
 import ocm
+import ocm.gardener
 
 
 def test_load_base_component(tmp_path):
@@ -133,3 +134,67 @@ def test_as_component_descriptor_dict():
         'sources': [dummy],
         'version': 'version',
     }
+
+
+def test_add_resources_from_imagevector():
+    image_dicts = tuple(ocm.gardener.iter_images_from_imagevector(
+        images_yaml_path=os.path.join(own_dir, 'imagevector-test.yaml'),
+    ))
+
+    local_resource = ocm.Resource(
+        name='apiserver',
+        version='version',
+        type=ocm.ArtefactType.OCI_IMAGE,
+        access=ocm.OciAccess(
+            imageReference='europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver',
+        ),
+    )
+    component = bcd.BaseComponent(
+        name='github.com/gardener/gardener',
+        version='version',
+        repositoryContexts=[],
+        provider='acme',
+        componentReferences=[],
+        resources=[
+        ],
+        sources=[],
+        labels=[],
+        creationTime='creation-time',
+        main_source={},
+    )
+
+    assert component.resources == []
+
+    component = ocm.gardener.add_resources_from_imagevector(
+        component=component,
+        image_dicts=image_dicts,
+        component_prefixes=[
+            'europe-docker.pkg.dev/gardener-project/releases',
+            'some-other-prefix',
+        ],
+    )
+
+    # local resources are expected to be added later-on by pipeline (oci-ocm-action in our case),
+    # hence, we expect the resource to be _removed_
+    assert local_resource not in component.resources
+
+    # in our imagevector-test.yaml, we have a total of:
+    # - 1 resources to be ignored
+    # - 1 resources to be added
+    # - 1 component-references to be added
+
+    assert len(component.resources) == 1
+    assert len(component.componentReferences) == 1
+
+    # check resource from imagevector
+    resource = component.resources[0]
+
+    assert resource.name == 'pause-container'
+    assert resource.version == '3.10'
+    assert resource.access.imageReference == 'registry.k8s.io/pause:3.10'
+
+    cref = component.componentReferences[0]
+
+    assert cref.name == 'gardener-dashboard'
+    assert cref.componentName == 'github.com/gardener/dashboard'
+    assert cref.version == '1.80.2'
