@@ -121,7 +121,7 @@ def add_resources_from_imagevector(
     # wrap function-call so we have a hook for unittesting
     return ocm.gardener.add_resources_from_imagevector(
         component=component,
-        image_dicts=ocm.gardener.iter_images_from_imagevector(
+        images=ocm.gardener.iter_images_from_imagevector(
             images_yaml_path=imagevector_file,
         ),
         component_prefixes=component_prefixes,
