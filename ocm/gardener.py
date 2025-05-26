@@ -5,7 +5,9 @@ define cross-references to resources to other (Gardener-)Components.
 Code in this module is not intended for re-use.
 '''
 
+import collections.abc
 import copy
+import os
 
 import yaml
 
@@ -13,17 +15,36 @@ import oci.model
 import ocm
 
 
-def add_resources_from_imagevector(
-    component: ocm.Component,
+def find_imagevector_file(
+    repo_root: str=None,
+) -> str | None:
+    for candidate in (
+        'charts/images.yaml',
+        'imagevector/images.yaml',
+        'imagevector/container.yaml',
+    ):
+        if repo_root:
+            candidate = os.path.join(
+                repo_root,
+                candidate,
+            )
+        if os.path.isfile(candidate):
+            return candidate
+
+
+def iter_images_from_imagevector(
     images_yaml_path: str,
-    component_prefixes: list[str],
-) -> ocm.Component:
-  # images_yaml_path, as found e.g. at github.com/gardener/gardener charts/images.yaml
-  def iter_images():
+) -> collections.abc.Generator[dict, None, None]:
     with open(images_yaml_path) as f:
       for part in yaml.safe_load_all(f):
         yield from part['images']
 
+
+def add_resources_from_imagevector(
+    component: ocm.Component,
+    image_dicts: collections.abc.Iterable[dict],
+    component_prefixes: list[str],
+) -> ocm.Component:
   imagevector_label_name = 'imagevector.gardener.cloud/images'
   imagevector_label = component.find_label(imagevector_label_name)
   if not imagevector_label:
@@ -34,7 +55,7 @@ def add_resources_from_imagevector(
       )
     )
 
-  for image_dict in iter_images():
+  for image_dict in image_dicts:
     name = image_dict['name']
     resource_id = image_dict.get('resourceId', {'name': name})
     source_repo = image_dict.get('sourceRepository', None)
