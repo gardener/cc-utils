@@ -62,6 +62,11 @@ inputs:
       passed to `version` action as `commit-message`. see this action for documentation
     required: false
     default: 'next version: ${version}'
+  next-version-callback-action-path:
+    type: string
+    required: false
+    description: |
+      passed to `version` action as `callback-action-path`
   version-read-callback:
     type: string
     description: |
@@ -346,6 +351,7 @@ runs:
         read-callback: ${{ inputs.version-read-callback }}
         write-callback: ${{ inputs.version-write-callback }}
         version-operation: ${{ inputs.next-version }}
+        callback-action-path: ${{ inputs.next-version-callback-action-path }}
         prerelease: 'dev'
         commit-message: ${{ inputs.next-version-commit-message }}
         repository-operation: commit-to-head

@@ -66,6 +66,13 @@ on:
             - bump-major
             - bump-minor
             - bump-patch
+      next-version-callback-action-path:
+        required: false
+        type: string
+        description: |
+          the path to a local action (relative to repository-root) that should be called during
+          creation of "bump-commit"
+          passed to `gardener/cc-utils/.github/actions/version` as callback-action-path input.
       slack-channel-id:
         required: false
         type: string
@@ -129,6 +136,7 @@ jobs:
           release-commit-target: ${{ inputs.release-commit-target }}
           next-version: ${{ inputs.next-version }}
           next-version-commit-message: "next version: ${version}"
+          next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           release-notes: ${{ steps.release-notes.outputs.release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
