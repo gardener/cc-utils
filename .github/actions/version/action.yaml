@@ -180,7 +180,6 @@ runs:
         cp -r "${{ inputs.callback-action-path }}" ../version-callback-action
     - name: call-callback-action
       if: ${{ inputs.callback-action-path != '' }}
-      shell: bash
       uses: ./../version-callback-action
       with:
         effective-version: ${{ steps.calc-version.outputs.effective-version }}
