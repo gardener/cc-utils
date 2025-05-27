@@ -37,6 +37,14 @@ on:
       output-artefact-filename:
         default: prepare-workflow-values.tar
         type: string
+      version-commit-callback-action-path:
+        type: string
+        required: false
+        description: |
+          the path to a local action (relative to repository-root) that should be called during
+          creation of "version-commit" (in case of release-mode, this commit will be used as
+          release-commit).
+          passed to `gardener/cc-utils/.github/actions/version` as `callback-action-path` input.
 
     outputs:
       ocm-repository:
@@ -120,6 +128,7 @@ jobs:
           prerelease: ${{ steps.pre.outputs.prerelease }}
           commit-message: ${{ steps.pre.outputs.commit-message }}
           commit-objects-artefact: release-commit-objects
+          callback-action-path: ${{ inputs.version-commit-callback-action-path }}
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
         id: component-descriptor
         with:
