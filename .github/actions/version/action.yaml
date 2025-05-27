@@ -43,6 +43,22 @@ inputs:
       pass-in version for more control, if needed. versionfile/callbacks will not be used for
       reading (however, they will be used for writing). In conjunction w/ setting version-operation
       to `noop`, this allows for full control over effective-version.
+  callback-action-path:
+    required: false
+    type: string
+    description: |
+      an optional path (relative to caller's repository-tree) to a GitHub-Action that is to be
+      called during creation of version-commit.
+      The called action can assume PWD is set to repository-root. Effective version will already
+      have been written, honouring either `versionfile` or `write-callback` and chosen
+      `version-operation`.
+
+      The effective version will be passed via an input named `effective-version`. Any diff created
+      by the callback-action will be included in version-commit. The callback should _not_ create
+      a commit itself.
+
+      A typical use-case for such a callback action is installation of runtime dependencies, such
+      as golang-toolchain and doing code-generation using such dependencies.
   commit-message:
     required: false
     type: string
@@ -128,8 +144,8 @@ runs:
   steps:
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - name: version
-      id: version
+    - name: calculate-version
+      id: calc-version
       shell: bash
       run: |
         set -eu
@@ -152,6 +168,26 @@ runs:
           --extra-version-outfile /tmp/effective-version \
           --commit-digest="${{ github.sha }}"
 
+        echo "effective-version=$(cat /tmp/effective-version)" >> ${GITHUB_OUTPUT}
+
+    - name: prepare-callback-action
+      if: ${{ inputs.callback-action-path != '' }}
+      run: |
+        set -eu
+        # cp outside of repository-tree so we do not have to cleanup afterwards; also, we need a
+        # static path, as github-actions do not allow using parameters for this
+        cp -r "${{ inputs.callback-action-path }}" ../version-callback-action
+    - name: call-callback-action
+      if: ${{ inputs.callback-action-path != '' }}
+      uses: ./../version-callback-action
+      with:
+        effective-version: ${{ steps.calc-version.outputs.effective-version }}
+
+    - name: version
+      id: version
+      shell: bash
+      run: |
+        set -eu
         # expose to commit-message template
         version="$(cat /tmp/effective-version)"
 
