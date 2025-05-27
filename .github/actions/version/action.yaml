@@ -23,7 +23,6 @@ description: |
   The action offers different options of how to convey created diff from  writing effective version,
   controlled via the `repository-operation`-input:
 
-  - leave-dirty: do not create a commit, leave diff in repository
   - commit-to-head: create a commit, update head (regular result of git commit)
   - capture-commit: create a commit, but capture using `capture-commit` action (no change to head)
 
@@ -103,14 +102,10 @@ inputs:
       This is particularly useful if commit is to be conveyed to other jobs, with identical
       commit-digest, but without pushing the commit to upstream repository (yet).
 
-      *leave-dirty*
-      do not create a commit. Instead, leave created diff (if any) in worktree
-
       *commit-to-head*
       create a commit, and update head to it
     options:
       - capture-commit
-      - leave-dirty
       - commit-to-head
 
 outputs:
@@ -139,15 +134,6 @@ runs:
       run: |
         set -eu
 
-        git stash
-
-        restore_stash() {
-          stash_len=$(git stash list | wc -l)
-          if [ ${stash_len} -gt 0 ]; then
-            git stash pop
-          fi
-        }
-
         touch /tmp/timestamp-ref
 
         # pass variables to prerelease-template
@@ -166,11 +152,6 @@ runs:
           --extra-version-outfile /tmp/effective-version \
           --commit-digest="${{ github.sha }}"
 
-        if [ "${{ inputs.repository-operation }}" == leave-dirty ]; then
-            restore_stash
-            exit 0
-        fi
-
         # expose to commit-message template
         version="$(cat /tmp/effective-version)"
 
@@ -185,7 +166,6 @@ runs:
 
     - name: capture-commit
       id: capture-commit
-      if: ${{ inputs.repository-operation != 'leave-dirty' }}
       uses: gardener/cc-utils/.github/actions/capture-commit@master
       with:
         timestamp-reference: /tmp/timestamp-ref
