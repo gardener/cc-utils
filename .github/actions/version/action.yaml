@@ -172,6 +172,7 @@ runs:
 
     - name: prepare-callback-action
       if: ${{ inputs.callback-action-path != '' }}
+      shell: bash
       run: |
         set -eu
         # cp outside of repository-tree so we do not have to cleanup afterwards; also, we need a
@@ -179,6 +180,7 @@ runs:
         cp -r "${{ inputs.callback-action-path }}" ../version-callback-action
     - name: call-callback-action
       if: ${{ inputs.callback-action-path != '' }}
+      shell: bash
       uses: ./../version-callback-action
       with:
         effective-version: ${{ steps.calc-version.outputs.effective-version }}
