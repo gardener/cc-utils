@@ -86,9 +86,16 @@ runs:
             ${commit_out}
 
         tar tf ${objects_out}
+        objects_size=$(stat --format=%s ${objects_out})
+        objects_max_size=65536 # 64 KiB
 
         echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
-        echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
+        if [ ${objects_size} -lt ${objects_max_size} ]; then
+          echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
+        else
+          echo "Warning: captured objects were too large (${objects_size} octets)"
+          echo "commit-objects output will not be set"
+        fi
 
         summary_kind="${{ inputs.commit-summary }}"
 
