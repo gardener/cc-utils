@@ -63,11 +63,6 @@ on:
       version:
         description: the effective version
         value: ${{ jobs.version-and-ocm.outputs.version }}
-
-      version-commit-objects:
-        description: |
-          The created version-change-commit in serialised form as output by `capture-commit`.
-        value: ${{ jobs.version-and-ocm.outputs.commit-objects }}
       version-commit-digest:
         description: |
           The commit-digest of the version-change-commit.
@@ -100,7 +95,6 @@ jobs:
       - params
     outputs:
       version: ${{ steps.version.outputs.version }}
-      commit-objects: ${{ steps.version.outputs.commit-objects }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
       component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
@@ -158,7 +152,6 @@ jobs:
 
           # version-and-ocm
           echo "${{ needs.version-and-ocm.outputs.version }}" > $p/version
-          echo "${{ needs.version-and-ocm.outputs.commit-objects }}" > $p/commit-objects
           echo "${{ needs.version-and-ocm.outputs.commit-digest }}" > $p/commit-digest
           cat <<EOF > $p/component-descriptor
           ${{ needs.version-and-ocm.outputs.component-descriptor }}
