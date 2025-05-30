@@ -94,12 +94,8 @@ UPGRADE_TO_UPSTREAM = bool(upstream_component_name)
 
 logger.info(f'{UPGRADE_TO_UPSTREAM=}')
 
-pull_request_util = github.util.PullRequestUtil(
-    owner=REPO_OWNER,
-    name=REPO_NAME,
-    default_branch=REPO_BRANCH,
-    github_api=ccc.github.github_api(github_cfg),
-)
+github_api = ccc.github.github_api(github_cfg)
+repository = github_api.repository(REPO_OWNER, REPO_NAME)
 
 ## hack / workaround: rebase to workaround concourse sometimes not refreshing git-resource
 git_helper.rebase(
@@ -107,7 +103,8 @@ git_helper.rebase(
 )
 
 upgrade_pull_requests = list(
-    pull_request_util.enumerate_upgrade_pull_requests(
+    github.pullrequest.iter_upgrade_pullrequests(
+        repository=repository,
         state='all',
     ),
 )
@@ -189,7 +186,6 @@ for from_ref, to_version in determine_upgrade_prs(
         from_ref=from_ref,
         to_ref=from_ref,
         to_version=to_version,
-        pull_request_util=pull_request_util,
         upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
         upgrade_script_relpath='${set_dependency_version_script_path}',
         git_helper=git_helper,
@@ -219,7 +215,7 @@ for from_ref, to_version in determine_upgrade_prs(
     # consideration
     upgrade_pull_requests.append(pull_request)
 
-for upgrade_pull_request in github.util.iter_obsolete_upgrade_pull_requests(
+for upgrade_pull_request in github.pullrequest.iter_obsolete_upgrade_pull_requests(
     list(upgrade_pull_requests)
 ):
     upgrade_pull_request.purge()

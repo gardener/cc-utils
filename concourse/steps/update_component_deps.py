@@ -22,12 +22,12 @@ import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
 import github.pullrequest
-import github.util as gu
 import gitutil
 import model.container_registry as cr
 import release_notes.fetch as release_notes_fetch
 import version
 
+UpgradePullRequest = github.pullrequest.UpgradePullRequest
 
 logger = logging.getLogger('step.update_component_deps')
 
@@ -68,9 +68,9 @@ def close_obsolete_pull_requests(
 def upgrade_pr_exists(
     component_reference: ocm.ComponentReference,
     component_version: str,
-    upgrade_requests: collections.abc.Iterable[gu.UpgradePullRequest],
-    request_filter: collections.abc.Callable[[gu.UpgradePullRequest], bool] = lambda rq: True,
-) -> gu.UpgradePullRequest | None:
+    upgrade_requests: collections.abc.Iterable[UpgradePullRequest],
+    request_filter: collections.abc.Callable[[UpgradePullRequest], bool] = lambda rq: True,
+) -> UpgradePullRequest | None:
     if any(
         (matching_rq := upgrade_rq).target_matches(
             reference=component_reference,
@@ -254,7 +254,7 @@ def deserialise_extra_component_references(
 def determine_upgrade_prs(
     upstream_component_name: str,
     upstream_update_policy: ucd.UpstreamUpdatePolicy,
-    upgrade_pull_requests: collections.abc.Iterable[gu.UpgradePullRequest],
+    upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
     version_lookup,
     ocm_lookup,
     ignore_prerelease_versions=False,
@@ -352,7 +352,6 @@ def determine_upgrade_prs(
 def _import_release_notes(
     component: ocm.Component,
     to_version: str,
-    pull_request_util,
     version_lookup,
     component_descriptor_lookup,
 ):
@@ -390,7 +389,7 @@ def create_upgrade_pr(
     from_ref: ocm.ComponentReference,
     to_ref: ocm.ComponentReference,
     to_version: str,
-    pull_request_util: gu.PullRequestUtil,
+    repository: github3.repos.Repository,
     upgrade_script_path,
     upgrade_script_relpath,
     branch: str,
@@ -406,11 +405,11 @@ def create_upgrade_pr(
     container_image:str=None,
     pullrequest_body_suffix: str=None,
     include_bom_diff: bool=True,
-) -> gu.UpgradePullRequest:
+) -> github.pullrequest.UpgradePullRequest:
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
 
-    ls_repo = pull_request_util.repository
+    ls_repo = repository
 
     from_component_descriptor = component_descriptor_lookup(
         ocm.ComponentIdentity(
@@ -528,7 +527,6 @@ def create_upgrade_pr(
         release_notes = _import_release_notes(
             component=from_component,
             to_version=to_version,
-            pull_request_util=pull_request_util,
             version_lookup=version_lookup,
             component_descriptor_lookup=component_descriptor_lookup,
         )
@@ -601,7 +599,7 @@ def create_upgrade_pr(
         raise
 
     if merge_policy is ucd.MergePolicy.MANUAL:
-        return pull_request_util._pr_to_upgrade_pull_request(pull_request)
+        return github.pullrequest.as_upgrade_pullrequest(pull_request)
 
     logger.info(
         f"Merging upgrade-pr #{pull_request.number} ({merge_method=!s}) on branch "
@@ -656,7 +654,7 @@ def create_upgrade_pr(
             env=cmd_env
         )
 
-    return pull_request_util._pr_to_upgrade_pull_request(pull_request)
+    return github.pullrequest.as_upgrade_pullrequest(pull_request)
 
 
 def push_upgrade_commit(
