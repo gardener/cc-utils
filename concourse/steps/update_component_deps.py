@@ -21,6 +21,7 @@ import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
+import github.pullrequest
 import github.util as gu
 import gitutil
 import model.container_registry as cr
@@ -583,7 +584,7 @@ def create_upgrade_pr(
 
     try:
         pull_request = ls_repo.create_pull(
-            title=gu.PullRequestUtil.calculate_pr_title(
+            title=github.pullrequest.upgrade_pullrequest_title(
                 reference=to_ref,
                 from_version=from_version,
                 to_version=to_version

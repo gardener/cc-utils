@@ -239,20 +239,6 @@ def iter_obsolete_upgrade_pull_requests(
 _pr_title_pattern = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
 class PullRequestUtil(RepositoryHelperBase):
 
-    @staticmethod
-    def calculate_pr_title(
-            reference: ocm.ComponentReference,
-            from_version: str,
-            to_version: str,
-    ) -> str:
-        if not isinstance(reference, ocm.ComponentReference):
-            raise TypeError(reference)
-
-        type_name = 'component'
-        reference_name = reference.componentName
-
-        return f'[ci:{type_name}:{reference_name}:{from_version}->{to_version}]'
-
     def _pr_to_upgrade_pull_request(
         self,
         pull_request,
