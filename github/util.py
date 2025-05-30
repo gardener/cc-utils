@@ -17,7 +17,6 @@ from github3.github import GitHub
 from github3.orgs import Team
 from github3.pulls import PullRequest
 
-import ci.util
 import ocm
 import version
 
@@ -81,7 +80,9 @@ class UpgradePullRequest:
         from_ref: typing.Union[ocm.Resource, ocm.ComponentReference],
         to_ref: typing.Union[ocm.Resource, ocm.ComponentReference],
     ):
-        self.pull_request = ci.util.not_none(pull_request)
+        self.pull_request = pull_request
+        if pull_request is None:
+            raise ValueError('pull_request must not be None')
 
         if from_ref.name != to_ref.name:
             raise ValueError(f'reference name mismatch {from_ref.name=} {to_ref.name=}')
@@ -257,7 +258,8 @@ class PullRequestUtil(RepositoryHelperBase):
         pull_request,
         pattern: re.Pattern=None,
     ) -> UpgradePullRequest:
-        ci.util.not_none(pull_request)
+        if pull_request is None:
+            raise ValueError('pull_request must not be None')
 
         if not pattern:
             pattern = self._pr_title_pattern
@@ -327,7 +329,8 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
         self,
         tag_name: str,
     ):
-        ci.util.not_empty(tag_name)
+        if not tag_name:
+            raise ValueError('tag_name must not be empty')
         try:
             self.repository.ref('tags/' + tag_name)
             return True
