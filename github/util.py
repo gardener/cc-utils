@@ -236,8 +236,8 @@ def iter_obsolete_upgrade_pull_requests(
                 yield upgrade_pr
 
 
+_pr_title_pattern = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
 class PullRequestUtil(RepositoryHelperBase):
-    _pr_title_pattern = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
 
     @staticmethod
     def calculate_pr_title(
@@ -256,13 +256,10 @@ class PullRequestUtil(RepositoryHelperBase):
     def _pr_to_upgrade_pull_request(
         self,
         pull_request,
-        pattern: re.Pattern=None,
+        pattern: re.Pattern=_pr_title_pattern,
     ) -> UpgradePullRequest:
         if pull_request is None:
             raise ValueError('pull_request must not be None')
-
-        if not pattern:
-            pattern = self._pr_title_pattern
 
         match = pattern.fullmatch(pull_request.title)
         if match is None:
@@ -302,13 +299,10 @@ class PullRequestUtil(RepositoryHelperBase):
     def enumerate_upgrade_pull_requests(
         self,
         state: str='all',
-        pattern: re.Pattern=None,
+        pattern: re.Pattern=_pr_title_pattern,
     ) -> typing.Generator[UpgradePullRequest, None, None]:
         def has_upgrade_pr_title(pull_request):
             return bool(pattern.fullmatch(pull_request.title))
-
-        if not pattern:
-            pattern = self._pr_title_pattern
 
         for pull_request in self.repository.pull_requests(
             state=state,
