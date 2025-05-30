@@ -9,7 +9,6 @@ import pprint
 import sys
 import tempfile
 
-import github3
 import yaml
 
 try:
@@ -22,6 +21,7 @@ except ImportError:
     import ocm
 
 import cnudie.retrieve
+import github
 import gitutil
 import oci.auth
 import oci.client
@@ -114,19 +114,13 @@ def main():
         oci_client=oci_client,
     )
 
-    if (repo_url := parsed.repo_url):
-        host, org, repo = repo_url.strip('/').split('/')
-    else:
-        host = os.environ['GITHUB_SERVER_URL'].removeprefix('https://')
-        org, repo = os.environ['GITHUB_REPOSITORY'].split('/')
-
-    if host == 'github.com':
-        github_api = github3.GitHub(token=parsed.github_auth_token)
-    else:
-        github_api = github3.GitHubEnterprise(
-            url=f'https://{host}', # yes, slightly hacky (but good enough for now)
-            token=parsed.github_auth_token,
-        )
+    host, org, repo = github.host_org_and_repo(
+        repo_url=parsed.repo_url,
+    )
+    github_api = github.github_api(
+        repo_url=parsed.repo_url,
+        token=parsed.github_auth_token,
+    )
 
     git_helper = gitutil.GitHelper(
         repo=parsed.repo_worktree,
