@@ -51,6 +51,7 @@ import concourse.model.traits.release
 import concourse.model.traits.update_component_deps
 import ctx
 import ocm
+import ocm.gardener
 import github.util
 import gitutil
 import oci.auth as oa
@@ -151,9 +152,11 @@ if list(cfg_set._cfg_elements('delivery_endpoints')):
 else:
     delivery_dashboard_url = None
 
+component_references = list(ocm.gardener.iter_component_references(component=own_component))
+
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
-    component=own_component,
+    component_references=component_references,
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,

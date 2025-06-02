@@ -235,25 +235,8 @@ def greatest_references(
             yield matching_refs[-1]
 
 
-def deserialise_extra_component_references(
-    extra_crefs_label: ocm.Label,
-) -> collections.abc.Generator[ocm.ComponentReference, None, None]:
-    for extra_cref_raw in extra_crefs_label.value:
-        extra_cref = dacite.from_dict(
-            data_class=ocm.gardener.ExtraComponentReference,
-            data=extra_cref_raw,
-        )
-        extra_cref_id = extra_cref.component_reference
-
-        yield ocm.ComponentReference(
-            name=extra_cref_id.name,
-            componentName=extra_cref_id.name,
-            version=extra_cref_id.version,
-        )
-
-
 def determine_upgrade_prs(
-    component: ocm.Component,
+    component_references: ocm.ComponentReference,
     upstream_component_name: str|None,
     upstream_update_policy: ucd.UpstreamUpdatePolicy,
     upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
@@ -263,16 +246,6 @@ def determine_upgrade_prs(
 ) -> collections.abc.Iterable[tuple[
     ocm.ComponentReference, ocm.ComponentReference, str
 ]]:
-    component_references = component.componentReferences
-
-    # don't use the deserialisation within `cnudie.iter.iter` here to avoid unnecessary lookups of
-    # component references and keep `ComponentReference` instances (!= `Component` instances)
-    if extra_crefs_label := component.find_label(
-        name=ocm.gardener.ExtraComponentReferencesLabel.name,
-    ):
-        extra_component_references = list(deserialise_extra_component_references(extra_crefs_label))
-        component_references = component_references + extra_component_references
-
     for greatest_component_reference in greatest_references(
         references=component_references,
     ):
