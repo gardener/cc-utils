@@ -10,6 +10,7 @@ import copy
 import dataclasses
 import os
 
+import dacite
 import yaml
 
 import oci.model
@@ -26,6 +27,31 @@ class ExtraComponentReference:
 class ExtraComponentReferencesLabel:
     name = 'ocm.software/ocm-gear/extra-component-references'
     value: list[ExtraComponentReference]
+
+
+def iter_component_references(
+    component: ocm.Component,
+) -> collections.abc.Iterable[ocm.ComponentReference]:
+    '''
+    an opinionated function that will return component-references from both regular
+    componentReferences-attribute of given component, as well as "soft-references" from
+    `ExtraComponentReferencesLabel` (if present).
+    '''
+    yield from component.componentReferences
+    if not (extra_ref_label := component.find_label(name=ExtraComponentReferencesLabel.name)):
+        return
+
+    for extra_ref in extra_ref_label.value:
+        cref = dacite.from_dict(
+            ExtraComponentReference,
+            data=extra_ref,
+        )
+
+        yield ocm.ComponentReference(
+            name=cref.component_reference.name,
+            componentName=cref.component_reference.name,
+            version=cref.component_reference.version,
+        )
 
 
 def find_imagevector_file(
