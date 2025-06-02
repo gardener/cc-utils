@@ -153,7 +153,7 @@ greatest_component_references = ocm.gardener.iter_greatest_component_references(
 )
 
 # find components that need to be upgraded
-for from_ref, to_version in determine_upgrade_prs(
+for upgrade_vector in determine_upgrade_prs(
     component_references=greatest_component_references,
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
@@ -162,8 +162,8 @@ for from_ref, to_version in determine_upgrade_prs(
     version_lookup=version_lookup,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
-    merge_policy = merge_policies.merge_policy_for(from_ref)
-    merge_method = merge_policies.merge_method_for(from_ref)
+    merge_policy = merge_policies.merge_policy_for(upgrade_vector.component_name)
+    merge_method = merge_policies.merge_method_for(upgrade_vector.component_name)
 
     if not merge_policy:
         merge_policy = concourse.model.traits.update_component_deps.MergePolicy.MANUAL
@@ -173,9 +173,7 @@ for from_ref, to_version in determine_upgrade_prs(
 
     pull_request = create_upgrade_pr(
         component=own_component,
-        from_ref=from_ref,
-        to_ref=from_ref,
-        to_version=to_version,
+        upgrade_vector=upgrade_vector,
         upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
         upgrade_script_relpath='${set_dependency_version_script_path}',
         git_helper=git_helper,

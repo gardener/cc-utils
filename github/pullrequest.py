@@ -129,17 +129,14 @@ def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePu
 
 
 def upgrade_pullrequest_title(
-    reference: ocm.ComponentReference,
-    from_version: str,
-    to_version: str,
+    upgrade_vector: UpgradeVector,
 ) -> str:
-    if not isinstance(reference, ocm.ComponentReference):
-        raise TypeError(reference)
-
     type_name = 'component'
-    reference_name = reference.componentName
+    cname = upgrade_vector.component_name
+    from_version = upgrade_vector.whence.version
+    to_version = upgrade_vector.whither.version
 
-    return f'[ci:{type_name}:{reference_name}:{from_version}->{to_version}]'
+    return f'[ci:{type_name}:{cname}:{from_version}->{to_version}]'
 
 
 def iter_upgrade_pullrequests(
