@@ -153,6 +153,7 @@ else:
 
 # find components that need to be upgraded
 for from_ref, to_version in determine_upgrade_prs(
+    component=own_component,
     upstream_component_name=upstream_component_name,
     upstream_update_policy=upstream_update_policy,
     upgrade_pull_requests=upgrade_pull_requests,
