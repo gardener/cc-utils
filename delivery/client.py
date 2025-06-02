@@ -239,7 +239,14 @@ class DeliveryServiceClient:
         headers: dict=None,
         **kwargs,
     ):
-        self._authenticate()
+        try:
+            self._authenticate()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code != 400:
+                raise
+            if e.response.json().get('error_id') != 'feature-inactive':
+                raise
+            logger.info('delivery-service authentication feature is inactive')
 
         headers = headers or {}
 
