@@ -139,9 +139,6 @@ version_lookup = cnudie.retrieve.version_lookup(
     oci_client=oci_client,
 )
 
-# we at most need to do this once
-os.environ['DOCKERD_STARTED'] = 'no'
-
 % if pullrequest_body_suffix:
 import textwrap
 % endif
