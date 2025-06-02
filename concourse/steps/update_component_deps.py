@@ -6,8 +6,6 @@ import tempfile
 import time
 import traceback
 
-import dacite
-
 import ocm
 import ocm.gardener
 import ocm.util

@@ -460,6 +460,13 @@ class ComponentReference(Artifact, LabelMethodsMixin):
     extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
     labels: list[Label] = dataclasses.field(default_factory=tuple)
 
+    @property
+    def component_id(self) -> ComponentIdentity:
+        return ComponentIdentity(
+            name=self.componentName,
+            version=self.version,
+        )
+
 
 @dc
 class SourceReference(LabelMethodsMixin):
