@@ -218,12 +218,10 @@ def determine_upgrade_prs(
 ) -> collections.abc.Iterable[tuple[
     ocm.ComponentReference, ocm.ComponentReference, str
 ]]:
-    for greatest_component_reference in ocm.gardener.iter_greatest_component_references(
-        references=component_references,
-    ):
+    for component_reference in component_references:
         versions_to_consider = determine_reference_versions(
-            component_name=greatest_component_reference.componentName,
-            reference_version=greatest_component_reference.version,
+            component_name=component_reference.componentName,
+            reference_version=component_reference.version,
             upstream_component_name=upstream_component_name,
             upstream_update_policy=upstream_update_policy,
             version_lookup=version_lookup,
@@ -233,11 +231,11 @@ def determine_upgrade_prs(
         if versions_to_consider:
             logger.info(
                 f"Found possible version(s) to up- or downgrade to: '{versions_to_consider}' for "
-                f'{greatest_component_reference.componentName=}'
+                f'{component_reference.componentName=}'
             )
         else:
             logger.warning(
-                f'No component versions found for {greatest_component_reference.componentName=}'
+                f'No component versions found for {component_reference.componentName=}'
             )
         for candidate_version in versions_to_consider:
             # we might have found 'None' as version to consider.
@@ -245,9 +243,9 @@ def determine_upgrade_prs(
                 continue
 
             candidate_version_semver = version.parse_to_semver(candidate_version)
-            reference_version_semver = version.parse_to_semver(greatest_component_reference.version)
+            reference_version_semver = version.parse_to_semver(component_reference.version)
 
-            logger.info(f'{candidate_version=}, ours: {greatest_component_reference}')
+            logger.info(f'{candidate_version=}, ours: {component_reference}')
 
             if candidate_version_semver <= reference_version_semver:
                 downgrade_pr = True
@@ -259,8 +257,8 @@ def determine_upgrade_prs(
                     or upstream_update_policy is not ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW
                 ):
                     logger.info(
-                        f'skipping (outdated) {greatest_component_reference=}; '
-                        f'our {greatest_component_reference.version=}, '
+                        f'skipping (outdated) {component_reference=}; '
+                        f'our {component_reference.version=}, '
                         f'found: {candidate_version=}'
                     )
                     continue
@@ -268,31 +266,31 @@ def determine_upgrade_prs(
                 downgrade_pr = False
 
             if not downgrade_pr and (matching_pr := upgrade_pr_exists(
-                component_reference=greatest_component_reference,
+                component_reference=component_reference,
                 component_version=candidate_version,
                 upgrade_requests=upgrade_pull_requests,
                 request_filter=lambda rq: not rq.is_downgrade(),
             )):
                 logger.info(
                     'skipping upgrade (PR already exists): '
-                    f'{greatest_component_reference=} '
+                    f'{component_reference=} '
                     f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
                 )
                 continue
             elif downgrade_pr and (matching_pr := upgrade_pr_exists(
-                component_reference=greatest_component_reference,
+                component_reference=component_reference,
                 component_version=candidate_version,
                 upgrade_requests=upgrade_pull_requests,
                 request_filter=lambda rq: rq.is_downgrade(),
             )):
                 logger.info(
                     'skipping downgrade (PR already exists): '
-                    f'{greatest_component_reference=} '
+                    f'{component_reference=} '
                     f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
                 )
                 continue
             else:
-                yield(greatest_component_reference, candidate_version)
+                yield(component_reference, candidate_version)
 
 
 def _import_release_notes(
