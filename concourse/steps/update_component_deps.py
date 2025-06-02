@@ -253,7 +253,7 @@ def deserialise_extra_component_references(
 
 def determine_upgrade_prs(
     component: ocm.Component,
-    upstream_component_name: str,
+    upstream_component_name: str|None,
     upstream_update_policy: ucd.UpstreamUpdatePolicy,
     upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
     version_lookup,
