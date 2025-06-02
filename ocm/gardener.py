@@ -15,6 +15,7 @@ import yaml
 
 import oci.model
 import ocm
+import version
 
 
 @dataclasses.dataclass
@@ -52,6 +53,25 @@ def iter_component_references(
             componentName=cref.component_reference.name,
             version=cref.component_reference.version,
         )
+
+
+def iter_greatest_component_references(
+    references: collections.abc.Iterable[ocm.ComponentReference],
+) -> collections.abc.Iterable[ocm.ComponentReference]:
+    greatest_crefs = {} # cname -> cref
+
+    for reference in references:
+        cid = reference.component_id
+        if cid.name in greatest_crefs:
+            candidate_version = version.parse_to_semver(cid.version)
+            have_version = version.parse_to_semver(greatest_crefs[cid.name].component_id.version)
+
+            if candidate_version > have_version:
+                greatest_crefs[cid.name] = reference
+        else:
+            greatest_crefs[cid.name] = reference
+
+    yield from greatest_crefs.values()
 
 
 def find_imagevector_file(
