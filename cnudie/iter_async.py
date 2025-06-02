@@ -3,6 +3,7 @@ import collections.abc
 import cnudie.iter
 import cnudie.retrieve_async
 import ocm
+import ocm.gardener
 
 
 async def iter(
@@ -101,7 +102,7 @@ async def iter(
                 yield node
 
         if not (extra_crefs_label := component.find_label(
-            name=cnudie.iter.ExtraComponentReferencesLabel.name,
+            name=ocm.gardener.ExtraComponentReferencesLabel.name,
         )):
             return
 

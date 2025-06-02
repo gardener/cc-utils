@@ -9,6 +9,7 @@ import traceback
 import dacite
 
 import ocm
+import ocm.gardener
 import ocm.util
 import github3.exceptions
 import github3.repos.repo
@@ -239,7 +240,7 @@ def deserialise_extra_component_references(
 ) -> collections.abc.Generator[ocm.ComponentReference, None, None]:
     for extra_cref_raw in extra_crefs_label.value:
         extra_cref = dacite.from_dict(
-            data_class=cnudie.iter.ExtraComponentReference,
+            data_class=ocm.gardener.ExtraComponentReference,
             data=extra_cref_raw,
         )
         extra_cref_id = extra_cref.component_reference
@@ -267,7 +268,7 @@ def determine_upgrade_prs(
     # don't use the deserialisation within `cnudie.iter.iter` here to avoid unnecessary lookups of
     # component references and keep `ComponentReference` instances (!= `Component` instances)
     if extra_crefs_label := component.find_label(
-        name=cnudie.iter.ExtraComponentReferencesLabel.name,
+        name=ocm.gardener.ExtraComponentReferencesLabel.name,
     ):
         extra_component_references = list(deserialise_extra_component_references(extra_crefs_label))
         component_references = component_references + extra_component_references
