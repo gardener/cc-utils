@@ -215,9 +215,7 @@ def determine_upgrade_prs(
     version_lookup,
     ocm_lookup,
     ignore_prerelease_versions=False,
-) -> collections.abc.Iterable[tuple[
-    ocm.ComponentReference, ocm.ComponentReference, str
-]]:
+) -> collections.abc.Iterable[github.pullrequest.UpgradeVector]:
     for component_reference in component_references:
         versions_to_consider = determine_reference_versions(
             component_name=component_reference.componentName,
@@ -290,7 +288,16 @@ def determine_upgrade_prs(
                 )
                 continue
             else:
-                yield(component_reference, candidate_version)
+                yield github.pullrequest.UpgradeVector(
+                    whence=ocm.ComponentIdentity(
+                        name=component_reference.componentName,
+                        version=component_reference.version,
+                    ),
+                    whither=ocm.ComponentIdentity(
+                        name=component_reference.componentName,
+                        version=candidate_version,
+                    ),
+                )
 
 
 def _import_release_notes(
@@ -330,9 +337,7 @@ def _import_release_notes(
 
 def create_upgrade_pr(
     component: ocm.Component,
-    from_ref: ocm.ComponentReference,
-    to_ref: ocm.ComponentReference,
-    to_version: str,
+    upgrade_vector: github.pullrequest.UpgradeVector,
     repository: github3.repos.Repository,
     upgrade_script_path,
     upgrade_script_relpath,
@@ -356,19 +361,13 @@ def create_upgrade_pr(
     ls_repo = repository
 
     from_component_descriptor = component_descriptor_lookup(
-        ocm.ComponentIdentity(
-            name=from_ref.componentName,
-            version=from_ref.version,
-        ),
+        upgrade_vector.whence,
         absent_ok=False,
     )
     from_component = from_component_descriptor.component
 
     to_component_descriptor = component_descriptor_lookup(
-        ocm.ComponentIdentity(
-            name=to_ref.componentName,
-            version=to_version,
-        )
+        upgrade_vector.whither,
     )
 
     to_component = to_component_descriptor.component
@@ -399,9 +398,9 @@ def create_upgrade_pr(
     cmd_env = os.environ.copy()
     # TODO: Handle upgrades for types other than 'component'
     cmd_env['DEPENDENCY_TYPE'] = 'component'
-    cmd_env['DEPENDENCY_NAME'] = to_ref.componentName
-    cmd_env['LOCAL_DEPENDENCY_NAME'] = to_ref.name
-    cmd_env['DEPENDENCY_VERSION'] = to_version
+    cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
+    cmd_env['LOCAL_DEPENDENCY_NAME'] = upgrade_vector.component_name # todo: drop this env-var
+    cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
     if container_image:
         cmd_env['REPO_DIR'] = (repo_dir_in_container := '/mnt/main_repo')
     else:
@@ -457,8 +456,10 @@ def create_upgrade_pr(
             if docker_cfg_dir:
                 docker_cfg_dir.cleanup()
 
-    from_version = from_ref.version
-    commit_message = f'Upgrade {to_ref.name}\n\nfrom {from_version} to {to_version}'
+    from_version = upgrade_vector.whence.version
+    to_version = upgrade_vector.whither.version
+    cname = upgrade_vector.component_name
+    commit_message = f'Upgrade {cname}\n\nfrom {from_version} to {to_version}'
 
     upgrade_branch_name = push_upgrade_commit(
         ls_repo=ls_repo,
@@ -527,9 +528,7 @@ def create_upgrade_pr(
     try:
         pull_request = ls_repo.create_pull(
             title=github.pullrequest.upgrade_pullrequest_title(
-                reference=to_ref,
-                from_version=from_version,
-                to_version=to_version
+                upgrade_vector=upgrade_vector,
             ),
             base=branch,
             head=upgrade_branch_name,
