@@ -4,23 +4,12 @@ import enum
 
 import cnudie.retrieve
 import ocm
-
-
-@dataclasses.dataclass
-class ExtraComponentReference:
-    component_reference: ocm.ComponentIdentity
-    purpose: list[str] | None
-
-
-@dataclasses.dataclass
-class ExtraComponentReferencesLabel:
-    name = 'ocm.software/ocm-gear/extra-component-references'
-    value: list[ExtraComponentReference]
+import ocm.gardener
 
 
 class NodeReferenceType(enum.StrEnum):
     COMPONENT_REFERENCE = 'componentReference'
-    EXTRA_COMPONENT_REFS_LABEL = f'label:{ExtraComponentReferencesLabel.name}'
+    EXTRA_COMPONENT_REFS_LABEL = f'label:{ocm.gardener.ExtraComponentReferencesLabel.name}'
 
 
 @dataclasses.dataclass(frozen=True)
@@ -206,7 +195,7 @@ def iter(
             )
 
         if not (extra_crefs_label := component.find_label(
-            name=ExtraComponentReferencesLabel.name,
+            name=ocm.gardener.ExtraComponentReferencesLabel.name,
         )):
             return
 

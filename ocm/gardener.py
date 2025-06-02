@@ -7,12 +7,25 @@ Code in this module is not intended for re-use.
 
 import collections.abc
 import copy
+import dataclasses
 import os
 
 import yaml
 
 import oci.model
 import ocm
+
+
+@dataclasses.dataclass
+class ExtraComponentReference:
+    component_reference: ocm.ComponentIdentity
+    purpose: list[str] | None
+
+
+@dataclasses.dataclass
+class ExtraComponentReferencesLabel:
+    name = 'ocm.software/ocm-gear/extra-component-references'
+    value: list[ExtraComponentReference]
 
 
 def find_imagevector_file(
