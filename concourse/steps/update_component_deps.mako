@@ -60,7 +60,6 @@ logger = logging.getLogger('step.update_component_deps')
 
 
 ${step_lib('update_component_deps')}
-${step_lib('images')}
 
 
 # must point to this repository's root directory
@@ -83,12 +82,9 @@ merge_policy_configs = [
     concourse.model.traits.update_component_deps.MergePolicyConfig(cfg)
     for cfg in ${[p.raw for p in update_component_deps_trait.merge_policies()]}
 ]
-merge_policy_and_filters = {
-    p: component_ref_component_name_filter(
-        include_regexes=p.component_names(),
-        exclude_regexes=(),
-    ) for p in merge_policy_configs
-}
+merge_policies = concourse.model.traits.update_component_deps.MergePolicies(
+    policies=merge_policy_configs,
+)
 # indicates whether or not an upstream component was defined as a reference
 upstream_component_name = os.environ.get('UPSTREAM_COMPONENT_NAME', None)
 UPGRADE_TO_UPSTREAM = bool(upstream_component_name)
@@ -166,23 +162,14 @@ for from_ref, to_version in determine_upgrade_prs(
     version_lookup=version_lookup,
     ignore_prerelease_versions=${ignore_prerelease_versions},
 ):
-    applicable_merge_policy = [
-        policy for policy, filter_func in merge_policy_and_filters.items() if filter_func(from_ref)
-    ]
-    if len(applicable_merge_policy) > 1:
-        if any([
-            p.merge_mode() is not applicable_merge_policy[0].merge_mode()
-            for p in applicable_merge_policy
-        ]):
-            raise RuntimeError(f'Conflicting merge policies found to apply to {from_ref.name}')
-        merge_policy = applicable_merge_policy[0].merge_mode()
-        merge_method = applicable_merge_policy[0].merge_method()
-    elif len(applicable_merge_policy) == 0:
+    merge_policy = merge_policies.merge_policy_for(from_ref)
+    merge_method = merge_policies.merge_method_for(from_ref)
+
+    if not merge_policy:
         merge_policy = concourse.model.traits.update_component_deps.MergePolicy.MANUAL
+
+    if not merge_method:
         merge_method = concourse.model.traits.update_component_deps.MergeMethod.MERGE
-    else:
-        merge_policy = applicable_merge_policy[0].merge_mode()
-        merge_method = applicable_merge_policy[0].merge_method()
 
     pull_request = create_upgrade_pr(
         component=own_component,

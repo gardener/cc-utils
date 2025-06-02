@@ -4,6 +4,7 @@
 
 
 import enum
+import re
 import typing
 
 from concourse.model.step import (
@@ -25,6 +26,7 @@ from model.base import ModelValidationError
 
 import concourse.model.traits.component_descriptor
 import concourse.model.traits.images
+import ocm
 
 OciImageCfg = concourse.model.traits.images.OciImageCfg
 
@@ -92,6 +94,37 @@ class MergePolicyConfig(ModelBase):
 
     def merge_method(self):
         return MergeMethod(self.raw['merge_method'])
+
+
+class MergePolicies:
+    def __init__(
+        self,
+        policies: list[MergePolicyConfig],
+    ):
+        self.policies = policies
+
+    def find_policy(self, component) -> MergePolicyConfig | None:
+        if isinstance(component, ocm.Component):
+            component = component.name
+        elif isinstance(component, ocm.ComponentIdentity):
+            component = component.name
+        elif isinstance(component, ocm.ComponentReference):
+            component = component.componentName
+
+        for policy in self.policies:
+            for cname in policy.component_names():
+                if re.fullmatch(cname, component):
+                    return policy
+
+    def merge_policy_for(self, component) -> MergePolicy | None:
+        policy = self.find_policy(component=component)
+        if policy:
+            return policy.merge_mode()
+
+    def merge_method_for(self, component) -> MergeMethod | None:
+        policy = self.find_policy(component=component)
+        if policy:
+            return policy.merge_method()
 
 
 ATTRIBUTES = (
