@@ -207,97 +207,96 @@ def determine_reference_versions(
         raise NotImplementedError
 
 
-def determine_upgrade_prs(
-    component_references: ocm.ComponentReference,
+def determine_upgrade_vector(
+    component_reference: ocm.ComponentReference,
     upstream_component_name: str|None,
     upstream_update_policy: ucd.UpstreamUpdatePolicy,
     upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
     version_lookup,
     ocm_lookup,
     ignore_prerelease_versions=False,
-) -> collections.abc.Iterable[github.pullrequest.UpgradeVector]:
-    for component_reference in component_references:
-        versions_to_consider = determine_reference_versions(
-            component_name=component_reference.componentName,
-            reference_version=component_reference.version,
-            upstream_component_name=upstream_component_name,
-            upstream_update_policy=upstream_update_policy,
-            version_lookup=version_lookup,
-            ocm_lookup=ocm_lookup,
-            ignore_prerelease_versions=ignore_prerelease_versions,
+) -> github.pullrequest.UpgradeVector | None:
+    versions_to_consider = determine_reference_versions(
+        component_name=component_reference.componentName,
+        reference_version=component_reference.version,
+        upstream_component_name=upstream_component_name,
+        upstream_update_policy=upstream_update_policy,
+        version_lookup=version_lookup,
+        ocm_lookup=ocm_lookup,
+        ignore_prerelease_versions=ignore_prerelease_versions,
+    )
+    if versions_to_consider:
+        logger.info(
+            f"Found possible version(s) to up- or downgrade to: '{versions_to_consider}' for "
+            f'{component_reference.componentName=}'
         )
-        if versions_to_consider:
-            logger.info(
-                f"Found possible version(s) to up- or downgrade to: '{versions_to_consider}' for "
-                f'{component_reference.componentName=}'
-            )
+    else:
+        logger.warning(
+            f'No component versions found for {component_reference.componentName=}'
+        )
+    for candidate_version in versions_to_consider:
+        # we might have found 'None' as version to consider.
+        if not candidate_version:
+            continue
+
+        candidate_version_semver = version.parse_to_semver(candidate_version)
+        reference_version_semver = version.parse_to_semver(component_reference.version)
+
+        logger.info(f'{candidate_version=}, ours: {component_reference}')
+
+        if candidate_version_semver <= reference_version_semver:
+            downgrade_pr = True
+            # downgrades are permitted iff the version is tracking a _dependency_ of another
+            # component and we are to follow strictly
+            if (
+                candidate_version_semver == reference_version_semver or
+                not upstream_component_name
+                or upstream_update_policy is not ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW
+            ):
+                logger.info(
+                    f'skipping (outdated) {component_reference=}; '
+                    f'our {component_reference.version=}, '
+                    f'found: {candidate_version=}'
+                )
+                continue
         else:
-            logger.warning(
-                f'No component versions found for {component_reference.componentName=}'
+            downgrade_pr = False
+
+        if not downgrade_pr and (matching_pr := upgrade_pr_exists(
+            component_reference=component_reference,
+            component_version=candidate_version,
+            upgrade_requests=upgrade_pull_requests,
+            request_filter=lambda rq: not rq.is_downgrade(),
+        )):
+            logger.info(
+                'skipping upgrade (PR already exists): '
+                f'{component_reference=} '
+                f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
             )
-        for candidate_version in versions_to_consider:
-            # we might have found 'None' as version to consider.
-            if not candidate_version:
-                continue
-
-            candidate_version_semver = version.parse_to_semver(candidate_version)
-            reference_version_semver = version.parse_to_semver(component_reference.version)
-
-            logger.info(f'{candidate_version=}, ours: {component_reference}')
-
-            if candidate_version_semver <= reference_version_semver:
-                downgrade_pr = True
-                # downgrades are permitted iff the version is tracking a _dependency_ of another
-                # component and we are to follow strictly
-                if (
-                    candidate_version_semver == reference_version_semver or
-                    not upstream_component_name
-                    or upstream_update_policy is not ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW
-                ):
-                    logger.info(
-                        f'skipping (outdated) {component_reference=}; '
-                        f'our {component_reference.version=}, '
-                        f'found: {candidate_version=}'
-                    )
-                    continue
-            else:
-                downgrade_pr = False
-
-            if not downgrade_pr and (matching_pr := upgrade_pr_exists(
-                component_reference=component_reference,
-                component_version=candidate_version,
-                upgrade_requests=upgrade_pull_requests,
-                request_filter=lambda rq: not rq.is_downgrade(),
-            )):
-                logger.info(
-                    'skipping upgrade (PR already exists): '
-                    f'{component_reference=} '
-                    f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
-                )
-                continue
-            elif downgrade_pr and (matching_pr := upgrade_pr_exists(
-                component_reference=component_reference,
-                component_version=candidate_version,
-                upgrade_requests=upgrade_pull_requests,
-                request_filter=lambda rq: rq.is_downgrade(),
-            )):
-                logger.info(
-                    'skipping downgrade (PR already exists): '
-                    f'{component_reference=} '
-                    f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
-                )
-                continue
-            else:
-                yield github.pullrequest.UpgradeVector(
-                    whence=ocm.ComponentIdentity(
-                        name=component_reference.componentName,
-                        version=component_reference.version,
-                    ),
-                    whither=ocm.ComponentIdentity(
-                        name=component_reference.componentName,
-                        version=candidate_version,
-                    ),
-                )
+            continue
+        elif downgrade_pr and (matching_pr := upgrade_pr_exists(
+            component_reference=component_reference,
+            component_version=candidate_version,
+            upgrade_requests=upgrade_pull_requests,
+            request_filter=lambda rq: rq.is_downgrade(),
+        )):
+            logger.info(
+                'skipping downgrade (PR already exists): '
+                f'{component_reference=} '
+                f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
+            )
+            continue
+        else:
+            return github.pullrequest.UpgradeVector(
+                whence=ocm.ComponentIdentity(
+                    name=component_reference.componentName,
+                    version=component_reference.version,
+                ),
+                whither=ocm.ComponentIdentity(
+                    name=component_reference.componentName,
+                    version=candidate_version,
+                ),
+            )
 
 
 def _import_release_notes(
