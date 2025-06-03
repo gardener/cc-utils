@@ -9,7 +9,6 @@ import github3
 import github3.issues
 from github3.exceptions import NotFoundError
 from github3.github import GitHub
-from github3.orgs import Team
 
 logger = logging.getLogger(__name__)
 
@@ -107,15 +106,6 @@ class GitHubRepositoryHelper(RepositoryHelperBase):
             return False
         else:
             return True
-
-
-def _retrieve_team_by_name_or_none(
-    organization: github3.orgs.Organization,
-    team_name: str
-) -> Team:
-
-    team_list = list(filter(lambda t: t.name == team_name, organization.teams()))
-    return team_list[0] if team_list else None
 
 
 def close_issue(
