@@ -152,16 +152,20 @@ greatest_component_references = ocm.gardener.iter_greatest_component_references(
     references=ocm.gardener.iter_component_references(component=own_component),
 )
 
-# find components that need to be upgraded
-for upgrade_vector in determine_upgrade_prs(
-    component_references=greatest_component_references,
-    upstream_component_name=upstream_component_name,
-    upstream_update_policy=upstream_update_policy,
-    upgrade_pull_requests=upgrade_pull_requests,
-    ocm_lookup=ocm_lookup,
-    version_lookup=version_lookup,
-    ignore_prerelease_versions=${ignore_prerelease_versions},
-):
+for component_reference in greatest_component_references:
+    upgrade_vector = determine_upgrade_vector(
+        component_reference=component_reference,
+        upstream_component_name=upstream_component_name,
+        upstream_update_policy=upstream_update_policy,
+        upgrade_pull_requests=upgrade_pull_requests,
+        ocm_lookup=ocm_lookup,
+        version_lookup=version_lookup,
+        ignore_prerelease_versions=${ignore_prerelease_versions},
+    )
+
+    if upgrade_vector is None:
+        continue # did not find a suitable update-vector
+
     merge_policy = merge_policies.merge_policy_for(upgrade_vector.component_name)
     merge_method = merge_policies.merge_method_for(upgrade_vector.component_name)
 
