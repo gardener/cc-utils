@@ -22,15 +22,7 @@ import cnudie.util
 import oci.client as oc
 import oci.model as om
 
-
 logger = logging.getLogger(__name__)
-
-ComponentName = str | tuple[str, str] | ocm.Component | ocm.ComponentIdentity
-
-VersionLookupByComponent = collections.abc.Callable[
-    [ComponentName, ocm.OcmRepository],
-    collections.abc.Sequence[str]
-]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -42,15 +34,11 @@ class OcmRepositoryMappingEntry:
 OcmRepositoryCfg = str | collections.abc.Iterable[str]
 
 
-OcmRepositoryLookup = collections.abc.Callable[
-    [ComponentName],
-    collections.abc.Generator[ocm.OciOcmRepository | str, None, None],
-]
-
-ComponentDescriptorLookupById = collections.abc.Callable[
-    [ocm.ComponentIdentity, OcmRepositoryLookup],
-    ocm.ComponentDescriptor
-]
+# keep for backwards-compatibility (todo: remove)
+ComponentName = ocm.ComponentName
+OcmRepositoryLookup = ocm.OcmRepositoryLookup
+ComponentDescriptorLookupById = ocm.ComponentDescriptorLookup
+VersionLookupByComponent = ocm.VersionLookup
 
 
 def _iter_ocm_repositories(
