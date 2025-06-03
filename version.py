@@ -345,13 +345,13 @@ def process_version(
 T = typing.TypeVar('T', semver.VersionInfo, str)
 
 
-def find_latest_version(
+def greatest_version(
     versions: Iterable[T],
     ignore_prerelease_versions: bool=False,
     invalid_semver_ok: bool=False,
 ) -> T | None:
-    latest_candidate = None
-    latest_candidate_semver = None
+    greatest_candidate = None
+    greatest_candidate_semver = None
 
     for candidate in versions:
         if isinstance(candidate, str):
@@ -368,20 +368,16 @@ def find_latest_version(
         if ignore_prerelease_versions and candidate_semver.prerelease:
             continue
 
-        if not latest_candidate_semver:
-            latest_candidate_semver = candidate_semver
-            latest_candidate = candidate
+        if not greatest_candidate_semver:
+            greatest_candidate_semver = candidate_semver
+            greatest_candidate = candidate
             continue
 
-        if candidate_semver > latest_candidate_semver:
-            latest_candidate_semver = candidate_semver
-            latest_candidate = candidate
+        if candidate_semver > greatest_candidate_semver:
+            greatest_candidate_semver = candidate_semver
+            greatest_candidate = candidate
 
-    return latest_candidate
-
-
-# alias with a more expressive (and correct..) name
-greatest_version = find_latest_version
+    return greatest_candidate
 
 
 def greatest_version_with_matching_major(
