@@ -1,0 +1,100 @@
+name: OCM-Upgrade
+description: |
+  An action creating upgrade-pullrequests for referenced OCM-Components
+
+inputs:
+  component-descriptor:
+    description: |
+      The effective OCM-Component-Descriptor based on which Upgrade-Pullrequests should be
+      created.
+    type: string
+    required: true
+  ocm-repositories:
+    description: |
+      A comma-separated list of OCM-Repositories that should be used to lookup Component-Versions.
+    required: true
+  github-token:
+    description: |
+      auth-token used for pushing upgrade-pullrequest-commit and for creating PullRequests.
+    type: string
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: actions/checkout@v4
+      with:
+        token: ${{  inputs.github-token }}
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - name: write-component-descriptor
+      shell: bash
+      run: |
+        cat <<EOF > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
+    - name: create-and-update-upgrade-pullrequests
+      shell: python
+      run: |
+        import os
+        import sys
+
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import logging
+
+        import yaml
+
+        import github
+        import github.pullrequest
+        import ocm
+        import ocm.gardener
+
+        import ocm_upgrade
+
+        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+        logger = logging.getLogger('ugrade-ocm')
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          raw = yaml.load(f)
+
+        component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
+        component = component_descriptor.component
+
+        component_descriptor_lookup, version_lookup = ocm_upgrade.create_ocm_lookups(
+          ocm_repositories='${{ inputs.ocm-repositories }}'.split(','),
+        )
+
+        host, org, repo = github.host_org_repo()
+        github_api = github.github_api(token='${{ inputs.github-token }}')
+        repository = github_api.repository(org, repo)
+
+        logger.info('retrieving existing upgrade-pull-requests')
+
+        upgrade_pullrequests = tuple(
+          github.pullrequest.iter_upgrade_pullrequests(
+            repository=repository,
+            state='all',
+          )
+        )
+
+        logger.info(f'found {len(upgrade_pullrequests)=}')
+
+        for cref in ocm.gardener.iter_component_references(
+          component=component,
+        ):
+          logger.info(f'processing {cref=}')
+
+          upgrade_vector = ocm.gardener.find_upgrade_vector(
+            component_id=cref.component_id,
+            version_lookup=version_lookup,
+            ignore_prerelease_versions=True,
+            ignore_invalid_semver_versions=True,
+          )
+
+          if not upgrade_vector:
+            logger.info(f'did not find an upgrade-proposal for {cref=}')
+            continue
+
+          logger.info(f'found {upgrade_vector=}')
+          # todo: actually create upgrade-pullrequest
