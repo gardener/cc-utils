@@ -351,6 +351,16 @@ def greatest_version(
     invalid_semver_ok: bool=False,
     min_version: semver.VersionInfo | str=None,
 ) -> T | None:
+    '''
+    returns the greatest version from the passed versions. versions are parsed as semver versions
+    using gardener's relaxed semver (which allows a `v` prefix, as well as omitting the patchlevel).
+    if `ignore_prerelease_versions` is set to True, only final release versions will be considered.
+    if `invalid_semver_ok` is set to True, versions that are not valid (relaxed) semver versions
+    are silently ignored (will raise otherwise).
+
+    If `min_version` is given, only versions greater than min_version will be returned. If the
+    greatest passed-in version is smaller than or equal to min_version, None will be returned.
+    '''
     greatest_candidate = None
     greatest_candidate_semver = None
 
@@ -381,7 +391,7 @@ def greatest_version(
     if min_version:
         min_version = parse_to_semver(min_version)
 
-        if greatest_candidate_semver < min_version:
+        if greatest_candidate_semver <= min_version:
             return None
 
     return greatest_candidate
