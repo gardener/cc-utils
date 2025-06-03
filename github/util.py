@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class RepositoryHelperBase:
-    GITHUB_TIMESTAMP_UTC_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
-
     def __init__(
         self,
         owner: str,
