@@ -182,11 +182,11 @@ def find_greatest_github_release_version(
         version.parse_to_semver(release_version)
         for release_version in release_versions
     ]
-    latest_version = version.find_latest_version(
+    greatest_version = version.greatest_version(
         versions=release_version_infos,
         ignore_prerelease_versions=ignore_prerelease_versions,
     )
-    if latest_version:
-        return str(latest_version)
+    if greatest_version:
+        return str(greatest_version)
     else:
         return None
