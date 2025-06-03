@@ -195,7 +195,7 @@ def iter_obsolete_upgrade_pull_requests(
         # greatest version will be sorted as last element
         ordered_by_version = sorted(
             upgrade_pull_request_group,
-            key=lambda upr: version.parse_to_semver(upr.to_ref.version),
+            key=lambda upr: version.parse_to_semver(upr.upgrade_vector.whither.version),
         )
 
         greatest_version = version.parse_to_semver(ordered_by_version[-1].to_ref.version)
