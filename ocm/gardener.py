@@ -30,6 +30,16 @@ class ExtraComponentReferencesLabel:
     value: list[ExtraComponentReference]
 
 
+@dataclasses.dataclass
+class UpgradeVector:
+    whence: ocm.ComponentIdentity
+    whither: ocm.ComponentIdentity
+
+    @property
+    def component_name(self) -> str:
+        return self.whence.name
+
+
 def iter_component_references(
     component: ocm.Component,
 ) -> collections.abc.Iterable[ocm.ComponentReference]:

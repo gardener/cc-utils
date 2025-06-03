@@ -5,23 +5,14 @@ import re
 import github3.pulls
 
 import ocm
+import ocm.gardener
 import version
-
-
-@dataclasses.dataclass
-class UpgradeVector:
-    whence: ocm.ComponentIdentity
-    whither: ocm.ComponentIdentity
-
-    @property
-    def component_name(self) -> str:
-        return self.whence.name
 
 
 @dataclasses.dataclass
 class UpgradePullRequest:
     pull_request: github3.pulls.PullRequest
-    upgrade_vector: UpgradeVector
+    upgrade_vector: ocm.gardener.UpgradeVector
 
     @property
     def component_name(self) -> str:
@@ -89,7 +80,7 @@ class UpgradePullRequest:
 def parse_pullrequest_title(
     title: str,
     invalid_ok=False,
-) -> UpgradeVector:
+) -> ocm.gardener.UpgradeVector:
     title_pattern = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
     if not title_pattern.fullmatch(title):
         if invalid_ok:
@@ -105,7 +96,7 @@ def parse_pullrequest_title(
 
     version_whence, version_whiter = version_vector.split('->')
 
-    return UpgradeVector(
+    return ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
             name=component_name,
             version=version_whence,
@@ -129,7 +120,7 @@ def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePu
 
 
 def upgrade_pullrequest_title(
-    upgrade_vector: UpgradeVector,
+    upgrade_vector: ocm.gardener.UpgradeVector,
 ) -> str:
     type_name = 'component'
     cname = upgrade_vector.component_name
