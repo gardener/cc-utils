@@ -755,3 +755,24 @@ class EnumJSONEncoder(json.JSONEncoder):
         elif isinstance(o, datetime.datetime):
             return o.isoformat()
         return super().default(o)
+
+
+# shortcut-aliases
+Callable = collections.abc.Callable
+Iterable = collections.abc.Iterable
+
+
+# Type-Aliases (for interoperability w/ external implementations)
+ComponentName = str | tuple[str, str] | Component | ComponentIdentity
+OcmRepositoryLookup = Callable[
+    [ComponentName],
+    Iterable[OciOcmRepository],
+]
+ComponentDescriptorLookup = Callable[
+    [ComponentIdentity, OcmRepositoryLookup],
+    ComponentDescriptor
+]
+VersionLookup = Callable[
+    [ComponentName, OcmRepository],
+    Iterable[str],
+]
