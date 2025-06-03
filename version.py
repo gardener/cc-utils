@@ -349,6 +349,7 @@ def greatest_version(
     versions: Iterable[T],
     ignore_prerelease_versions: bool=False,
     invalid_semver_ok: bool=False,
+    min_version: semver.VersionInfo | str=None,
 ) -> T | None:
     greatest_candidate = None
     greatest_candidate_semver = None
@@ -376,6 +377,12 @@ def greatest_version(
         if candidate_semver > greatest_candidate_semver:
             greatest_candidate_semver = candidate_semver
             greatest_candidate = candidate
+
+    if min_version:
+        min_version = parse_to_semver(min_version)
+
+        if greatest_candidate < min_version:
+            return None
 
     return greatest_candidate
 
