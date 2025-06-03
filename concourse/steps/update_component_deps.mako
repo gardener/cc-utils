@@ -178,6 +178,7 @@ for component_reference in greatest_component_references:
     pull_request = create_upgrade_pr(
         component=own_component,
         upgrade_vector=upgrade_vector,
+        repository=repository,
         upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
         upgrade_script_relpath='${set_dependency_version_script_path}',
         git_helper=git_helper,
