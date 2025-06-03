@@ -215,7 +215,7 @@ def determine_upgrade_vector(
     version_lookup,
     ocm_lookup,
     ignore_prerelease_versions=False,
-) -> github.pullrequest.UpgradeVector | None:
+) -> ocm.gardener.UpgradeVector | None:
     versions_to_consider = determine_reference_versions(
         component_name=component_reference.componentName,
         reference_version=component_reference.version,
@@ -287,7 +287,7 @@ def determine_upgrade_vector(
             )
             continue
         else:
-            return github.pullrequest.UpgradeVector(
+            return ocm.gardener.UpgradeVector(
                 whence=ocm.ComponentIdentity(
                     name=component_reference.componentName,
                     version=component_reference.version,
@@ -336,7 +336,7 @@ def _import_release_notes(
 
 def create_upgrade_pr(
     component: ocm.Component,
-    upgrade_vector: github.pullrequest.UpgradeVector,
+    upgrade_vector: ocm.gardener.UpgradeVector,
     repository: github3.repos.Repository,
     upgrade_script_path,
     upgrade_script_relpath,
