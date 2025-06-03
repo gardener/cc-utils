@@ -160,26 +160,10 @@ def determine_reference_versions(
     reference_version: str,
     version_lookup,
     ocm_lookup,
-    upstream_component_name: str=None,
+    upstream_component_name: str,
     upstream_update_policy: ucd.UpstreamUpdatePolicy=ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=False,
 ) -> collections.abc.Sequence[str]:
-    if upstream_component_name is None:
-        # no upstream component defined - look for greatest released version
-        latest_component_version = greatest_component_version(
-            component_name=component_name,
-            version_lookup=version_lookup,
-            ignore_prerelease_versions=ignore_prerelease_versions,
-        )
-        if not latest_component_version:
-            raise RuntimeError(
-                f'did not find any versions of {component_name=}'
-            )
-
-        return (
-            latest_component_version,
-        )
-
     version_candidate = latest_component_version_from_upstream(
         component_name=component_name,
         upstream_component_name=upstream_component_name,
@@ -216,6 +200,15 @@ def determine_upgrade_vector(
     ocm_lookup,
     ignore_prerelease_versions=False,
 ) -> ocm.gardener.UpgradeVector | None:
+    if not upstream_component_name:
+        return ocm.gardener.find_upgrade_vector(
+            component_id=component_reference.component_id,
+            version_lookup=version_lookup,
+            ignore_prerelease_versions=ignore_prerelease_versions,
+            ignore_invalid_semver_versions=True,
+        )
+
+    # below this line, we handle following upstream-component
     versions_to_consider = determine_reference_versions(
         component_name=component_reference.componentName,
         reference_version=component_reference.version,

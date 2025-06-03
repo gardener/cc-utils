@@ -40,6 +40,36 @@ class UpgradeVector:
         return self.whence.name
 
 
+def find_upgrade_vector(
+    component_id: ocm.ComponentIdentity,
+    version_lookup: ocm.VersionLookup,
+    ignore_prerelease_versions=True,
+    ignore_invalid_semver_versions=True,
+) -> UpgradeVector | None:
+    '''
+    returns an upgrade-vector from given component_id to greatest available (using semver-arithmetic)
+    based on passed version-lookup's returned versions.
+
+    If no greater version can be found, None is returned.
+    '''
+    greatest_version = version.greatest_version(
+        versions=version_lookup(component_id),
+        ignore_prerelease_versions=ignore_prerelease_versions,
+        invalid_semver_ok=ignore_prerelease_versions,
+        min_version=component_id.version,
+    )
+    if not greatest_version:
+        return None
+
+    return UpgradeVector(
+        whence=component_id,
+        whither=dataclasses.replace(
+            component_id,
+            version=greatest_version,
+        ),
+    )
+
+
 def iter_component_references(
     component: ocm.Component,
 ) -> collections.abc.Iterable[ocm.ComponentReference]:
