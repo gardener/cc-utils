@@ -80,8 +80,12 @@ class UpgradePullRequest:
 def parse_pullrequest_title(
     title: str,
     invalid_ok=False,
+    title_regex_pattern: str | None=None,
 ) -> ocm.gardener.UpgradeVector:
-    title_pattern = re.compile(r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$')
+    if not title_regex_pattern:
+        title_regex_pattern = r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$'
+
+    title_pattern = re.compile(title_regex_pattern)
     if not title_pattern.fullmatch(title):
         if invalid_ok:
             return None
@@ -133,11 +137,13 @@ def upgrade_pullrequest_title(
 def iter_upgrade_pullrequests(
     repository: github3.repos.Repository,
     state: str='all',
+    title_regex_pattern: str | None=None,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
     def has_upgrade_pr_title(pull_request):
         return parse_pullrequest_title(
             title=pull_request.title,
             invalid_ok=True,
+            title_regex_pattern=title_regex_pattern,
         ) is not None
 
     for pull_request in repository.pull_requests(
