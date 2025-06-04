@@ -9,8 +9,12 @@ on:
         description: Whether to release to PYPI
       slack-channel-id:
         type: string
-        default: '' # C0170EXLULE # gardener-cicd channel
-        description: which slack-channel to post release-notes to (use empty str to suppress)
+        default: C0170EXLULE # gardener-cicd channel
+        description: which slack-channel to post release-notes to (defaults to gardener-cicd)
+      post-to-slack:
+        type: boolean
+        default: true
+        description: post to slack
 
 defaults:
   run:
@@ -30,7 +34,7 @@ jobs:
     with:
       release-commit-target: branch
       next-version: bump-minor
-      slack-channel-id: ${{ inputs.slack-channel-id }}
+      slack-channel-id: ${{ inputs.post-to-slack && 'C0170EXLULE' || '' }}
 
   pypi:
     if: ${{ inputs.release-to-pypi }}
