@@ -384,7 +384,7 @@ git_helper = gitutil.GitHelper(
   ),
 )
 branch = repository_branch
-repository = github_api(
+repository = github_api.repository(
   repo_owner,
   repo_name,
 )
