@@ -575,7 +575,7 @@ for gh_asset in github_assets:
 
 % if merge_back:
 try:
-  old_head = repository.head
+  old_head = git_helper.repo.head
 
   create_and_push_mergeback_commit(
     git_helper=git_helper,
