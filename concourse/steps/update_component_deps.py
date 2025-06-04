@@ -259,7 +259,7 @@ def determine_upgrade_vector(
             component_reference=component_reference,
             component_version=candidate_version,
             upgrade_requests=upgrade_pull_requests,
-            request_filter=lambda rq: not rq.is_downgrade(),
+            request_filter=lambda rq: not rq.is_downgrade,
         )):
             logger.info(
                 'skipping upgrade (PR already exists): '
@@ -271,7 +271,7 @@ def determine_upgrade_vector(
             component_reference=component_reference,
             component_version=candidate_version,
             upgrade_requests=upgrade_pull_requests,
-            request_filter=lambda rq: rq.is_downgrade(),
+            request_filter=lambda rq: rq.is_downgrade,
         )):
             logger.info(
                 'skipping downgrade (PR already exists): '
