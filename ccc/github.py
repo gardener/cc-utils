@@ -15,7 +15,6 @@ import github3.github
 import github3.session
 
 import ci.util
-import github.util
 import http_requests
 import model
 import model.github
