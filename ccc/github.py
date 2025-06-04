@@ -85,26 +85,6 @@ def github_api_ctor(
         )
 
 
-def repo_helper(
-    host: str,
-    org: str,
-    repo: str,
-    branch: str='master',
-    session_adapter: SessionAdapter=SessionAdapter.RETRY,
-):
-    api = github_api(
-        github_cfg=github_cfg_for_repo_url(repo_url=ci.util.urljoin(host, org, repo)),
-        session_adapter=session_adapter,
-    )
-
-    return github.util.GitHubRepositoryHelper(
-        owner=org,
-        name=repo,
-        github_api=api,
-        default_branch=branch,
-    )
-
-
 def github_api(
     github_cfg: model.github.GithubConfig=None,
     repo_url: str=None,

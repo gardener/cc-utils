@@ -545,24 +545,21 @@ class ReplicationResultProcessor:
             cfg_factory=self._cfg_set,
         )
         github_api = ccc.github.github_api(github_cfg)
-
-        repo_helper = ccc.github.repo_helper(
-            host=main_repo['hostname'],
-            org=repo_owner,
-            repo=repo_name,
-            branch=main_repo['branch'],
+        repository = github_api.repository(
+            repo_owner,
+            repo_name,
         )
 
         recipients = set(github.codeowners.resolve_email_addresses(
             codeowners_entries=github.codeowners.enumerate_codeowners_from_remote_repo(
-                repo=repo_helper.repository
+                repo=repository
             ),
             github_api=github_api,
         ))
 
         # in case no codeowners are available, resort to using the committer
         if not recipients:
-            head_commit = repo_helper.repository.commit(main_repo['branch'])
+            head_commit = repository.commit(main_repo['branch'])
             user_ids = {
                 user_info.get('login')
                 for user_info

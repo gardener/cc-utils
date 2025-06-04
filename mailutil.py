@@ -295,15 +295,13 @@ def _codeowners_parser_from_component(
     access = main_source.access
     github_api = ccc.github.github_api_from_gh_access(access=access)
 
-    repo_helper = ccc.github.repo_helper(
-        host=access.hostname(),
-        org=access.org_name(),
-        repo=access.repository_name(),
-        branch=branch_name,
+    repository = github_api.repository(
+        access.org_name(),
+        access.repository_name(),
     )
 
     return github_api, github.codeowners.enumerate_codeowners_from_remote_repo(
-        repo=repo_helper.repository,
+        repo=repository,
     )
 
 
