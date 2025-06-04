@@ -9,7 +9,7 @@ on:
         description: Whether to release to PYPI
       slack-channel-id:
         type: string
-        default: C0170EXLULE # gardener-cicd channel
+        default: '' # C0170EXLULE # gardener-cicd channel
         description: which slack-channel to post release-notes to (use empty str to suppress)
 
 defaults:
