@@ -61,19 +61,22 @@ class RepositoryHelperBase:
             )
 
 
-class GitHubRepositoryHelper(RepositoryHelperBase):
-    def tag_exists(
-        self,
-        tag_name: str,
-    ):
-        if not tag_name:
-            raise ValueError('tag_name must not be empty')
-        try:
-            self.repository.ref('tags/' + tag_name)
-            return True
-        except NotFoundError:
-            return False
+def tag_exists(
+    repository: github3.repos.Repository,
+    tag_name: str,
+):
+    if not tag_name:
+        raise ValueError('tag_name must not be empty')
+    try:
+        tag_name = tag_name.removesuffix('refs/')
+        tag_name = tag_name.removesuffix('tags/')
+        repository.ref(f'tags/{tag_name}')
+        return True
+    except NotFoundError:
+        return False
 
+
+class GitHubRepositoryHelper(RepositoryHelperBase):
     def add_labels_to_pull_request(self, pull_request_number, *labels):
         pull_request = self.repository.pull_request(pull_request_number)
         pull_request.issue().add_labels(*labels)

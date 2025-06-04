@@ -22,6 +22,7 @@ import ccc.github
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
+import github.util
 import release_notes.fetch
 import release_notes.markdown
 import slackclient.util
@@ -162,12 +163,15 @@ def collect_release_notes(
 
 
 def have_tag_conflicts(
-    github_helper,
+    repository,
     tags,
 ):
     found_tags = 0
     for tag in tags:
-        if github_helper.tag_exists(tag.removeprefix('refs/tags/')):
+        if github.util.tag_exists(
+            repository=repository,
+            tag_name=tag.removeprefix('refs/tags/'),
+        ):
             logger.error(f'{tag=} exists in remote repository - aborting release')
             found_tags += 1
 
@@ -334,7 +338,6 @@ def create_and_push_tags(
 
 def create_and_push_mergeback_commit(
     git_helper,
-    github_helper,
     tags,
     branch: str,
     merge_commit_message_prefix: str,

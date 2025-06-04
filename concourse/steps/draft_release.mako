@@ -29,15 +29,11 @@ import ci.util
 import cnudie.retrieve
 import cnudie.util
 import github.release
-import github.util
 import gitutil
 import ocm
 import release_notes.fetch
 import release_notes.markdown
 
-from github.util import (
-    GitHubRepositoryHelper,
-)
 
 logger = logging.getLogger('draft-release')
 ci.log.configure_default_logging()
@@ -93,12 +89,12 @@ ocm_version_lookup = cnudie.retrieve.version_lookup(
     oci_client=oci_client,
 )
 
-github_helper = github.util.GitHubRepositoryHelper(
-    owner='${repo.repo_owner()}',
-    name='${repo.repo_name()}',
-    github_api=ccc.github.github_api(github_cfg),
-    default_branch='${repo.branch()}',
+github_api = ccc.github.github_api(github_cfg)
+repository = github_api.repository(
+    '${repo.repo_owner()}',
+    '${repo.repo_name()}',
 )
+
 git_helper = gitutil.GitHelper(
     repo=repo_dir,
     git_cfg=github_cfg.git_cfg(
@@ -123,7 +119,6 @@ except ValueError as e:
     # repository is already published - usually by steps that erroneously publish them before they should.
     release_notes_md = 'no release notes available'
 
-repository = github_helper.repository
 draft_name = f'{processed_version}-draft'
 draft_release = github.release.find_draft_release(
     repository=repository,

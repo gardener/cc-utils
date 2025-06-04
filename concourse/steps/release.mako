@@ -384,11 +384,9 @@ git_helper = gitutil.GitHelper(
   ),
 )
 branch = repository_branch
-github_helper = github.util.GitHubRepositoryHelper(
-  owner=repo_owner,
-  name=repo_name,
-  github_api=github_api,
-  default_branch=branch,
+repository = github_api(
+  repo_owner,
+  repo_name,
 )
 
 % if release_trait.rebase_before_release():
@@ -429,7 +427,7 @@ tags = _calculate_tags(
 )
 
 if have_tag_conflicts(
-  github_helper=github_helper,
+  repository=repository,
   tags=tags,
 ):
   exit(1)
@@ -505,9 +503,8 @@ uploaded_oci_manifest_bytes = ocm.upload.upload_component_descriptor(
 )
 
 % if release_trait.release_on_github():
-repo = github_helper.repository
 try:
-  for releases, succeeded in github.release.delete_outdated_draft_releases(repo):
+  for releases, succeeded in github.release.delete_outdated_draft_releases(repository):
     if succeeded:
       logger.info(f'deleted {release.name=}')
     else:
@@ -534,11 +531,11 @@ else:
 
 
 gh_release = github.release.find_draft_release(
-  repository=repo,
+  repository=repository,
   name=draft_tag,
 )
 if not gh_release:
-  gh_release = repo.create_release(
+  gh_release = repository.create_release(
     tag_name=release_tag,
     body=release_notes_md or '',
     draft=False,
@@ -578,11 +575,10 @@ for gh_asset in github_assets:
 
 % if merge_back:
 try:
-  old_head = git_helper.repo.head
+  old_head = repository.head
 
   create_and_push_mergeback_commit(
     git_helper=git_helper,
-    github_helper=github_helper,
     tags=tags,
     branch=branch,
     merge_commit_message_prefix='${mergeback_commit_msg_prefix or ''}',
