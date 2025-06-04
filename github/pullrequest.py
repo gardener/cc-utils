@@ -198,7 +198,9 @@ def iter_obsolete_upgrade_pull_requests(
             key=lambda upr: version.parse_to_semver(upr.upgrade_vector.whither.version),
         )
 
-        greatest_version = version.parse_to_semver(ordered_by_version[-1].to_ref.version)
+        greatest_version = version.parse_to_semver(
+            ordered_by_version[-1].upgrade_vector.whither.version
+        )
         for upgrade_pr in ordered_by_version:
-            if version.parse_to_semver(upgrade_pr.to_ref.version) < greatest_version:
+            if version.parse_to_semver(upgrade_pr.upgrade_vector.whither.version) < greatest_version:
                 yield upgrade_pr
