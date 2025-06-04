@@ -152,6 +152,8 @@ greatest_component_references = ocm.gardener.iter_greatest_component_references(
     references=ocm.gardener.iter_component_references(component=own_component),
 )
 
+existing_upgrade_vectors = [u.upgrade_vector for u in upgrade_pull_requests]
+
 for component_reference in greatest_component_references:
     upgrade_vector = determine_upgrade_vector(
         component_reference=component_reference,
@@ -165,6 +167,10 @@ for component_reference in greatest_component_references:
 
     if upgrade_vector is None:
         continue # did not find a suitable update-vector
+
+    if upgrade_vector in existing_upgrade_vectors:
+        logger.info(f'found existing pullrequest for {upgrade_vector=} - skipping')
+        continue
 
     merge_policy = merge_policies.merge_policy_for(upgrade_vector.component_name)
     merge_method = merge_policies.merge_method_for(upgrade_vector.component_name)
