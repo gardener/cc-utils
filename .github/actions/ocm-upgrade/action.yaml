@@ -63,7 +63,7 @@ runs:
 
         # silence annoying loggers
         logging.getLogger('github3').setLevel(logging.WARN)
-        logging.getLoggeR('urllib3').setLevel(logging.WARN)
+        logging.getLogger('urllib3').setLevel(logging.WARN)
 
         with open('/tmp/component-descriptor.yaml') as f:
           raw = yaml.safe_load(f)
