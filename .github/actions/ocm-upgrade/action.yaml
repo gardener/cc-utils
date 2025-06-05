@@ -33,10 +33,10 @@ runs:
         cat <<EOF > /tmp/component-descriptor.yaml
         ${{ inputs.component-descriptor }}
         EOF
-        echo <<EOF > /tmp/ocm-repositories
+        cat <<EOF > /tmp/ocm-repositories
         ${{ inputs.ocm-repositories }}
         EOF
-        echo <<EOF > /tmp/github-token
+        cat <<EOF > /tmp/github-token
         ${{ inputs.github-token }}
         EOF
     - name: create-and-update-upgrade-pullrequests
@@ -73,6 +73,8 @@ runs:
 
         with open('/tmp/ocm-repositories') as f:
           ocm_repositories = f.read().strip().split(',')
+
+        logger.info(f'{ocm_repositories=}')
 
         component_descriptor_lookup, version_lookup = ocm_upgrade.create_ocm_lookups(
           ocm_repositories=ocm_repositories,
@@ -114,3 +116,12 @@ runs:
 
           logger.info(f'found {upgrade_vector=}')
           # todo: actually create upgrade-pullrequest
+
+        summary = f'''\
+        ## Upgrade-Dependencies-Summary
+
+        Found {len(upgrade_pullrequests=)=}.
+        '''
+
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+          f.write(summary)
