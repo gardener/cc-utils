@@ -33,6 +33,12 @@ runs:
         cat <<EOF > /tmp/component-descriptor.yaml
         ${{ inputs.component-descriptor }}
         EOF
+        echo <<EOF > /tmp/ocm-repositories
+        ${{ inputs.ocm-repositories }}
+        EOF
+        echo <<EOF > /tmp/github-token
+        ${{ inputs.github-token }}
+        EOF
     - name: create-and-update-upgrade-pullrequests
       shell: python
       run: |
@@ -55,18 +61,28 @@ runs:
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
         logger = logging.getLogger('ugrade-ocm')
 
+        # silence annoying loggers
+        logging.getLogger('github3').setLevel(logging.WARN)
+        logging.getLoggeR('urllib3').setLevel(logging.WARN)
+
         with open('/tmp/component-descriptor.yaml') as f:
-          raw = yaml.load(f)
+          raw = yaml.safe_load(f)
 
         component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
         component = component_descriptor.component
 
+        with open('/tmp/ocm-repositories') as f:
+          ocm_repositories = f.read().strip().split(',')
+
         component_descriptor_lookup, version_lookup = ocm_upgrade.create_ocm_lookups(
-          ocm_repositories='${{ inputs.ocm-repositories }}'.split(','),
+          ocm_repositories=ocm_repositories,
         )
 
-        host, org, repo = github.host_org_repo()
-        github_api = github.github_api(token='${{ inputs.github-token }}')
+        with open('/tmp/github-token') as f:
+          github_token = f.read().strip()
+
+        host, org, repo = github.host_org_and_repo()
+        github_api = github.github_api(token=github_token)
         repository = github_api.repository(org, repo)
 
         logger.info('retrieving existing upgrade-pull-requests')

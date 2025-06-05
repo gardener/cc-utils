@@ -1,0 +1,50 @@
+name: Upgrade Dependencies
+description: |
+  A re-usable workflow for creating upgrade-pullrequests for referenced OCM-Components.
+
+on:
+  workflow_call:
+    inputs:
+      component-descriptor:
+        required: false
+        type: string
+        description: |
+          The Component-Descriptor containing the Component-References to honour.
+          If not given, a default Component-Descriptor will be determined using the
+          `prepare.yaml` workflow.
+      ocm-repositories:
+        required: false
+        type: string
+        description: |
+          An optional, comma-separated list of OCM-Repositories that should be used for looking-up
+          OCM-Component-Versions. If not passed, the releases-repository from `prepare.yaml`
+          workflow will be used.
+
+jobs:
+  prepare:
+    if: ${{ inputs.component-descriptor == '' }}
+    uses: ./.github/workflows/prepare.yaml
+    with:
+      mode: release
+
+  create-upgrade-pullrequests:
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+      - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
+        with:
+          component-descriptor: |
+            ${{ inputs.component-desriptor || needs.prepare.outputs.component-descriptor }}
+          ocm-repositories: |
+            ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-releases-repository }}
+          github-token: |
+            ${{ steps.app-token.outputs.token }}
