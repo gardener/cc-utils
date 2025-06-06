@@ -388,7 +388,7 @@ def greatest_version(
             greatest_candidate_semver = candidate_semver
             greatest_candidate = candidate
 
-    if min_version:
+    if min_version and greatest_candidate_semver:
         min_version = parse_to_semver(min_version)
 
         if greatest_candidate_semver <= min_version:
