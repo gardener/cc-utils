@@ -39,11 +39,9 @@ Passed Environment Variables
 +-----------------------+--------------------------------------------------------------------+
 | name                  | explanation                                                        |
 +=======================+====================================================================+
-| DEPENDENCY_TYPE       | one of: 'component', 'container_image', 'web', 'generic'           |
+| DEPENDENCY_TYPE       | always: 'component'                                                |
 +-----------------------+--------------------------------------------------------------------+
-| DEPENDENCY_NAME       | the dependency name as declared in component descriptor            |
-+-----------------------+--------------------------------------------------------------------+
-| LOCAL_DEPENDENCY_NAME | the logical name of the dependency within the component descriptor |
+| DEPENDENCY_NAME       | the referenced component-name                                      |
 +-----------------------+--------------------------------------------------------------------+
 | DEPENDENCY_VERSION    | the discovered target component version (e.g. 1.2.3)               |
 +-----------------------+--------------------------------------------------------------------+
