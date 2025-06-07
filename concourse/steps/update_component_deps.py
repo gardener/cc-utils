@@ -374,7 +374,6 @@ def create_upgrade_pr(
     # TODO: Handle upgrades for types other than 'component'
     cmd_env['DEPENDENCY_TYPE'] = 'component'
     cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
-    cmd_env['LOCAL_DEPENDENCY_NAME'] = upgrade_vector.component_name # todo: drop this env-var
     cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
     if container_image:
         cmd_env['REPO_DIR'] = (repo_dir_in_container := '/mnt/main_repo')
