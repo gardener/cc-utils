@@ -182,7 +182,6 @@ for component_reference in greatest_component_references:
         merge_method = concourse.model.traits.update_component_deps.MergeMethod.MERGE
 
     pull_request = create_upgrade_pr(
-        component=own_component,
         upgrade_vector=upgrade_vector,
         repository=repository,
         upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
