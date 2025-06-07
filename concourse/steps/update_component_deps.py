@@ -15,8 +15,6 @@ import github3.repos.repo
 import ccc.github
 import ci.util
 import cnudie.iter
-import cnudie.util
-import cnudie.retrieve
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
@@ -364,26 +362,12 @@ def create_upgrade_pr(
 
     to_component = to_component_descriptor.component
 
-    if delivery_dashboard_url:
-        delivery_dashboard_url_view_diff = (
-            f'{delivery_dashboard_url}/#/component?name={to_component.name}&view=diff'
-            f'&componentDiff={from_component.name}:{from_component.version}'
-            f':{to_component.name}:{to_component.version}'
-        )
-    else:
-        delivery_dashboard_url_view_diff = None
-
     if include_bom_diff:
-        bom_diff = cnudie.retrieve.component_diff(
-            left_component=from_component,
-            right_component=to_component,
+        formatted_diff = github.pullrequest.bom_diff(
+            delivery_dashboard_url=delivery_dashboard_url,
+            from_component=from_component,
+            to_component=to_component,
             component_descriptor_lookup=component_descriptor_lookup,
-        )
-
-        formatted_diff = cnudie.util.format_component_diff(
-            component_diff=bom_diff,
-            delivery_dashboard_url_view_diff=delivery_dashboard_url_view_diff,
-            delivery_dashboard_url=delivery_dashboard_url
         )
 
     # prepare env for upgrade script and after-merge-callback

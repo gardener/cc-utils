@@ -4,6 +4,8 @@ import re
 
 import github3.pulls
 
+import cnudie.retrieve
+import cnudie.util
 import ocm
 import ocm.gardener
 import version
@@ -210,3 +212,33 @@ def iter_obsolete_upgrade_pull_requests(
         for upgrade_pr in ordered_by_version:
             if version.parse_to_semver(upgrade_pr.upgrade_vector.whither.version) < greatest_version:
                 yield upgrade_pr
+
+
+def bom_diff(
+    delivery_dashboard_url: str,
+    from_component: ocm.Component,
+    to_component: ocm.Component,
+    component_descriptor_lookup,
+) -> str:
+    if delivery_dashboard_url:
+        delivery_dashboard_url_view_diff = (
+            f'{delivery_dashboard_url}/#/component?name={to_component.name}&view=diff'
+            f'&componentDiff={from_component.name}:{from_component.version}'
+            f':{to_component.name}:{to_component.version}'
+        )
+    else:
+        delivery_dashboard_url_view_diff = None
+
+    bom_diff = cnudie.retrieve.component_diff(
+        left_component=from_component,
+        right_component=to_component,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    formatted_diff = cnudie.util.format_component_diff(
+        component_diff=bom_diff,
+        delivery_dashboard_url_view_diff=delivery_dashboard_url_view_diff,
+        delivery_dashboard_url=delivery_dashboard_url
+    )
+
+    return formatted_diff
