@@ -288,7 +288,7 @@ def upgrade_pullrequest_body(
 def set_dependency_cmd_env(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
-    github_cfg_name: str,
+    github_cfg_name: str=None,
 ) -> dict[str, str]:
     '''
     returns a cmd-env-block (in form of a dict) to pass to `set_depedency_version` callbacks.
@@ -301,5 +301,8 @@ def set_dependency_cmd_env(
     cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
     cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
     cmd_env['REPO_DIR'] = repo_dir
+
+    if github_cfg_name: # concourse-only
+        cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
 
     return cmd_env
