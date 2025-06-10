@@ -240,18 +240,15 @@ it may be assumed that a Python3 runtime is available, along with all tools from
 </thead>
 <tbody>
 <tr class="row-even"><td><p>DEPENDENCY_TYPE</p></td>
-<td><p>one of: ‘component’, ‘container_image’, ‘web’, ‘generic’</p></td>
+<td><p>always: ‘component’</p></td>
 </tr>
 <tr class="row-odd"><td><p>DEPENDENCY_NAME</p></td>
-<td><p>the dependency name as declared in component descriptor</p></td>
+<td><p>the referenced component-name</p></td>
 </tr>
-<tr class="row-even"><td><p>LOCAL_DEPENDENCY_NAME</p></td>
-<td><p>the logical name of the dependency within the component descriptor</p></td>
-</tr>
-<tr class="row-odd"><td><p>DEPENDENCY_VERSION</p></td>
+<tr class="row-even"><td><p>DEPENDENCY_VERSION</p></td>
 <td><p>the discovered target component version (e.g. 1.2.3)</p></td>
 </tr>
-<tr class="row-even"><td><p>REPO_DIR</p></td>
+<tr class="row-odd"><td><p>REPO_DIR</p></td>
 <td><p>the absolute path to component repo work tree</p></td>
 </tr>
 </tbody>
