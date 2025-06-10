@@ -95,6 +95,7 @@ runs:
         import yaml
 
         import ocm
+        import ocm.base_component
         import ocm.gardener
 
         import base_component_descriptor
@@ -113,7 +114,7 @@ runs:
             print(f'Error: {base_component_path=} is not a file')
             exit(1)
 
-        base_component = base_component_descriptor.load_base_component(
+        base_component = ocm.base_component.load_base_component(
           path=base_component_path,
           absent_ok=True,
         )
