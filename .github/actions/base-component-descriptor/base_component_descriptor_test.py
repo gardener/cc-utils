@@ -7,9 +7,6 @@ sys.path.insert(1, repo_root)
 
 import datetime
 import dataclasses
-import pytest
-
-import yaml
 
 import base_component_descriptor as bcd
 import ocm
