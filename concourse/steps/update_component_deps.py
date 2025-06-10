@@ -459,7 +459,7 @@ def create_upgrade_pr(
     commit_message = f'Upgrade {cname}\n\nfrom {from_version} to {to_version}'
 
     upgrade_branch_name = push_upgrade_commit(
-        ls_repo=repository,
+        repository=repository,
         git_helper=git_helper,
         commit_message=commit_message,
         branch=branch,
@@ -561,7 +561,7 @@ def create_upgrade_pr(
 
 
 def push_upgrade_commit(
-    ls_repo: github3.repos.repo.Repository,
+    repository: github3.repos.repo.Repository,
     git_helper: gitutil.GitHelper,
     commit_message: str,
     branch: str,
@@ -569,14 +569,14 @@ def push_upgrade_commit(
     commit = git_helper.index_to_commit(message=commit_message)
     logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
     new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    head_sha = ls_repo.ref(f'heads/{branch}').object.sha
-    ls_repo.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+    head_sha = repository.ref(f'heads/{branch}').object.sha
+    repository.create_ref(f'refs/heads/{new_branch_name}', head_sha)
 
     try:
         git_helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
     except:
         logger.warning('an error occurred - removing now useless pr-branch')
-        ls_repo.ref(f'heads/{new_branch_name}').delete()
+        repository.ref(f'heads/{new_branch_name}').delete()
         raise
 
     git_helper.repo.git.checkout('.')
