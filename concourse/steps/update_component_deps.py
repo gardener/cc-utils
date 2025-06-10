@@ -14,7 +14,6 @@ import github3.repos.repo
 
 import ccc.github
 import ci.util
-import cnudie.iter
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
 import dockerutil
@@ -362,7 +361,7 @@ def create_upgrade_pr(
     to_component = to_component_descriptor.component
 
     if include_bom_diff:
-        formatted_diff = github.pullrequest.bom_diff(
+        bom_diff_markdown = github.pullrequest.bom_diff(
             delivery_dashboard_url=delivery_dashboard_url,
             from_component=from_component,
             to_component=to_component,
@@ -453,47 +452,10 @@ def create_upgrade_pr(
         traceback.print_exc()
         release_notes = 'failed to retrieve release-notes'
 
-    if release_notes:
-        max_pr_body_length = 65536 # also: max comment body length
-        # If the size of the release-notes exceeds the max. body-length for PRs, split the notes
-        # into MAX_PR_BODY_LENGTH-sized chunks and add subsequent chunks to the PR as comments.
-        max_body_length_exceeded_remark = (
-            '\n\nRelease notes were shortened since they exceeded the maximum length allowed for a '
-            'pull request body. The remaining release notes will be added as comments to this PR.'
-        )
-        additional_notes = []
-
-        pr_body = ''
-
-        if len(release_notes) > max_pr_body_length:
-            step_size = max_pr_body_length - len(max_body_length_exceeded_remark)
-            split_release_notes = [
-                release_notes[start:start + step_size]
-                for start in range(0, len(release_notes), step_size)
-            ]
-        else:
-            split_release_notes = [release_notes]
-
-        if len(split_release_notes) > 1:
-            pr_body += split_release_notes[0] + max_body_length_exceeded_remark
-            additional_notes = split_release_notes[1:]
-        else:
-            pr_body += split_release_notes[0]
-
-        if include_bom_diff:
-            if len(formatted_diff) <= max_pr_body_length - len(pr_body):
-                pr_body += '\n\n' + formatted_diff
-            else:
-                if len(formatted_diff) < max_pr_body_length:
-                    additional_notes.append(formatted_diff)
-                else:
-                    component_details_start = formatted_diff.find('## Component Details:')
-                    additional_notes.append(formatted_diff[:component_details_start])
-                    additional_notes.append(formatted_diff[component_details_start:])
-
-    else:
-        pr_body = ''
-        additional_notes = []
+    pr_body, additional_notes = github.pullrequest.upgrade_pullrequest_body(
+        release_notes=release_notes,
+        bom_diff_markdown=bom_diff_markdown,
+    )
 
     if pullrequest_body_suffix:
         pr_body += f'\n{pullrequest_body_suffix}'

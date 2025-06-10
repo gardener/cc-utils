@@ -6,6 +6,7 @@ import github3.pulls
 
 import cnudie.retrieve
 import cnudie.util
+import github.limits
 import ocm
 import ocm.gardener
 import version
@@ -242,3 +243,42 @@ def bom_diff(
     )
 
     return formatted_diff
+
+
+def upgrade_pullrequest_body(
+    release_notes: str | None,
+    bom_diff_markdown: str | None,
+) -> tuple[str, list[str]]:
+    pr_body = ''
+    additional_notes = []
+
+    if release_notes:
+        too_long_hint = 'shortened due to GitHub-Length-Limit. Remainder follows in comments'
+
+        if not github.limits.fits(release_notes, github.limits.pullrequest_body):
+            step_size = github.limits.pullrequest_body - len(too_long_hint)
+            split_release_notes = [
+                release_notes[start:start + step_size]
+                for start in range(0, len(release_notes), step_size)
+            ]
+        else:
+            split_release_notes = [release_notes]
+
+        if len(split_release_notes) > 1:
+            pr_body += split_release_notes[0] + too_long_hint
+            additional_notes = split_release_notes[1:]
+        else:
+            pr_body += split_release_notes[0]
+
+        if bom_diff_markdown:
+            if len(bom_diff_markdown) + len(pr_body) + 2 <= github.limits.pullrequest_body:
+                pr_body += '\n\n' + bom_diff_markdown
+            else:
+                if github.limits.fits(bom_diff_markdown, github.limits.pullrequest_body):
+                    additional_notes.append(bom_diff_markdown)
+                else:
+                    component_details_start = bom_diff_markdown.find('## Component Details:')
+                    additional_notes.append(bom_diff_markdown[:component_details_start])
+                    additional_notes.append(bom_diff_markdown[component_details_start:])
+
+    return pr_body, additional_notes
