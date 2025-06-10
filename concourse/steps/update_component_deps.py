@@ -346,8 +346,6 @@ def create_upgrade_pr(
     if container_image:
         dockerutil.launch_dockerd_if_not_running()
 
-    ls_repo = repository
-
     from_component_descriptor = component_descriptor_lookup(
         upgrade_vector.whence,
         absent_ok=False,
@@ -434,7 +432,7 @@ def create_upgrade_pr(
     commit_message = f'Upgrade {cname}\n\nfrom {from_version} to {to_version}'
 
     upgrade_branch_name = push_upgrade_commit(
-        ls_repo=ls_repo,
+        ls_repo=repository,
         git_helper=git_helper,
         commit_message=commit_message,
         branch=branch,
@@ -461,7 +459,7 @@ def create_upgrade_pr(
         pr_body += f'\n{pullrequest_body_suffix}'
 
     try:
-        pull_request = ls_repo.create_pull(
+        pull_request = repository.create_pull(
             title=github.pullrequest.upgrade_pullrequest_title(
                 upgrade_vector=upgrade_vector,
             ),
@@ -521,7 +519,7 @@ def create_upgrade_pr(
     _merge_pr(merge_method=merge_method, pull_request=pull_request, attempts=3)
 
     try:
-        ls_repo.ref(f'heads/{upgrade_branch_name}').delete()
+        repository.ref(f'heads/{upgrade_branch_name}').delete()
     except github3.exceptions.NotFoundError:
         pass
 
