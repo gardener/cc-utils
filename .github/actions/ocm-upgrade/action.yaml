@@ -87,6 +87,8 @@ runs:
         github_api = github.github_api(token=github_token)
         repository = github_api.repository(org, repo)
 
+        repo_dir = os.getcwd()
+
         logger.info('retrieving existing upgrade-pull-requests')
 
         upgrade_pullrequests = tuple(
@@ -115,7 +117,12 @@ runs:
             continue
 
           logger.info(f'found {upgrade_vector=}')
-          # todo: actually create upgrade-pullrequest
+          ocm_upgrade.create_upgrade_pullrequest_diff(
+            upgrade_vector=upgrade_vector,
+            repo_dir=repo_dir,
+          )
+
+          # todo: create upgrade-pullrequest + reset repo
 
         summary = f'''\
         ## Upgrade-Dependencies-Summary
