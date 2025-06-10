@@ -324,59 +324,29 @@ def _import_release_notes(
     return release_notes
 
 
-def create_upgrade_pr(
+def _cmd_env(
     upgrade_vector: ocm.gardener.UpgradeVector,
-    repository: github3.repos.Repository,
-    upgrade_script_path,
-    upgrade_script_relpath,
-    branch: str,
-    repo_dir,
-    git_helper: gitutil.GitHelper,
-    github_cfg_name,
-    merge_policy: ucd.MergePolicy,
-    merge_method: ucd.MergeMethod,
-    version_lookup,
-    component_descriptor_lookup,
-    delivery_dashboard_url: str=None,
-    after_merge_callback=None,
-    container_image:str=None,
-    pullrequest_body_suffix: str=None,
-    include_bom_diff: bool=True,
-) -> github.pullrequest.UpgradePullRequest:
-    if container_image:
-        dockerutil.launch_dockerd_if_not_running()
-
-    from_component_descriptor = component_descriptor_lookup(
-        upgrade_vector.whence,
-        absent_ok=False,
-    )
-    from_component = from_component_descriptor.component
-
-    to_component_descriptor = component_descriptor_lookup(
-        upgrade_vector.whither,
-    )
-
-    to_component = to_component_descriptor.component
-
-    if include_bom_diff:
-        bom_diff_markdown = github.pullrequest.bom_diff(
-            delivery_dashboard_url=delivery_dashboard_url,
-            from_component=from_component,
-            to_component=to_component,
-            component_descriptor_lookup=component_descriptor_lookup,
-        )
-
-    # prepare env for upgrade script and after-merge-callback
+    repo_dir: str,
+    github_cfg_name: str,
+) -> dict[str, str]:
     cmd_env = os.environ.copy()
-    # TODO: Handle upgrades for types other than 'component'
     cmd_env['DEPENDENCY_TYPE'] = 'component'
     cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
     cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
+    cmd_env['REPO_DIR'] = repo_dir
+
+    return cmd_env
+
+
+def create_upgrade_commit_diff(
+    repo_dir: str,
+    container_image,
+    upgrade_script_path,
+    upgrade_script_relpath,
+    cmd_env: dict[str, str],
+):
     if container_image:
         cmd_env['REPO_DIR'] = (repo_dir_in_container := '/mnt/main_repo')
-    else:
-        cmd_env['REPO_DIR'] = repo_dir
-    cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
 
     if not container_image:
         # create upgrade diff
@@ -425,6 +395,63 @@ def create_upgrade_pr(
         finally:
             if docker_cfg_dir:
                 docker_cfg_dir.cleanup()
+
+
+def create_upgrade_pr(
+    upgrade_vector: ocm.gardener.UpgradeVector,
+    repository: github3.repos.Repository,
+    upgrade_script_path,
+    upgrade_script_relpath,
+    branch: str,
+    repo_dir,
+    git_helper: gitutil.GitHelper,
+    github_cfg_name,
+    merge_policy: ucd.MergePolicy,
+    merge_method: ucd.MergeMethod,
+    version_lookup,
+    component_descriptor_lookup,
+    delivery_dashboard_url: str=None,
+    after_merge_callback=None,
+    container_image:str=None,
+    pullrequest_body_suffix: str=None,
+    include_bom_diff: bool=True,
+) -> github.pullrequest.UpgradePullRequest:
+    if container_image:
+        dockerutil.launch_dockerd_if_not_running()
+
+    from_component_descriptor = component_descriptor_lookup(
+        upgrade_vector.whence,
+        absent_ok=False,
+    )
+    from_component = from_component_descriptor.component
+
+    to_component_descriptor = component_descriptor_lookup(
+        upgrade_vector.whither,
+    )
+
+    to_component = to_component_descriptor.component
+
+    if include_bom_diff:
+        bom_diff_markdown = github.pullrequest.bom_diff(
+            delivery_dashboard_url=delivery_dashboard_url,
+            from_component=from_component,
+            to_component=to_component,
+            component_descriptor_lookup=component_descriptor_lookup,
+        )
+
+    cmd_env = _cmd_env(
+        upgrade_vector=upgrade_vector,
+        repo_dir=repo_dir,
+        github_cfg_name=github_cfg_name,
+    )
+
+    create_upgrade_commit_diff(
+        repo_dir=repo_dir,
+        container_image=container_image,
+        upgrade_script_path=upgrade_script_path,
+        upgrade_script_relpath=upgrade_script_relpath,
+        cmd_env=cmd_env,
+    )
 
     from_version = upgrade_vector.whence.version
     to_version = upgrade_vector.whither.version
