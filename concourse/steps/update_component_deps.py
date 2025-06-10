@@ -324,20 +324,6 @@ def _import_release_notes(
     return release_notes
 
 
-def _cmd_env(
-    upgrade_vector: ocm.gardener.UpgradeVector,
-    repo_dir: str,
-    github_cfg_name: str,
-) -> dict[str, str]:
-    cmd_env = os.environ.copy()
-    cmd_env['DEPENDENCY_TYPE'] = 'component'
-    cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
-    cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
-    cmd_env['REPO_DIR'] = repo_dir
-
-    return cmd_env
-
-
 def create_upgrade_commit_diff(
     repo_dir: str,
     container_image,
@@ -439,7 +425,7 @@ def create_upgrade_pr(
             component_descriptor_lookup=component_descriptor_lookup,
         )
 
-    cmd_env = _cmd_env(
+    cmd_env = github.pullrequest.set_dependency_cmd_env(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
         github_cfg_name=github_cfg_name,

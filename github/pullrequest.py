@@ -1,5 +1,6 @@
 import collections.abc
 import dataclasses
+import os
 import re
 
 import github3.pulls
@@ -282,3 +283,23 @@ def upgrade_pullrequest_body(
                     additional_notes.append(bom_diff_markdown[component_details_start:])
 
     return pr_body, additional_notes
+
+
+def set_dependency_cmd_env(
+    upgrade_vector: ocm.gardener.UpgradeVector,
+    repo_dir: str,
+    github_cfg_name: str,
+) -> dict[str, str]:
+    '''
+    returns a cmd-env-block (in form of a dict) to pass to `set_depedency_version` callbacks.
+
+    I.e. callbacks as defined in Gardener-CICD that shall, depending on passed env-vars, leave a
+    diff that sets the target-version to the given upgrade-vector's `whither`-version.
+    '''
+    cmd_env = os.environ.copy()
+    cmd_env['DEPENDENCY_TYPE'] = 'component'
+    cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
+    cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
+    cmd_env['REPO_DIR'] = repo_dir
+
+    return cmd_env
