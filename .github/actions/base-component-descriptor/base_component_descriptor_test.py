@@ -13,27 +13,11 @@ import yaml
 
 import base_component_descriptor as bcd
 import ocm
+import ocm.base_component
 import ocm.gardener
 
 
-def test_load_base_component(tmp_path):
-    absent_path = os.path.join(tmp_path, 'does-not-exist')
-
-    # expect empty base-component for absent file
-    component = bcd.load_base_component(absent_path, absent_ok=True)
-
-    assert component.name is None
-    assert component.version is None
-    assert component.repositoryContexts == []
-    assert component.resources == []
-    assert component.sources == []
-    assert component.labels == []
-    assert component.main_source == {}
-
-    with pytest.raises(SystemExit):
-        with open(path := os.path.join(tmp_path, 'base-component.yaml'), 'w') as f:
-            yaml.safe_dump({'version': 'not-allowed'}, f)
-        bcd.load_base_component(path)
+BaseComponent = ocm.base_component.BaseComponent
 
 
 def test_fill_in_defaults():
@@ -43,7 +27,7 @@ def test_fill_in_defaults():
         name='source',
         access=dummy_access,
     )
-    component = bcd.BaseComponent(
+    component = BaseComponent(
         name='name',
         version='version',
         repositoryContexts=[dummy],
@@ -101,7 +85,7 @@ def test_fill_in_defaults():
 
 def test_as_component_descriptor_dict():
     dummy = {}
-    component = bcd.BaseComponent(
+    component = BaseComponent(
         name='name',
         version='version',
         repositoryContexts=[dummy],
@@ -149,7 +133,7 @@ def test_add_resources_from_imagevector():
             imageReference='europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver',
         ),
     )
-    component = bcd.BaseComponent(
+    component = BaseComponent(
         name='github.com/gardener/gardener',
         version='version',
         repositoryContexts=[],
