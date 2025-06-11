@@ -1,16 +1,22 @@
 import collections.abc
+import contextlib
 import dataclasses
+import logging
 import os
 import re
 
 import github3.pulls
 
+import ci.util
 import cnudie.retrieve
 import cnudie.util
 import github.limits
+import gitutil
 import ocm
 import ocm.gardener
 import version
+
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
@@ -306,3 +312,45 @@ def set_dependency_cmd_env(
         cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
 
     return cmd_env
+
+
+@contextlib.contextmanager
+def commit_and_push_to_tmp_branch(
+    repository: github3.repos.repo.Repository,
+    git_helper: gitutil.GitHelper,
+    commit_message: str,
+    target_branch: str,
+    delete_on_exit: bool=False,
+):
+    '''
+    creates a commit from existing diff and pushes it to a temporary branch w/ random name. The
+    temporary branch-name is yielded.
+
+    In case of exceptions, the branch will be purged.
+    '''
+    commit = git_helper.index_to_commit(message=commit_message)
+    logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
+    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
+    head_sha = repository.ref(f'heads/{target_branch}').object.sha
+    repository.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+
+    try:
+        git_helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
+    except:
+        logger.warning('an error occurred - removing now useless pr-branch')
+        repository.ref(f'heads/{new_branch_name}').delete()
+        raise
+
+    git_helper.repo.git.checkout('.')
+
+    try:
+        yield new_branch_name
+    except:
+        repository.ref(f'heads/{new_branch_name}').delete()
+        raise
+    finally:
+        if delete_on_exit:
+            try:
+                repository.ref(f'heads/{new_branch_name}').delete()
+            except github3.exceptions.NotFoundError:
+                pass

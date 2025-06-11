@@ -3,7 +3,6 @@ import logging
 import os
 import subprocess
 import tempfile
-import time
 import traceback
 
 import ocm
@@ -444,13 +443,6 @@ def create_upgrade_pr(
     cname = upgrade_vector.component_name
     commit_message = f'Upgrade {cname}\n\nfrom {from_version} to {to_version}'
 
-    upgrade_branch_name = push_upgrade_commit(
-        repository=repository,
-        git_helper=git_helper,
-        commit_message=commit_message,
-        branch=branch,
-    )
-    # branch was created. Cleanup if something fails
     try:
         release_notes = _import_release_notes(
             component=from_component,
@@ -471,70 +463,45 @@ def create_upgrade_pr(
     if pullrequest_body_suffix:
         pr_body += f'\n{pullrequest_body_suffix}'
 
-    try:
-        pull_request = repository.create_pull(
-            title=github.pullrequest.upgrade_pullrequest_title(
-                upgrade_vector=upgrade_vector,
-            ),
-            base=branch,
-            head=upgrade_branch_name,
-            body=pr_body.strip(),
-        )
-
-        for release_note_part in additional_notes:
-            pull_request.create_comment(body=release_note_part)
-    except github3.exceptions.UnprocessableEntity as e:
-        logger.info(f'Intercepted UnprocessableEntity exception. Listed errors: {e.errors}')
-        raise
-
     if merge_policy is ucd.MergePolicy.MANUAL:
-        return github.pullrequest.as_upgrade_pullrequest(pull_request)
+        delete_on_exit = False
+    else:
+        delete_on_exit = True
 
-    logger.info(
-        f"Merging upgrade-pr #{pull_request.number} ({merge_method=!s}) on branch "
-        f"'{upgrade_branch_name}' into branch '{branch}'."
-    )
-
-    def  _merge_pr(
-        merge_method: ucd.MergeMethod,
-        pull_request: github3.github.pulls.ShortPullRequest,
-        attempts: int,
-        delay: int = 2,
-    ):
-        if attempts > 0:
-            try:
-                if merge_method is ucd.MergeMethod.MERGE:
-                    pull_request.merge(merge_method='merge')
-                elif merge_method is ucd.MergeMethod.REBASE:
-                    pull_request.merge(merge_method='rebase')
-                elif merge_method is ucd.MergeMethod.SQUASH:
-                    pull_request.merge(merge_method='squash')
-                else:
-                    raise NotImplementedError(f'{merge_method=}')
-            except github3.exceptions.MethodNotAllowed as e:
-                remaining_attempts = attempts-1
-                logger.warning(
-                    f'Encountered an exception when merging PR: {e}. Will wait {delay} seconds '
-                    f'and try again {remaining_attempts} time(s).'
-                )
-                time.sleep(delay)
-                _merge_pr(
-                    merge_method=merge_method,
-                    pull_request=pull_request,
-                    attempts=remaining_attempts,
-                )
-        else:
-            logger.warning(
-                f'Unable to merge upgrade pull request #{pull_request.number} '
-                f'({pull_request.html_url}).'
+    with github.pullrequest.commit_and_push_to_tmp_branch(
+        repository=repository,
+        git_helper=git_helper,
+        commit_message=commit_message,
+        target_branch=branch,
+        delete_on_exit=delete_on_exit,
+    ) as upgrade_branch_name:
+        try:
+            pull_request = repository.create_pull(
+                title=github.pullrequest.upgrade_pullrequest_title(
+                    upgrade_vector=upgrade_vector,
+                ),
+                base=branch,
+                head=upgrade_branch_name,
+                body=pr_body.strip(),
             )
 
-    _merge_pr(merge_method=merge_method, pull_request=pull_request, attempts=3)
+            for release_note_part in additional_notes:
+                pull_request.create_comment(body=release_note_part)
+        except github3.exceptions.UnprocessableEntity as e:
+            logger.info(f'Intercepted UnprocessableEntity exception. Listed errors: {e.errors}')
+            raise
 
-    try:
-        repository.ref(f'heads/{upgrade_branch_name}').delete()
-    except github3.exceptions.NotFoundError:
-        pass
+        if merge_policy is ucd.MergePolicy.MANUAL:
+            return github.pullrequest.as_upgrade_pullrequest(pull_request)
+
+        logger.info(
+            f"Merging upgrade-pr #{pull_request.number} ({merge_method=!s}) on branch "
+            f"'{upgrade_branch_name}' into branch '{branch}'."
+        )
+
+        pull_request.merge(
+            merge_method=str(merge_method),
+        )
 
     if after_merge_callback:
         subprocess.run(
@@ -544,30 +511,6 @@ def create_upgrade_pr(
         )
 
     return github.pullrequest.as_upgrade_pullrequest(pull_request)
-
-
-def push_upgrade_commit(
-    repository: github3.repos.repo.Repository,
-    git_helper: gitutil.GitHelper,
-    commit_message: str,
-    branch: str,
-) -> str:
-    commit = git_helper.index_to_commit(message=commit_message)
-    logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
-    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    head_sha = repository.ref(f'heads/{branch}').object.sha
-    repository.create_ref(f'refs/heads/{new_branch_name}', head_sha)
-
-    try:
-        git_helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
-    except:
-        logger.warning('an error occurred - removing now useless pr-branch')
-        repository.ref(f'heads/{new_branch_name}').delete()
-        raise
-
-    git_helper.repo.git.checkout('.')
-
-    return new_branch_name
 
 
 def create_release_notes(
