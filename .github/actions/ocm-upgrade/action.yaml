@@ -18,6 +18,23 @@ inputs:
       auth-token used for pushing upgrade-pullrequest-commit and for creating PullRequests.
     type: string
     required: true
+  merge-policy:
+    description: |
+      Controls what should happen to newly created upgrade-pullrequests.
+    type: choice
+    default: manual
+    options:
+      - automerge
+      - manual
+  merge-method:
+    description: |
+      Sets the merge-method (only used if merge-policy is set to automerge)
+    type: choice
+    default: merge
+    options:
+      - rebase
+      - merge
+      - squash
 
 runs:
   using: composite
@@ -58,7 +75,7 @@ runs:
 
         import ocm_upgrade
 
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
         logger = logging.getLogger('ugrade-ocm')
 
         # silence annoying loggers
@@ -76,9 +93,18 @@ runs:
 
         logger.info(f'{ocm_repositories=}')
 
-        component_descriptor_lookup, version_lookup = ocm_upgrade.create_ocm_lookups(
+        oci_client, component_descriptor_lookup, version_lookup = ocm_upgrade.create_ocm_lookups(
           ocm_repositories=ocm_repositories,
         )
+
+        merge_method = '${{ inputs.merge-method }}'
+        merge_policy = '${{ inputs.merge-policy }}'
+        if merge_policy == 'automerge':
+          auto_merge = True
+        elif merge_policy == 'manual':
+          auto_merge = False
+        else:
+          raise ValueError(f'unspected {merge_policy=}')
 
         with open('/tmp/github-token') as f:
           github_token = f.read().strip()
@@ -86,6 +112,10 @@ runs:
         host, org, repo = github.host_org_and_repo()
         github_api = github.github_api(token=github_token)
         repository = github_api.repository(org, repo)
+
+        def github_api_lookup(repo_url):
+          # XXX needs to be extended for cross-github-support
+          return github_api
 
         repo_dir = os.getcwd()
 
@@ -100,29 +130,19 @@ runs:
 
         logger.info(f'found {len(upgrade_pullrequests)=}')
 
-        for cref in ocm.gardener.iter_component_references(
+        ocm_upgrade.create_upgrade_pullrequests(
           component=component,
-        ):
-          logger.info(f'processing {cref=}')
-
-          upgrade_vector = ocm.gardener.find_upgrade_vector(
-            component_id=cref.component_id,
-            version_lookup=version_lookup,
-            ignore_prerelease_versions=True,
-            ignore_invalid_semver_versions=True,
-          )
-
-          if not upgrade_vector:
-            logger.info(f'did not find an upgrade-proposal for {cref=}')
-            continue
-
-          logger.info(f'found {upgrade_vector=}')
-          ocm_upgrade.create_upgrade_pullrequest_diff(
-            upgrade_vector=upgrade_vector,
-            repo_dir=repo_dir,
-          )
-
-          # todo: create upgrade-pullrequest + reset repo
+          component_descriptor_lookup=component_descriptor_lookup,
+          version_lookup=version_lookup,
+          github_api_lookup=github_api_lookup,
+          repo_dir=repo_dir,
+          repo_url=f'https://{host}/{org}/{repo}',
+          repository=repository,
+          auto_merge=auto_merge,
+          merge_method=merge_method,
+          branch='${{ github.ref_name }}',
+          oci_client=oci_client,
+        )
 
         summary = f'''\
         ## Upgrade-Dependencies-Summary

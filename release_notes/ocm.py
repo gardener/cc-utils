@@ -4,12 +4,15 @@ OCM-Component-Descriptors
 '''
 
 import collections.abc
+import logging
 import zlib
 
 import oci.client
 import ocm
 import ocm.gardener
 import version as version_mod
+
+logger = logging.getLogger(__name__)
 
 
 def release_notes(
@@ -85,6 +88,7 @@ def release_notes_range(
             name=version_vector.component_name,
             version=version,
         )
+        logger.info(f'retrieving release-notes for {component_id=}')
         notes = release_notes(
            component=component_id,
            oci_client=oci_client,
@@ -93,6 +97,8 @@ def release_notes_range(
         )
 
         if not notes: # previous call would already have failed, if absent_ok were falsy
+            logger.info(f'did not find release-notes for {component_id=}')
             continue
 
+        logger.info(f'found {len(notes)=} characters of release-notes for {component_id=}')
         yield component_id, notes

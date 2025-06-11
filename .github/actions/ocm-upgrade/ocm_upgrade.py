@@ -14,14 +14,18 @@ except ImportError:
     sys.path.insert(1, repo_root)
     import ocm
 
+import github3.repos
 import yaml
 
 import cnudie.retrieve
 import github.pullrequest
+import gitutil
 import oci.auth
 import oci.client
 import ocm.base_component
 import ocm.gardener
+import release_notes.ocm as rno
+import version
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +33,7 @@ logger = logging.getLogger(__name__)
 def create_ocm_lookups(
     ocm_repositories: collections.abc.Iterable[str],
 ) -> tuple[
+    oci.client.Client,
     ocm.ComponentDescriptorLookup,
     ocm.VersionLookup,
 ]:
@@ -50,7 +55,7 @@ def create_ocm_lookups(
         oci_client=oci_client,
     )
 
-    return component_descriptor_lookup, version_lookup
+    return oci_client, component_descriptor_lookup, version_lookup
 
 
 def create_diff_in_base_component(
@@ -134,6 +139,176 @@ def create_upgrade_pullrequest_diff(
         repo_dir=repo_dir,
         rel_path='.ci/set_dependency_version',
     )
+
+
+def retrieve_release_notes(
+    upgrade_vector,
+    versions,
+    oci_client: oci.client.Client,
+    component_descriptor_lookup,
+) -> str | None:
+    logger.info(f'fetching release-notes for {upgrade_vector=}')
+
+    release_notes = '\n'.join((rn for _, rn in rno.release_notes_range(
+        version_vector=upgrade_vector,
+        versions=versions,
+        oci_client=oci_client,
+        component_descriptor_lookup=component_descriptor_lookup,
+        absent_ok=True,
+    )))
+
+    if release_notes:
+        logger.info(f'fetched {len(release_notes)=} characters of release-notes')
+    else:
+        logger.warning('did not find any release-notes')
+
+    if not release_notes:
+        return None
+
+    return f'**Release Notes**:\n{release_notes}'
+
+
+def create_upgrade_pullrequest(
+    upgrade_vector,
+    component: ocm.Component,
+    component_descriptor_lookup,
+    version_lookup,
+    github_api_lookup,
+    repo_dir: str,
+    repo_url: str,
+    repository: github3.repos.Repository,
+    auto_merge: bool,
+    merge_method: str,
+    branch: str,
+    oci_client: oci.client.Client,
+) -> github.pullrequest.UpgradePullRequest | None:
+    logger.info(f'found {upgrade_vector=}')
+    git_helper = gitutil.GitHelper(
+        repo=repo_dir,
+        git_cfg=gitutil.GitCfg(
+            repo_url=repo_url,
+            user_name='Gardener-CICD-GitHubAction-Bot',
+            user_email='no-reply@github.com',
+            auth=None,
+            auth_type=gitutil.AuthType.PRESET,
+        ),
+    )
+    from_component_descriptor = component_descriptor_lookup(
+        upgrade_vector.whence,
+        absent_ok=False,
+    )
+    from_component = from_component_descriptor.component
+
+    to_component_descriptor = component_descriptor_lookup(
+        upgrade_vector.whither,
+        absent_ok=False,
+    )
+    to_component = to_component_descriptor.component
+
+    versions = [v for v in version_lookup(upgrade_vector.component_name) if version.is_final(v)]
+    logger.info(f'found {len(versions)=} versions of {upgrade_vector.component_name=}')
+
+    release_notes = retrieve_release_notes(
+        upgrade_vector=upgrade_vector,
+        versions=versions,
+        oci_client=oci_client,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    bom_diff_markdown = github.pullrequest.bom_diff(
+        delivery_dashboard_url=None, # XXX add URL once delivery-dashboard is available publicly
+        from_component=from_component,
+        to_component=to_component,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    pullrequest_body, extra_bodyparts = github.pullrequest.upgrade_pullrequest_body(
+        release_notes=release_notes,
+        bom_diff_markdown=bom_diff_markdown,
+    )
+
+    create_upgrade_pullrequest_diff(
+        upgrade_vector=upgrade_vector,
+        repo_dir=repo_dir,
+    )
+
+    fv = upgrade_vector.whence.version
+    tv = upgrade_vector.whither.version
+    commit_message = f'Upgrade {component.name}\n\nfrom {fv} to {tv}'
+
+    with github.pullrequest.commit_and_push_to_tmp_branch(
+        repository=repository,
+        git_helper=git_helper,
+        commit_message=commit_message,
+        target_branch=branch,
+        delete_on_exit=auto_merge,
+    ) as upgrade_branch_name:
+        pull_request = repository.create_pull(
+            title=github.pullrequest.upgrade_pullrequest_title(
+                upgrade_vector=upgrade_vector,
+            ),
+            base=branch,
+            head=upgrade_branch_name,
+            body=pullrequest_body,
+        )
+
+        for extra_bodypart in extra_bodyparts:
+            pull_request.create_comment(body=extra_bodypart)
+
+        if auto_merge:
+            logger.info(f'Merging PR#{pull_request.number} -> {branch=}')
+            pull_request.merge(
+                merge_method=merge_method,
+            )
+
+            return
+
+    return github.pullrequest.as_upgrade_pullrequest(pull_request)
+
+
+def create_upgrade_pullrequests(
+    component: ocm.Component,
+    component_descriptor_lookup,
+    version_lookup,
+    github_api_lookup,
+    repo_dir: str,
+    repo_url: str,
+    repository: github3.repos.Repository,
+    auto_merge: bool,
+    merge_method: str,
+    branch: str,
+    oci_client: oci.client.Client,
+):
+    for cref in ocm.gardener.iter_component_references(
+        component=component,
+    ):
+        logger.info(f'processing {cref=}')
+
+        upgrade_vector = ocm.gardener.find_upgrade_vector(
+            component_id=cref.component_id,
+            version_lookup=version_lookup,
+            ignore_prerelease_versions=True,
+            ignore_invalid_semver_versions=True,
+        )
+
+        if not upgrade_vector:
+            logger.info(f'did not find an upgrade-proposal for {cref=}')
+            continue
+
+        create_upgrade_pullrequest(
+            upgrade_vector=upgrade_vector,
+            component=component,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            github_api_lookup=github_api_lookup,
+            repo_dir=repo_dir,
+            repo_url=repo_url,
+            repository=repository,
+            auto_merge=auto_merge,
+            merge_method=merge_method,
+            branch=branch,
+            oci_client=oci_client,
+        )
 
 
 def main():
