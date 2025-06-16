@@ -591,3 +591,79 @@ def smallest_versions(
     purge_idx = versions_count - keep
 
     return versions[:purge_idx]
+
+
+def iter_upgrade_path(
+    whence: Version,
+    whither: Version,
+    versions: collections.abc.Iterable[Version],
+) -> collections.abc.Iterable[semver.VersionInfo]:
+    '''
+    returns an iterable of versions marking the upgrade-path between whence and whither versions.
+
+    The upgrade-path is determined heuristically, by assuming semver-semantics. The upgrade-path
+    is considered to be useful to collect release-notes, assuming that any releases of less
+    significance (e.g. patch-level-releases) contain changes that were either downported (i.e.
+    also included in greater versions, including release-ntoes), or not relevant for upstream (in
+    which case it is not of interest to collect release-notes).
+
+    Firstly, the left-most differing version-part is determined.
+
+    If major-version is different, then upgrade-path will consist of the sequence of smallest
+    versions of each major-version until (including) `whither`-version. Any additional versions
+    with major-version matching `whither`-version will be yielded (including whither-version),
+    in ascending order.
+
+    If major-version is equal, but minor-version is different, then all smallest versions with
+    matching minor- and major-version will be yielded (in ascending order), followed by all versions
+    with matching major and minor-version to `whither`-version (in ascending order), including
+    `whither`-version.
+
+    If major, and minor-versions are equal, versions with patch-levels between `whence` and
+    `whither` will be yielded, in ascending order, including `whither`-version.
+    '''
+    whence = parse_to_semver(whence)
+    whither = parse_to_semver(whither)
+
+    if not whence < whither:
+        raise ValueError(f'{whence=} must be smaller than {whither=}')
+
+    major_eq = whence.major == whither.major
+
+    versions = [ # <parsed, original>
+        (pv, v) for v in versions
+        if (pv := parse_to_semver(v)) > whence and pv <= whither
+    ]
+    versions = sorted(
+        versions,
+        key=lambda x: x[0],
+    )
+
+    last = whence
+    if not major_eq:
+        # major-versions differ - yield smallest versions for each major-version until whither
+        # (as versions are already sorted, it is sufficient to keep last yielded)
+        for version, orig_version in versions:
+            if version.major == whither.major:
+                yield orig_version
+            elif version.major > last.major:
+                last = version
+                yield orig_version
+        return
+
+    minor_eq = whence.minor == whither.minor
+    last = whence
+    if not minor_eq:
+        # major versions are equal, minor versions differ. yield smallest version for each
+        # minor-version until whither
+        for version, orig_version in versions:
+            if version.minor == whither.minor:
+                yield orig_version
+            elif version.minor > last.minor:
+                last = version
+                yield orig_version
+        return
+
+    # major and minor versions are equal - yield all
+    for _, orig_version in versions:
+        yield orig_version
