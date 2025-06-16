@@ -199,3 +199,49 @@ def test_smallest_versions():
 
     # keep greatest (returned versions are intended to be removed)
     assert set(version.smallest_versions({'1.2.3', '2.3.4', '3.0'}, keep=1)) == {'1.2.3', '2.3.4'}
+
+
+def test_iter_upgrade_path():
+    versions = (
+        '0.1.0',
+        'v1.0.0', # original values should be retained
+        '1.0.1',
+        '1.1.0',
+        '1.1.1',
+        '1.1.2',
+        '1.2.0',
+        '1.2.1',
+        '1.3.2',
+        '1.4.0',
+        '1.4.1',
+        '1.4.2',
+        'v2.0.0',
+        '2.2.2',
+        '3.0.1',
+        '3.0.2',
+        '4.0.0',
+    )
+
+    # different major version (minor / patch-versions should be ignored)
+    path = tuple(v for v in version.iter_upgrade_path(
+        whence='1.0.0',
+        whither='3.0.2',
+        versions=versions,
+    ))
+    assert path == ('v2.0.0', '3.0.1', '3.0.2')
+
+    # different minor-version (patch-versions should be ignored)
+    path = tuple(v for v in version.iter_upgrade_path(
+        whence='1.1.0',
+        whither='1.4.2',
+        versions=versions,
+    ))
+    assert path == ('1.2.0', '1.3.2', '1.4.0', '1.4.1', '1.4.2')
+
+    # equal major and minor version (only patch-versions should be yielded)
+    path = tuple(v for v in version.iter_upgrade_path(
+        whence='1.4.0',
+        whither='1.4.2',
+        versions=versions,
+    ))
+    assert path == ('1.4.1', '1.4.2')
