@@ -15,6 +15,9 @@ import version as version_mod
 logger = logging.getLogger(__name__)
 
 
+release_notes_resource_name = 'release-notes'
+
+
 def release_notes(
     component: ocm.ComponentIdentity | ocm.Component,
     oci_client: oci.client.Client,
@@ -35,7 +38,7 @@ def release_notes(
         component = component_descriptor_lookup(component).component
 
     for resource in component.resources:
-        if resource.name == 'release-notes':
+        if resource.name == release_notes_resource_name:
             break
     else:
         if absent_ok:

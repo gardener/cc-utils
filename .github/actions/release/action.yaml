@@ -170,6 +170,7 @@ runs:
 
         import yaml
 
+        import release_notes.ocm
         import oci.client
         import oci.auth
         import ocm
@@ -202,7 +203,7 @@ runs:
 
         component.resources.append(
           ocm.Resource(
-            name='release-notes',
+            name=release_notes.ocm.release_notes_resource_name,
             version=component.version,
             type='text/markdown.release-notes',
             access=ocm.LocalBlobAccess(
