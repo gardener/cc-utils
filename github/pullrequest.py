@@ -252,43 +252,70 @@ def bom_diff(
     return formatted_diff
 
 
+def split_into_chunks_if_too_long(
+    string: str,
+    split_hint: str,
+    max_leng: int,
+    max_chunk_leng: int,
+) -> tuple[str, tuple[str]]:
+    '''
+    split passed string into chunks, if needed, adding an optional splitting-hint to first part.
+
+    If string is shorter than allowed max_leng, the string will be returned unchanged, along with
+    an empty tuple of extra-chunks.
+
+    Otherwise, a shortened string (shortened to max_leng minus the length of the given split_hint)
+    is returned. Remainder of string is returned as a tuple of strings where each string is
+    at most as long as max_chunk_leng.
+
+    This function is useful for creating (potentially long) pullrequest-bodies, where, in case of
+    body being too long, remainder can be posted as a sequence of comments.
+    '''
+    if len(string) <= max_leng:
+        return string, ()
+
+    # string is too long
+    split_idx = max_leng - len(split_hint)
+    first = f'{string[0: split_idx]}{split_hint}'
+    string = string[split_idx:]
+
+    chunks = tuple(
+        string[start:start + max_chunk_leng]
+        for start in range(0, len(string), max_chunk_leng)
+    )
+
+    return first, chunks
+
+
 def upgrade_pullrequest_body(
     release_notes: str | None,
     bom_diff_markdown: str | None,
 ) -> tuple[str, list[str]]:
     pr_body = ''
-    additional_notes = []
+
+    if bom_diff_markdown:
+        total_length = len(bom_diff_markdown)
+        if release_notes:
+            total_length += len(release_notes)
+        if total_length > github.limits.pullrequest_body:
+            include_bom_diff = True
+        else:
+            include_bom_diff = False
+    else:
+        include_bom_diff = False
 
     if release_notes:
-        too_long_hint = 'shortened due to GitHub-Length-Limit. Remainder follows in comments'
+        pr_body = release_notes
 
-        if not github.limits.fits(release_notes, github.limits.pullrequest_body):
-            step_size = github.limits.pullrequest_body - len(too_long_hint)
-            split_release_notes = [
-                release_notes[start:start + step_size]
-                for start in range(0, len(release_notes), step_size)
-            ]
-        else:
-            split_release_notes = [release_notes]
+    if include_bom_diff:
+        pr_body = f'{pr_body}\n\n{bom_diff_markdown}'
 
-        if len(split_release_notes) > 1:
-            pr_body += split_release_notes[0] + too_long_hint
-            additional_notes = split_release_notes[1:]
-        else:
-            pr_body += split_release_notes[0]
-
-        if bom_diff_markdown:
-            if len(bom_diff_markdown) + len(pr_body) + 2 <= github.limits.pullrequest_body:
-                pr_body += '\n\n' + bom_diff_markdown
-            else:
-                if github.limits.fits(bom_diff_markdown, github.limits.pullrequest_body):
-                    additional_notes.append(bom_diff_markdown)
-                else:
-                    component_details_start = bom_diff_markdown.find('## Component Details:')
-                    additional_notes.append(bom_diff_markdown[:component_details_start])
-                    additional_notes.append(bom_diff_markdown[component_details_start:])
-
-    return pr_body, additional_notes
+    return split_into_chunks_if_too_long(
+        string=pr_body,
+        split_hint='release-notes were too long (remainder will be appended as comments)',
+        max_leng=github.limits.issue_body,
+        max_chunk_leng=github.limits.comment_body,
+    )
 
 
 def set_dependency_cmd_env(
