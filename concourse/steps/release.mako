@@ -126,6 +126,7 @@ import concourse.util
 import ocm
 import ocm.upload
 import ocm.util
+import release_notes.ocm
 import github.release
 import github.util
 import gitutil
@@ -483,7 +484,7 @@ if release_notes_md:
 
   component.resources.append(
     ocm.Resource(
-      name='release-notes',
+      name=release_notes.ocm.release_notes_resource_name,
       version=component.version,
       type='text/markdown.release-notes',
       access=ocm.LocalBlobAccess(
