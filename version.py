@@ -472,10 +472,6 @@ def greatest_version_with_matching_minor(
     return latest_candidate
 
 
-# alias for backwards-compatibility
-find_latest_version_with_matching_minor = greatest_version_with_matching_minor
-
-
 def find_smallest_version_with_matching_minor(
     reference_version: Union[semver.VersionInfo, str],
     versions: Iterable[Union[semver.VersionInfo, str]],
