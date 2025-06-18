@@ -416,6 +416,7 @@ def create_upgrade_pr(
 
     to_component = to_component_descriptor.component
 
+    bom_diff_markdown = None
     if include_bom_diff:
         bom_diff_markdown = github.pullrequest.bom_diff(
             delivery_dashboard_url=delivery_dashboard_url,
