@@ -39,6 +39,12 @@ inputs:
       If passed, this value is concatenated to `oci-registry`-input. Note that also in this case,
       the `name` input will be appended to the end of the target-oci-reference.
 
+  push:
+    default: true
+    type: boolean
+    description: |
+      whether or not to push the built helmchart.
+
   component-descriptor:
     required: true
     type: string
@@ -95,6 +101,7 @@ runs:
         ${{ inputs.component-descriptor }}
         EOF
     - name: authenticate
+      if: ${{ inputs.push }}
       uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
@@ -208,15 +215,22 @@ runs:
         with open(chart_yaml_path) as f:
           chart = yaml.safe_load(f)
 
-        helmchart_resource = helm.upload_helmchart(
-          helmchart_archive_path=helmchart_archive_path,
-          helmchart_name=name,
-          helmchart_description=chart.get('description', 'no description available'),
-          version=version,
-          helm_values_path=values_yaml_path,
-          target_ref=oci_target_ref,
-          oci_client=oci_client,
-        )
+        if '${{ inputs.push }}' == 'true':
+          helmchart_resource = helm.upload_helmchart(
+            helmchart_archive_path=helmchart_archive_path,
+            helmchart_name=name,
+            helmchart_description=chart.get('description', 'no description available'),
+            version=version,
+            helm_values_path=values_yaml_path,
+            target_ref=oci_target_ref,
+            oci_client=oci_client,
+          )
+        else:
+          helmchart_resource = helm.helmchart_resource(
+            helmchart_name=name,
+            version=version,
+            target_ref=oci_target_ref,
+          )
 
         helmchart_imagemap = ocm.Resource(
           name=name,
