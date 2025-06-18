@@ -147,7 +147,7 @@ runs:
         summary = f'''\
         ## Upgrade-Dependencies-Summary
 
-        Found {len(upgrade_pullrequests=)=}.
+        Found {len(upgrade_pullrequests)=}.
         '''
 
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
