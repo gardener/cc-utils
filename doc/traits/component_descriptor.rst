@@ -205,20 +205,6 @@ Gardener-Components have a name that is by convention the github-repo-url (w/o s
     - name: imagevector.gardener.cloud/source-repository
       value: github.com/gardener/gardener # github-repo
 
-
-Retention Policies (aka cleaning up old versions)
-=================================================
-
-The `retention_policies` attribute can be used to configure automated removal of
-component descriptors and referenced `resources` (mostly OCI Container Images).
-
-.. attention::
-   Removal of component descriptors and referenced resources is _permanent_. There is no
-   backup mechanism in place. Use with care. For example, if multiple component descriptors
-   share reference to the same OCI Artefact (using the same registry, repository, and tag)
-   removal of any of the referencing component descriptors will lead to stale references
-   in other component descriptors.
-
 Cleanup Semantics and Use-Case
 ------------------------------
 
