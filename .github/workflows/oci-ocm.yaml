@@ -37,6 +37,20 @@ on:
         type: string
         default: '{version}'
         required: false
+      push:
+        description: |
+          Whether or not to push the built image. Allowed values:
+          - always
+          - never
+          - if-possible
+
+          `if-possible` assumes `prepare.yaml` workflow was run prior to this workflow, and
+          assumes an artefact `prepare-workflow-values` was emitted by it.
+
+          It is assumed pushing is not possible if workflow-trigger stems from a pullrequest from
+          a forked repository (where owner differs from fork's origin).
+        type: string
+        default: if-possible
       target:
         description: |
           The (optional) target to build (passed to `docker build` as --target).
@@ -124,7 +138,35 @@ jobs:
     outputs:
       args: ${{ steps.preprocess.outputs.args }}
       target-image-ref: ${{ steps.preprocess.outputs.target-image-ref }}
+      push: ${{ steps.check.outputs.push }}
     steps:
+      - name: retrieve-params
+        if: ${{ inputs.push == 'if-possible' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: prepare-workflow-values
+      - name: check-params
+        id: check
+        run: |
+          set -euo pipefail
+          case "${{ inputs.push }}" in
+            'if-possible')
+              tar xf prepare-workflow-values.tar prepare-values.d/can-push
+              push="$(cat prepare-values.d/can-push)"
+              rm -rf prepare-values.d prepare-workflow-values.tar
+              ;;
+            always)
+              push=true
+              ;;
+            never)
+              push=false
+              ;;
+            *)
+              echo "unexpected value for inputs.push: ${{ inputs.push }}"
+              exit 1
+              ;;
+          esac
+          echo "push=${push}" >> ${GITHUB_OUTPUT}
       - name: preprocess
         shell: python
         id: preprocess
@@ -188,6 +230,7 @@ jobs:
     steps:
       - uses: docker/setup-buildx-action@v3
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        if: ${{ needs.preprocess.outputs.push }}
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
@@ -212,7 +255,7 @@ jobs:
         uses: docker/build-push-action@v6
         id: build
         with:
-          push: true
+          push: ${{ needs.preprocess.outputs.push }}
           tags: ${{ matrix.args.image-reference }}
           context: '.'
           target: ${{ inputs.target }}

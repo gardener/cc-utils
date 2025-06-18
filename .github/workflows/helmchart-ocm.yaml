@@ -36,6 +36,20 @@ on:
           case, the `name` input will be appended to the end of the target-oci-reference.
         type: string
         required: false
+      push:
+        description: |
+          Whether or not to push the build helmchart. Allowed values:
+          - always
+          - never
+          - if-possible
+
+          `if-possible` assumes `prepare.yaml` workflow was run prior to this workflow, and assumes
+          an artefact `prepare-workflow-values` was emitted by it.
+
+          It is assumed pushing is not possible if workflow-trigger stems from a pullrequest from
+          a forked repository (where owner differs from fork's origin).
+        type: string
+        default: if-possible
       component-descriptor:
         description: |
           Use to explicitly pass-in the OCM-Component-Descriptor containing referenced OCI-Images.
@@ -83,6 +97,34 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
+      - name: retrieve-params
+        if: ${{ inputs.push == 'if-possible' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: prepare-workflow-values
+      - name: check-params
+        id: check
+        run: |
+          set -euo pipefail
+          case "${{ inputs.push }}" in
+            'if-possible')
+              tar xf prepare-workflow-values.tar prepare-values.d/can-push
+              push="$(cat prepare-values.d/can-push)"
+              rm -rf prepare-values.d prepare-workflow-values.tar
+              ;;
+            always)
+              push=true
+              ;;
+            never)
+              push=false
+              ;;
+            *)
+              echo "unexpected value for inputs.push: ${{ inputs.push }}"
+              exit 1
+              ;;
+          esac
+          echo "push=${push}" >> ${GITHUB_OUTPUT}
+
       - name: fetch-ocm-fragments
         id: fetch-ocm
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
@@ -98,6 +140,7 @@ jobs:
           dir: ${{ inputs.dir }}
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
+          push: ${{ steps.check.outputs.push }}
           component-descriptor: ${{ steps.fetch-ocm.outputs.component-descriptor }}
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
