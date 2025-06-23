@@ -266,11 +266,22 @@ def create_upgrade_pullrequest(
     return github.pullrequest.as_upgrade_pullrequest(pull_request)
 
 
+def upgrade_pullrequest_exists(
+    upgrade_vector: ocm.gardener.UpgradeVector,
+    upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
+) -> bool:
+    for upgrade_pullrequest in upgrade_pullrequests:
+        if upgrade_pullrequest.upgrade_vector == upgrade_vector:
+            return True
+    return False
+
+
 def create_upgrade_pullrequests(
     component: ocm.Component,
     component_descriptor_lookup,
     version_lookup,
     github_api_lookup,
+    upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
     repo_dir: str,
     repo_url: str,
     repository: github3.repos.Repository,
@@ -293,6 +304,13 @@ def create_upgrade_pullrequests(
 
         if not upgrade_vector:
             logger.info(f'did not find an upgrade-proposal for {cref=}')
+            continue
+
+        if upgrade_pullrequest_exists(
+            upgrade_vector=upgrade_vector,
+            upgrade_pullrequests=upgrade_pullrequests,
+        ):
+            logger.info(f'upgrade-pullrequest for {upgrade_vector=} already exists (skipping)')
             continue
 
         create_upgrade_pullrequest(
