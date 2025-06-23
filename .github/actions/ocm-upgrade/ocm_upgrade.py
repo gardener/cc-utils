@@ -181,7 +181,7 @@ def create_upgrade_pullrequest(
     merge_method: str,
     branch: str,
     oci_client: oci.client.Client,
-) -> github.pullrequest.UpgradePullRequest | None:
+) -> github.pullrequest.UpgradePullRequest:
     logger.info(f'found {upgrade_vector=}')
     git_helper = gitutil.GitHelper(
         repo=repo_dir,
@@ -261,8 +261,6 @@ def create_upgrade_pullrequest(
                 merge_method=merge_method,
             )
 
-            return
-
     return github.pullrequest.as_upgrade_pullrequest(pull_request)
 
 
@@ -289,7 +287,7 @@ def create_upgrade_pullrequests(
     merge_method: str,
     branch: str,
     oci_client: oci.client.Client,
-):
+) -> collections.abc.Iterable[github.pullrequest.UpgradePullRequest]:
     for cref in ocm.gardener.iter_component_references(
         component=component,
     ):
@@ -313,7 +311,7 @@ def create_upgrade_pullrequests(
             logger.info(f'upgrade-pullrequest for {upgrade_vector=} already exists (skipping)')
             continue
 
-        create_upgrade_pullrequest(
+        yield create_upgrade_pullrequest(
             upgrade_vector=upgrade_vector,
             component=component,
             component_descriptor_lookup=component_descriptor_lookup,
