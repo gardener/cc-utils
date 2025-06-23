@@ -121,7 +121,7 @@ runs:
 
         logger.info('retrieving existing upgrade-pull-requests')
 
-        upgrade_pullrequests = tuple(
+        upgrade_pullrequests = list(
           github.pullrequest.iter_upgrade_pullrequests(
             repository=repository,
             state='all',
@@ -130,25 +130,36 @@ runs:
 
         logger.info(f'found {len(upgrade_pullrequests)=}')
 
-        ocm_upgrade.create_upgrade_pullrequests(
-          component=component,
-          component_descriptor_lookup=component_descriptor_lookup,
-          version_lookup=version_lookup,
-          upgrade_pullrequests=upgrade_pullrequests,
-          github_api_lookup=github_api_lookup,
-          repo_dir=repo_dir,
-          repo_url=f'https://{host}/{org}/{repo}',
-          repository=repository,
-          auto_merge=auto_merge,
-          merge_method=merge_method,
-          branch='${{ github.ref_name }}',
-          oci_client=oci_client,
+        created_upgrade_pullrequests = tuple(
+          ocm_upgrade.create_upgrade_pullrequests(
+            component=component,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            upgrade_pullrequests=upgrade_pullrequests,
+            github_api_lookup=github_api_lookup,
+            repo_dir=repo_dir,
+            repo_url=f'https://{host}/{org}/{repo}',
+            repository=repository,
+            auto_merge=auto_merge,
+            merge_method=merge_method,
+            branch='${{ github.ref_name }}',
+            oci_client=oci_client,
+          )
         )
+
+        upgrade_pullrequests.extend(created_upgrade_pullrequests)
+
+        for obsolete_pullrequest in github.pullrequest.iter_obsolete_upgrade_pull_requests(
+          upgrade_pull_requests=upgrade_pullrequests,
+          keep_hotfix_versions=True,
+        ):
+          obsolete_pullrequest.purge()
 
         summary = f'''\
         ## Upgrade-Dependencies-Summary
 
         Found {len(upgrade_pullrequests)=}.
+        Created {len(created_upgrade_pullrequests)=}.
         '''
 
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
