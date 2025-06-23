@@ -134,6 +134,7 @@ runs:
           component=component,
           component_descriptor_lookup=component_descriptor_lookup,
           version_lookup=version_lookup,
+          upgrade_pullrequests=upgrade_pullrequests,
           github_api_lookup=github_api_lookup,
           repo_dir=repo_dir,
           repo_url=f'https://{host}/{org}/{repo}',
