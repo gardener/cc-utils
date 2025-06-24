@@ -246,7 +246,7 @@ def create_upgrade_pullrequest(
 
     fv = upgrade_vector.whence.version
     tv = upgrade_vector.whither.version
-    commit_message = f'Upgrade {component.name}\n\nfrom {fv} to {tv}'
+    commit_message = f'Upgrade {upgrade_vector.component_name}\n\nfrom {fv} to {tv}'
 
     with github.pullrequest.commit_and_push_to_tmp_branch(
         repository=repository,
