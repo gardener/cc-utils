@@ -177,6 +177,7 @@ class DeliveryServiceClient:
     def _authenticate(self):
         if self._bearer_token and not delivery.jwt.is_jwt_token_expired(
             token=self._bearer_token,
+            token_expiration_buffer_seconds=30,
         ):
             return
 

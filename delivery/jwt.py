@@ -144,6 +144,7 @@ def decode_jwt(
 
 def is_jwt_token_expired(
     token: str,
+    token_expiration_buffer_seconds: int=0,
 ) -> bool:
     decoded_jwt = decode_jwt(
         token=token,
@@ -157,4 +158,4 @@ def is_jwt_token_expired(
 
     now = datetime.datetime.now(tz=datetime.timezone.utc)
 
-    return now > expiration_date
+    return now + datetime.timedelta(seconds=token_expiration_buffer_seconds) > expiration_date
