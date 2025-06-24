@@ -19,6 +19,7 @@ import jwt
 
 logger = logging.getLogger(__name__)
 JWT_KEY = 'bearer_token'
+REFRESH_TOKEN_KEY = 'refresh_token'
 
 
 class KeyType(enum.StrEnum):
