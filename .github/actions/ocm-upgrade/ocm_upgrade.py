@@ -60,8 +60,8 @@ def create_ocm_lookups(
 
 def create_diff_in_base_component(
     upgrade_vector: ocm.gardener.UpgradeVector,
-    repo_dir,
-    rel_path='.ocm/base-component.yaml',
+    repo_dir: str,
+    rel_path: str='.ocm/base-component.yaml',
 ) -> bool:
     path = os.path.join(repo_dir, rel_path)
     if not os.path.isfile(path):
@@ -107,38 +107,50 @@ def create_diff_in_base_component(
 
 def create_diff_using_callback(
     upgrade_vector: ocm.gardener.UpgradeVector,
-    repo_dir,
-    rel_path,
-):
+    repo_dir: str,
+    rel_path: str,
+) -> bool:
+    path = os.path.join(repo_dir, rel_path)
+    if not os.path.isfile(path):
+        return False
+
     cmd_env = github.pullrequest.set_dependency_cmd_env(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
     )
 
     subprocess.run(
-        (os.path.join(repo_dir, rel_path),),
+        (path,),
         check=True,
         env=cmd_env,
     )
+
+    return True
 
 
 def create_upgrade_pullrequest_diff(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
-):
+) -> bool:
+    created_diff = False
+
     if create_diff_in_base_component(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
         rel_path='.ocm/base-component.yaml',
     ):
         logger.info('created upgrade-diff in base-component')
-        return True
+        created_diff = True
 
-    create_diff_using_callback(
+    if create_diff_using_callback(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
         rel_path='.ci/set_dependency_version',
-    )
+    ):
+        logger.info('created upgrade-diff using callback')
+        created_diff = True
+
+    return created_diff
 
 
 def retrieve_release_notes(
