@@ -140,7 +140,7 @@ jobs:
           dir: ${{ inputs.dir }}
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
-          push: ${{ steps.check.outputs.push }}
+          push: ${{ steps.check.outputs.push == 'true' }}
           component-descriptor: ${{ steps.fetch-ocm.outputs.component-descriptor }}
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
