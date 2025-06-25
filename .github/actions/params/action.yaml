@@ -39,6 +39,28 @@ outputs:
     description: |
       true if current repository is a fork, else false
     value: ${{ steps.params.outputs.is-fork }}
+  is-pr-from-fork:
+    description: |
+      true if triggering event is `pull_request`, and underlying pullrequest stems from a fork that
+      does not belong to the same owner as the target repository.
+    value: ${{ steps.params.outputs.is-pr-from-fork }}
+  can-push:
+    description: |
+      boolean indicating whether or not it will likely be possible for this workflow to push
+      contents (to OCI-Registries).
+
+      If repository from which the workflow was triggered is not a fork (or a fork within the same
+      organisation), pushing is always deemed possible (following cases refer to forks, only).
+
+      If the `workflow_event` reads `pull_request`, pushing is _not_ deemded to be possible.
+
+      If the `workflow_event` reads `pull_request_target`, pushing is possible, if the
+      `author_association` of the pullrequest-event is one of `COLLABORATOR`, `CONTRIBUTOR`,
+      `MEMBER`, `OWNER`.
+
+      However, special checkout-handling is needed (which is not yet implemented), hence for now,
+      is also deemed to not be possible. TODO: update this documentation once implemented.
+    value: ${{ steps.params.outputs.can-push }}
 
 runs:
   using: composite
@@ -83,18 +105,59 @@ runs:
             ;;
         esac
 
+        event_name='${{ github.event_name }}'
+        if [ ${event_name} == 'pull_request' ]; then
+          repo_owner='${{ github.repository_owner }}'
+          head_owner='${{ github.event.pull_request.head.repo.owner.login }}'
+          if [ ${repo_owner} != ${head_owner} ]; then
+            is_pr_from_fork=true
+            can_push=false
+          else
+            is_pr_from_fork=false
+            can_push=true
+          fi
+        elif [ ${event_name} == 'pull_request_target' ]; then
+          case '${{ github.event.pull_request_target.author_association }}' in
+            COLLABORATOR)
+              can_push=true
+              can_push=false # TODO: remove once checkout-handling is implemented
+              ;;
+            CONTRIBUTOR)
+              can_push=true
+              can_push=false # TODO: remove once checkout-handling is implemented
+              ;;
+            MEMBER)
+              can_push=true
+              can_push=false # TODO: remove once checkout-handling is implemented
+              ;;
+            OWNER)
+              can_push=true
+              can_push=false # TODO: remove once checkout-handling is implemented
+              ;;
+            *)
+              can_push=false
+          esac
+        else
+          is_pr_from_fork=false
+          can_push=true
+        fi
+
         echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
         echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
         echo "ocm-releases-repository=${ocm_releases_repository}" >> ${GITHUB_OUTPUT}
         echo "is-fork=${is_fork}" >> ${GITHUB_OUTPUT}
+        echo "is-pr-from-fork=${is_pr_from_fork}" >> ${GITHUB_OUTPUT}
+        echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
 
         cat << EOF > ${GITHUB_STEP_SUMMARY}
         ## Pipeline-Params-Summary
 
         <table> <tbody>
-          <tr> <td>mode</td>           <td>${{ inputs.mode }}</td> </tr>
-          <tr> <td>oci-registry</td>   <td>${oci_registry}</td> </tr>
-          <tr> <td>ocm-repository</td> <td>${ocm_repository}</td> </tr>
-          <tr> <td>is-fork</td>        <td>${is_fork}</td> </tr>
+          <tr> <td>mode</td>            <td>${{ inputs.mode }}</td> </tr>
+          <tr> <td>oci-registry</td>    <td>${oci_registry}</td> </tr>
+          <tr> <td>ocm-repository</td>  <td>${ocm_repository}</td> </tr>
+          <tr> <td>is-fork</td>         <td>${is_fork}</td> </tr>
+          <tr> <td>is-pr-from-fork</td> <td>${is_pr_from_fork}</td> </tr>
+          <tr> <td>can-push</td>        <td>${can_push}</td> </tr>
         </tbody> </table>
         EOF

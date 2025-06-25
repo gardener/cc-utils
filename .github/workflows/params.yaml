@@ -23,6 +23,11 @@ on:
       is-fork:
         description: boolean indicating whether or not current repository is a fork
         value: ${{ jobs.params.outputs.is-fork }}
+      is-pr-from-fork:
+        description: |
+          boolean indicating whether or not event-trigger is from a pullrequest from
+          a forked repository where fork-owner differs from origin.
+        value: ${{ jobs.params.outputs.is-pr-from-fork }}
 
 jobs:
   params:
@@ -32,6 +37,7 @@ jobs:
       ocm-releases-repository: ${{ steps.params.outputs.ocm-releases-repository }}
       oci-registry: ${{ steps.params.outputs.oci-registry }}
       is-fork: ${{ steps.params.outputs.is-fork }}
+      is-pr-from-fork: ${{ steps.params.outputs.is-pr-from-fork }}
     steps:
       - uses: actions/checkout@v4
       - name: params
