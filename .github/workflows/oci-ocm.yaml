@@ -265,6 +265,7 @@ jobs:
     needs:
       - build-images
       - preprocess
+    if: ${{ needs.preprocess.outputs.push == 'true' }}
     outputs:
       ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
       oci-reference: ${{ steps.collect-images.outputs.oci-reference }}
@@ -280,7 +281,6 @@ jobs:
           oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
       - name: collect-images
-        if: ${{ needs.preprocess.outputs.push == 'true' }}
         id: collect-images
         shell: python
         run: |
