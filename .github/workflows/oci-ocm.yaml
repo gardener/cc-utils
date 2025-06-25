@@ -265,7 +265,6 @@ jobs:
     needs:
       - build-images
       - preprocess
-    if: ${{ needs.preprocess.outputs.push == 'true' }}
     outputs:
       ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
       oci-reference: ${{ steps.collect-images.outputs.oci-reference }}
@@ -277,6 +276,7 @@ jobs:
     steps:
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
@@ -303,6 +303,8 @@ jobs:
           ''')
           pprint.pprint(args)
 
+          push = '${{ needs.preprocess.outputs.push }}' == 'true'
+
           src_image_refs = [
             a['image-reference'] for a in args
           ]
@@ -314,13 +316,15 @@ jobs:
           )
 
           print(f'merging {src_image_refs=} into {tgt_image_ref=}')
-          oci.merge.into_image_index(
-            src_image_refs=src_image_refs,
-            tgt_image_ref=tgt_image_ref,
-            oci_client=oci_client,
-          )
 
-          print(f'published to {tgt_image_ref=}')
+          if push:
+            oci.merge.into_image_index(
+              src_image_refs=src_image_refs,
+              tgt_image_ref=tgt_image_ref,
+              oci_client=oci_client,
+            )
+
+            print(f'published to {tgt_image_ref=}')
 
           labels_str = '''${{ inputs.ocm-labels }}'''
           if labels_str:
