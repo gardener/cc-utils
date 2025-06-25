@@ -101,7 +101,7 @@ runs:
         ${{ inputs.component-descriptor }}
         EOF
     - name: authenticate
-      if: ${{ inputs.push }}
+      if: ${{ inputs.push == 'true' }}
       uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
