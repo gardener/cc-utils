@@ -97,58 +97,65 @@ runs:
 
     - name: Export Access-Token and docker-cfg
       id: export
-      shell: bash
+      shell: python
       run: |
-        set -eu
-        rtype=${{ steps.tgt.outputs.rtype }}
-        case ${rtype} in
-          gcp)
-          orig_username="${{ inputs.gcp-service-account }}"
-          username=oauth2accesstoken
-          password=${{ steps.gcp-auth.outputs.access_token }}
-          ;;
-          ghcr)
-          username=${{ github.actor }}
-          orig_username="${username}"
-          password="${{ inputs.gh-token }}"
-          if [ -z "${password}" ]; then
-            echo "error: no github-token was passed-in"
-            exit 1
-          fi
-          ;;
-          *)
-          echo "error: do not know registry-type: ${rtype}"
-          exit 1
-          ;;
-        esac
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
-        token=$(echo -n ${username}:${password} | base64 -w0)
-        mkdir -p $HOME/.docker
-        docker_cfg_path="${HOME}/.docker/config.json"
-        netloc=${{ steps.tgt.outputs.netloc }}
+        import base64
+        import json
+        import textwrap
 
-        cat << EOF > ${docker_cfg_path}
-        {
-          "auths": {
-            "${netloc}": {
-              "auth": "${token}"
-            }
-          }
+        registry_type = '${{ steps.tgt.outputs.rtype }}'
+
+        if registry_type == 'gcp':
+          orig_username = '${{ inputs.gcp-service-account }}'
+          username = 'oauth2accesstoken'
+          password = '${{ steps.gcp-auth.outputs.access_token }}'
+        elif registry_type == 'ghcr':
+          username = '${{ github.actor }}'
+          orig_username = username
+          password = '${{ inputs.gh-token }}'
+          if not password:
+            print('Error: no github-token was passed-in')
+            exit(1)
+        else:
+          print(f'Error: unknown {registry_type=}')
+          exit(1)
+
+        token = base64.b64encode(f'{username}:{password}'.encode('utf-8')).decode('utf-8')
+        netloc = '${{ steps.tgt.outputs.netloc }}'
+
+        auths = {
+          netloc: {
+            'auth': token,
+          },
         }
-        EOF
-        docker_cfg="$(cat "${docker_cfg_path}" | tr -d "\n")"
 
-        echo "docker-cfg=${docker_cfg}" >> ${GITHUB_OUTPUT}
-        echo "access-token=${token}" >> ${GITHUB_OUTPUT}
+        docker_cfg = {
+          'auths': auths,
+        }
 
-        if ! "${{ inputs.print-summary || 'false' }}"; then
-          exit 0
-        fi
+        docker_cfg_dir = os.path.join(os.environ['HOME'], '.docker')
+        docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
 
-        cat << EOF > ${GITHUB_STEP_SUMMARY}
-        ## OCI-Auth Summary
-        authenticated against: \`${netloc}\`
-        user: \`${orig_username}\`
-        type: \`${rtype}\`
-        docker-cfg written to: \`${docker_cfg_path}\`
-        EOF
+        os.makedirs(docker_cfg_dir, exist_ok=True)
+        with open(docker_cfg_path, 'w') as f:
+          json.dump(docker_cfg, f)
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write(f'docker-cfg={json.dumps(docker_cfg)}\n')
+          f.write(f'access-token={token}\n')
+
+        if '${{ inputs.print-summary }}' == 'false':
+          exit(0)
+
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+          f.write(textwrap.dedent(f'''\
+          ## OCI-Auth Summary
+          authenticated against: `{netloc}`
+          user: `{orig_username}`
+          type: `{registry_type}`
+          docker-cfg written to: `{docker_cfg_path}`
+          '''))
