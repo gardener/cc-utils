@@ -234,7 +234,7 @@ jobs:
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/checkout@v4
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: retrieve build-ctx-artefact
         if: ${{ inputs.build-ctx-artefact }}
         uses: actions/download-artifact@v4
