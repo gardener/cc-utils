@@ -229,11 +229,25 @@ jobs:
         args: ${{ fromJSON(needs.preprocess.outputs.args) }}
     steps:
       - uses: docker/setup-buildx-action@v3
+      - name: inject-authtoken-for-dockerhub
+        id: extra-auth
+        shell: bash
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        run: |
+          set -eu
+          # cannot check in if-clause above, as `secrets` ctx is not accesible there
+          if [ -z '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
+            exit 0
+          fi
+          cat <<EOF > ${GITHUB_OUTPUT}
+          extra-auths=[{"registry-1.docker.io": {"auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"}}]
+          EOF
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: retrieve build-ctx-artefact
         if: ${{ inputs.build-ctx-artefact }}
