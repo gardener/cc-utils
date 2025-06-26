@@ -16,7 +16,13 @@ original_ref_label_name = 'cloud.gardener.cnudie/migration/original_ref'
 
 
 class IdentityUploader:
-    def process(self, processing_job, target_as_source=False):
+    def process(
+        self,
+        processing_job: pm.ProcessingJob,
+        /,
+        target_as_source: bool=False,
+        **kwargs,
+    ):
         upload_request = processing_job.upload_request
 
         _, _, src_tag = oci.client._split_image_reference(upload_request.source_ref)
@@ -53,15 +59,12 @@ def labels_with_migration_hint(
 class PrefixUploader:
     def __init__(
         self,
-        prefix,
-        mangle=True,
-        mangle_replacement_char='_',
-        convert_to_relative_refs=False,
-        remove_prefixes=[],
-        **kwargs
+        prefix: str,
+        mangle: bool=True,
+        mangle_replacement_char: str='_',
+        convert_to_relative_refs: bool=False,
+        remove_prefixes: list[str]=[],
     ):
-        super().__init__(**kwargs)
-
         self._prefix = prefix
         self._mangle = mangle
         self._mangle_replacement_char = mangle_replacement_char
@@ -71,7 +74,8 @@ class PrefixUploader:
     def process(
         self,
         processing_job: pm.ProcessingJob,
-        target_as_source=False,
+        /,
+        target_as_source: bool=False,
     ):
         if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
             raise RuntimeError('PrefixUploader only supports access type == ociRegistry')
@@ -161,7 +165,9 @@ class TagSuffixUploader:
     def process(
         self,
         processing_job: pm.ProcessingJob,
+        /,
         target_as_source: bool=False,
+        **kwargs,
     ):
         if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
             raise NotImplementedError
@@ -211,7 +217,12 @@ class ExtraTagUploader:
     def __init__(self, extra_tags: typing.Iterable[str]):
         self.extra_tags = tuple(extra_tags)
 
-    def process(self, processing_job, target_as_source=False):
+    def process(
+        self,
+        processing_job: pm.ProcessingJob,
+        /,
+        **kwargs,
+    ):
         processing_job.extra_tags = self.extra_tags
 
         return processing_job
@@ -230,7 +241,12 @@ class DigestUploader:
     ):
         self._retain_symbolic_tag = retain_symbolic_tag
 
-    def process(self, processing_job: pm.ProcessingJob, target_as_source=False):
+    def process(
+        self,
+        processing_job: pm.ProcessingJob,
+        /,
+        **kwargs,
+    ):
         processing_job.upload_request.reference_target_by_digest = True
         processing_job.upload_request.retain_symbolic_tag = self._retain_symbolic_tag
 
