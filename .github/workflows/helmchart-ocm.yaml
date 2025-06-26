@@ -132,7 +132,7 @@ jobs:
           component-descriptor: ${{ inputs.component-descriptor }}
           component-descriptor-artefact: base-component-descriptor
           ctx: ${{ inputs.ocm-ctx }}
-      - uses: actions/checkout@v4
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: build-helmchart
         uses: gardener/cc-utils/.github/actions/helmchart@master
         with:

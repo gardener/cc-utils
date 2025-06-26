@@ -122,7 +122,7 @@ jobs:
       commit-digest: ${{ steps.version.outputs.commit-digest }}
       component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: preprocess-params
         id: pre
         run: |
