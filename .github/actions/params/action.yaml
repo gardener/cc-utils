@@ -58,8 +58,8 @@ outputs:
       `author_association` of the pullrequest-event is one of `COLLABORATOR`, `CONTRIBUTOR`,
       `MEMBER`, `OWNER`.
 
-      However, special checkout-handling is needed (which is not yet implemented), hence for now,
-      is also deemed to not be possible. TODO: update this documentation once implemented.
+      Note that consistent usage of `cc-utils/.github/actions/trusted-checkout` is required.
+      Workflows offered from cc-utils repository already do this.
     value: ${{ steps.params.outputs.can-push }}
 
 runs:
@@ -120,19 +120,15 @@ runs:
           case '${{ github.event.pull_request_target.author_association }}' in
             COLLABORATOR)
               can_push=true
-              can_push=false # TODO: remove once checkout-handling is implemented
               ;;
             CONTRIBUTOR)
               can_push=true
-              can_push=false # TODO: remove once checkout-handling is implemented
               ;;
             MEMBER)
               can_push=true
-              can_push=false # TODO: remove once checkout-handling is implemented
               ;;
             OWNER)
               can_push=true
-              can_push=false # TODO: remove once checkout-handling is implemented
               ;;
             *)
               can_push=false
