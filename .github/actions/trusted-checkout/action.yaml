@@ -1,0 +1,67 @@
+name: Trusted Checkout
+description: |
+  A wrapper around github.com/actions/checkout, with safety measures for pullrequests triggered
+  from forks with `pull_request_target` event.
+
+  It will by default behave identical to wrapped checkout-action. For pullrequests from forked
+  repositories, which are triggered by the `pull_request_target` event (where wrapped checkout
+  action will by default checkout receiving repository's contents), this action will instead
+  checkout the pullrequest's contents (to allow for building/testing code proposed by the
+  pullrequest). As this is generally considered to be unsafe, this will only be done under certain
+  conditions:
+
+  - if the fork's owner is equal to the target's (i.e. fork within the same organisation)
+  - if the author_association is one of:
+    - COLLABORATOR
+    - CONTRIBUTOR
+    - MEMBER
+    - OWNER
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+    - name: checkout-pullrequest
+      if: ${{ github.event_name == 'pull_request_target' }}
+      id: calc
+      shell: python
+      run: |
+        import os
+        import subprocess
+        import textwrap
+
+        allowed_author_associations = (
+          'COLLABORATOR',
+          'CONTRIBUTOR',
+          'MEMBER',
+          'OWNER',
+        )
+        author_association = '${{ github.event.pull_request.author_association }}'
+        allowed_to_checkout = author_association in allowed_author_associations
+
+        if not allowed_to_checkout:
+          summary = textwrap.dedent(f'''\
+          [!WARNING]
+          Checked out target-repository's contents, as pullrequest author is not trusted
+          ''')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(summary)
+          exit(0)
+
+        # allowed to checkout
+        repository = '${{ github.event.pull_request.head.repo.full_name }}'
+        remote = f'${{ github.server_url }}/{repository}'
+        summary = ''
+
+        subprocess.run(
+          (
+            'git', 'fetch', remote,
+          ),
+          check=True,
+        )
+        subprocess.run(
+          (
+            'git', 'checkout', '-B', '${{ github.ref_name }}', 'FETCH_HEAD',
+          ),
+          check=True,
+        )
