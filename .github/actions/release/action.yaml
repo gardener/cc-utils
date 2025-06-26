@@ -322,7 +322,7 @@ runs:
           repository=repository,
           name=draft_tag_name,
         )):
-          repository.create_release(
+          gh_release = repository.create_release(
             tag_name=release_tag_name,
             body=release_notes_markdown or 'no release-notes available',
             draft=False,
@@ -336,6 +336,14 @@ runs:
             draft=False,
             prerelease=False,
           )
+
+        # application/yaml is (since 2024) a registered mimetype
+        # https://www.iana.org/assignments/media-types/media-types.xhtml
+        gh_release.upload_asset(
+          content_type='application/yaml',
+          name='component-descriptor.yaml',
+          asset=open('/tmp/component-descriptor.yaml'),
+        )
 
     - name: prepare-push-bump-commit
       shell: bash
