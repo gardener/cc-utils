@@ -44,6 +44,17 @@ inputs:
       The OCI-Image-Reference specifying the OCI-Registry to authenticate against. Must encompass
       at least a hostname.
     default: europe-docker.pkg.dev
+  extra-auths:
+    required: false
+    description: |
+      A JSON-Document containing a mapping of additional auth-cfgs of the following form:
+      { <host>: {"auth": <token>}}
+
+      example:
+      ```
+      {"registry-1.docker.io": {"auth": "abcd"}}
+      ```
+      Passed tokens will be _appended_ to resulting docker-cfg, and thus have precedence.
   print-summary:
     default: false
     type: boolean
@@ -137,6 +148,22 @@ runs:
           'auths': auths,
         }
 
+        extra_auths = '''
+        ${{ inputs.extra-auths }}
+        '''.strip()
+
+        if extra_auths:
+          extra_auths = json.loads(extra_auths)
+          if not isinstance(extra_auths, dict):
+            print(f'expected a dict for extra-auths, but got: {type(extra_auths)=}')
+            exit(1)
+
+          docker_cfg['auths'] |= extra_auths
+
+          extra_auth_netlocs = tuple(extra_auths.keys())
+        else:
+          extra_auth_netlocs = ()
+
         docker_cfg_dir = os.path.join(os.environ['HOME'], '.docker')
         docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
 
@@ -158,4 +185,5 @@ runs:
           user: `{orig_username}`
           type: `{registry_type}`
           docker-cfg written to: `{docker_cfg_path}`
+          extra-auth-netlocs: `{extra_auth_netlocs}`
           '''))
