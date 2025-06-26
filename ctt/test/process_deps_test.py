@@ -10,6 +10,12 @@ def test_processor_instantiation(tmpdir):
     tmpfile.write('')  # touch
 
     cfg = {
+        'target': {
+            'type': 'RegistriesTarget',
+            'kwargs': {
+                'registries': ['foo'],
+            },
+        },
         'filter': {
             'type': 'ImageFilter',
             'kwargs': {
@@ -23,14 +29,23 @@ def test_processor_instantiation(tmpdir):
             },
         },
         'upload': {
-            'type': 'PrefixUploader',
+            'type': 'RepositoryUploader',
             'kwargs': {
-                'prefix': 'a/prefix',
+                'repository': 'a/repository',
             },
         },
     }
 
     _ = process_dependencies.processing_pipeline(cfg)
+
+    # test shared target
+    shared_target = {'shared_target': cfg['target']}
+    cfg['target'] = 'shared_target'
+
+    _ = process_dependencies.processing_pipeline(cfg, shared_targets=shared_target)
+
+    # revert
+    cfg['target'] = shared_target['shared_target']
 
     # test shared processor
     shared_proc = {'shared_p': cfg['processor']}

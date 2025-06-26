@@ -23,6 +23,7 @@ import ctt.replicate
 import cnudie.iter
 import cnudie.retrieve
 import container.util
+import delivery.client
 import ocm
 import ocm.gardener
 import oci
@@ -32,6 +33,7 @@ import oci.model as om
 import ctt.filters as filters
 import ctt.processing_model as processing_model
 import ctt.processors as processors
+import ctt.targets as targets
 import ctt.uploaders as uploaders
 import ctt.util as ctt_util
 
@@ -51,11 +53,13 @@ class ProcessingPipeline:
     def __init__(
         self,
         name,
+        targets,
         filters,
         processor,
         uploaders,
     ):
         self._name = name
+        self._targets = targets
         self._filters = filters
         self._processor = processor
         self._uploaders = uploaders
@@ -79,16 +83,11 @@ class ProcessingPipeline:
         self,
         component: ocm.Component,
         resource: ocm.Resource,
+        tgt_oci_registry: str,
         inject_ocm_coordinates_into_oci_manifests: bool=False,
     ) -> processing_model.ProcessingJob:
         if not self.matches(component, resource):
             return None
-
-        logging.info(f'{inject_ocm_coordinates_into_oci_manifests=}')
-        logging.info(
-            f'{self._name} will process: '
-            f'{component.name}:{resource.type}:{resource.access}'
-        )
 
         job = processing_model.ProcessingJob(
             component=component,
@@ -101,11 +100,26 @@ class ProcessingPipeline:
             inject_ocm_coordinates_into_oci_manifest=inject_ocm_coordinates_into_oci_manifests,
         )
 
+        replicate_resource_to_tgt = any(target.filter(tgt_oci_registry) for target in self._targets)
+        if not replicate_resource_to_tgt:
+            # resources are only processed if the current target is a target of the resource
+            return None
+
+        logging.info(f'{inject_ocm_coordinates_into_oci_manifests=}')
+        logging.info(
+            f'{self._name} will process: {component.name}:{resource.type}:{resource.access} '
+            f'{tgt_oci_registry=}'
+        )
+
         job: processing_model.ProcessingJob = self._processor.process(processing_job=job)
 
         first = True
         for uploader in self._uploaders:
-            job = uploader.process(job, target_as_source=not first)
+            job = uploader.process(
+                job,
+                tgt_oci_registry=tgt_oci_registry,
+                target_as_source=not first,
+            )
             first = False
 
         ctt_label = create_ctt_label(
@@ -148,6 +162,15 @@ def parse_processing_cfg(path: str):
     return raw_cfg
 
 
+def _target(target_cfg: dict):
+    target_type = target_cfg['type']
+    target_ctor = getattr(targets, target_type, None)
+    if not target_ctor:
+        ci.util.fail(f'no such target: {target_type}')
+    target = target_ctor(**target_cfg.get('kwargs', {}))
+    return target
+
+
 def _filter(filter_cfg: dict):
     filter_ctor = getattr(filters, filter_cfg['type'])
     filter_ = filter_ctor(**filter_cfg.get('kwargs', {}))
@@ -175,10 +198,22 @@ def _uploader(uploader_cfg: dict):
 
 def processing_pipeline(
     processing_cfg: dict,
+    shared_targets: dict={},
     shared_processors: dict={},
     shared_uploaders: dict={},
 ) -> ProcessingPipeline:
     name = processing_cfg.get('name', '<no name>')
+
+    target_cfgs = processing_cfg['target']
+    if not isinstance(target_cfgs, list):
+        target_cfgs = [target_cfgs]
+
+    def instantiate_target(target_cfg):
+        if isinstance(target_cfg, str):
+            return shared_targets[target_cfg]
+        return _target(target_cfg)
+
+    targets = [instantiate_target(target_cfg) for target_cfg in target_cfgs]
 
     filter_cfgs = processing_cfg['filter']
     if isinstance(filter_cfgs, dict):
@@ -207,6 +242,7 @@ def processing_pipeline(
 
     pipeline = ProcessingPipeline(
         name=name,
+        targets=targets,
         filters=filters,
         processor=proc,
         uploaders=uploaders,
@@ -216,6 +252,7 @@ def processing_pipeline(
 
 def enum_processing_cfgs(
     processing_cfg: dict,
+    shared_targets: dict,
     shared_processors: dict,
     shared_uploaders: dict,
 ):
@@ -224,6 +261,7 @@ def enum_processing_cfgs(
     yield from map(
         processing_pipeline,
         cfg_entries,
+        itertools.repeat(shared_targets, len(cfg_entries)),
         itertools.repeat(shared_processors, len(cfg_entries)),
         itertools.repeat(shared_uploaders, len(cfg_entries)),
     )
@@ -295,8 +333,12 @@ def determine_changed_components(
 def create_jobs(
     component_descriptors: collections.abc.Iterable[ocm.ComponentDescriptor],
     processing_cfg: dict,
+    tgt_oci_registry: str,
     inject_ocm_coordinates: bool,
 ) -> collections.abc.Generator[processing_model.ProcessingJob, None, None]:
+    shared_targets = {
+        name: _target(cfg) for name, cfg in processing_cfg.get('targets', {}).items()
+    }
     shared_processors = {
         name: _processor(cfg) for name, cfg in processing_cfg.get('processors', {}).items()
     }
@@ -314,12 +356,14 @@ def create_jobs(
 
             for pipeline in enum_processing_cfgs(
                 processing_cfg=processing_cfg,
+                shared_targets=shared_targets,
                 shared_processors=shared_processors,
                 shared_uploaders=shared_uploaders,
             ):
                 job = pipeline.process(
                     component=component,
                     resource=resource,
+                    tgt_oci_registry=tgt_oci_registry,
                     inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates,
                 )
 
@@ -329,8 +373,8 @@ def create_jobs(
                 yield job
                 break
             else:
-                ci.util.warning(
-                    f'no matching processor: {component.name}:{resource.access}'
+                logger.debug(
+                    f'skipped processing: {component.name}:{resource.access} ({tgt_oci_registry=})'
                 )
 
 
@@ -439,6 +483,7 @@ def process_images(
     processing_cfg_path: str,
     component_descriptor_v2: ocm.ComponentDescriptor,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    tgt_ocm_repository: str,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
@@ -448,8 +493,6 @@ def process_images(
     oci_client: oci.client.Client=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
-    tgt_ocm_base_url: str=None,
-    tgt_ctx_base_url: str=None, # deprecated -> replaced by `tgt_ocm_base_url`
 ) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -459,24 +502,60 @@ def process_images(
     references from the replication. In both cases, `True` means the respective component is
     _excluded_.
     '''
-    if tgt_ctx_base_url:
-        tgt_ocm_base_url = tgt_ctx_base_url
-
-    if not tgt_ocm_base_url:
-        raise ValueError(tgt_ocm_base_url)
-
     if not oci_client:
         oci_client = ccc.oci.oci_client()
+
+    delivery_service_client = ccc.delivery.default_client_if_available()
 
     if processing_mode is ProcessingMode.DRY_RUN:
         ci.util.warning('dry-run: not downloading or uploading any images')
 
-    src_ocm_base_url = component_descriptor_v2.component.current_ocm_repo.baseUrl
+    processing_cfg = parse_processing_cfg(processing_cfg_path)
 
-    if src_ocm_base_url == tgt_ocm_base_url:
-        raise RuntimeError('current repo context and target repo context must be different!')
+    # all component descriptors are replicated to all target registries, but OCI artefacts are
+    # only replicated to the respectively configured targets
+    tgt_oci_registries = set()
+    for target_cfg in processing_cfg['targets'].values():
+        tgt_oci_registries.update(target_cfg['kwargs']['registries'])
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+    for tgt_oci_registry in tgt_oci_registries:
+        yield from process_images_for_target(
+            processing_cfg=processing_cfg,
+            component_descriptor_v2=component_descriptor_v2,
+            component_descriptor_lookup=component_descriptor_lookup,
+            tgt_oci_registry=tgt_oci_registry,
+            tgt_ocm_repository=tgt_ocm_repository,
+            oci_client=oci_client,
+            delivery_service_client=delivery_service_client,
+            processing_mode=processing_mode,
+            replication_mode=replication_mode,
+            inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
+            platform_filter=platform_filter,
+            component_filter=component_filter,
+            remove_label=remove_label,
+            skip_cd_validation=skip_cd_validation,
+            skip_component_upload=skip_component_upload,
+        )
+
+
+def process_images_for_target(
+    processing_cfg: dict,
+    component_descriptor_v2: ocm.ComponentDescriptor,
+    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    tgt_oci_registry: str,
+    tgt_ocm_repository: str,
+    oci_client: oci.client.Client,
+    delivery_service_client: delivery.client.DeliveryServiceClient,
+    processing_mode: ProcessingMode=ProcessingMode.REGULAR,
+    replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
+    inject_ocm_coordinates_into_oci_manifests: bool=False,
+    platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
+    component_filter: collections.abc.Callable[[ocm.Component], bool] | None=None,
+    remove_label: collections.abc.Callable[[str], bool]=None,
+    skip_cd_validation: bool=False,
+    skip_component_upload: collections.abc.Callable[[ocm.Component], bool] | None=None,
+) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
+    tgt_ocm_base_url = ci.util.urljoin(tgt_oci_registry, tgt_ocm_repository)
 
     reftype_filter = None
     if remove_label and remove_label(ocm.gardener.ExtraComponentReferencesLabel.name):
@@ -488,7 +567,7 @@ def process_images(
     tgt_component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(tgt_ocm_base_url),
         oci_client=oci_client,
-        delivery_client=ccc.delivery.default_client_if_available(),
+        delivery_client=delivery_service_client,
         fallback_to_service_mapping=False,
     )
 
@@ -503,7 +582,8 @@ def process_images(
 
     jobs = create_jobs(
         component_descriptors=component_descriptors,
-        processing_cfg=parse_processing_cfg(processing_cfg_path),
+        processing_cfg=processing_cfg,
+        tgt_oci_registry=tgt_oci_registry,
         inject_ocm_coordinates=inject_ocm_coordinates_into_oci_manifests,
     )
 
@@ -605,6 +685,7 @@ def process_images(
             logger.error(f'exception while processing {processing_job=}')
             raise e
 
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
     jobs = tuple(executor.map(wrap_process_job, jobs))
 
     def append_ocm_repo(
