@@ -56,16 +56,16 @@ def labels_with_migration_hint(
     )
 
 
-class PrefixUploader:
+class RepositoryUploader:
     def __init__(
         self,
-        prefix: str,
+        repository: str,
         mangle: bool=True,
         mangle_replacement_char: str='_',
         convert_to_relative_refs: bool=False,
         remove_prefixes: list[str]=[],
     ):
-        self._prefix = prefix
+        self._repository = repository
         self._mangle = mangle
         self._mangle_replacement_char = mangle_replacement_char
         self._convert_to_relative_refs = convert_to_relative_refs
@@ -75,10 +75,11 @@ class PrefixUploader:
         self,
         processing_job: pm.ProcessingJob,
         /,
+        tgt_oci_registry: str,
         target_as_source: bool=False,
     ):
         if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
-            raise RuntimeError('PrefixUploader only supports access type == ociRegistry')
+            raise RuntimeError(f'RepositoryUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
 
         if not target_as_source:
             src_ref = processing_job.resource.access.imageReference
@@ -99,11 +100,12 @@ class PrefixUploader:
         # Instead, leave it up to the configuration to decide on the joining character.
         if not self._remove_prefixes:
             tgt_ref = ci.util.urljoin(
-                self._prefix,
+                tgt_oci_registry,
+                self._repository,
                 src_base_ref,
             )
         else:
-            tgt_ref = self._prefix + src_base_ref
+            tgt_ref = ci.util.urljoin(tgt_oci_registry, self._repository) + src_base_ref
 
         if src_ref.has_mixed_tag:
             symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
