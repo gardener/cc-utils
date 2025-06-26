@@ -262,6 +262,7 @@ jobs:
       - package # needed indirectly (distribution-packages-artefact)
       - prepare
       - setuptools-version
+    secrets: inherit
     permissions:
       contents: read
       packages: write
