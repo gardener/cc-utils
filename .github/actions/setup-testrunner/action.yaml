@@ -1,0 +1,34 @@
+name: Setup Testmachinery Testrunner
+description: |
+  Installs `testrunner` for testmachinery. `testrunner` executable will be available from PATH
+  after installation.
+
+  Note that `testrunner` is only available for linux/x86_64. This action will not check runner,
+  so caller needs to ensure a matching runner is selected.
+
+  see: https://github.com/gardener/test-infra
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: install-testrunner
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        tgt_dir=/home/runner/.local/bin
+        mkdir -p ${tgt_dir}
+
+        ocm_repo=europe-docker.pkg.dev/gardener-project/releases
+        ocm_component=github.com/gardener/test-infra
+        ocm_resource_name=tm-run
+        executable_path=testrunner
+
+
+        ${GITHUB_ACTION_PATH}/install_testrunner.py \
+          --ocm-repo "${ocm_repo}" \
+          --ocm-component "${ocm_component}" \
+          --ocm-resource "${ocm_resource_name}" \
+          --target-path "${tgt_dir}/testrunner" \
+          --executable-path "${executable_path}"
