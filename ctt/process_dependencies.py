@@ -538,6 +538,7 @@ def process_images(
     remove_label: collections.abc.Callable[[str], bool]=None,
     tgt_ocm_repository: str=None,
     tgt_ocm_base_url: str | None=None, # deprecated -> replaced by `tgt_ocm_repository`
+    tgt_ctx_base_url: str | None=None, # deprecated -> replaced by `tgt_ocm_base_url`
 ) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -548,6 +549,9 @@ def process_images(
     _excluded_.
     '''
     processing_cfg = parse_processing_cfg(processing_cfg_path)
+
+    if tgt_ctx_base_url:
+        tgt_ocm_base_url = tgt_ctx_base_url
 
     if tgt_ocm_base_url:
         tgt_oci_registry, tgt_ocm_repository = tgt_ocm_base_url.rsplit('/', 1)
