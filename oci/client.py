@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 oci_request_logger = logging.getLogger('oci.client.request_logger')
-oci_request_logger.setLevel(logging.DEBUG)
 
 
 def _append_b64_padding_if_missing(b64_str: str):
