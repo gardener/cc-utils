@@ -320,7 +320,10 @@ jobs:
         path: documentation-out.d
 
   publish-documentation:
-    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    if: >-
+      ${{ github.ref_name == github.event.repository.default_branch  &&
+          github.repository == 'gardener/cc-utils'
+      }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
