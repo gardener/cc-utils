@@ -4,19 +4,26 @@
 
 import abc
 import collections.abc
-import dataclasses
 import os
+
+import ctt.model
 
 
 class ProcessorBase:
     @abc.abstractmethod
-    def process(self, processing_job):
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+    ) -> ctt.model.ReplicationResourceElement:
         raise NotImplementedError()
 
 
 class NoOpProcessor(ProcessorBase):
-    def process(self, processing_job):
-        return processing_job
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+    ) -> ctt.model.ReplicationResourceElement:
+        return replication_resource_element
 
 
 class FileFilter(ProcessorBase):
@@ -35,13 +42,10 @@ class FileFilter(ProcessorBase):
                     else:
                         self._remove_entries.append(line)
 
-    def process(self, processing_job):
-        upload_request = dataclasses.replace(
-            processing_job.upload_request,
-            remove_files=tuple(self._remove_entries),
-        )
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.remove_files = self._remove_entries
 
-        return dataclasses.replace(
-            processing_job,
-            upload_request=upload_request
-        )
+        return replication_resource_element

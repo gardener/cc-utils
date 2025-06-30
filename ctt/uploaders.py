@@ -4,13 +4,11 @@
 
 import abc
 import collections.abc
-import dataclasses
 
 import ci.util
-import ctt.processing_model as pm
+import ctt.model
 import ctt.util as ctt_util
 import ocm
-import oci.model as om
 
 original_ref_label_name = 'cloud.gardener.cnudie/migration/original_ref'
 
@@ -34,10 +32,10 @@ class UploaderBase:
     @abc.abstractmethod
     def process(
         self,
-        processing_job: pm.ProcessingJob,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
         /,
         **kwargs,
-    ) -> pm.ProcessingJob:
+    ) -> ctt.model.ReplicationResourceElement:
         raise NotImplementedError('must be implemented by its subclasses')
 
 
@@ -58,20 +56,19 @@ class RepositoryUploader(UploaderBase):
 
     def process(
         self,
-        processing_job: pm.ProcessingJob,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
         /,
         tgt_oci_registry: str,
         target_as_source: bool=False,
-    ):
-        if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
+    ) -> ctt.model.ReplicationResourceElement:
+        if replication_resource_element.source.access.type is not ocm.AccessType.OCI_REGISTRY:
             raise RuntimeError(f'RepositoryUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
 
         if not target_as_source:
-            src_ref = processing_job.resource.access.imageReference
+            src_ref = replication_resource_element.src_ref
         else:
-            src_ref = processing_job.upload_request.target_ref
+            src_ref = replication_resource_element.tgt_ref
 
-        src_ref = om.OciImageReference.to_image_ref(src_ref)
         src_base_ref = src_ref.ref_without_tag
 
         for remove_prefix in self._remove_prefixes:
@@ -101,44 +98,21 @@ class RepositoryUploader(UploaderBase):
             tgt_ref = f'{tgt_ref}:{src_ref.tag}'
 
         if src_ref.has_digest_tag:
-            processing_job.upload_request.reference_target_by_digest = True
-
-        upload_request = dataclasses.replace(
-            processing_job.upload_request,
-            source_ref=processing_job.resource.access.imageReference,
-            target_ref=tgt_ref,
-        )
+            replication_resource_element.reference_by_digest = True
 
         if self._convert_to_relative_refs:
-            # remove host from target ref
-            # don't use artifact_path as self._prefix can also contain path elements
-            relative_artifact_path = om.OciImageReference.to_image_ref(
-                image_reference=tgt_ref,
-                normalise=False, # don't inject docker special handlings
-            ).local_ref
-            access = ocm.RelativeOciAccess(
-                reference=relative_artifact_path,
-            )
-        else:
-            access = ocm.OciAccess(
-                imageReference=tgt_ref,
-            )
+            replication_resource_element.convert_to_relative_ref = True
 
-        # propagate changed resource
-        processing_job.processed_resource = dataclasses.replace(
-            processing_job.resource,
-            access=access,
-            labels=labels_with_migration_hint(
-                resource=processing_job.resource,
-                src_img_ref=processing_job.resource.access.imageReference,
-            ),
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
         )
 
-        return dataclasses.replace(
-            processing_job,
-            upload_request=upload_request
+        replication_resource_element.target.labels = labels_with_migration_hint(
+            resource=replication_resource_element.target,
+            src_img_ref=str(replication_resource_element.src_ref),
         )
 
+        return replication_resource_element
 
 
 class TagSuffixUploader(UploaderBase):
@@ -152,20 +126,18 @@ class TagSuffixUploader(UploaderBase):
 
     def process(
         self,
-        processing_job: pm.ProcessingJob,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
         /,
         target_as_source: bool=False,
         **kwargs,
-    ):
-        if processing_job.resource.access.type is not ocm.AccessType.OCI_REGISTRY:
-            raise NotImplementedError
+    ) -> ctt.model.ReplicationResourceElement:
+        if replication_resource_element.source.access.type is not ocm.AccessType.OCI_REGISTRY:
+            raise RuntimeError(f'TagSuffixUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
 
         if not target_as_source:
-            src_ref = processing_job.resource.access.imageReference
+            src_ref = replication_resource_element.src_ref
         else:
-            src_ref = processing_job.upload_request.target_ref
-
-        src_ref = om.OciImageReference.to_image_ref(src_ref)
+            src_ref = replication_resource_element.tgt_ref
 
         if src_ref.has_digest_tag:
             raise RuntimeError('Cannot append tag suffix to resource that is accessed via digest')
@@ -173,28 +145,16 @@ class TagSuffixUploader(UploaderBase):
         tgt_tag = self._separator.join((src_ref.tag, self._suffix))
         tgt_ref = ':'.join((src_ref.ref_without_tag, tgt_tag))
 
-        upload_request = dataclasses.replace(
-            processing_job.upload_request,
-            source_ref=processing_job.resource.access.imageReference,
-            target_ref=tgt_ref,
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
         )
 
-        # propagate changed resource
-        processing_job.processed_resource = dataclasses.replace(
-            processing_job.resource,
-            access=ocm.OciAccess(
-                imageReference=tgt_ref,
-            ),
-            labels=labels_with_migration_hint(
-                resource=processing_job.resource,
-                src_img_ref=processing_job.resource.access.imageReference,
-            ),
+        replication_resource_element.target.labels = labels_with_migration_hint(
+            resource=replication_resource_element.target,
+            src_img_ref=str(replication_resource_element.src_ref),
         )
 
-        return dataclasses.replace(
-            processing_job,
-            upload_request=upload_request
-        )
+        return replication_resource_element
 
 
 class ExtraTagUploader(UploaderBase):
@@ -206,17 +166,17 @@ class ExtraTagUploader(UploaderBase):
         self,
         extra_tags: collections.abc.Iterable[str],
     ):
-        self.extra_tags = tuple(extra_tags)
+        self.extra_tags = list(extra_tags)
 
     def process(
         self,
-        processing_job: pm.ProcessingJob,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
         /,
         **kwargs,
-    ):
-        processing_job.extra_tags = self.extra_tags
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.extra_tags = self.extra_tags
 
-        return processing_job
+        return replication_resource_element
 
 
 class DigestUploader(UploaderBase):
@@ -234,11 +194,11 @@ class DigestUploader(UploaderBase):
 
     def process(
         self,
-        processing_job: pm.ProcessingJob,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
         /,
         **kwargs,
-    ):
-        processing_job.upload_request.reference_target_by_digest = True
-        processing_job.upload_request.retain_symbolic_tag = self._retain_symbolic_tag
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.reference_by_digest = True
+        replication_resource_element.retain_symbolic_tag = self._retain_symbolic_tag
 
-        return processing_job
+        return replication_resource_element
