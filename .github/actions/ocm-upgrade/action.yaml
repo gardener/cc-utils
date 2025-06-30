@@ -1,6 +1,23 @@
 name: OCM-Upgrade
 description: |
-  An action creating upgrade-pullrequests for referenced OCM-Components
+  An action creating upgrade-pullrequests for referenced OCM-Components.
+
+  The action will firstly try to locate the "base-component" descriptor (`.ocm/base-component.yaml`).
+  If it exists, diffs for matching component-references will be created. In addition, the optional
+  `.ci/set_dependency_version`-callback will be called.
+
+  The latter callback is passed the following environment variables:
+    - DEPENDENCY_TYPE (always `component` - reserved for later extension)
+    - DEPENDENCY_NAME (the component-name to be upgraded)
+    - DEPENDENCY_VERSION (the target-version of component to be upgraded)
+
+  For backwards-compatibility-reasons, in addition, the environment variable `REPO_DIR`, pointing to
+  repository-worktree will be set. However, set_dependency_version callback-scripts should not rely
+  on it, and consider it deprecated.
+
+  If a component-upgrade cannot be done using "base-component", the `set_dependency_version` script
+  is _not_ optional (absence is in that case reported as an error).
+
 
 inputs:
   component-descriptor:
