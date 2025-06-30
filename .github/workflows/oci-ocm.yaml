@@ -338,11 +338,17 @@ jobs:
           print(f'merging {src_image_refs=} into {tgt_image_ref=}')
 
           if push:
+            extra_tags='${{ inputs.extra-tags }}'.strip()
+            if extra_tags:
+              extra_tags = extra_tags.split(',')
+            else:
+              extra_tags = ()
+
             oci.merge.into_image_index(
               src_image_refs=src_image_refs,
               tgt_image_ref=tgt_image_ref,
               oci_client=oci_client,
-              extra_tags='${{ inputs.extra-tags }}'.strip().split(','),
+              extra_tags=extra_tags,
             )
 
             print(f'published to {tgt_image_ref=}')
