@@ -78,16 +78,7 @@ runs:
         is_fork=${{ steps.repo-metadata.outputs.fork }}
         echo "repo is a fork: ${is_fork}"
 
-        if [ "${is_fork}" == true ]; then
-          # avoid interference w/ images or component-descriptors from forked repositories
-          # (also: do not require forks to have permissions for gardener's registries)
-          repo_base=ghcr.io/${{ github.repository }}
-        elif [ "${is_fork}" == false ]; then
-          repo_base=europe-docker.pkg.dev/gardener-project
-        else
-          echo "unexpected value for is_fork: ${is_fork}"
-          exit 1
-        fi
+        repo_base=europe-docker.pkg.dev/gardener-project
 
         ocm_releases_repository=${repo_base}/releases
 
