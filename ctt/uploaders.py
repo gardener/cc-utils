@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import abc
 import collections.abc
 import dataclasses
 
@@ -29,7 +30,18 @@ def labels_with_migration_hint(
     )
 
 
-class RepositoryUploader:
+class UploaderBase:
+    @abc.abstractmethod
+    def process(
+        self,
+        processing_job: pm.ProcessingJob,
+        /,
+        **kwargs,
+    ) -> pm.ProcessingJob:
+        raise NotImplementedError('must be implemented by its subclasses')
+
+
+class RepositoryUploader(UploaderBase):
     def __init__(
         self,
         repository: str,
@@ -128,7 +140,8 @@ class RepositoryUploader:
         )
 
 
-class TagSuffixUploader:
+
+class TagSuffixUploader(UploaderBase):
     def __init__(
         self,
         suffix,
@@ -184,7 +197,7 @@ class TagSuffixUploader:
         )
 
 
-class ExtraTagUploader:
+class ExtraTagUploader(UploaderBase):
     '''
     Uploader that will push additional (static) tags to uploaded images. Useful to e.g. add
     `latest` tag. Extra-Tags will be overwritten as a hardcoded behaviour of this uploader.
@@ -206,7 +219,7 @@ class ExtraTagUploader:
         return processing_job
 
 
-class DigestUploader:
+class DigestUploader(UploaderBase):
     '''
     sets `reference_target_by_digest` attribute in upload-request, which will result in
     target-component-descriptor's resouce's access use digest rather than tag to reference
