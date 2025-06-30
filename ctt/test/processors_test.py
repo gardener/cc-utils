@@ -4,32 +4,28 @@
 
 import pytest
 
+import ctt.model
 import ctt.processors as processors
-import ctt.processing_model as processing_model
 
 
 @pytest.fixture
-def job():
-    return processing_model.ProcessingJob(
-        component=None,
-        resource=None,
-        upload_request=processing_model.ContainerImageUploadRequest(
-            source_ref='source:ref',
-            target_ref='target:ref',
-            remove_files=(),
-        ),
+def replication_resource_element():
+    return ctt.model.ReplicationResourceElement(
+        source=None,
+        target=None,
+        component_id=None,
     )
 
 
-def test_noop_processor(job):
+def test_noop_processor(replication_resource_element):
     examinee = processors.NoOpProcessor()
 
-    result = examinee.process(job)
+    result = examinee.process(replication_resource_element)
 
-    assert result is job
+    assert result is replication_resource_element
 
 
-def test_filefilter_processor(job, tmpdir):
+def test_filefilter_processor(replication_resource_element, tmpdir):
     filter_file = tmpdir.join('filters')
     filter_file.write('remove/me')
 
@@ -37,8 +33,7 @@ def test_filefilter_processor(job, tmpdir):
         filter_files=[filter_file],
     )
 
-    result = examinee.process(job)
-    upload_request = result.upload_request
-    remove_files = upload_request.remove_files
+    result = examinee.process(replication_resource_element)
+    remove_files = result.remove_files
 
-    assert remove_files == ('remove/me',)
+    assert remove_files == ['remove/me',]
