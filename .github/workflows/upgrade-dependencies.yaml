@@ -19,6 +19,13 @@ on:
           An optional, comma-separated list of OCM-Repositories that should be used for looking-up
           OCM-Component-Versions. If not passed, the releases-repository from `prepare.yaml`
           workflow will be used.
+      prepare-action-path:
+        required: false
+        type: string
+        description: |
+          An optional path (relative to repository-root) to a local action. If given, this action
+          will be called prior to calling `set_dependency_version` callback. Useful to install
+          preliminaries, such as golang toolchain.
 
 jobs:
   prepare:
@@ -48,3 +55,4 @@ jobs:
             ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-releases-repository }}
           github-token: |
             ${{ steps.app-token.outputs.token }}
+          prepare-action-path: ${{ inputs.prepare-action-path }}
