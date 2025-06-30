@@ -1,4 +1,8 @@
-class Target:
+import abc
+
+
+class TargetBase:
+    @abc.abstractmethod
     def filter(
         self,
         tgt_oci_registry: str,
@@ -11,7 +15,7 @@ class Target:
         raise NotImplementedError('must be implemented by its subclasses')
 
 
-class RegistriesTarget(Target):
+class RegistriesTarget(TargetBase):
     def __init__(
         self,
         registries: list[str],
