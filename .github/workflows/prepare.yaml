@@ -75,7 +75,7 @@ on:
           If the `workflow_event` reads `pull_request`, pushing is _not_ deemed to be possible.
 
           If the `workflow_event` reads `pull_request_target`, pushing is possible, if the
-          `author_association` of the pullrequest-event is one of `COLLABORATOR`, `CONTRIBUTOR`,
+          `author_association` of the pullrequest-event is one of `COLLABORATOR`,
           `MEMBER`, `OWNER`.
           However special checkout-handling is needed (which is not yet
           implemented), hence for now, is also deemed to not be possible.

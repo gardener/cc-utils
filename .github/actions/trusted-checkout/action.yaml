@@ -13,7 +13,6 @@ description: |
   - if the fork's owner is equal to the target's (i.e. fork within the same organisation)
   - if the author_association is one of:
     - COLLABORATOR
-    - CONTRIBUTOR
     - MEMBER
     - OWNER
 
@@ -32,7 +31,6 @@ runs:
 
         allowed_author_associations = (
           'COLLABORATOR',
-          'CONTRIBUTOR',
           'MEMBER',
           'OWNER',
         )

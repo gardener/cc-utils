@@ -55,7 +55,7 @@ outputs:
       If the `workflow_event` reads `pull_request`, pushing is _not_ deemded to be possible.
 
       If the `workflow_event` reads `pull_request_target`, pushing is possible, if the
-      `author_association` of the pullrequest-event is one of `COLLABORATOR`, `CONTRIBUTOR`,
+      `author_association` of the pullrequest-event is one of `COLLABORATOR`,
       `MEMBER`, `OWNER`.
 
       Note that consistent usage of `cc-utils/.github/actions/trusted-checkout` is required.
@@ -121,14 +121,14 @@ runs:
             COLLABORATOR)
               can_push=true
               ;;
-            CONTRIBUTOR)
-              can_push=true
-              ;;
             MEMBER)
               can_push=true
               ;;
             OWNER)
               can_push=true
+              ;;
+            CONTRIBUTOR)
+              can_push=false
               ;;
             *)
               can_push=false
