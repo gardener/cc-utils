@@ -37,6 +37,12 @@ on:
         type: string
         default: '{version}'
         required: false
+      extra-tags:
+        type: string
+        required: false
+        description: |
+          A comma-separated list of additional tags to set. Existing tags will be updated.
+          Commonly used to reset `latest`-tag.
       push:
         description: |
           Whether or not to push the built image. Allowed values:
@@ -336,6 +342,7 @@ jobs:
               src_image_refs=src_image_refs,
               tgt_image_ref=tgt_image_ref,
               oci_client=oci_client,
+              extra_tags='${{ inputs.extra-tags }}'.strip().split(','),
             )
 
             print(f'published to {tgt_image_ref=}')
