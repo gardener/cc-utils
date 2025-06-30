@@ -137,24 +137,6 @@ def parse_image_reference(image_reference: str):
     return parsed_url
 
 
-def _split_image_reference(image_reference: str):
-    image_reference = oci.util.normalise_image_reference(image_reference)
-
-    image_url = parse_image_reference(image_reference=image_reference)
-    image_name_and_tag = image_url.path.lstrip('/')
-
-    prefix = image_url.netloc
-
-    if '@' in image_name_and_tag:
-        image_name, image_tag = image_name_and_tag.rsplit('@', 1)
-    elif ':' in image_name_and_tag:
-        image_name, image_tag = image_name_and_tag.rsplit(':', 1)
-    else:
-        raise ValueError(f'{image_reference=} does not seem to contain a tag')
-
-    return prefix, image_name, image_tag
-
-
 def base_api_url(
     image_reference: str | om.OciImageReference,
 ) -> str:

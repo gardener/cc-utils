@@ -9,36 +9,9 @@ import ci.util
 import ctt.processing_model as pm
 import ctt.util as ctt_util
 import ocm
-import oci.client
 import oci.model as om
 
 original_ref_label_name = 'cloud.gardener.cnudie/migration/original_ref'
-
-
-class IdentityUploader:
-    def process(
-        self,
-        processing_job: pm.ProcessingJob,
-        /,
-        target_as_source: bool=False,
-        **kwargs,
-    ):
-        upload_request = processing_job.upload_request
-
-        _, _, src_tag = oci.client._split_image_reference(upload_request.source_ref)
-        if ':' in src_tag:
-            raise NotImplementedError
-
-        if not target_as_source:
-            upload_request = dataclasses.replace(
-                processing_job.upload_request,
-                target_ref=processing_job.upload_request.source_ref,
-            )
-
-        return dataclasses.replace(
-            processing_job,
-            upload_request=upload_request,
-        )
 
 
 def labels_with_migration_hint(
