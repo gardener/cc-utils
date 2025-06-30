@@ -18,6 +18,8 @@ description: |
   If a component-upgrade cannot be done using "base-component", the `set_dependency_version` script
   is _not_ optional (absence is in that case reported as an error).
 
+  Use `prepare-action-path` in case `set_dependency_version` needs additional setup (e.g. to install
+  golang toolchain).
 
 inputs:
   component-descriptor:
@@ -52,6 +54,13 @@ inputs:
       - rebase
       - merge
       - squash
+  prepare-action-path:
+    description: |
+      Path (relative to repository-root) to a local action. If given, this action will be called
+      prior to running `.ci/set_dependency_version` callback script. Useful to install preliminaries
+      required by said callback-script.
+    type: string
+    required: false
 
 runs:
   using: composite
@@ -73,6 +82,17 @@ runs:
         cat <<EOF > /tmp/github-token
         ${{ inputs.github-token }}
         EOF
+    - name: prepare-action
+      if: ${{ inputs.prepare-action-path != '' }}
+      shell: bash
+      run: |
+        set -eu
+        # cp outside of repository-tree so we do not have to cleanup afterwards; also, we need a
+        # static path, as github-actions do not allow using parameters
+        cp -r "${{ inputs.prepare-action-path }}" ../prepare-action
+    - name: call-prepare-action
+      if: ${{ inputs.prepare-action-path != '' }}
+      uses: ./../prepare-action
     - name: create-and-update-upgrade-pullrequests
       shell: python
       run: |
