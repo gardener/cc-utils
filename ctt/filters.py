@@ -15,7 +15,7 @@ class FilterBase:
         self,
         component: ocm.Component,
         resource: ocm.Resource,
-    ):
+    ) -> bool:
         pass
 
 
@@ -27,7 +27,7 @@ class MatchAllFilter(FilterBase):
         self,
         component: ocm.Component,
         resource: ocm.Resource,
-    ):
+    ) -> bool:
         return True
 
 
@@ -58,7 +58,7 @@ class ImageFilter(FilterBase):
         self,
         component: ocm.Component,
         resource: ocm.Resource,
-    ):
+    ) -> bool:
         if resource.access.type is not ocm.AccessType.OCI_REGISTRY:
             return False
 
@@ -123,5 +123,5 @@ class ComponentFilter(FilterBase):
         self,
         component: ocm.Component,
         resource: ocm.Resource,
-    ):
+    ) -> bool:
         return self._comp_name_filter(component)

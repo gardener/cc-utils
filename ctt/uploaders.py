@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import collections.abc
 import dataclasses
-import typing
 
 import ci.util
 import ctt.processing_model as pm
@@ -43,8 +43,8 @@ class IdentityUploader:
 
 def labels_with_migration_hint(
     resource: ocm.Resource,
-    src_img_ref,
-):
+    src_img_ref: str,
+) -> collections.abc.Sequence[ocm.Label]:
     original_ref_label = ocm.Label(
         name=original_ref_label_name,
         value=src_img_ref,
@@ -216,7 +216,10 @@ class ExtraTagUploader:
     Uploader that will push additional (static) tags to uploaded images. Useful to e.g. add
     `latest` tag. Extra-Tags will be overwritten as a hardcoded behaviour of this uploader.
     '''
-    def __init__(self, extra_tags: typing.Iterable[str]):
+    def __init__(
+        self,
+        extra_tags: collections.abc.Iterable[str],
+    ):
         self.extra_tags = tuple(extra_tags)
 
     def process(

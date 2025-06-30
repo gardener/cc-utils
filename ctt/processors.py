@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import collections.abc
 import dataclasses
 import os
 
@@ -21,8 +22,8 @@ class NoOpProcessor(ProcessorBase):
 class FileFilter(ProcessorBase):
     def __init__(
         self,
-        filter_files,
-        base_dir='',
+        filter_files: collections.abc.Iterable[str],
+        base_dir: str='',
     ):
         self._remove_entries = []
         for path in filter_files:
