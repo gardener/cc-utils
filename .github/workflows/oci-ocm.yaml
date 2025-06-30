@@ -353,7 +353,7 @@ jobs:
 
             print(f'published to {tgt_image_ref=}')
 
-          labels_str = '''${{ inputs.ocm-labels }}'''
+          labels_str = '''${{ inputs.ocm-labels }}'''.strip()
           if labels_str:
             labels = yaml.safe_load(labels_str)
             if isinstance(labels, dict):
