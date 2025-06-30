@@ -10,6 +10,7 @@ def into_image_index(
     src_image_refs: collections.abc.Iterable[str | om.OciImageReference],
     tgt_image_ref: str | om.OciImageReference,
     oci_client: oc.Client,
+    extra_tags: collections.abc.Iterable[str]=None,
 ):
     '''
     merges the given OCI-Artefacts into an OCI Image Index. Source artefacts may either be
@@ -25,6 +26,9 @@ def into_image_index(
     allowed, and this function does not offer conversion).
 
     If inconsistent sources are encountered, ValueError will be raised.
+
+    Passed `extra_tags` will be (re-)set, referring to the same resulting (target) OCI-Image, in
+    the same OCI-Repository.
     '''
     target_manifest_index = om.OciImageManifestList(
         manifests=[],
@@ -110,3 +114,16 @@ def into_image_index(
         image_reference=tgt_image_ref,
         manifest=target_manifest_bytes,
     )
+
+    if not extra_tags:
+        return
+
+    tgt_ref_without_tag = om.OciImageReference.to_image_ref(tgt_image_ref).ref_without_tag
+
+    for extra_tag in extra_tags:
+        extra_tgt_ref = f'{tgt_ref_without_tag}:{extra_tag}'
+
+        oci_client.put_manifest(
+            image_reference=extra_tgt_ref,
+            manifest=target_manifest_bytes,
+        )
