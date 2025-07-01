@@ -620,7 +620,7 @@ def create_replication_plan_step(
 
 def process_images(
     processing_cfg_path: str,
-    component_descriptor_v2: ocm.ComponentDescriptor,
+    root_component_descriptor: ocm.ComponentDescriptor,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
@@ -690,7 +690,7 @@ def process_images(
 
         replication_plan_step = create_replication_plan_step(
             processing_cfg=processing_cfg,
-            root_component_descriptor=component_descriptor_v2,
+            root_component_descriptor=root_component_descriptor,
             src_component_descriptor_lookup=component_descriptor_lookup,
             tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
             tgt_oci_registry=tgt_oci_registry,
@@ -714,7 +714,7 @@ def process_images(
 
         yield from process_replication_plan_step(
             replication_plan_step=replication_plan_step,
-            component_descriptor_v2=component_descriptor_v2,
+            root_component_descriptor=root_component_descriptor,
             oci_client=oci_client,
             tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
             processing_mode=processing_mode,
@@ -730,7 +730,7 @@ def process_images(
 
 def process_replication_plan_step(
     replication_plan_step: ctt.model.ReplicationPlanStep,
-    component_descriptor_v2: ocm.ComponentDescriptor,
+    root_component_descriptor: ocm.ComponentDescriptor,
     oci_client: oci.client.Client,
     tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
@@ -911,14 +911,14 @@ def process_replication_plan_step(
     # retrieve component descriptor from the target registry as local descriptor might not contain
     # patched image references (if it was already existing the the target registry and thus patching
     # has been skipped)
-    if not skip_component_upload or not skip_component_upload(component_descriptor_v2.component):
-        component_descriptor_v2 = tgt_component_descriptor_lookup(ocm.ComponentIdentity(
-            name=component_descriptor_v2.component.name,
-            version=component_descriptor_v2.component.version,
+    if not skip_component_upload or not skip_component_upload(root_component_descriptor.component):
+        root_component_descriptor = tgt_component_descriptor_lookup(ocm.ComponentIdentity(
+            name=root_component_descriptor.component.name,
+            version=root_component_descriptor.component.version,
         ))
 
     for node in cnudie.iter.iter(
-        component=component_descriptor_v2,
+        component=root_component_descriptor,
         lookup=tgt_component_descriptor_lookup,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
