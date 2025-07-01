@@ -156,21 +156,23 @@ def to_ocm_mapping(
     converts the given `mapping` into a mapping-dict compliant to the proposed one from:
     https://github.com/open-component-model/ocm/blob/2b9ed814dee16e351636cb0d4ea0203f72224c0d/components/helmdemo/README.md
     '''
-    attrs_by_resource = collections.defaultdict(dict)
+    attrs_by_resource_and_value_key = collections.defaultdict(lambda: collections.defaultdict(dict))
     for mapping in mappings:
         resource_name, ref_name = mapping.referenced_resource_and_attribute
-        attrs_by_resource[resource_name][ref_name] = mapping.attribute
+        value_key = mapping.attribute.split('.')[0]
+        attrs_by_resource_and_value_key[resource_name][value_key][ref_name] = mapping.attribute
 
     image_mappings = []
 
-    for resource_name, attribute_mappings in attrs_by_resource.items():
-        image_mapping = {
-            'resource': {'name': resource_name},
-        }
-        for ref, attr in attribute_mappings.items():
-            image_mapping[ref] = attr
+    for resource_name, attrs_by_value_key in attrs_by_resource_and_value_key.items():
+        for attribute_mappings in attrs_by_value_key.values():
+            image_mapping = {
+                'resource': {'name': resource_name},
+            }
+            for ref, attr in attribute_mappings.items():
+                image_mapping[ref] = attr
 
-        image_mappings.append(image_mapping)
+            image_mappings.append(image_mapping)
 
     return {
         'helmchartResource': {
