@@ -20,6 +20,11 @@ def test_to_ocm_mapping():
             ref='ocm-resource:resource-2.repository',
             attribute='example.repo-2',
         ),
+
+        helm.HelmchartValueMapping(
+            ref='ocm-resource:resource-2.repository',
+            attribute='sub.example.repo-2',
+        ),
     ]
 
     ocm_mapping = helm.to_ocm_mapping(
@@ -45,6 +50,12 @@ def test_to_ocm_mapping():
                     'name': 'resource-2',
                 },
                 'repository': 'example.repo-2',
-            }
+            },
+            {
+                'resource': {
+                    'name': 'resource-2',
+                },
+                'repository': 'sub.example.repo-2',
+            },
         ],
     }
