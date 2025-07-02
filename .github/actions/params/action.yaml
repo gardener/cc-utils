@@ -96,6 +96,7 @@ runs:
             ;;
         esac
 
+        is_pr_from_fork=false
         event_name='${{ github.event_name }}'
         if [ ${event_name} == 'pull_request' ]; then
           repo_owner='${{ github.repository_owner }}'
