@@ -493,9 +493,10 @@ def iter_replication_plan_components(
     remove_label: collections.abc.Callable[[str], bool] | None=None,
 ) -> collections.abc.Iterable[ctt.model.ReplicationComponentElement]:
     for component_descriptor in component_descriptors:
-        # create copies to not unintentionally modify mutually/afterwards
+        # create copy to not unintentionally modify mutually/afterwards
         source = copy.deepcopy(component_descriptor)
-        target = copy.deepcopy(component_descriptor)
+        # don't create a copy for target so that the passed-in component descriptor gets patched
+        target = component_descriptor
 
         if target.component.current_ocm_repo.oci_ref != tgt_ocm_repo.oci_ref:
             target.component.repositoryContexts.append(tgt_ocm_repo)
