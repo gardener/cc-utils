@@ -577,7 +577,7 @@ def create_replication_plan_step(
     src_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     tgt_oci_registry: str,
-    tgt_ocm_repository: str,
+    tgt_ocm_repo_path: str,
     oci_client: oci.client.Client,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     component_filter: collections.abc.Callable[[ocm.Component], bool] | None=None,
@@ -585,7 +585,7 @@ def create_replication_plan_step(
     remove_label: collections.abc.Callable[[str], bool]=None,
 ) -> ctt.model.ReplicationPlanStep:
     tgt_ocm_repo = ocm.OciOcmRepository(
-        baseUrl=ci.util.urljoin(tgt_oci_registry, tgt_ocm_repository),
+        baseUrl=ci.util.urljoin(tgt_oci_registry, tgt_ocm_repo_path),
     )
 
     component_descriptors = tuple(determine_changed_components(
@@ -631,8 +631,8 @@ def process_images(
     oci_client: oci.client.Client=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
-    tgt_ocm_repository: str=None,
-    tgt_ocm_base_url: str | None=None, # deprecated -> replaced by `tgt_ocm_repository`
+    tgt_ocm_repo_path: str=None,
+    tgt_ocm_base_url: str | None=None, # deprecated -> replaced by `tgt_ocm_repo_path`
 ) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -645,14 +645,14 @@ def process_images(
     processing_cfg = parse_processing_cfg(processing_cfg_path)
 
     if tgt_ocm_base_url:
-        tgt_oci_registry, tgt_ocm_repository = tgt_ocm_base_url.rsplit('/', 1)
+        tgt_oci_registry, tgt_ocm_repo_path = tgt_ocm_base_url.rsplit('/', 1)
         processing_cfg = create_backwards_compatible_cfg(
             processing_cfg=processing_cfg,
             tgt_oci_registry=tgt_oci_registry,
         )
 
-    if not tgt_ocm_repository:
-        raise ValueError(tgt_ocm_repository)
+    if not tgt_ocm_repo_path:
+        raise ValueError(tgt_ocm_repo_path)
 
     if not oci_client:
         oci_client = ccc.oci.oci_client()
@@ -679,7 +679,7 @@ def process_images(
 
     for tgt_oci_registry in tgt_oci_registries:
         tgt_component_descriptor_lookup = create_component_descriptor_lookup_for_ocm_repo(
-            ocm_repo_url=ci.util.urljoin(tgt_oci_registry, tgt_ocm_repository),
+            ocm_repo_url=ci.util.urljoin(tgt_oci_registry, tgt_ocm_repo_path),
             oci_client=oci_client,
             delivery_service_client=delivery_service_client,
         )
@@ -690,7 +690,7 @@ def process_images(
             src_component_descriptor_lookup=component_descriptor_lookup,
             tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
             tgt_oci_registry=tgt_oci_registry,
-            tgt_ocm_repository=tgt_ocm_repository,
+            tgt_ocm_repo_path=tgt_ocm_repo_path,
             oci_client=oci_client,
             replication_mode=replication_mode,
             component_filter=component_filter,
