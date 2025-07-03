@@ -839,11 +839,17 @@ def process_replication_plan_step(
         patched_resources = {}
 
         # patch-in overwrites (caveat: must be done sequentially, as lists are not threadsafe)
+        # use copy of resources as peers to shortcut "self"-check in identity function
+        peer_resources = [
+            copy.deepcopy(resource)
+            for resource in component.resources
+        ]
+
         for resource in resource_group:
-            patched_resources[resource.identity(component.resources)] = resource
+            patched_resources[resource.identity(peer_resources)] = resource
 
         component.resources = [
-            patched_resources.get(resource.identity(component.resources), resource)
+            patched_resources.get(resource.identity(peer_resources), resource)
             for resource in component.resources
         ]
 
