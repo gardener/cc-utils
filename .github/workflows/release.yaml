@@ -144,7 +144,7 @@ jobs:
       - name: write-release-notes-to-file
         if: ${{ inputs.slack-channel-id != '' }}
         run: |
-          cat <<EOF > release-notes.md
+          cat <<"EOF" > release-notes.md
           ${{ steps.release-notes.outputs.release-notes }}
           EOF
       - name: publish-release-notes-to-slack
