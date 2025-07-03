@@ -65,6 +65,12 @@ on:
       dockerfile:
         type: string
         required: false
+      build-args:
+        description: |
+           build-args, passed to `actions/build-push-action`. newline-separated values of form
+           NAME=VALUE
+        type: string
+        required: false
       prebuild-hook:
         description: |
           if set, value will be executed as a bash-expression _after_ repository-checkout and
@@ -280,6 +286,7 @@ jobs:
           context: '.'
           target: ${{ inputs.target }}
           file: ${{ inputs.dockerfile }}
+          build-args: ${{ inputs.build-args }}
 
   collect-images:
     needs:
