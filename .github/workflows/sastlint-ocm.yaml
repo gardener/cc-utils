@@ -1,0 +1,80 @@
+name: SAST-Lint-OCM
+description: |
+  A re-usable, and strongly opinionated workflow for running SAST-Linter, and export linting-results
+  as an OCM-Fragment using the `export-ocm-fragments`-action.
+on:
+  workflow_call:
+    inputs:
+      linter:
+        required: true
+        type: string
+        default: gosec
+        description: |
+          the linter to run. Currently, only `gosec` is supported.
+      run:
+        required: true
+        default: .ci/verify
+        type: string
+        description: |
+          the command to run. Passed to `bash` without any quoting or preprocessing.
+
+      go-version:
+        required: false
+        default: 'greatest'
+        type: string
+        description: |
+          if passed, golang will be installed prior to calling command specified by `run` input.
+
+          If special value `greatest` is passed, greatest available golang version will be setup.
+          Otherwise, the passed version will be installed. To disable installation of golang, pass
+          the empty string.
+
+jobs:
+  run-linter:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/setup-go@v5
+        if: ${{ inputs.go-version != '' }}
+        with:
+          go-version: ${{ inputs.go-version != 'greatest' && inputs.go-version || '' }}
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - name: run-linter
+        shell: bash
+        run: |
+          set -eu
+
+          if [ '${{ inputs.linter }}' != 'gosec' ]; then
+            echo 'do not know how to run ${{ inputs.linter }}'
+            exit 1
+          fi
+
+          # it is okay for the passed expression to be split into multiple tokens - have bash
+          # interpret whatever is passed
+          ${{ inputs.run }}
+
+          # linter-script is expected to output `gosec-report.sarif` (hardcoded contract)
+          mkdir -p /tmp/blobs.d
+          tar czf /tmp/blobs.d/gosec-report.tar.gz gosec-report.sarif
+
+      - name: add-sast-report-to-component-descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            name: gosec-report
+            relation: local
+            access:
+              type: localBlob
+              localReference: gosec-report.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - gosec
+              - name: gardener.cloud/comment
+                value: |
+                  we use gosec (linter) for SAST scans
+                  see: https://github.com/securego/gosec
