@@ -18,7 +18,6 @@ import threading
 
 import dacite
 
-import ccc.delivery
 import ccc.oci
 import ci.util
 import ctt.replicate
@@ -630,6 +629,7 @@ def process_images(
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool]=None,
     oci_client: oci.client.Client=None,
+    delivery_service_client: delivery.client.DeliveryServiceClient | None=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
     tgt_ocm_repo_path: str=None,
@@ -657,8 +657,6 @@ def process_images(
 
     if not oci_client:
         oci_client = ccc.oci.oci_client()
-
-    delivery_service_client = ccc.delivery.default_client_if_available()
 
     reftype_filter = None
     if remove_label and remove_label(ocm.gardener.ExtraComponentReferencesLabel.name):
