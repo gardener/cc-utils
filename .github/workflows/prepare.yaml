@@ -45,6 +45,12 @@ on:
           creation of "version-commit" (in case of release-mode, this commit will be used as
           release-commit).
           passed to `gardener/cc-utils/.github/actions/version` as `callback-action-path` input.
+      versionfile:
+        type: string
+        required: false
+      base-component-file:
+        default: .ocm/base-component.yaml
+        type: string
 
     outputs:
       ocm-repository:
@@ -147,10 +153,11 @@ jobs:
           commit-message: ${{ steps.pre.outputs.commit-message }}
           commit-objects-artefact: release-commit-objects
           callback-action-path: ${{ inputs.version-commit-callback-action-path }}
+          versionfile: ${{ inputs.versionfile }}
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
         id: component-descriptor
         with:
-          base-component: .ocm/base-component.yaml
+          base-component: ${{ inputs.base-component-file }}
           version: ${{ steps.version.outputs.version }}
           ocm-repository: ${{ needs.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
