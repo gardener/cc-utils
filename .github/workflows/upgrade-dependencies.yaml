@@ -19,6 +19,23 @@ on:
           An optional, comma-separated list of OCM-Repositories that should be used for looking-up
           OCM-Component-Versions. If not passed, the releases-repository from `prepare.yaml`
           workflow will be used.
+      merge-policy:
+        required: false
+        default: manual
+        type: string
+        description: |
+          Controls what should happen to newly created upgrade-pullrequests. Allowed values are:
+            - automerge
+            - manual
+      merge-method:
+        required: false
+        default: merge
+        type: string
+        description: |
+          Sets the merge-method (only used if merge-policy is set to automerge). Allowed values are:
+            - rebase
+            - merge
+            - squash
       prepare-action-path:
         required: false
         type: string
@@ -55,4 +72,6 @@ jobs:
             ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-releases-repository }}
           github-token: |
             ${{ steps.app-token.outputs.token }}
+          merge-policy: ${{ inputs.merge-policy }}
+          merge-method: ${{ inputs.merge-method }}
           prepare-action-path: ${{ inputs.prepare-action-path }}
