@@ -8,8 +8,8 @@ import hashlib
 import json
 import logging
 
-import ccc.oci
 import oci
+import oci.client
 import oci.model as om
 import ocm
 import ocm.oci
@@ -22,6 +22,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     src_version: str,
     patched_component_descriptor: ocm.ComponentDescriptor,
     src_ocm_repo: ocm.OciOcmRepository,
+    oci_client: oci.client.Client,
 ):
     if isinstance(src_ocm_repo, str):
         src_ocm_repo = ocm.OciOcmRepository(baseUrl=src_ocm_repo)
@@ -29,13 +30,11 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     if not isinstance(src_ocm_repo, ocm.OciOcmRepository):
         raise NotImplementedError(src_ocm_repo)
 
-    client = ccc.oci.oci_client()
-
     component = patched_component_descriptor.component
     target_repository = component.current_ocm_repo
     target_ref = target_repository.component_version_oci_ref(component)
 
-    if client.head_manifest(image_reference=target_ref, absent_ok=True):
+    if oci_client.head_manifest(image_reference=target_ref, absent_ok=True):
         # do not overwrite existing component-descriptors
         return
 
@@ -44,7 +43,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         version=src_version,
     )
 
-    src_manifest = client.manifest(
+    src_manifest = oci_client.manifest(
         image_reference=src_ref,
     )
 
@@ -60,7 +59,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     raw_fobj.seek(0)
 
     # src component descriptor OciBlobRef for patching
-    src_config_dict = json.loads(client.blob(src_ref, src_manifest.config.digest).content)
+    src_config_dict = json.loads(oci_client.blob(src_ref, src_manifest.config.digest).content)
     src_component_descriptor_oci_blob_ref = om.OciBlobRef(
         **src_config_dict['componentDescriptorLayer'],
     )
@@ -80,7 +79,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         src_ref=src_ref,
         src_oci_manifest=src_manifest,
         tgt_ref=target_ref,
-        oci_client=client,
+        oci_client=oci_client,
         blob_overwrites={
             src_component_descriptor_oci_blob_ref: raw_fobj,
             src_manifest.config: cfg_raw,
@@ -90,7 +89,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     target_manifest_dict = dataclasses.asdict(target_manifest)
     target_manifest_bytes = json.dumps(target_manifest_dict).encode('utf-8')
 
-    client.put_manifest(
+    oci_client.put_manifest(
         image_reference=target_ref,
         manifest=target_manifest_bytes,
     )
