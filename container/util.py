@@ -26,11 +26,6 @@ import tarutil
 logger = logging.getLogger(__name__)
 
 
-def image_exists(image_reference: str):
-    oci_client = ccc.oci.oci_client()
-    return bool(oci_client.head_manifest(image_reference=image_reference, absent_ok=True))
-
-
 def filter_image(
     source_ref: typing.Union[str, om.OciImageReference],
     target_ref: typing.Union[str, om.OciImageReference],
