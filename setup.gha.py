@@ -114,7 +114,6 @@ def packages():
         'ccc',
         'concourse',
         'container',
-        'ctt',
         'delivery',
         'mail',
         'model',
