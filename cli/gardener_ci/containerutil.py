@@ -8,10 +8,13 @@ def filter_image(
     target_ref:str,
     remove_files:[str]=[],
 ):
+    oci_client = ccc.oci.oci_client()
+
     container.util.filter_image(
         source_ref=source_ref,
         target_ref=target_ref,
         remove_files=remove_files,
+        oci_client=oci_client,
         mode=oci.ReplicationMode.PREFER_MULTIARCH,
     )
 

@@ -14,7 +14,6 @@ import zlib
 
 import requests
 
-import ccc.oci
 import gziputil
 import oci
 import oci.client as oc
@@ -29,15 +28,12 @@ logger = logging.getLogger(__name__)
 def filter_image(
     source_ref: typing.Union[str, om.OciImageReference],
     target_ref: typing.Union[str, om.OciImageReference],
+    oci_client: oc.Client,
     remove_files: typing.Sequence[str]=(),
-    oci_client: oc.Client=None,
     mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
     platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
     oci_manifest_annotations: dict[str, str]=None,
 ) -> typing.Tuple[requests.Response, str, bytes]: # response, tgt-ref, manifest_bytes
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
-
     source_ref = om.OciImageReference.to_image_ref(source_ref)
     target_ref = om.OciImageReference.to_image_ref(target_ref)
 
