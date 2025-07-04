@@ -18,7 +18,6 @@ import threading
 
 import dacite
 
-import ccc.oci
 import ci.util
 import ctt.replicate
 import cnudie.iter
@@ -354,15 +353,12 @@ upload_image_lock = threading.Lock()
 # uploads a single OCI artifact and returns the content digest
 def process_upload_request(
     replication_resource_element: ctt.model.ReplicationResourceElement,
+    oci_client: oci.client.Client,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
-    oci_client: oci.client.Client | None=None,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
 ) -> str:
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
-
     src_ref = replication_resource_element.src_ref
     tgt_ref = replication_resource_element.tgt_ref
 
@@ -622,13 +618,13 @@ def process_images(
     processing_cfg_path: str,
     root_component_descriptor: ocm.ComponentDescriptor,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    oci_client: oci.client.Client,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     skip_cd_validation: bool=False,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool]=None,
-    oci_client: oci.client.Client=None,
     delivery_service_client: delivery.client.DeliveryServiceClient | None=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
@@ -654,9 +650,6 @@ def process_images(
 
     if not tgt_ocm_repo_path:
         raise ValueError(tgt_ocm_repo_path)
-
-    if not oci_client:
-        oci_client = ccc.oci.oci_client()
 
     reftype_filter = None
     if remove_label and remove_label(ocm.gardener.ExtraComponentReferencesLabel.name):
@@ -742,9 +735,9 @@ def process_replication_plan_step(
     ) -> ctt.model.ReplicationResourceElement:
         oci_manifest_digest = process_upload_request(
             replication_resource_element=replication_resource_element,
+            oci_client=oci_client,
             replication_mode=replication_mode,
             platform_filter=platform_filter,
-            oci_client=oci_client,
             inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
             processing_mode=processing_mode,
         )
@@ -904,6 +897,7 @@ def process_replication_plan_step(
             src_version=component.version,
             patched_component_descriptor=replication_plan_component.target,
             src_ocm_repo=orig_ocm_repo,
+            oci_client=oci_client,
         )
 
     if processing_mode is ProcessingMode.DRY_RUN:
