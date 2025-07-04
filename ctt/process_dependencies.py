@@ -659,7 +659,7 @@ def process_images(
         reftype_filter = filter_extra_component_refs
 
     if processing_mode is ProcessingMode.DRY_RUN:
-        ci.util.warning('dry-run: not downloading or uploading any images')
+        logger.warning('dry-run: not downloading or uploading any images')
 
     # all component descriptors are replicated to all target registries, but OCI artefacts are
     # only replicated to the respectively configured targets
