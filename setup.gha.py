@@ -113,7 +113,6 @@ def packages():
     omit_packages = (
         'ccc',
         'concourse',
-        'container',
         'delivery',
         'mail',
         'model',
