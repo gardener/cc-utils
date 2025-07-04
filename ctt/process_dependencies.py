@@ -23,7 +23,6 @@ import ctt.replicate
 import cnudie.iter
 import cnudie.retrieve
 import container.util
-import delivery.client
 import ocm
 import ocm.gardener
 import oci
@@ -53,7 +52,7 @@ class ProcessingMode(enum.Enum):
 def create_component_descriptor_lookup_for_ocm_repo(
     ocm_repo_url: str,
     oci_client: oci.client.Client | None=None,
-    delivery_service_client: delivery.client.DeliveryServiceClient | None=None,
+    delivery_service_client: 'delivery.client.DeliveryServiceClient' | None=None,
 ) -> cnudie.retrieve.ComponentDescriptorLookupById:
     return cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo_url),
@@ -625,7 +624,7 @@ def process_images(
     skip_cd_validation: bool=False,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool]=None,
-    delivery_service_client: delivery.client.DeliveryServiceClient | None=None,
+    delivery_service_client: 'delivery.client.DeliveryServiceClient' | None=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
     tgt_ocm_repo_path: str=None,
