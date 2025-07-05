@@ -96,6 +96,12 @@ inputs:
       an auth-token to use for pushing release- and bump-commits. Must grant the privilege to
       bypass branch-protection-rules, if present.
     required: false
+  release-on-github:
+    default: true
+    type: boolean
+    description: |
+      If set to `true`, the action will create a new GitHub release (or convert an existing draft
+      release to an actual release).
 
 defaults:
   run:
@@ -288,6 +294,7 @@ runs:
         fi
 
     - name: create github-release
+      if: ${{ inputs.release-on-github }}
       shell: python
       run: |
         import os

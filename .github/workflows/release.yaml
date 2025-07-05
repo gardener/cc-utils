@@ -89,6 +89,12 @@ on:
           The auth-token to use to authenticate against slack. Only needed if `slack-channel-id` is
           passed. For convenience, defaults to `secrets.SLACK_APP_TOKEN_GARDENER_CICD` (calling
           workflows must set `secrets: inherit` for this to work.
+      release-on-github:
+        default: true
+        type: boolean
+        description: |
+          If set to `true`, the workflow will create a new GitHub release (or convert an existing
+          draft release to an actual release).
 
     outputs:
       release-notes:
@@ -140,6 +146,7 @@ jobs:
           release-notes: ${{ steps.release-notes.outputs.release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
+          release-on-github: ${{ inputs.release-on-github }}
 
       - name: write-release-notes-to-file
         if: ${{ inputs.slack-channel-id != '' }}
