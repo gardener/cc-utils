@@ -102,6 +102,13 @@ inputs:
     description: |
       If set to `true`, the action will create a new GitHub release (or convert an existing draft
       release to an actual release).
+  github-tag-template:
+    default: '${version}'
+    type: string
+    description: |
+      GitHub tag template to use for the created release tag. Currently only supported template-var:
+      ${version} (bash-syntax): Version read from local component descriptor (i.e. previous version
+      operations are honoured).
 
 defaults:
   run:
@@ -131,7 +138,7 @@ runs:
         echo "${{ inputs.component-descriptor }}" > /tmp/component-descriptor.yaml
         version=$(yq .component.version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
-        tag_name="${version}"
+        tag_name="${{ inputs.github-tag-template }}"
         tag_ref="refs/tags/${tag_name}"
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
