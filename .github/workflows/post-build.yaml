@@ -111,7 +111,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: prepare-workflow-values
-          path: prepare-workflow-values.tar
       - name: prepare-prepare-workflow-values
         id: prep
         run: |
