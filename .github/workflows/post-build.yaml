@@ -86,7 +86,7 @@ jobs:
   repo-metadata:
     runs-on: ubuntu-latest
     outputs:
-      is-fork: ${{ steps.repo-metadata.outputs.is-fork }}
+      fork: ${{ steps.repo-metadata.outputs.fork }}
     steps:
       - id: repo-metadata
         uses: gardener/cc-utils/.github/actions/repo-metadata@master
@@ -100,7 +100,7 @@ jobs:
       - repo-metadata
     # only run for default-branch, and never run for forks
     if: ${{ github.ref_name == github.event.repository.default_branch &&
-            ! fromJSON(needs.repo-metadata.outputs.is-fork)
+            ! fromJSON(needs.repo-metadata.outputs.fork)
         }}
     runs-on: ubuntu-latest
     permissions:
