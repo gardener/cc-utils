@@ -61,10 +61,6 @@ runs:
         echo 'Component-Descriptor:'
         cat component-descriptor.yaml
 
-        # todo: remove after next release of gardener-gha-libs (2025-01-16)
-        git config --global user.name 'Gardener GitHubActions-Bot'
-        git config --global user.email 'no-reply@github.com'
-
         auth_token="${{ inputs.github-token }}"
 
         if [ -z "${auth_token:-}" ]; then

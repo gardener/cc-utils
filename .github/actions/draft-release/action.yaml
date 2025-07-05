@@ -41,9 +41,6 @@ runs:
           auth_token="${GITHUB_TOKEN}"
         fi
 
-        # XXX remove again after next release of cc-utils -> PYPI
-        export PYTHONPATH="$PWD:${PYTHONPATH:-}"
-
         echo 'Updating / creating draft-release'
         "${GITHUB_ACTION_PATH}/update_draft_release.py" \
           --release-notes release-notes.md \
