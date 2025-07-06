@@ -16,10 +16,22 @@ description: |
     - MEMBER
     - OWNER
 
+inputs:
+  fetch-depth:
+    type: number
+    default: 1
+    required: false
+    description: |
+      passed to `actions/checkout`'s as `fetch-depth` input.
+
+      useful for cases where longer history is required.
+
 runs:
   using: composite
   steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
     - name: checkout-pullrequest
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc
