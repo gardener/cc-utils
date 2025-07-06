@@ -52,6 +52,12 @@ on:
         default: .ocm/base-component.yaml
         type: string
 
+      checkout-fetch-depth:
+        default: 1
+        type: number
+        description: |
+          passed to checkout. Useful longer history is required.
+
     outputs:
       ocm-repository:
         description: the ocm-repository to use for publishing to for the selected mode.
@@ -129,6 +135,8 @@ jobs:
       component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          fetch-depth: ${{ inputs.checkout-fetch-depth }}
       - name: preprocess-params
         id: pre
         run: |
