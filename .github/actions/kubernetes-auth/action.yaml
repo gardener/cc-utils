@@ -1,0 +1,105 @@
+name: Authenticate against k8s-API using OIDC
+description: |
+  An opinionated action for authenticating against Gardener-managed k8s-clusters using OIDC from
+  GitHub-Action-Runs.
+
+  For authentication to succeed, trust needs to be established from target-cluster against
+  GitHub-Actions (including owner (aka org) and repository).
+
+inputs:
+  server:
+    description: |
+      the endpoint serving the k8s-endpoint against which to authenticate
+    type: string
+    default: https://api.tm-os-opensource.core.shoot.canary.k8s-hana.ondemand.com
+  server-ca:
+    type: string
+    description: |
+      the base64-encoded certificate-bundle for the server-endpoint.
+  audience:
+    type: string
+    default: gardener
+    description: |
+      the audience to request during OIDC-flow
+  oidc-user:
+    type: string
+    default: gha
+  kubeconfig-path:
+    type: string
+    default: kubeconfig.yaml
+    description: |
+      the path resulting kubeconfig should be generated to. If the empty string is passed,
+      no kubeconfig will be written.
+
+outputs:
+  kubeconfig:
+    description: |
+      the authenticated kubeconfig.
+    value: ${{ steps.auth.outputs.kubeconfig }}
+
+runs:
+  using: composite
+  steps:
+    - name: auth
+      id: auth
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        gh_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
+        token_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
+
+        if [ -z "${gh_token}" -o -z ${token_url} ]; then
+          echo 'Error: ACTIONS_ID_TOKEN_REQUEST_TOKEN and/or ACTIONS_ID_TOKEN_REQUEST_URL'
+          echo '       were not passed'
+          echo
+          echo 'that typically means this workflow was not run with `id-token: write`-permission'
+          exit 1
+        fi
+
+        token_url="${token_url}&audience=${{ inputs.audience }}"
+
+        auth_token=$(
+          curl -sLS \
+            -H "Authorization: Bearer ${gh_token}" \
+            "${token_url}" \
+          | jq .value
+        )
+
+        if [ -z "${auth_token}" ]; then
+          echo 'failed to retrieve an auth-token'
+          exit 1
+        else
+          echo 'successfully retrieved an auth-token'
+        fi
+
+        cat <<EOF > kubeconfig.yaml
+        apiVersion: v1
+        clusters:
+          - name: cluster
+            cluster:
+              server: ${{ inputs.server }}
+              certificate-authority-data: ${{ inputs.server-ca }}
+        contexts:
+          - name: gha
+            context:
+              cluster: cluster
+              user: ${{ inputs.oidc-user }}
+        current-context: gha
+        kind: Config
+        preferences: {}
+        users:
+          - name: ${{ inputs.oidc-user }}
+            user:
+              token: ${auth_token}
+        EOF
+
+        echo 'kubeconfig<<EOF' >> ${GITHUB_OUTPUT}
+        cat kubeconfig.yaml >> ${GITHUB_OUTPUT}
+        echo EOF >> ${GITHUB_OUTPUT}
+
+        if [ -z '${{ inputs.kubeconfig-path }}' ]; then
+          unlink kubeconfig.yaml
+        elif [ '${{ inputs.kubeconfig-path }}' != 'kubeconfig.yaml' ]; then
+          mv kubeconfig.yaml '${{ inputs.kubeconfig-path }}'
+        fi
