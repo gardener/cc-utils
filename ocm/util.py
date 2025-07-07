@@ -1,3 +1,5 @@
+import urllib.parse
+
 import ocm
 
 
@@ -73,3 +75,26 @@ def artifact_url(
 
     else:
         raise ValueError(access)
+
+
+def to_absolute_oci_access(
+    access: ocm.OciAccess | ocm.RelativeOciAccess,
+    ocm_repo: ocm.OciOcmRepository | None=None,
+) -> ocm.OciAccess:
+    if access.type is ocm.AccessType.OCI_REGISTRY:
+        pass
+
+    elif access.type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
+        if not '://' in ocm_repo.baseUrl:
+            base_url = urllib.parse.urlparse(f'x://{ocm_repo.baseUrl}').netloc
+        else:
+            base_url = urllib.parse.urlparse(ocm_repo.baseUrl).netloc
+
+        access = ocm.OciAccess(
+            imageReference=f'{base_url.rstrip('/')}/{access.reference.lstrip('/')}',
+        )
+
+    else:
+        raise ValueError(f'Unsupported access type: {access.type}')
+
+    return access
