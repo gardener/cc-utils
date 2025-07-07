@@ -124,13 +124,7 @@ def main():
 
     git_helper = gitutil.GitHelper(
         repo=parsed.repo_worktree,
-        git_cfg=gitutil.GitCfg(
-            repo_url=f'https://{host}/{org}/{repo}',
-            user_name='Gardener-CICD-GitHubAction-Bot',
-            user_email='no-reply@github.com',
-            auth=None,
-            auth_type=gitutil.AuthType.PRESET,
-        ),
+        git_cfg=gitutil.GitCfg(repo_url=f'https://{host}/{org}/{repo}'),
     )
 
     # pass current head as ref-commit. This avoids release-tag to exist in remote while

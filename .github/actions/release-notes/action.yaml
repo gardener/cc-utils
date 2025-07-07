@@ -46,6 +46,7 @@ runs:
         if which git &>/dev/null; then exit 0; fi
         apt-get install -y git
       shell: sh
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - name: checkout
       uses: actions/checkout@v4
       with:
