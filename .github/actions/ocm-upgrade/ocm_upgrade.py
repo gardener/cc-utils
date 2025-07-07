@@ -197,13 +197,7 @@ def create_upgrade_pullrequest(
     logger.info(f'found {upgrade_vector=}')
     git_helper = gitutil.GitHelper(
         repo=repo_dir,
-        git_cfg=gitutil.GitCfg(
-            repo_url=repo_url,
-            user_name='Gardener-CICD-GitHubAction-Bot',
-            user_email='no-reply@github.com',
-            auth=None,
-            auth_type=gitutil.AuthType.PRESET,
-        ),
+        git_cfg=gitutil.GitCfg(repo_url=repo_url),
     )
     from_component_descriptor = component_descriptor_lookup(
         upgrade_vector.whence,
