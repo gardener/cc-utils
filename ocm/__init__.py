@@ -739,6 +739,8 @@ if _have_yaml:
                 # yaml dumper won't know how to parse objects of type `AccessDict`
                 # (altough it is just a wrapped dict) -> so convert it to a "real" dict
                 data = dict(data)
+            if dataclasses.is_dataclass(data):
+                data = dataclasses.asdict(data)
             if isinstance(data, enum.Enum):
                 return self.represent_data(data.value)
             return super().represent_data(data)
@@ -750,6 +752,8 @@ class EnumJSONEncoder(json.JSONEncoder):
             # yaml dumper won't know how to parse objects of type `AccessDict`
             # (altough it is just a wrapped dict) -> so convert it to a "real" dict
             o = dict(o)
+        if dataclasses.is_dataclass(o):
+            o = dataclasses.asdict(o)
         if isinstance(o, enum.Enum):
             return o.value
         elif isinstance(o, datetime.datetime):
