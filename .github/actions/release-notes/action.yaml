@@ -46,12 +46,12 @@ runs:
         if which git &>/dev/null; then exit 0; fi
         apt-get install -y git
       shell: sh
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - name: checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0 # release-notes code needs full commit-history and tags
         fetch-tags: 0
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - name: Retrieve Release-Notes
       id: release-notes
       shell: bash
