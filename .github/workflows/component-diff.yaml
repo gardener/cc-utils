@@ -1,0 +1,65 @@
+name: Component-Diff
+description: |
+  An opinionated workflow to determine the component-diff between the current version (read from
+  base-component-descriptor) and the greatest published release-version. Because the component-
+  descriptor and OCM releases repository is read from it, the `prepare.yaml` workflow must be
+  executed beforehand.
+
+on:
+  workflow_call:
+    inputs:
+      ocm-repositories:
+        required: false
+        type: string
+        description: |
+          A comma-separated list of OCM-Repository-URLs to use for looking up
+          OCM-Component-Descriptors. If not passed, the value will be read from the
+          `prepare-workflow-values` artefact, which is by default emitted by the
+          `prepare.yaml` workflow (which must have been run prior to calling this workflow for
+          this to succeed).
+    outputs:
+      has-diff:
+        description: |
+          Indicates whether (at least) one of the component dependency versions has changed.
+        value: ${{ jobs.component-diff.outputs.has-diff }}
+      component-diff:
+        description: |
+          The determined component diff between the current and the greatest version, structured
+          according to `cnudie.util.ComponentDiff`.
+        value: ${{ jobs.component-diff.outputs.component-diff }}
+
+jobs:
+  component-diff:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      has-diff: ${{ steps.component-diff.outputs.has-diff }}
+      component-diff: ${{ steps.component-diff.outputs.component-diff }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: collect-component-descriptor
+        id: component-descriptor
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        with:
+          component-descriptor-artefact: base-component-descriptor
+      - name: fetch-prepare-values
+        if: ${{ inputs.ocm-repositories == '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: prepare-workflow-values
+      - name: prepare-prepare-workflow-values
+        id: prepare
+        run: |
+          if [ -f prepare-workflow-values.tar ]; then
+            tar xf prepare-workflow-values.tar prepare-values.d/ocm-releases-repository
+            ocm_repositories="$(cat prepare-values.d/ocm-releases-repository)"
+            rm -rf prepare-values.d prepare-workflow-values.tar
+          else
+            ocm_repositories="${{ inputs.ocm-repositories }}"
+          fi
+          echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
+      - uses: ./.github/actions/component-diff
+        id: component-diff
+        with:
+          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+          ocm-repositories: ${{ steps.prepare.outputs.ocm-repositories }}
