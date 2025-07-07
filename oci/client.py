@@ -241,6 +241,21 @@ def no_credentials_lookup(*args, **kwargs) -> None:
     return None
 
 
+def client_with_dockerauth() -> 'Client':
+    '''
+    convenience function creating an oci.client.Client which will use default docker-cfg
+    to lookup credentials. If no such cfg is available, the returned client will use
+    anonymous authentication.
+
+    Use `Client`-initialiser if more control over client-creation is needed.
+    '''
+    return Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            absent_ok=True,
+        ),
+    )
+
+
 class Client:
     def __init__(
         self,
