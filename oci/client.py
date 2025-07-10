@@ -10,13 +10,12 @@ import logging
 import tempfile
 import threading
 import time
+import urllib.parse
 
 import dacite
 import dateutil.parser
 import requests
 import requests.auth
-import urllib
-import urllib.parse
 import www_authenticate
 
 import oci.auth as oa
@@ -250,7 +249,7 @@ def client_with_dockerauth() -> 'Client':
     Use `Client`-initialiser if more control over client-creation is needed.
     '''
     return Client(
-        credentials_lookup=oci.auth.docker_credentials_lookup(
+        credentials_lookup=oa.docker_credentials_lookup(
             absent_ok=True,
         ),
     )
