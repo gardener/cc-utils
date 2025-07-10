@@ -1,4 +1,5 @@
 import base64
+import collections
 import collections.abc
 import dataclasses
 import datetime
@@ -96,44 +97,39 @@ class OauthToken:
 
 class OauthTokenCache:
     def __init__(self):
-        self.tokens = {} # {scope: token}
+        self.tokens = collections.defaultdict(dict) # {netloc: {scope: token}}
         self.auth_methods = {} # {netloc: method}
         self._token_access_lock = threading.Lock()
 
-    def token(self, scope: str):
+    def token(self, image_reference: str, scope: str):
+        netloc = om.OciImageReference(image_reference).netloc
+
         with self._token_access_lock:
             # purge expired tokens
-            self.tokens = {s:t for s,t in self.tokens.items() if t.valid()}
+            self.tokens[netloc] = {s:t for s,t in self.tokens.get(netloc, {}).items() if t.valid()}
 
-            return self.tokens.get(scope)
+            return self.tokens.get(netloc, {}).get(scope)
 
-    def set_token(self, token: OauthToken):
+    def set_token(self, image_reference: str, token: OauthToken):
         if not token.valid():
             raise ValueError(f'token expired: {token=}')
         # TODO: we might compare remaining validity, and only replace existing tokens
         # if the new one has a later expiry date
 
+        netloc = om.OciImageReference(image_reference).netloc
+
         with self._token_access_lock:
-            self.tokens[token.scope] = token
+            self.tokens[netloc][token.scope] = token
 
     def set_auth_method(self, image_reference: str, auth_method: AuthMethod):
-        netloc = parse_image_reference(image_reference=image_reference).netloc
+        netloc = om.OciImageReference(image_reference).netloc
+
         self.auth_methods[netloc] = auth_method
 
     def auth_method(self, image_reference: str) -> AuthMethod | None:
-        image_reference = om.OciImageReference.to_image_ref(image_reference)
+        netloc = om.OciImageReference(image_reference).netloc
 
-        netloc = image_reference.netloc
         return self.auth_methods.get(netloc)
-
-
-def parse_image_reference(image_reference: str):
-    image_reference = oci.util.normalise_image_reference(image_reference)
-    if not image_reference.startswith('https://'):
-        image_reference = 'https://' + image_reference
-
-    parsed_url = urllib.parse.urlparse(image_reference)
-    return parsed_url
 
 
 def base_api_url(
@@ -307,7 +303,13 @@ class Client:
         cached_auth_method = self.token_cache.auth_method(image_reference=image_reference)
         if cached_auth_method is AuthMethod.BASIC:
             return # basic-auth does not require any additional preliminary steps
-        if cached_auth_method is AuthMethod.BEARER and self.token_cache.token(scope=scope):
+        if (
+            cached_auth_method is AuthMethod.BEARER
+            and self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            )
+        ):
             return # no re-auth required, yet
 
         if 'push' in scope:
@@ -400,7 +402,10 @@ class Client:
             data_class=OauthToken,
         )
 
-        self.token_cache.set_token(token)
+        self.token_cache.set_token(
+            image_reference=image_reference,
+            token=token,
+        )
 
     def _request(
         self,
@@ -462,8 +467,12 @@ class Client:
             else:
                 logger.debug(f'did not find any matching credentials for {image_reference=}')
         else:
+            token = self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            ).token
             headers = {
-              'Authorization': f'Bearer {self.token_cache.token(scope=scope).token}',
+              'Authorization': f'Bearer {token}',
               **headers,
             }
 
