@@ -41,6 +41,7 @@ class OciTagType(enum.Enum):
 
 
 class OciRegistryType(enum.Enum):
+    AWS = 'aws'
     GAR = 'gar'
     GCR = 'gcr'
     DOCKERHUB = 'dockerhub'
@@ -65,6 +66,8 @@ class OciRegistryType(enum.Enum):
             return OciRegistryType.GHCR
         if 'cr.aliyuncs.com' in netloc:
             return OciRegistryType.ALIYUN
+        if 'amazonaws.com' in netloc:
+            return OciRegistryType.AWS
 
         return OciRegistryType.UNKNOWN
 
@@ -227,6 +230,11 @@ class OciImageReference:
         if not '://' in (img_ref := str(self)) and not img_ref.startswith('/'):
             return urllib.parse.urlparse(f'https://{img_ref}')
         return urllib.parse.urlparse(img_ref)
+
+    @property
+    @functools.cache
+    def registry_type(self) -> OciRegistryType:
+        return OciRegistryType.from_image_ref(self)
 
     def with_tag(self, tag: str) -> 'OciImageReference':
         if 'sha256' in tag and not '@' in tag:
