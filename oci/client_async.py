@@ -78,7 +78,10 @@ class Client:
             return # basic-auth does not require any additional preliminary steps
         if (
             cached_auth_method is oci.client.AuthMethod.BEARER
-            and self.token_cache.token(scope=scope)
+            and self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            )
         ):
             return # no re-auth required, yet
 
@@ -172,7 +175,10 @@ class Client:
             data_class=oci.client.OauthToken,
         )
 
-        self.token_cache.set_token(token)
+        self.token_cache.set_token(
+            image_reference=image_reference,
+            token=token,
+        )
 
     async def _request(
         self,
@@ -237,8 +243,12 @@ class Client:
             else:
                 logger.debug(f'did not find any matching credentials for {image_reference=}')
         else:
+            token = self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            ).token
             headers = {
-              'Authorization': f'Bearer {self.token_cache.token(scope=scope).token}',
+              'Authorization': f'Bearer {token}',
               **headers,
             }
 
