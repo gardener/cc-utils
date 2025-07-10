@@ -1041,7 +1041,6 @@ class Client:
                 with data:
                   return self._put_blob_chunked(
                       image_reference=image_reference,
-                      digest=digest,
                       octets_count=octets_count,
                       data_iterator=data.iter_content(chunk_size=max_chunk),
                       chunk_size=max_chunk,
@@ -1053,7 +1052,6 @@ class Client:
     def _put_blob_chunked(
         self,
         image_reference: str | om.OciImageReference,
-        digest: str,
         octets_count: int,
         data_iterator: collections.abc.Iterator[bytes],
         chunk_size: int=1024 * 1024 * 16, # 16 MiB
