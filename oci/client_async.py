@@ -27,7 +27,7 @@ oci_request_logger.setLevel(logging.DEBUG)
 class Client:
     def __init__(
         self,
-        credentials_lookup: collections.abc.Callable,
+        credentials_lookup: collections.abc.Callable=oci.client.no_credentials_lookup,
         routes: oci.client.OciRoutes=oci.client.OciRoutes(),
         disable_tls_validation: bool=False,
         timeout_seconds: int=None,
@@ -36,15 +36,16 @@ class Client:
         tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
     ):
         '''
-        @param credentials_lookup <Callable>
-        @param routes <OciRoutes>
-        @param disable_tls_validation <bool>
-        @param timeout_seconds <int>
-        @param session <ClientSession>
-        @param tag_preprocessing_callback <Callable>
+        :param Callable credentials_lookup:
+            defaults to no credentials, leading to anonymous-auth attempt
+        :param OciRoutes routes:
+        :param bool disable_tls_validation:
+        :param int timeout_seconds:
+        :param ClientSession session:
+        :param Callable tag_preprocessing_callback:
             callback which is instrumented _prior_ to interacting with the OCI registry, i.e. useful
             in case the tag has to be sanitised so it is accepted by the OCI registry
-        @param tag_postprocessing_callback <Callable>
+        :param Callable tag_postprocessing_callback:
             callback which is instrumented _after_ interacting with the OCI registry, i.e. useful to
             revert required sanitisation of `tag_preprocessing_callback`
         '''
