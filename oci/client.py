@@ -267,16 +267,16 @@ class Client:
         tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
     ):
         '''
-        @param credentials_lookup <Callable>
+        :param Callable credentials_lookup:
             defaults to no credentials, leading to anonymous-auth attempt
-        @param routes <OciRoutes>
-        @param disable_tls_validation <bool>
-        @param timeout_seconds <int>
-        @param session <Session>
-        @param tag_preprocessing_callback <Callable>
+        :param OciRoutes routes:
+        :param bool disable_tls_validation:
+        :param int timeout_seconds:
+        :param Session session:
+        :param Callable tag_preprocessing_callback:
             callback which is instrumented _prior_ to interacting with the OCI registry, i.e. useful
             in case the tag has to be sanitised so it is accepted by the OCI registry
-        @param tag_postprocessing_callback <Callable>
+        :param Callable tag_postprocessing_callback:
             callback which is instrumented _after_ interacting with the OCI registry, i.e. useful to
             revert required sanitisation of `tag_preprocessing_callback`
         '''
