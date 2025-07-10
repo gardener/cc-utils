@@ -6,6 +6,7 @@ import requests
 
 import oci.auth as oa
 import oci.client as oc
+import oci.model
 import model.container_registry
 
 
@@ -34,6 +35,14 @@ def oci_cfg_lookup(
                 f'No credentials found for {image_reference} with {privileges=}'
             )
         creds = registry_cfg.credentials()
+
+        if registry_cfg.registry_type() is oci.model.OciRegistryType.AWS:
+            # XXX enhance `container_registry` model to be more flexible
+            return oa.OciAccessKeyCredentials(
+                access_key_id=creds.username(),
+                secret_access_key=creds.passwd(),
+            )
+
         return oa.OciBasicAuthCredentials(
             username=creds.username(),
             password=creds.passwd(),

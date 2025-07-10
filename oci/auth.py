@@ -98,6 +98,12 @@ class OciBasicAuthCredentials(OciCredentials):
     password: str
 
 
+@dataclasses.dataclass(frozen=True)
+class OciAccessKeyCredentials(OciCredentials):
+    access_key_id: str
+    secret_access_key: str
+
+
 # typehint-alias
 image_reference = str
 credentials_lookup = collections.abc.Callable[[image_reference, Privileges, bool], OciCredentials]

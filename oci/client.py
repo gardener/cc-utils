@@ -20,6 +20,7 @@ import requests.auth
 import www_authenticate
 
 import oci.auth as oa
+import oci.aws
 import oci.model as om
 import oci.util
 
@@ -46,6 +47,7 @@ def _append_b64_padding_if_missing(b64_str: str):
 
 
 class AuthMethod(enum.Enum):
+    AWS_BASIC = 'aws_basic'
     BEARER = 'bearer'
     BASIC = 'basic'
 
@@ -227,6 +229,46 @@ def _scope(image_reference: str | om.OciImageReference, action: str):
     return scope
 
 
+def initialise_repository_if_required(func):
+    '''
+    Some OCI registries require separate repositories for each OCI artefact (e.g. AWS ECR), which
+    have to be initialised prior to uploading any artefacts. This wrapper will handle HTTP 404 errors
+    (which are raised if the repository does not exist) by trying to create the repository and
+    afterwards re-uploading the artefacts.
+    '''
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code != 404:
+                raise
+
+            if not (image_reference := kwargs.get('image_reference')):
+                raise
+
+            image_reference = om.OciImageReference(image_reference)
+            oci_client = args[0]
+
+            if image_reference.registry_type is om.OciRegistryType.AWS:
+                credentials = oci_client.credentials_lookup(
+                    image_reference=image_reference,
+                    privileges=oa.Privileges.ADMIN,
+                    absent_ok=False,
+                )
+
+                oci.aws.create_repository(
+                    image_reference=image_reference,
+                    credentials=credentials,
+                    session=oci_client.session,
+                )
+
+                return func(*args, **kwargs)
+
+            raise
+
+    return wrapper
+
+
 def no_credentials_lookup(*args, **kwargs) -> None:
     '''
     a lookup that never returns credentials, regardless of passed arguments.
@@ -304,7 +346,7 @@ class Client:
         if cached_auth_method is AuthMethod.BASIC:
             return # basic-auth does not require any additional preliminary steps
         if (
-            cached_auth_method is AuthMethod.BEARER
+            cached_auth_method in (AuthMethod.BEARER, AuthMethod.AWS_BASIC)
             and self.token_cache.token(
                 image_reference=image_reference,
                 scope=scope,
@@ -324,6 +366,30 @@ class Client:
             privileges=privileges,
             absent_ok=True,
         )
+
+        if om.OciImageReference(image_reference).registry_type is om.OciRegistryType.AWS:
+            if not oci_creds:
+                raise ValueError(f'no credentials for {image_reference=}')
+
+            _, password = oci.aws.basic_auth_credentials(
+                image_reference=image_reference,
+                credentials=oci_creds,
+                session=self.session,
+            )
+            token = OauthToken(
+                token=password,
+                scope=scope,
+                expires_in=datetime.timedelta(hours=12).seconds,
+            )
+            self.token_cache.set_token(
+                image_reference=image_reference,
+                token=token,
+            )
+            self.token_cache.set_auth_method(
+                image_reference=image_reference,
+                auth_method=AuthMethod.AWS_BASIC,
+            )
+            return
 
         if not oci_creds:
             logger.debug(f'no credentials for {image_reference=} - attempting anonymous-auth')
@@ -466,6 +532,12 @@ class Client:
                 auth = oci_creds.username, oci_creds.password
             else:
                 logger.debug(f'did not find any matching credentials for {image_reference=}')
+        elif auth_method is AuthMethod.AWS_BASIC:
+            password = self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            ).token
+            auth = 'AWS', password
         else:
             token = self.token_cache.token(
                 image_reference=image_reference,
@@ -795,6 +867,7 @@ class Client:
         )
         return False
 
+    @initialise_repository_if_required
     def put_manifest(
         self,
         image_reference: str | om.OciImageReference,
@@ -825,6 +898,7 @@ class Client:
 
         if not res.ok:
             logger.warning(f'our manifest was rejected (see below for more details): {manifest=}')
+
         res.raise_for_status()
 
         return res
@@ -1058,6 +1132,7 @@ class Client:
             else:
               raise NotImplementedError
 
+    @initialise_repository_if_required
     def _put_blob_chunked(
         self,
         image_reference: str | om.OciImageReference,
@@ -1141,6 +1216,7 @@ class Client:
         )
         return res
 
+    @initialise_repository_if_required
     def _put_blob_single_post(
         self,
         image_reference: str | om.OciImageReference,
