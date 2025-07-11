@@ -1,3 +1,4 @@
+import copy
 import jsonpath_ng
 
 import oci.client
@@ -13,6 +14,7 @@ def localised_helmchart_values(
     resource_version: str | None=None,
     resource_extra_id: dict[str, str] | None=None,
     resource_type: str='helmchart-imagemap',
+    base_values: dict | None=None,
 ) -> dict:
     '''
     Resolves image references from a helmchart-imagemap resource and returns a dictionary
@@ -49,7 +51,7 @@ def localised_helmchart_values(
         cv = f'{component.name}:{component.version}'
         raise ValueError(f'imagemapping of {cv} does not match expected format')
 
-    values = {}
+    values = copy.deepcopy(base_values) if base_values else {}
     for image_mapping in image_mappings:
         # image-mapping is expected to contain the following attributes:
         #
