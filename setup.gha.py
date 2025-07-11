@@ -51,7 +51,6 @@ def requirements():
         'pylint',
         'python-gitlab',
         'pytimeparse',
-        'ruamel.yaml',
         'slack-sdk',
         'sphinx_rtd_theme',
         'sseclient-py',
