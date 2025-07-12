@@ -100,6 +100,8 @@ runs:
 
         if [ -z '${{ inputs.kubeconfig-path }}' ]; then
           unlink kubeconfig.yaml
+          echo 'unlinked `kubeconfig.yaml` (caller did not want it in filesystem)'
         elif [ '${{ inputs.kubeconfig-path }}' != 'kubeconfig.yaml' ]; then
           mv kubeconfig.yaml '${{ inputs.kubeconfig-path }}'
+          echo 'kubeconfig can be found at `${{ inputs.kubeconfig-path }}`'
         fi
