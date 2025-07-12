@@ -1,0 +1,75 @@
+name: Run Testmachinery-Tests
+description: |
+  Runs Integrationtests using TestMachinery
+
+  see: https://github.com/gardener/test-infra
+
+on:
+  workflow_call:
+    inputs:
+      k8s-api-endpoint:
+        required: false
+        type: string
+        default: https://api.tm-os-opensource.core.shoot.canary.k8s-hana.ondemand.com
+        description: |
+          The URL referring to the k8s-apiserver-endpoint in which the testmachinery-instance to use
+          runs. Pipeline-Runs will authenticate against this cluster using OIDC.
+
+          Note that in case of the default-cluster, only a subset of repositories below
+          https://github.com/gardener are authorised. Runs triggered from forked repositories will
+          also fail, unless `on.pull_request_target` is used as trigger-event.
+      k8s-api-ca:
+        required: false
+        type: string
+        default: ${{ vars.TESTMACHINERY_CANARY_CLUSTER_CA }}
+      kubeconfig-path:
+        required: false
+        type: string
+        default: /tmp/kubeconfig.yaml
+        description: |
+          The path to which the generated kubeconfig will be generated (this needs to be passed
+          to `testrunner`).
+      test-command:
+        required: true
+        type: string
+        description: |
+          The command to trigger test-machinery. Will be run within a bash-script without quoting
+          or escaping.
+
+          For convenience, the `testrunner_run`-environment-variable is set to:
+
+          ```
+          testrunner run --tm-kubeconfig-path=<kubeconfig-path>
+          ```
+
+          For example, the following value might be passed:
+
+          ```
+          ${testrunner_run} \
+            --no-execution-group \
+            --testrun-prefix tm-extension-aws
+          ```
+
+jobs:
+  trigger-testmachinery-tests:
+    runs-on: ubuntu-latest-static-ip
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: azure/setup-kubectl@v4
+      - uses: gardener/cc-utils/.github/actions/setup-testrunner@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/kubernetes-auth@master
+        with:
+          server: ${{ inputs.k8s-api-endpoint }}
+          server-ca: ${{ inputs.k8s-api-ca }}
+          kubeconfig-path: ${{ inputs.kubeconfig-path }}
+      - name: trigger-testmachinery-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export testrunner_run='testrunner run --tm-kubeconfig-path=${{ inputs.kubeconfig-path }}'
+
+          ${{ inputs.test-command }}
