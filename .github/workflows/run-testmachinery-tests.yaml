@@ -52,8 +52,8 @@ on:
         required: true
         type: string
         description: |
-          The command to trigger test-machinery. Will be run within a bash-script without quoting
-          or escaping.
+          The command to trigger test-machinery. Will be run within a bash-script (subshell)
+          without quoting or escaping.
 
           For convenience, the `testrunner_run`-environment-variable is set to:
 
@@ -92,4 +92,30 @@ jobs:
 
           export testrunner_run='testrunner run --tm-kubeconfig-path=${{ inputs.kubeconfig-path }}'
 
+          if (
           ${{ inputs.test-command }}
+          ) |& tee /tmp/testrunner-output; then
+            result='success'
+            succeeded=true
+          else
+            result='test-errors'
+            succeeded=false
+          fi
+
+          cat << EOF > ${GITHUB_STEP_SUMMARY}
+          ## Testmachinery-Summary
+
+          *result*: ${result}
+
+          *Command*
+          ${{ inputs.test-command }}
+
+          *Log*
+          $(cat /tmp/testrunner-output)
+          EOF
+
+          if succeeded; then
+            exit 0
+          else
+            exit 1
+          fi
