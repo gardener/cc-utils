@@ -42,12 +42,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - uses: actions/setup-go@v5
         if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
         with:
           go-version: ${{ inputs.go-version != 'greatest' && inputs.go-version || '' }}
           go-version-file: ${{ inputs.go-version-file }}
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: run-linter
         shell: bash
         run: |
