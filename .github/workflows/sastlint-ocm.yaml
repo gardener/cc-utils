@@ -29,6 +29,13 @@ on:
           Otherwise, the passed version will be installed. To disable installation of golang, pass
           the empty string.
 
+      go-version-file:
+        required: false
+        type: string
+        description: |
+          passed to `setup-go`'s equally-named input:
+          https://github.com/actions/setup-go?tab=readme-ov-file#getting-go-version-from-the-gomod-file
+
 jobs:
   run-linter:
     runs-on: ubuntu-latest
@@ -36,9 +43,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/setup-go@v5
-        if: ${{ inputs.go-version != '' }}
+        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
         with:
           go-version: ${{ inputs.go-version != 'greatest' && inputs.go-version || '' }}
+          go-version-file: ${{ inputs.go-version-file }}
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
       - name: run-linter
         shell: bash
