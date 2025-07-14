@@ -57,7 +57,10 @@ runs:
       shell: bash
       run: |
         set -eu
-        echo "${{ inputs.component-descriptor }}" > component-descriptor.yaml
+
+        cat <<EOF > component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
 
         echo 'Component-Descriptor:'
         cat component-descriptor.yaml
