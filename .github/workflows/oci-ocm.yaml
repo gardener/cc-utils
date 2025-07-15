@@ -133,6 +133,14 @@ on:
           will be passed to `export-ocm-fragments` for exporting OCM-Resource-Fragment
         type: string
         required: false
+      commit-objects-artefact:
+        type: string
+        description: |
+          the github-artifact-name containing a captured commit as output by the `capture-commit`
+          action. The default value will import the commit emitted by the `prepare` workflow
+          (which will result in the build to see the to-be-released commit, with correct
+          commit-digest).
+        default: release-commit-objects # exported from prepare.yaml
 
     outputs:
       ocm-resource:
@@ -261,6 +269,12 @@ jobs:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - name: import-release-commit
+        if: ${{ inputs.commit-objects-artefact != '' }}
+        uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
+          after-import: rebase
       - name: retrieve build-ctx-artefact
         if: ${{ inputs.build-ctx-artefact }}
         uses: actions/download-artifact@v4
