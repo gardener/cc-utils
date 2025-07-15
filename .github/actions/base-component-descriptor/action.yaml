@@ -88,6 +88,7 @@ runs:
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import datetime
+        import logging
         import tarfile
         import textwrap
         import urllib.parse
@@ -99,6 +100,8 @@ runs:
         import ocm.gardener
 
         import base_component_descriptor
+
+        logger = logging.getLogger('base-component-descriptor')
 
         base_component_path = '${{ inputs.base-component }}'
         version = '${{ inputs.version }}'
