@@ -118,6 +118,7 @@ def find_imagevector_file(
     repo_root: str=None,
 ) -> str | None:
     for candidate in (
+        'internal/images/images.yaml', # etcd-druid
         'charts/images.yaml',
         'imagevector/images.yaml',
         'imagevector/container.yaml',
