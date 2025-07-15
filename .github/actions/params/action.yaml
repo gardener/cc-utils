@@ -61,6 +61,10 @@ outputs:
       Note that consistent usage of `cc-utils/.github/actions/trusted-checkout` is required.
       Workflows offered from cc-utils repository already do this.
     value: ${{ steps.params.outputs.can-push }}
+  can-push-reason:
+    description: |
+      An indication (in natural language) as to why `can-push` was chosen to be either true or false.
+    value: ${{ steps.params.outputs.can-push-reason }}
 
 runs:
   using: composite
@@ -96,6 +100,7 @@ runs:
             ;;
         esac
 
+        can_push_reason='unknown'
         is_pr_from_fork=false
         event_name='${{ github.event_name }}'
         if [ ${event_name} == 'pull_request' ]; then
@@ -104,30 +109,44 @@ runs:
           if [ ${repo_owner} != ${head_owner} ]; then
             is_pr_from_fork=true
             can_push=false
+            can_push_reason='untrusted fork'
           else
             is_pr_from_fork=false
             can_push=true
+            can_push_reason='pullrequest from local branch'
           fi
         elif [ ${event_name} == 'pull_request_target' ]; then
           case '${{ github.event.pull_request_target.author_association }}' in
             COLLABORATOR)
               can_push=true
+              can_push_reason='trusted fork'
               ;;
             MEMBER)
               can_push=true
+              can_push_reason='trusted fork'
               ;;
             OWNER)
               can_push=true
+              can_push_reason='trusted fork'
               ;;
             CONTRIBUTOR)
               can_push=false
+              can_push_reason='untrusted fork'
               ;;
             *)
               can_push=false
+              can_push_reason='untrusted fork'
           esac
         else
           is_pr_from_fork=false
           can_push=true
+          can_push_reason='unknown'
+        fi
+        ref='${{ github.ref }}'
+        ref_leng=${#ref}
+        if [ $ref_leng -gt 50 ]; then
+          can_push=false # workaround: https://issuetracker.google.com/issues/264362370?pli=1
+          can_push_reason='ref exceeds allowed length of 50 chars'
         fi
 
         echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
@@ -136,6 +155,7 @@ runs:
         echo "is-fork=${is_fork}" >> ${GITHUB_OUTPUT}
         echo "is-pr-from-fork=${is_pr_from_fork}" >> ${GITHUB_OUTPUT}
         echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
+        echo "can-push-reason=${can_push_reason}" >> ${GITHUB_OUTPUT}
 
         cat << EOF > ${GITHUB_STEP_SUMMARY}
         ## Pipeline-Params-Summary
@@ -147,5 +167,6 @@ runs:
           <tr> <td>is-fork</td>         <td>${is_fork}</td> </tr>
           <tr> <td>is-pr-from-fork</td> <td>${is_pr_from_fork}</td> </tr>
           <tr> <td>can-push</td>        <td>${can_push}</td> </tr>
+          <tr> <td>can-push-reason</td> <td>${can_push_reason}</td> </tr>
         </tbody> </table>
         EOF
