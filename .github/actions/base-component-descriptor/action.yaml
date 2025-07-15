@@ -151,15 +151,17 @@ runs:
 
         if imagevector_file := ocm.gardener.find_imagevector_file(repo_root=os.getcwd()):
           prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
-          if len(prefixes) == 1:
+          for prefix in prefixes:
             # hack: in some (/all?) cases, images in imagevectors use `public` oci-registry,
             #       which is a virtual oci-registry including both snapshots and releases
             #       add to prefixes so ocm-component-references are correctly being detected
-            prefix = prefixes[0].rstrip('/')
+            prefix = prefix.rstrip('/')
             if prefix.endswith('snapshots/gardener'):
               prefixes.append(f'{prefix.removesuffix("snapshots/gardener")}public/gardener')
             elif prefix.endswith('releases/gardener'):
               prefixes.append(f'{prefix.removesuffix("releases/gardener")}public/gardener')
+
+          prefixes = set(prefixes) # deduplicate
 
           logger.info(f'{prefixes=}')
 
