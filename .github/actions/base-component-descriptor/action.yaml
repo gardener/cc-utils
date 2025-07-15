@@ -147,10 +147,23 @@ runs:
         )
 
         if imagevector_file := ocm.gardener.find_imagevector_file(repo_root=os.getcwd()):
+          prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
+          if len(prefixes) == 1:
+            # hack: in some (/all?) cases, images in imagevectors use `public` oci-registry,
+            #       which is a virtual oci-registry including both snapshots and releases
+            #       add to prefixes so ocm-component-references are correctly being detected
+            prefix = prefixes[0].rstrip('/')
+            if prefix.endswith('snapshots/gardener'):
+              prefixes.append(f'{prefix.removesuffix("snapshots/gardener")}public/gardener')
+            elif prefix.endswith('releases/gardener'):
+              prefixes.append(f'{prefix.removesuffix("releases/gardener")}public/gardener')
+
+          logger.info(f'{prefixes=}')
+
           base_component = base_component_descriptor.add_resources_from_imagevector(
             imagevector_file=imagevector_file,
             component=base_component,
-            component_prefixes='${{ inputs.ocm-component-prefixes }}'.split(','),
+            component_prefixes=prefixes,
           )
 
         base_component_dict = base_component_descriptor.as_component_descriptor_dict(
