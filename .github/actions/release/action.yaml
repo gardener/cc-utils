@@ -102,6 +102,40 @@ inputs:
     description: |
       If set to `true`, the action will create a new GitHub release (or convert an existing draft
       release to an actual release).
+  assets:
+    type: string
+    required: false
+    description: |
+      An optional list of release-assets in YAML-format that will be added to the GitHub-Release.
+      If creation of github-release is suppressed (via `release-on-github` input), this value
+      will be ignored.
+
+      Each element is expected to have the following form:
+
+      ```
+      name: <name, as it should be set for the release-asset>, required
+      mime-type: # optional (will be determined using libmagic, if absent)
+      type: ocm-resource # mandatory; only `ocm-resource` is supported; for future extensions
+      id:
+        name: <ocm-resource-name>, required
+        type: <ocm-resource-type>, optional
+        <extra-id-attr>: <value> # optional - any attributes from extraIdentity
+      ```
+
+      `id` must be specified such that a resource is identified unambiguously. Only resources
+      that are stored as a localBlob (access-type) are supported.
+
+      Example (assuming pipeline builds `helm` for multiple platforms):
+      ```
+      assets: |
+       - name: helm-linux-x86-64
+         mime-type: application/x-pie-executable
+         type: ocm-resource
+         id:
+          name: helm
+          os: linux
+          arch: x86_64
+      ```
   github-tag-template:
     default: '${version}'
     type: string
@@ -142,6 +176,9 @@ runs:
         tag_ref="refs/tags/${tag_name}"
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
+        cat <<EOF > /tmp/assets.yaml
+        ${{ inputs.assets }}
+        EOF
 
     - name: read-target-oci-ref
       id: read-oci-ref
@@ -305,10 +342,16 @@ runs:
       shell: python
       run: |
         import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import github3
+        import yaml
 
         import github.release
+        import ocm
+
+        import release
 
         host = os.environ['GITHUB_SERVER_URL'].removeprefix('https://')
         org, repo = os.environ['GITHUB_REPOSITORY'].split('/')
@@ -358,6 +401,32 @@ runs:
           name='component-descriptor.yaml',
           asset=open('/tmp/component-descriptor.yaml'),
         )
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f)
+          )
+
+        for asset in release.iter_assets(path='/tmp/assets.yaml'):
+          path, access = release.find_blob(
+            blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
+            asset=asset,
+            component=component_descriptor.component,
+          )
+
+          if asset.mime_type:
+            mime_type = asset.mime_type
+          else:
+            mime_type = access.mediaType
+
+          print(f'Uploading {asset=} as github-release-asset')
+          fh = open(path)
+          gh_release.upload_asset(
+            content_type=mime_type,
+            name=asset.name,
+            asset=fh,
+          )
+          fh.close() # as execution will end on errors, it should be okay to not guard against that
 
     - name: prepare-push-bump-commit
       shell: bash
