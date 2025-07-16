@@ -420,7 +420,7 @@ runs:
             mime_type = access.mediaType
 
           print(f'Uploading {asset=} as github-release-asset')
-          fh = open(path)
+          fh = open(path, 'rb')
           gh_release.upload_asset(
             content_type=mime_type,
             name=asset.name,
