@@ -177,8 +177,9 @@ runs:
         echo 'XXX' # make it easier to find
         pwd
         readlink -f '${{ inputs.callback-action-path }}'
-        ls
         ls .github
+        git status
+        git log
 
     - name: prepare-callback-action
       if: ${{ inputs.callback-action-path != '' }}
