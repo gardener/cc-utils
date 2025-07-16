@@ -54,11 +54,17 @@ def find_draft_release(
     # are uncommon), this should be okay to hardcode. Todo: check whether this limit is still
     # valid.
     max_releases = 1020
-    for release in repository.releases(number=max_releases):
-        if not release.draft:
-            continue
-        if release.name == name:
-            return release
+    try:
+        for release in repository.releases(number=max_releases):
+            if not release.draft:
+                continue
+            if release.name == name:
+                return release
+    except TypeError:
+        # `github3.py` raises if one of the release authors is unknown (i.e. a deleted account)
+        import traceback
+        traceback.print_exc()
+        logger.info('ignoring error and continuing with already found releases')
 
 
 def delete_outdated_draft_releases(
