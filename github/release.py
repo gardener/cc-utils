@@ -85,7 +85,15 @@ def delete_outdated_draft_releases(
             with the same major and minor version
     '''
 
-    releases = [release for release in repository.releases(number=20)]
+    try:
+        releases = [release for release in repository.releases(number=20)]
+    except TypeError:
+        # `github3.py` raises if one of the release authors is unknown (i.e. a deleted account)
+        import traceback
+        traceback.print_exc()
+        logger.info('ignoring error and continuing with empty releases')
+        releases = []
+
     non_draft_releases = [release for release in releases if not release.draft]
     draft_releases = [release for release in releases if release.draft]
     greatest_release_version = find_greatest_github_release_version(non_draft_releases)
