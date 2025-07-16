@@ -170,17 +170,6 @@ runs:
 
         echo "effective-version=$(cat /tmp/effective-version)" >> ${GITHUB_OUTPUT}
 
-    - name: debugging-output
-      shell: bash
-      run: |
-        set +e
-        echo 'XXX' # make it easier to find
-        pwd
-        readlink -f '${{ inputs.callback-action-path }}'
-        ls .github
-        git status
-        git log
-
     - name: prepare-callback-action
       if: ${{ inputs.callback-action-path != '' }}
       shell: bash
