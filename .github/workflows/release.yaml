@@ -101,6 +101,40 @@ on:
         description: |
           GitHub tag template to use for the created release tag. Currently only supported
           template-var: ${version} (bash-syntax).
+      assets:
+        type: string
+        required: false
+        description: |
+          An optional list of release-assets in YAML-format that will be added to the GitHub-Release.
+          If creation of github-release is suppressed (via `release-on-github` input), this value
+          will be ignored.
+
+          Each element is expected to have the following form:
+
+          ```
+          name: <name, as it should be set for the release-asset>, required
+          mime-type: # optional (will be determined using libmagic, if absent)
+          type: ocm-resource # mandatory; only `ocm-resource` is supported; for future extensions
+          id:
+            name: <ocm-resource-name>, required
+            type: <ocm-resource-type>, optional
+            <extra-id-attr>: <value> # optional - any attributes from extraIdentity
+          ```
+
+          `id` must be specified such that a resource is identified unambiguously. Only resources
+          that are stored as a localBlob (access-type) are supported.
+
+          Example (assuming pipeline builds `helm` for multiple platforms):
+          ```
+          assets: |
+           - name: helm-linux-x86-64
+             mime-type: application/x-pie-executable
+             type: ocm-resource
+             id:
+              name: helm
+              os: linux
+              arch: x86_64
+          ```
 
     outputs:
       release-notes:
@@ -154,6 +188,7 @@ jobs:
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
+          assets: ${{ inputs.assets }}
 
       - name: write-release-notes-to-file
         if: ${{ inputs.slack-channel-id != '' }}
