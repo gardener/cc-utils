@@ -70,7 +70,7 @@ class LintingResult:
 
     def max_level(self):
         if self.problems:
-            max(self.problems_dict.keys())
+            return max(self.problems_dict.keys())
         return 0
 
     def __str__(self):
