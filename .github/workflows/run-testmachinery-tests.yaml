@@ -10,7 +10,6 @@ on:
       k8s-api-endpoint:
         required: false
         type: string
-        default: https://api.tm-os-opensource.core.shoot.canary.k8s-hana.ondemand.com
         description: |
           The URL referring to the k8s-apiserver-endpoint in which the testmachinery-instance to use
           runs. Pipeline-Runs will authenticate against this cluster using OIDC.
@@ -21,7 +20,27 @@ on:
       k8s-api-ca:
         required: false
         type: string
-        default: ${{ vars.TESTMACHINERY_CANARY_CLUSTER_CA }}
+      cluster-cfg:
+        required: false
+        type: string
+        default: gardener/clusters/testmachinery-canary.yaml
+        description: |
+          Refers to a file located in a GitHub repository containing the k8s-api-endpoint as well as
+          the k8s-api-ca of the cluster in which the testmachinery-instance runs. Pipeline-runs will
+          authenticate against this cluster using OIDC. If the `k8s-api-endpoint` _and_ `k8s-api-ca`
+          inputs are specified as well, those will take precedence over this input parameter.
+
+          The path must adhere to the following format: `<org>/<repo>/<path-to-file.yaml>`.
+
+          The file is expected to have to following format:
+          ```
+          api: <api-url>
+          ca: <base64-encoded-ca>
+          ```
+
+          Note that in case of the default-cluster, only a subset of repositories below
+          https://github.com/gardener is authorised. Runs triggered from forked repositories will
+          also fail, unless `on.pull_request_target` is used as trigger-event.
       kubeconfig-path:
         required: false
         type: string
@@ -64,6 +83,7 @@ jobs:
         with:
           server: ${{ inputs.k8s-api-endpoint }}
           server-ca: ${{ inputs.k8s-api-ca }}
+          cluster-cfg: ${{ inputs.cluster-cfg }}
           kubeconfig-path: ${{ inputs.kubeconfig-path }}
       - name: trigger-testmachinery-tests
         shell: bash
