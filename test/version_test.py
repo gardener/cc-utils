@@ -245,3 +245,48 @@ def test_iter_upgrade_path():
         versions=versions,
     ))
     assert path == ('1.4.1', '1.4.2')
+
+
+def test_find_predecessor():
+    versions = (
+        '0.0.1',
+        '0.0.3',
+        '0.1.1',
+        '0.1.2',
+        '0.2.0',
+        '0.3.0',
+        '0.3.2',
+        '1.1.3',
+        '1.1.4',
+        '2.0.0',
+    )
+
+    assert version.find_predecessor(
+        version='2.0.0',
+        versions=versions,
+    ) == '1.1.3'
+
+    assert version.find_predecessor(
+        version='1.1.4',
+        versions=versions,
+    ) == '1.1.3'
+
+    assert version.find_predecessor(
+        version='1.1.3',
+        versions=versions,
+    ) == '0.3.0'
+
+    assert version.find_predecessor(
+        version='0.3.0',
+        versions=versions,
+    ) == '0.2.0'
+
+    assert version.find_predecessor(
+        version='0.1.1',
+        versions=versions,
+    ) == '0.0.1'
+
+    assert version.find_predecessor(
+        version='0.0.1',
+        versions=versions,
+    ) is None
