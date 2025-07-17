@@ -663,3 +663,51 @@ def iter_upgrade_path(
     # major and minor versions are equal - yield all
     for _, orig_version in versions:
         yield orig_version
+
+
+def find_predecessor(
+    version: Version,
+    versions: collections.abc.Iterable[Version],
+) -> Version | None:
+    '''
+    finds the predecessor version for the given version, using semver semantics.
+
+    Which version is considered a predecessor depends on the rightmost non-zero version part.
+    If patchlevel is greater than zero, the closest version with the same major and minor and
+    smaller patch-level is deemed to be predecessor. If minor version is greater than zero, the
+    closest smaller minor-version with matching major-version is deemed predecessor.
+    '''
+    version = parse_to_semver(version)
+    major = version.major
+    minor = version.minor
+
+    versions = [ # <parsed, original>
+        (pv, v) for v in versions
+        if (pv := parse_to_semver(v)) < version
+    ]
+
+    if not versions:
+        return
+
+    versions = sorted(
+        versions,
+        key=lambda x: x[0],
+        reverse=True, # greatest first
+    )
+
+    for idx, (candidate, candidate_orig) in enumerate(versions):
+        if candidate.minor == minor and candidate.major == major:
+            # take closest candidate with equal major/minor
+            return candidate_orig
+
+        # if this is reached, there was no candidate with matching major/minor
+        # -> fixate current minor, and take smallest patchlevel
+        for better_candidate, better_candidate_orig in versions[idx:]:
+            if better_candidate.minor == candidate.minor:
+                candidate = better_candidate
+                candidate_orig = better_candidate_orig
+            else:
+                # we went past the smallest version w/ matching minor version
+                return candidate_orig
+
+    return candidate_orig
