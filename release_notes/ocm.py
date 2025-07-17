@@ -7,6 +7,7 @@ import collections.abc
 import logging
 import zlib
 
+import cnudie.retrieve
 import oci.client
 import ocm
 import ocm.gardener
@@ -105,3 +106,36 @@ def release_notes_range(
 
         logger.info(f'found {len(notes)=} characters of release-notes for {component_id=}')
         yield component_id, notes
+
+
+def release_notes_range_recursive(
+    version_vector: ocm.gardener.UpgradeVector,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
+    oci_client: oci.client.Client,
+) -> collections.abc.Iterable[tuple[ocm.ComponentIdentity, str]]:
+    '''
+    recursively retrieves release-notes for the given version-vector. Yields pairs of
+    component-id and corresponding release-notes.
+    '''
+    whence_component = component_descriptor_lookup(version_vector.whence).component
+    whither_component = component_descriptor_lookup(version_vector.whither).component
+    component_diff = cnudie.retrieve.component_diff(
+        left_component=whence_component,
+        right_component=whither_component,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    for whence_component, whither_component in component_diff.cpairs_version_changed:
+        versions = version_lookup(whence_component)
+        version_vector = ocm.gardener.UpgradeVector(
+            whence=whence_component,
+            whither=whither_component,
+        )
+        yield from release_notes_range(
+            version_vector=version_vector,
+            versions=versions,
+            oci_client=oci_client,
+            component_descriptor_lookup=component_descriptor_lookup,
+            absent_ok=True,
+        )
