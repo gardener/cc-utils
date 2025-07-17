@@ -65,7 +65,7 @@ runs:
 
         subprocess.run(
           (
-            'git', 'fetch', remote,
+            'git', 'fetch', remote, 'refs/heads/${{ github.head_ref }}',
           ),
           check=True,
         )
