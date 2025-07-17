@@ -71,7 +71,7 @@ runs:
         )
         subprocess.run(
           (
-            'git', 'checkout', '-B', '${{ github.ref_name }}', 'FETCH_HEAD',
+            'git', 'checkout', '-B', 'refs/heads/${{ github.head_ref }}', 'FETCH_HEAD',
           ),
           check=True,
         )
