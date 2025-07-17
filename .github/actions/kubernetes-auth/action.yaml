@@ -8,14 +8,28 @@ description: |
 
 inputs:
   server:
+    type: string
     description: |
       the endpoint serving the k8s-endpoint against which to authenticate
-    type: string
-    default: https://api.tm-os-opensource.core.shoot.canary.k8s-hana.ondemand.com
   server-ca:
     type: string
     description: |
       the base64-encoded certificate-bundle for the server-endpoint.
+  cluster-cfg:
+    type: string
+    default: gardener/clusters/testmachinery-canary.yaml
+    description: |
+      Refers to a file located in a GitHub repository containing the k8s-api-endpoint as well as
+      the k8s-api-ca. If the `server` _and_ `server-ca` inputs are specified as well, those will
+      take precedence over this input parameter.
+
+      The path must adhere to the following format: `<org>/<repo>/<path-to-file.yaml>`.
+
+      The file is expected to have to following format:
+      ```
+      api: <api-url>
+      ca: <base64-encoded-ca>
+      ```
   audience:
     type: string
     default: gardener
@@ -40,6 +54,21 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: prepare-cluster-cfg
+      id: prepare
+      if: ${{ inputs.server == '' || inputs.server-ca == '' }}
+      shell: bash
+      run: |
+        cluster_cfg="${{ inputs.cluster-cfg }}"
+
+        echo "repository=$(echo "${cluster_cfg}" | cut -d '/' -f1,2)" >> ${GITHUB_OUTPUT}
+        echo "path=$(echo "${cluster_cfg}" | cut -d '/' -f3-)" >> ${GITHUB_OUTPUT}
+    - name: checkout cluster-cfg repo
+      if: ${{ inputs.server == '' || inputs.server-ca == '' }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ steps.prepare.outputs.repository }}
+        path: ./cluster-cfg-repo
     - name: auth
       id: auth
       shell: bash
@@ -55,6 +84,15 @@ runs:
           echo
           echo 'that typically means this workflow was not run with `id-token: write`-permission'
           exit 1
+        fi
+
+        server="${{ inputs.server }}"
+        server_ca="${{ inputs.server-ca }}"
+
+        if [ -z "${server}" -o -z ${server_ca} ]; then
+          cluster_cfg_file="./cluster-cfg-repo/${{ steps.prepare.outputs.path }}"
+          server=$(cat $cluster_cfg_file | yq .api)
+          server_ca=$(cat $cluster_cfg_file | yq .ca)
         fi
 
         token_url="${token_url}&audience=${{ inputs.audience }}"
@@ -78,8 +116,8 @@ runs:
         clusters:
           - name: cluster
             cluster:
-              server: ${{ inputs.server }}
-              certificate-authority-data: ${{ inputs.server-ca }}
+              server: ${server}
+              certificate-authority-data: ${server_ca}
         contexts:
           - name: gha
             context:
