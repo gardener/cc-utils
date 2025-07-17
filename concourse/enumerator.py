@@ -14,9 +14,7 @@ from github3.exceptions import NotFoundError
 import yaml
 
 from ci.util import (
-    LintingError,
     fail,
-    lint_yaml,
     load_yaml,
     merge_dicts,
     not_empty,
@@ -227,7 +225,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
                 path='branch.cfg',
                 ref='refs/meta/ci',
             ).decoded.decode('utf-8')
-            lint_yaml(branch_cfg)
         except NotFoundError:
             return None # no branch cfg present
 
@@ -238,12 +235,7 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
         repository,
         branch: str = None,
     ):
-        try:
-            branch_cfg = self._branch_cfg_or_none(repository=repository)
-        except LintingError as e:
-            # some linting errors (and possibly warnings) present. Print warning and continue
-            logger.warning(e)
-            return
+        branch_cfg = self._branch_cfg_or_none(repository=repository)
 
         if not branch_cfg:
             try:
@@ -328,7 +320,6 @@ class GithubDefinitionEnumeratorBase(DefinitionEnumerator):
 
             try:
                 decoded_definitions = definitions.decoded.decode('utf-8')
-                lint_yaml(decoded_definitions)
                 definitions = load_yaml(decoded_definitions)
 
             except BaseException as e:
