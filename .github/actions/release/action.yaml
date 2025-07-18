@@ -83,9 +83,13 @@ inputs:
       passed to `version` action as `versionfile`. see this action for documentation
   release-notes:
     description: |
-      the release-notes to publish as body for GitHub-Release (release-notes action might be
-      handy to collect those)
+      the release-notes to publish as inline-resource in OCM-Component-Descriptor. Consider
+      full-release-notes input, as well.
     required: false
+  full-release-notes:
+    description: |
+      the release-notes to publish as body for GitHub-Release. Those should contain release-notes
+      from sub-components (if any).
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub and OCI-Registry.
@@ -369,7 +373,7 @@ runs:
 
 
         release_notes_markdown = '''\
-        ${{ inputs.release-notes }}
+        ${{ inputs.full-release-notes }}
         '''
 
         release_tag_name = '${{ steps.preprocess.outputs.tag-name }}'
