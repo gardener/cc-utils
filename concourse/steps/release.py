@@ -186,6 +186,7 @@ def collect_release_notes(
         component=component,
     )):
         release_notes_markdown += '\n\n' + component_resources_markdown
+        full_release_notes_markdown += '\n\n' + component_resources_markdown
 
     return release_notes_markdown, full_release_notes_markdown
 
