@@ -155,7 +155,8 @@ def create_upgrade_pullrequest_diff(
 
 def retrieve_release_notes(
     upgrade_vector,
-    versions,
+    version_lookup,
+    version_filter,
     oci_client: oci.client.Client,
     component_descriptor_lookup,
 ) -> str | None:
@@ -163,12 +164,12 @@ def retrieve_release_notes(
 
     release_notes = '\n'.join((
         rno.release_notes_markdown_with_heading(cid, rn)
-        for cid, rn in rno.release_notes_range(
+        for cid, rn in rno.release_notes_range_recursive(
             version_vector=upgrade_vector,
-            versions=versions,
-            oci_client=oci_client,
             component_descriptor_lookup=component_descriptor_lookup,
-            absent_ok=True,
+            version_lookup=version_lookup,
+            version_filter=version_filter,
+            oci_client=oci_client,
         )
     ))
 
@@ -214,12 +215,10 @@ def create_upgrade_pullrequest(
     )
     to_component = to_component_descriptor.component
 
-    versions = [v for v in version_lookup(upgrade_vector.component_name) if version.is_final(v)]
-    logger.info(f'found {len(versions)=} versions of {upgrade_vector.component_name=}')
-
     release_notes = retrieve_release_notes(
         upgrade_vector=upgrade_vector,
-        versions=versions,
+        version_lookup=version_lookup,
+        version_filter=version.is_final,
         oci_client=oci_client,
         component_descriptor_lookup=component_descriptor_lookup,
     )
