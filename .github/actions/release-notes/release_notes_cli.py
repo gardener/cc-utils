@@ -137,7 +137,7 @@ def main():
         return github_api
 
     try:
-        release_notes_md = 'no release notes available'
+        release_notes_md = ''
         if parsed.draft:
             release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
                 component=component,
