@@ -454,7 +454,7 @@ for validation_error in cnudie.validate.iter_violations(
 % if process_release_notes:
 release_notes_md = None
 try:
-  release_notes_md = collect_release_notes(
+  release_notes_md, full_release_notes_md = collect_release_notes(
     git_helper=git_helper,
     release_version=version_str,
     component=component,
@@ -469,6 +469,7 @@ except:
   traceback.print_exc()
 % else:
 release_notes_md = None
+full_release_notes_md = None
 % endif
 
 tgt_ref = cnudie.util.target_oci_ref(component=component)
@@ -525,8 +526,8 @@ release_tag = tags[0].removeprefix('refs/tags/')
 draft_tag = f'{version_str}-draft'
 
 if release_notes_md is not None:
-  release_notes_md, is_full_release_notes  = github.release.body_or_replacement(
-    body=release_notes_md,
+  full_release_notes_md, is_full_release_notes  = github.release.body_or_replacement(
+    body=full_release_notes_md,
   )
 else:
   is_full_release_notes = False
@@ -539,7 +540,7 @@ gh_release = github.release.find_draft_release(
 if not gh_release:
   gh_release = repository.create_release(
     tag_name=release_tag,
-    body=release_notes_md or '',
+    body=full_release_notes_md or '',
     draft=False,
     prerelease=False,
   )
@@ -547,16 +548,16 @@ else:
   gh_release.edit(
     tag_name=release_tag,
     name=release_tag,
-    body=release_notes_md or '',
+    body=full_release_notes_md or '',
     draft=False,
     prerelease=False,
   )
 
-if release_notes_md is not None and not is_full_release_notes:
+if full_release_notes_md is not None and not is_full_release_notes:
   gh_release.upload_asset(
     content_type='application/markdown',
     name='release-notes.md',
-    asset=release_notes_md.encode('utf-8'),
+    asset=full_release_notes_md.encode('utf-8'),
     label='Release Notes',
   )
 

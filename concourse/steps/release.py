@@ -143,7 +143,7 @@ def collect_release_notes(
     component_descriptor_lookup,
     version_lookup,
     oci_client,
-) -> str:
+) -> tuple[str, str]:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         component=component,
         component_descriptor_lookup=component_descriptor_lookup,
@@ -178,14 +178,16 @@ def collect_release_notes(
     ))
 
     if sub_component_release_notes:
-        release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
+        full_release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
+    else:
+        full_release_notes_markdown = release_notes_markdown
 
     if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
         component=component,
     )):
         release_notes_markdown += '\n\n' + component_resources_markdown
 
-    return release_notes_markdown
+    return release_notes_markdown, full_release_notes_markdown
 
 
 def have_tag_conflicts(
