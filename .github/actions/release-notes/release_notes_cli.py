@@ -168,18 +168,14 @@ def main():
             str(rn) for rn
             in release_notes.markdown.render(release_note_blocks)
         )
-
-    append_newline = not release_notes_md.endswith('\n')
+        if not release_notes_md.endswith('\n'):
+            release_notes_md = f'{release_notes_md}\n'
 
     if parsed.outfile == '-':
         sys.stdout.write(release_notes_md)
-        if append_newline:
-            sys.stdout.write('\n')
     else:
         with open(parsed.outfile, 'w') as f:
             f.write(release_notes_md)
-            if append_newline:
-                f.write('\n')
 
 
 if __name__ == '__main__':
