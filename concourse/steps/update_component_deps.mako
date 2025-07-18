@@ -191,6 +191,7 @@ for component_reference in greatest_component_references:
         repo_dir=REPO_ROOT,
         github_cfg_name=github_cfg_name,
         component_descriptor_lookup=ocm_lookup,
+        oci_client=oci_client,
         delivery_dashboard_url=delivery_dashboard_url,
         version_lookup=version_lookup,
         merge_policy=merge_policy,
