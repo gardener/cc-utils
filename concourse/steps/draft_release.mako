@@ -112,12 +112,12 @@ try:
     )
     release_notes_md = '\n'.join(
         str(i) for i in release_notes.markdown.render(release_note_blocks)
-    ) or 'no release notes available'
+    ) or ''
 except ValueError as e:
     logger.warning(f'Error when computing release notes: {e}')
     # this will happen if a component-descriptor for a more recent version than what is available in the
     # repository is already published - usually by steps that erroneously publish them before they should.
-    release_notes_md = 'no release notes available'
+    release_notes_md = ''
 
 draft_name = f'{processed_version}-draft'
 draft_release = github.release.find_draft_release(
