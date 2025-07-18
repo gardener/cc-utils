@@ -27,6 +27,7 @@ import oci.auth
 import oci.client
 import release_notes.fetch
 import release_notes.markdown
+import release_notes.ocm
 import version
 
 logging.basicConfig(
@@ -170,6 +171,29 @@ def main():
         )
         if not release_notes_md.endswith('\n'):
             release_notes_md = f'{release_notes_md}\n'
+
+    version_vector = ocm.gardener.UpgradeVector(
+        whence=version.find_predecessor(
+            version=component.version,
+            versions=[v for v in ocm_version_lookup(component) if version.is_final(v)],
+        ),
+        whither=component.version,
+    )
+
+    # retrieve release-notes from sub-components
+    sub_component_release_notes = '\n'.join((
+        release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
+        for cid, rn in release_notes.ocm.release_notes_range_recursive(
+            version_vector=version_vector,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=ocm_version_lookup,
+            oci_client=oci_client,
+            version_filter=version.is_final,
+        )
+    ))
+
+    if sub_component_release_notes:
+        release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
 
     if parsed.outfile == '-':
         sys.stdout.write(release_notes_md)
