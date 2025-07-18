@@ -207,6 +207,7 @@ def main():
             version_lookup=ocm_version_lookup,
             oci_client=oci_client,
             version_filter=version.is_final,
+            whither_component=component,
         )
     ))
 
