@@ -161,13 +161,16 @@ def retrieve_release_notes(
 ) -> str | None:
     logger.info(f'fetching release-notes for {upgrade_vector=}')
 
-    release_notes = '\n'.join((rn for _, rn in rno.release_notes_range(
-        version_vector=upgrade_vector,
-        versions=versions,
-        oci_client=oci_client,
-        component_descriptor_lookup=component_descriptor_lookup,
-        absent_ok=True,
-    )))
+    release_notes = '\n'.join((
+        rno.release_notes_markdown_with_heading(cid, rn)
+        for cid, rn in rno.release_notes_range(
+            version_vector=upgrade_vector,
+            versions=versions,
+            oci_client=oci_client,
+            component_descriptor_lookup=component_descriptor_lookup,
+            absent_ok=True,
+        )
+    ))
 
     if release_notes:
         logger.info(f'fetched {len(release_notes)=} characters of release-notes')
