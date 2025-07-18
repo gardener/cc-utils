@@ -184,6 +184,7 @@ jobs:
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           release-notes: ${{ steps.release-notes.outputs.release-notes }}
+          full-release-notes: ${{ steps.release-notes.outputs.full-release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
