@@ -231,6 +231,8 @@ def main():
     #       release-notes action.
     if len(full_release_notes_md) > len(release_notes_md):
         subcomponent_release_notes = full_release_notes_md.removeprefix(release_notes_md)
+    else:
+        subcomponent_release_notes = ''
 
     if parsed.subcomponent_release_notes:
         with open(parsed.subcomponent_release_notes, 'w') as f:
