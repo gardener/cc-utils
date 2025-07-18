@@ -69,6 +69,14 @@ def release_notes(
     return release_notes_bytes.decode('utf-8')
 
 
+def release_notes_markdown_with_heading(
+    component_id: ocm.ComponentIdentity,
+    release_notes: str,
+) -> str:
+    header = f'[{component_id.name}:{component_id.version}]'
+    return f'{header}\n{release_notes}'
+
+
 def release_notes_range(
     version_vector: ocm.gardener.UpgradeVector,
     versions: collections.abc.Iterable[version_mod.Version],
