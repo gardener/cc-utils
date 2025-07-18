@@ -121,7 +121,7 @@ def release_notes_range_recursive(
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
     version_lookup: ocm.VersionLookup,
     oci_client: oci.client.Client,
-    version_filter=None,
+    version_filter=lambda v: True,
 ) -> collections.abc.Iterable[tuple[ocm.ComponentIdentity, str]]:
     '''
     recursively retrieves release-notes for the given version-vector. Yields pairs of
@@ -136,10 +136,7 @@ def release_notes_range_recursive(
     )
 
     for whence_component, whither_component in component_diff.cpairs_version_changed:
-        if version_filter:
-            versions = [v for v in version_lookup(whence_component) if version_filter(v)]
-        else:
-            versions = version_lookup(whence_component)
+        versions = [v for v in version_lookup(whence_component) if version_filter(v)]
 
         version_vector = ocm.gardener.UpgradeVector(
             whence=whence_component,
