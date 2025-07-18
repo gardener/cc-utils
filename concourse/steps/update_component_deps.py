@@ -287,27 +287,6 @@ def determine_upgrade_vector(
             )
 
 
-def _import_release_notes(
-    component: ocm.Component,
-    to_version: str,
-    version_lookup,
-    component_descriptor_lookup,
-    oci_client,
-):
-    release_notes = create_release_notes(
-        from_component=component,
-        to_version=to_version,
-        version_lookup=version_lookup,
-        component_descriptor_lookup=component_descriptor_lookup,
-        oci_client=oci_client,
-    )
-
-    if not release_notes:
-        release_notes = ''
-
-    return release_notes
-
-
 def create_upgrade_commit_diff(
     repo_dir: str,
     container_image,
@@ -431,8 +410,8 @@ def create_upgrade_pr(
     commit_message = f'Upgrade {cname}\n\nfrom {from_version} to {to_version}'
 
     try:
-        release_notes = _import_release_notes(
-            component=from_component,
+        release_notes = fetch_release_notes(
+            from_component=from_component,
             to_version=to_version,
             version_lookup=version_lookup,
             component_descriptor_lookup=component_descriptor_lookup,
@@ -501,7 +480,7 @@ def create_upgrade_pr(
     return github.pullrequest.as_upgrade_pullrequest(pull_request)
 
 
-def create_release_notes(
+def fetch_release_notes(
     from_component: ocm.Component,
     to_version: str,
     component_descriptor_lookup,
