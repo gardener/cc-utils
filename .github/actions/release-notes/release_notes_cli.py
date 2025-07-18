@@ -75,9 +75,16 @@ def main():
         help='if set, will fetch draft-release-notes',
     )
     parser.add_argument(
-        '--outfile',
+        '--full-release-notes',
         default='-',
-        help='output file to write to (`-` for stdout, which is the default)',
+        help='''\
+            output file to write to (`-` for stdout, which is the default).
+            full release-notes contain release-notes from sub-components.
+        ''',
+    )
+    parser.add_argument(
+        '--local-release-notes',
+        default=None,
     )
 
     parsed = parser.parse_args()
@@ -193,12 +200,18 @@ def main():
     ))
 
     if sub_component_release_notes:
-        release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
-
-    if parsed.outfile == '-':
-        sys.stdout.write(release_notes_md)
+        full_release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
     else:
-        with open(parsed.outfile, 'w') as f:
+        full_release_notes_md = release_notes_md
+
+    if parsed.full_release_notes == '-':
+        sys.stdout.write(full_release_notes_md)
+    else:
+        with open(parsed.full_release_notes, 'w') as f:
+            f.write(full_release_notes_md)
+
+    if parsed.local_release_notes:
+        with open(parsed.local_release_notes, 'w') as f:
             f.write(release_notes_md)
 
 
