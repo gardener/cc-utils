@@ -100,7 +100,7 @@ runs:
         cat full-release-notes.md >> ${GITHUB_OUTPUT}
         echo EOF >> ${GITHUB_OUTPUT}
 
-        echo 'subcomponent-release-notes<<EOF'
+        echo 'subcomponent-release-notes<<EOF' >> ${GITHUB_OUTPUT}
         cat subcomponent-release-notes.md >> ${GITHUB_OUTPUT}
         echo EOF >> ${GITHUB_OUTPUT}
 
