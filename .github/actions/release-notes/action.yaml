@@ -109,7 +109,7 @@ runs:
         $(cat release-notes.md)
         EOF
 
-        if [ $( stat -c%s subcomponent-release-notes.md) -gt 0]; then
+        if [ $( stat -c%s subcomponent-release-notes.md) -gt 0 ]; then
         cat <<"EOF" >> ${GITHUB_STEP_SUMMARY}
         ## Release-Notes (subcomponents)
         $(cat subcomponent-release-notes.md)
