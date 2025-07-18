@@ -195,7 +195,7 @@ jobs:
         if: ${{ inputs.slack-channel-id != '' }}
         run: |
           cat <<"EOF" > release-notes.md
-          ${{ steps.release-notes.outputs.release-notes }}
+          ${{ steps.release-notes.outputs.full-release-notes }}
           EOF
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
