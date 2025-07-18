@@ -104,14 +104,10 @@ runs:
         cat subcomponent-release-notes.md >> ${GITHUB_OUTPUT}
         echo EOF >> ${GITHUB_OUTPUT}
 
-        cat <<"EOF" >> ${GITHUB_STEP_SUMMARY}
-        ## Release-Notes (local)
-        $(cat release-notes.md)
-        EOF
+        echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
+        cat release-notes.md >> ${GITHUB_STEP_SUMMARY}
 
         if [ $( stat -c%s subcomponent-release-notes.md) -gt 0 ]; then
-        cat <<"EOF" >> ${GITHUB_STEP_SUMMARY}
-        ## Release-Notes (subcomponents)
-        $(cat subcomponent-release-notes.md)
-        EOF
+          echo '## Release-Notes (subcomponents)' >> ${GITHUB_STEP_SUMMARY}
+          cat subcomponent-release-notes.md >> ${GITHUB_STEP_SUMMARY}
         fi
