@@ -113,4 +113,5 @@ runs:
         cat <<"EOF" >> ${GITHUB_STEP_SUMMARY}
         ## Release-Notes (subcomponents)
         $(cat subcomponent-release-notes.md)
+        EOF
         fi
