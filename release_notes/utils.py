@@ -15,6 +15,7 @@ import yaml
 import yaml.scanner
 
 import ocm
+import github.pullrequest
 import gitutil
 import release_notes.model as rnm
 
@@ -224,7 +225,16 @@ def request_pull_requests_from_api(
 
             if prs := list_associated_pulls(github_api, owner, repo_name, commit.hexsha):
                 # add all found pull requests to the result right away
-                result[commit.hexsha].extend(prs)
+                for pullrequest in prs:
+                    if github.pullrequest.parse_pullrequest_title(
+                        title=pullrequest.title,
+                        invalid_ok=True,
+                    ):
+                        # we retrieve release-notes from sub-components using OCM; hence,
+                        # we need to ignore upgrade-pullrequests that still have
+                        # release-notes-blocks
+                        continue
+                    result[commit.hexsha].append(pullrequest)
                 # only write notes to commit if there are no notes yet,
                 # or if the notes are in the YAML format already
                 if note_content or not is_yaml_content:
