@@ -257,18 +257,21 @@ def fetch_draft_release_notes(
     github_api_lookup: rnu.GithubApiLookup,
     version_whither: str,
 ) -> set[rnm.ReleaseNote]:
-    known_versions: list[str] = list(version_lookup(component.identity()))
+    known_versions: list[str] = [
+        v for v in
+        version_lookup(component.identity())
+        if version.is_final(v)
+    ]
 
-    previous_version = version.greatest_version_before(
-        reference_version=version_whither,
+    predecessor_version = version.find_predecessor(
+        version=version_whither,
         versions=known_versions,
-        ignore_prerelease_versions=True,
     ) or SpecialVersion.INITIAL
 
-    release_note_version_range = (previous_version, SpecialVersion.HEAD)
+    release_note_version_range = (predecessor_version, SpecialVersion.HEAD)
 
     logger.info(
-        f'Creating draft-release notes from {previous_version} to current HEAD'
+        f'Creating draft-release notes from {predecessor_version} to current HEAD'
     )
 
     # todo: need to check access-type / handle unsupported types (!= GitHub)
@@ -352,18 +355,21 @@ def fetch_release_notes(
             )
             return set()
 
-    known_versions: list[str] = list(version_lookup(component.identity()))
+    known_versions: list[str] = [
+        v for v in
+        version_lookup(component.identity())
+        if version.is_final(v)
+    ]
 
     if not version_whence:
         if version_whither:
             # if we have a current version, try to find closest match and use it
-            version_whence = version.greatest_version_before(
-                reference_version=version_whither,
+            version_whence = version.find_predecessor(
+                version=version_whither,
                 versions=known_versions,
-                ignore_prerelease_versions=True,
             )
         else:
-            # if no current version was given, use latest version
+            # if no current version was given, use greatest version
             version_whence = version.greatest_version(
                 versions=known_versions,
                 ignore_prerelease_versions=True,
