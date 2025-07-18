@@ -460,6 +460,7 @@ try:
     component=component,
     component_descriptor_lookup=component_descriptor_lookup,
     version_lookup=version_lookup,
+    oci_client=oci_client,
   )
   git_helper.push('refs/notes/commits', 'refs/notes/commits')
 except:

@@ -17,6 +17,7 @@ from git.exc import (
 import git.types
 
 import ocm
+import ocm.gardener
 
 import ccc.github
 import concourse.steps.version
@@ -25,6 +26,7 @@ import dockerutil
 import github.util
 import release_notes.fetch
 import release_notes.markdown
+import release_notes.ocm
 import slackclient.util
 
 from gitutil import GitHelper
@@ -140,6 +142,7 @@ def collect_release_notes(
     component,
     component_descriptor_lookup,
     version_lookup,
+    oci_client,
 ) -> str:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         component=component,
@@ -153,6 +156,29 @@ def collect_release_notes(
     release_notes_markdown = '\n'.join(
         str(i) for i in release_notes.markdown.render(release_note_blocks)
     ) or ''
+
+    version_vector = ocm.gardener.UpgradeVector(
+        whence=version.find_predecessor(
+            version=component.version,
+            versions=[v for v in version_lookup(component) if version.is_final(v)],
+        ),
+        whither=component.version,
+    )
+
+    # retrieve release-notes from sub-components
+    sub_component_release_notes = '\n'.join((
+        release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
+        for cid, rn in release_notes.ocm.release_notes_range_recursive(
+            version_vector=version_vector,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            oci_client=oci_client,
+            version_filter=version.is_final,
+        )
+    ))
+
+    if sub_component_release_notes:
+        release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
 
     if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
         component=component,
