@@ -32,8 +32,13 @@ inputs:
 outputs:
   release-notes:
     description: |
-      the collected release-notes in markdown format
+      the collected release-notes in markdown format (only for current component)
     value: ${{ steps.release-notes.outputs.release-notes }}
+  full-release-notes:
+    description: |
+      In addition to `release-notes`, also contains release-notes of sub-components. If there
+      are no such components, has the same value as `release-notes`.
+    value: ${{ steps.relase-notes.outputs.full-release-notes }}
 
 runs:
   using: composite
@@ -79,15 +84,21 @@ runs:
           --github-auth-token "${auth_token}" \
           ${draft_arg:-} \
           ${ocm_repositories_arg:-} \
-          --outfile release-notes.md
+          --full-release-notes full-release-notes.md \
+          --local-release-notes release-notes.md
 
-        echo 'Release-notes written to `release-notes.md`'
+        echo 'Full Release-notes written to `full-release-nodes.md`'
+        echo 'Local Release-notes written to `release-notes.md`'
 
         echo 'release-notes<<EOF' >> ${GITHUB_OUTPUT}
         cat release-notes.md >> ${GITHUB_OUTPUT}
         echo EOF >> ${GITHUB_OUTPUT}
 
+        echo 'full-release-notes<<EOF'
+        cat full-release-notes.md > ${GITHUB_OUTPUT}
+        echo EOF >> ${GITHUB_OUTPUT}
+
         cat << EOF > ${GITHUB_STEP_SUMMARY}
-        ## Release-Notes
+        ## Release-Notes (local)
         $(cat release-notes.md)
         EOF
