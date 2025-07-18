@@ -86,6 +86,11 @@ def main():
         '--local-release-notes',
         default=None,
     )
+    parser.add_argument(
+        '--subcomponent-release-notes',
+        default=None,
+        help='release-notes from sub-components',
+    )
 
     parsed = parser.parse_args()
     print(pprint.pformat(parsed), file=sys.stderr)
@@ -213,6 +218,16 @@ def main():
     if parsed.local_release_notes:
         with open(parsed.local_release_notes, 'w') as f:
             f.write(release_notes_md)
+
+    # hack: full release-notes and release-notes have same prefix, so we can calculate the
+    #       diff. This, however, hardcodes against an implementation-detail from
+    #       release-notes action.
+    if len(full_release_notes_md) > len(release_notes_md):
+        subcomponent_release_notes = full_release_notes_md.removeprefix(release_notes_md)
+
+    if parsed.subcomponent_release_notes:
+        with open(parsed.subcomponent_release_notes, 'w') as f:
+            f.write(subcomponent_release_notes)
 
 
 if __name__ == '__main__':
