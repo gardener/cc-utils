@@ -11,7 +11,6 @@ import ocm.util
 import github3.exceptions
 import github3.repos.repo
 
-import ccc.github
 import ci.util
 import concourse.model.traits.update_component_deps as ucd
 import concourse.steps.component_descriptor_util as cdu
@@ -19,7 +18,7 @@ import dockerutil
 import github.pullrequest
 import gitutil
 import model.container_registry as cr
-import release_notes.fetch as release_notes_fetch
+import release_notes.ocm
 import version
 
 UpgradePullRequest = github.pullrequest.UpgradePullRequest
@@ -293,28 +292,14 @@ def _import_release_notes(
     to_version: str,
     version_lookup,
     component_descriptor_lookup,
+    oci_client,
 ):
-    if not component.sources:
-        logger.warning(
-            f'''
-            {component.name=}:{component.version=} has no sources; skipping release-notes-import
-            '''
-        )
-        return None
-
-    main_source = ocm.util.main_source(component)
-    github_cfg = ccc.github.github_cfg_for_repo_url(main_source.access.repoUrl)
-    org_name = main_source.access.org_name()
-    repository_name = main_source.access.repository_name()
-
     release_notes = create_release_notes(
         from_component=component,
-        from_github_cfg=github_cfg,
-        from_repo_owner=org_name,
-        from_repo_name=repository_name,
         to_version=to_version,
         version_lookup=version_lookup,
         component_descriptor_lookup=component_descriptor_lookup,
+        oci_client=oci_client,
     )
 
     if not release_notes:
@@ -395,6 +380,7 @@ def create_upgrade_pr(
     merge_method: ucd.MergeMethod,
     version_lookup,
     component_descriptor_lookup,
+    oci_client,
     delivery_dashboard_url: str=None,
     after_merge_callback=None,
     container_image:str=None,
@@ -450,6 +436,7 @@ def create_upgrade_pr(
             to_version=to_version,
             version_lookup=version_lookup,
             component_descriptor_lookup=component_descriptor_lookup,
+            oci_client=oci_client,
         )
     except Exception:
         logger.warning('failed to retrieve release-notes')
@@ -516,37 +503,35 @@ def create_upgrade_pr(
 
 def create_release_notes(
     from_component: ocm.Component,
-    from_github_cfg,
-    from_repo_owner: str,
-    from_repo_name: str,
     to_version: str,
-    version_lookup,
     component_descriptor_lookup,
+    version_lookup,
+    oci_client,
 ):
-    from_version = from_component.version
+    version_vector = ocm.gardener.UpgradeVector(
+        whence=from_component,
+        whither=ocm.ComponentIdentity(
+            name=from_component.name,
+            version=to_version,
+        ),
+    )
 
+    release_notes_md = ''
     try:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            git_helper = gitutil.GitHelper.clone_into(
-                target_directory=temp_dir,
-                git_cfg=from_github_cfg.git_cfg(
-                    repo_path=f'{from_repo_owner}/{from_repo_name}',
-                ),
-            )
-            release_note_blocks = release_notes_fetch.fetch_release_notes(
-                component=from_component,
+        release_notes_md = '\n'.join((
+            release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
+            for cid, rn in release_notes.ocm.release_notes_range_recursive(
+                version_vector=version_vector,
                 component_descriptor_lookup=component_descriptor_lookup,
                 version_lookup=version_lookup,
-                git_helper=git_helper,
-                github_api_lookup=ccc.github.github_api_lookup,
-                version_whither=to_version,
-                version_whence=from_version,
+                oci_client=oci_client,
+                version_filter=version.is_final,
             )
-            if release_note_blocks:
-                n = '\n'
-                return f'**Release Notes**:\n{n.join(r.block_str for r in release_note_blocks)}'
-
+        )) or ''
     except:
         logger.warning('an error occurred during release notes processing (ignoring)')
         import traceback
         logger.warning(traceback.format_exc())
+
+    if release_notes_md:
+        return f'**Release Notes**:\n{release_notes_md}'
