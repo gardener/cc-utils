@@ -453,6 +453,7 @@ for validation_error in cnudie.validate.iter_violations(
 
 % if process_release_notes:
 release_notes_md = None
+full_release_notes_md = None
 try:
   release_notes_md, full_release_notes_md = collect_release_notes(
     git_helper=git_helper,
