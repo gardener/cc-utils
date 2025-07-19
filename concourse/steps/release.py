@@ -158,11 +158,14 @@ def collect_release_notes(
     ) or ''
 
     version_vector = ocm.gardener.UpgradeVector(
-        whence=version.find_predecessor(
-            version=component.version,
-            versions=[v for v in version_lookup(component) if version.is_final(v)],
+        whence=ocm.ComponentIdentity(
+            name=component.name,
+            version=version.find_predecessor(
+                version=component.version,
+                versions=[v for v in version_lookup(component) if version.is_final(v)],
+            ),
         ),
-        whither=component.version,
+        whither=component,
     )
 
     # retrieve release-notes from sub-components
