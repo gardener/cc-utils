@@ -45,7 +45,11 @@ def to_component_id(
         name = component.componentName
         version = component.version
     if isinstance(component, str):
-        name, version = component.split(':', 1)
+        try:
+            name, version = component.split(':', 1)
+        except ValueError as ve:
+            ve.add_note(f'{component=}')
+            raise
     if isinstance(component, tuple):
         name, version = component
 
