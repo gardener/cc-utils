@@ -177,6 +177,7 @@ def collect_release_notes(
             version_lookup=version_lookup,
             oci_client=oci_client,
             version_filter=version.is_final,
+            whither_component=component,
         )
     ))
 
