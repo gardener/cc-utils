@@ -37,6 +37,12 @@ logging.basicConfig(
 logging.getLogger('github3').setLevel(logging.DEBUG) # silence verbose logger from github3
 
 
+def ensure_trailing_newline(text: str) -> str:
+    if text.endswith('\n'):
+        return text
+    return f'{text}\n'
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -177,12 +183,10 @@ def main():
         release_note_blocks = None
 
     if release_note_blocks:
-        release_notes_md = '\n'.join(
+        release_notes_md = ensure_trailing_newline('\n'.join(
             str(rn) for rn
             in release_notes.markdown.render(release_note_blocks)
-        )
-        if not release_notes_md.endswith('\n'):
-            release_notes_md = f'{release_notes_md}\n'
+        ))
 
     version_vector = ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
@@ -199,7 +203,7 @@ def main():
     )
 
     # retrieve release-notes from sub-components
-    sub_component_release_notes = '\n'.join((
+    sub_component_release_notes = ensure_trailing_newline('\n'.join((
         release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
         for cid, rn in release_notes.ocm.release_notes_range_recursive(
             version_vector=version_vector,
@@ -209,7 +213,7 @@ def main():
             version_filter=version.is_final,
             whither_component=component,
         )
-    ))
+    )))
 
     if sub_component_release_notes:
         full_release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
