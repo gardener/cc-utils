@@ -138,4 +138,4 @@ jobs:
         with:
           version: ${{ needs.component-descriptor.outputs.version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          release-notes: ${{ steps.drn.outputs.release-notes }}
+          release-notes: ${{ steps.drn.outputs.full-release-notes }}
