@@ -38,7 +38,7 @@ outputs:
     description: |
       In addition to `release-notes`, also contains release-notes of sub-components. If there
       are no such components, has the same value as `release-notes`.
-    value: ${{ steps.relase-notes.outputs.full-release-notes }}
+    value: ${{ steps.release-notes.outputs.full-release-notes }}
 
 runs:
   using: composite
