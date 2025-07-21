@@ -226,17 +226,9 @@ def main():
         with open(parsed.local_release_notes, 'w') as f:
             f.write(release_notes_md)
 
-    # hack: full release-notes and release-notes have same prefix, so we can calculate the
-    #       diff. This, however, hardcodes against an implementation-detail from
-    #       release-notes action.
-    if len(full_release_notes_md) > len(release_notes_md):
-        subcomponent_release_notes = full_release_notes_md.removeprefix(release_notes_md)
-    else:
-        subcomponent_release_notes = ''
-
     if parsed.subcomponent_release_notes:
         with open(parsed.subcomponent_release_notes, 'w') as f:
-            f.write(subcomponent_release_notes)
+            f.write(sub_component_release_notes)
 
 
 if __name__ == '__main__':
