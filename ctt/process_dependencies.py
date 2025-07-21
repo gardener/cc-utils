@@ -488,10 +488,10 @@ def iter_replication_plan_components(
     remove_label: collections.abc.Callable[[str], bool] | None=None,
 ) -> collections.abc.Iterable[ctt.model.ReplicationComponentElement]:
     for component_descriptor in component_descriptors:
-        # create copy to not unintentionally modify mutually/afterwards
+        # create copy to not unintentionally modify mutually/afterwards (e.g. relevant for in-memory
+        # lookup)
         source = copy.deepcopy(component_descriptor)
-        # don't create a copy for target so that the passed-in component descriptor gets patched
-        target = component_descriptor
+        target = copy.deepcopy(component_descriptor)
 
         if target.component.current_ocm_repo.oci_ref != tgt_ocm_repo.oci_ref:
             target.component.repositoryContexts.append(tgt_ocm_repo)
@@ -818,7 +818,17 @@ def process_replication_plan_step(
         replication_plan_step.resources,
     ))
 
+    is_root_component_descriptor = lambda component_descriptor: (
+        component_descriptor.component.name == root_component_descriptor.component.name
+        and component_descriptor.component.version == root_component_descriptor.component.version
+    )
+
     for replication_plan_component in replication_plan_step.components:
+        if is_root_component_descriptor(replication_plan_component.target):
+            # store modified root target component descriptor because `cnudie.iter.iter` won't
+            # resolve the (updated) root component descriptor again
+            root_component_descriptor = replication_plan_component.target
+
         component = replication_plan_component.target.component
 
         resource_group = [
