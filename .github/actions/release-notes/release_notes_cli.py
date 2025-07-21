@@ -38,7 +38,7 @@ logging.getLogger('github3').setLevel(logging.DEBUG) # silence verbose logger fr
 
 
 def ensure_trailing_newline(text: str) -> str:
-    if text.endswith('\n'):
+    if not text or text.endswith('\n'):
         return text
     return f'{text}\n'
 
