@@ -189,7 +189,6 @@ def collect_release_notes(
     if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
         component=component,
     )):
-        release_notes_markdown += '\n\n' + component_resources_markdown
         full_release_notes_markdown += '\n\n' + component_resources_markdown
 
     return release_notes_markdown, full_release_notes_markdown
