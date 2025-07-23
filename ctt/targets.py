@@ -27,3 +27,21 @@ class RegistriesTarget(TargetBase):
         tgt_oci_registry: str,
     ) -> bool:
         return tgt_oci_registry in self._registries
+
+
+class RegionsTarget(TargetBase):
+    def __init__(
+        self,
+        registry: str,
+        provider: str,
+        regions: list[str],
+    ):
+        self.registry = registry
+        self.provider = provider
+        self.regions = regions
+
+    def filter(
+        self,
+        tgt_oci_registry: str,
+    ) -> bool:
+        return tgt_oci_registry == self.registry
