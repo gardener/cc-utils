@@ -48,6 +48,17 @@ on:
       versionfile:
         type: string
         required: false
+      version-operation:
+        type: string
+        required: false
+        default: set-prerelease
+        description: |
+          how to calculate effective version. Possible values:
+          - noop: keep version as-is
+          - set-prerelease: replace / set version's prerelease (e.g. 1.2.3-${prerelease})
+          - bump-major: increment major-version by 1
+          - bump-minor: increment minor-version by 1
+          - bump-patch: increment patch-version by 1
       base-component-file:
         default: .ocm/base-component.yaml
         type: string
@@ -162,6 +173,7 @@ jobs:
           commit-objects-artefact: release-commit-objects
           callback-action-path: ${{ inputs.version-commit-callback-action-path }}
           versionfile: ${{ inputs.versionfile }}
+          version-operation: ${{ inputs.version-operation }}
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
         id: component-descriptor
         with:
