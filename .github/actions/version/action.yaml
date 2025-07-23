@@ -193,7 +193,7 @@ runs:
         version="$(cat /tmp/effective-version)"
 
         git add -A
-        git commit -m "${{ inputs.commit-message }}"
+        git commit --allow-empty -m "${{ inputs.commit-message }}"
 
         echo "version=${version}" >> $GITHUB_OUTPUT
         cat << EOF > ${GITHUB_STEP_SUMMARY}
