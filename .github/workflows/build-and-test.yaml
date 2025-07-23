@@ -257,7 +257,7 @@ jobs:
 
         mkdir /tmp/blobs.d
 
-        .ci/test |& tee /tmp/blobs.d/test-log.txt
+        .ci/test 2>&1 | tee /tmp/blobs.d/test-log.txt
 
         tar czf /tmp/blobs.d/test-log.tar.gz -C/tmp/blobs.d test-log.txt
     - name: add-unittests-results-to-component-descriptor
