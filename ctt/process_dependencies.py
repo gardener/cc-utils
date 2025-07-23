@@ -665,7 +665,10 @@ def process_images(
     # only replicated to the respectively configured targets
     tgt_oci_registries = set()
     for target_cfg in processing_cfg['targets'].values():
-        tgt_oci_registries.update(target_cfg['kwargs']['registries'])
+        if 'registry' in target_cfg['kwargs']:
+            tgt_oci_registries.add(target_cfg['kwargs']['registry'])
+        elif 'registries' in target_cfg['kwargs']:
+            tgt_oci_registries.update(target_cfg['kwargs']['registries'])
 
     replication_plan = ctt.model.ReplicationPlan()
 
