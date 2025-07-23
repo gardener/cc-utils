@@ -254,8 +254,26 @@ jobs:
         mkdir /tmp/fake-cfg.d
         touch /tmp/fake-cfg.d/config_types.yaml
         export CC_CONFIG_DIR=/tmp/fake-cfg.d
-        .ci/test
 
+        mkdir /tmp/blobs.d
+
+        .ci/test |& tee /tmp/blobs.d/test-log.txt
+
+        tar czf /tmp/blobs.d/test-log.tar.gz -C/tmp/blobs.d test-log.txt
+    - name: add-unittests-results-to-component-descriptor
+      uses: ./.github/actions/export-ocm-fragments
+      with:
+        blobs-directory: /tmp/blobs.d
+        ocm-resources: |
+          - name: test-results
+            relation: local
+            access:
+              type: localBlob
+              localReference: test-log.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - test
   images:
     name: Build Job-Image
     needs:
