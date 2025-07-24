@@ -7,6 +7,52 @@ import ocm
 import ocm.util
 
 
+def find_resource(
+    component: ocm.Component,
+    component_ref_name: str | None,
+    name: str,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup | None=None,
+    absent_ok: bool=False,
+) -> ocm.Resource | None:
+    '''
+    Tries to resolve the OCI image resource with the given `name` in the provided `component`. If
+    `component_ref_name` is specified as well (together with the lookup), the referenced
+    sub-component is searched recursively to find the requested resource.
+    '''
+    if not component_ref_name or component_ref_name == component.name:
+        for resource in component.resources:
+            if resource.type is not ocm.ArtefactType.OCI_IMAGE:
+                continue
+            if resource.name != name:
+                continue
+            return resource
+
+        if absent_ok:
+            return None
+
+        raise ValueError(f'did not find oci-image with {name=} in component {component.name}')
+
+    if not component_descriptor_lookup:
+        raise ValueError('component-descriptor-lookup is required if component-ref is set')
+
+    for component_ref in component.componentReferences:
+        component_ref = component_descriptor_lookup(component_ref.component_id).component
+
+        if resource := find_resource(
+            component=component_ref,
+            component_ref_name=component_ref_name,
+            name=name,
+            component_descriptor_lookup=component_descriptor_lookup,
+            absent_ok=True,
+        ):
+            return resource
+
+    if absent_ok:
+        return None
+
+    raise ValueError(f'did not find oci-image with {name=} and {component_ref_name=}')
+
+
 def localised_helmchart_values(
     component: ocm.Component,
     oci_client: oci.client.Client,
@@ -15,6 +61,7 @@ def localised_helmchart_values(
     resource_extra_id: dict[str, str] | None=None,
     resource_type: str='helmchart-imagemap',
     base_values: dict | None=None,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup | None=None,
 ) -> dict:
     '''
     Resolves image references from a helmchart-imagemap resource and returns a dictionary
@@ -55,22 +102,22 @@ def localised_helmchart_values(
     for image_mapping in image_mappings:
         # image-mapping is expected to contain the following attributes:
         #
+        # component:
+        #   name: optional-(sub-)component-name
         # resource:
         #   name: oci-image-resource-name (for looking up image-resource)
         # repository: <attribute-name to set resource's image-repository to>
         # tag: <attribute-name to set resource's image-tag to
 
         resource_name = image_mapping['resource']['name']
-        for resource in component.resources:
-            if resource.name != resource_name:
-                continue
-            if not resource.type is ocm.ArtefactType.OCI_IMAGE:
-                continue
-            break # found it
-        else:
-            raise ValueError(
-                f'did not find oci-image with {resource_name=} in component {component.name}'
-            )
+        component_ref_name = image_mapping.get('component', {}).get('name')
+
+        resource = find_resource(
+            component=component,
+            component_ref_name=component_ref_name,
+            name=resource_name,
+            component_descriptor_lookup=component_descriptor_lookup,
+        )
 
         access = ocm.util.to_absolute_oci_access(
             access=resource.access,
