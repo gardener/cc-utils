@@ -314,13 +314,28 @@ jobs:
         uses: docker/build-push-action@v6
         id: build
         with:
-          push: ${{ needs.preprocess.outputs.push }}
+          outputs: type=docker
           tags: ${{ matrix.args.image-reference }}
           context: '.'
           platforms: ${{ matrix.args.platform-name }}
           target: ${{ inputs.target }}
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
+
+      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        with:
+          oci-image-reference: ${{ matrix.args.image-reference }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+
+      - name: 'push ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
+        uses: docker/build-push-action@v6
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        id: push
+        with:
+          push: ${{ needs.preprocess.outputs.push }}
+          tags: ${{ matrix.args.image-reference }}
 
   collect-images:
     needs:
