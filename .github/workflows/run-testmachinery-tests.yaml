@@ -114,7 +114,7 @@ jobs:
           $(cat /tmp/testrunner-output)
           EOF
 
-          if succeeded; then
+          if ${succeeded}; then
             exit 0
           else
             exit 1
