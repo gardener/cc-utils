@@ -176,7 +176,7 @@ def main():
                 version_whither=component.version,
                 version_whither_ref_commit=version_whither_ref_commit,
             )
-    except ValueError as ve:
+    except Exception as ve:
         print(f'Warning: error whilst fetch draft-release-notes: {ve=}')
         import traceback
         traceback.print_exc(file=sys.stderr)
