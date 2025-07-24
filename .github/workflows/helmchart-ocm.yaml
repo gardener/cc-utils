@@ -25,6 +25,11 @@ on:
           Path to Chart-Directory. Relative to repository-root.
         required: true
         type: string
+      ocm-repository:
+        description: |
+          The OCM-Repository to use to lookup sub-components for Helm chart image-mappings.
+        required: false
+        type: string
       oci-registry:
         description: |
           The OCI-Registry to publish the Helm-Chart to.
@@ -138,6 +143,7 @@ jobs:
         with:
           name: ${{ inputs.name }}
           dir: ${{ inputs.dir }}
+          ocm-repository: ${{ inputs.ocm-repository }}
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
           push: ${{ steps.check.outputs.push == 'true' }}

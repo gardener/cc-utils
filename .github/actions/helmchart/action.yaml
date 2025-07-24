@@ -26,6 +26,12 @@ inputs:
     description: |
       Relative path to Chart-Directory (directory containing `Chart.yaml`).
 
+  ocm-repository:
+    required: false
+    type: string
+    description: |
+      The OCM-Repository to use to lookup sub-components for Helm chart image-mappings.
+
   oci-registry:
     required: true
     type: string
@@ -121,7 +127,7 @@ runs:
         import dacite
         import yaml
 
-        import oci.auth
+        import cnudie.retrieve
         import oci.client
         import ocm
 
@@ -143,6 +149,16 @@ runs:
           oci_target_ref = f'{oci_target_ref.strip("/")}/{oci_repository.strip("/")}'
         oci_target_ref = f'{oci_target_ref.strip("/")}/{name}:{version}'
         oci_target_ref = oci.model.OciImageReference(oci_target_ref)
+
+        oci_client = oci.client.client_with_dockerauth()
+
+        if ocm_repository := '${{ inputs.ocm-repository }}':
+          component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repository),
+            oci_client=oci_client,
+          )
+        else:
+          component_descriptor_lookup = None
 
         with open('/tmp/mappings.yaml') as f:
           mappings = yaml.safe_load(f)
@@ -170,6 +186,7 @@ runs:
           component=component,
           values_yaml_path=(values_yaml_path := os.path.join(dir, 'values.yaml')),
           mappings=mappings,
+          component_descriptor_lookup=component_descriptor_lookup,
         )
 
         outdir = 'helmchart.d'
@@ -207,10 +224,6 @@ runs:
         with open(ocm_mappings_path, 'w') as f:
           json.dump(ocm_mappings, f)
         print(f'wrote mappings to {ocm_mappings_path=}')
-
-        oci_client = oci.client.Client(
-          credentials_lookup=oci.auth.docker_credentials_lookup(),
-        )
 
         with open(chart_yaml_path) as f:
           chart = yaml.safe_load(f)

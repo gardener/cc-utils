@@ -363,7 +363,7 @@ class HelmchartValueMapping:
 
     Syntax for ref:
 
-        oci-resource:<name>.<attribute>
+        ocm-resource:<name>.<attribute>
         ^^^^^
         prefix
 

@@ -24,6 +24,7 @@ import yaml
 import oci.client
 import oci.model
 import ocm
+import ocm.helm
 
 
 # copy-pasted from concourse/model/traits/publish.py
@@ -46,10 +47,12 @@ class HelmchartValueMapping:
 
     Syntax for ref:
 
-        oci-resource:<name>.<attribute>
-        ^^^^^
-        prefix
+        <prefix>:<component-ref-name>.<name>.<attribute>
 
+        prefix: choose either of:
+            ocm-resource:           used to reference a resource in the local component
+            ocm-component-resource: used to reference a resource of the (recursive) sub-components
+        component-ref-name: name of the component the resource belongs to (optional)
         name: resource-name (match names used in `dockerimages` attribute)
         attribute: choose either of:
             repository: image-reference without tag
@@ -71,40 +74,38 @@ class HelmchartValueMapping:
     attribute: str
 
     @property
-    def referenced_resource_and_attribute(self):
+    def resolved_ocm_ref(self) -> tuple[str | None, str, str]:
         '''
-        returns a two-tuple of reference resource-name and resource's attribute, parsed from
-        `ref`. If ref is not a valid ref (see class-docstr), raises ValueError.
+        returns a three-tuple of an optional component-reference-name, the resource-name and
+        resource's attribute, parsed from `ref`. If ref is not a valid ref (see class-docstr),
+        raises ValueError.
         '''
-        if not self.ref.startswith(prefix := 'ocm-resource:'):
-            raise ValueError(self.ref, f'must start with {prefix=}')
+        if self.ref.startswith(prefix := 'ocm-resource:'):
+            ref = self.ref.removeprefix(prefix)
+            parts = ref.split('.')
+            if not len(parts) == 2:
+                raise ValueError(ref, 'must consist of exactly two period-separated parts')
 
-        ref = self.ref.removeprefix(prefix)
-        parts = ref.split('.')
-        if not len(parts) == 2:
-            raise ValueError(ref, 'must consist of exactly two period-separated parts')
+            resource_name, attribute_name = parts
+            return None, resource_name, attribute_name
 
-        resource_name, attribute_name = parts
-        return resource_name, attribute_name
+        elif self.ref.startswith(prefix := 'ocm-component-resource:'):
+            ref = self.ref.removeprefix(prefix)
+            component_ref_name, resource_name, attribute_name = ref.rsplit('.', maxsplit=2)
+            return component_ref_name, resource_name, attribute_name
 
-
-def find_resource(
-    component: ocm.Component,
-    name: str,
-):
-    for resource in component.resources:
-        if not resource.type is ocm.ArtefactType.OCI_IMAGE:
-            continue
-        if resource.name == name:
-            return resource
-    print(f'Error: did not find resource {name=} in component-descriptor')
-    exit(1)
+        else:
+            raise ValueError(
+                self.ref,
+                f'must start with either "ocm-resource:" or "ocm-component-resource:"',
+            )
 
 
 def patch_values_yaml(
     component: ocm.Component,
     values_yaml_path: str,
     mappings: list[HelmchartValueMapping],
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup | None=None,
 ):
     '''
     updates the given helm-values-file ("values.yaml") according to the given mappings. each
@@ -121,10 +122,12 @@ def patch_values_yaml(
         values = {}
 
     for mapping in mappings:
-        image_name, image_attr = mapping.referenced_resource_and_attribute
-        resource = find_resource(
+        component_ref_name, image_name, image_attr = mapping.resolved_ocm_ref
+        resource = ocm.helm.find_resource(
             component=component,
+            component_ref_name=component_ref_name,
             name=image_name,
+            component_descriptor_lookup=component_descriptor_lookup,
         )
 
         image_ref = oci.model.OciImageReference(resource.access.imageReference)
@@ -155,24 +158,36 @@ def to_ocm_mapping(
     '''
     converts the given `mapping` into a mapping-dict compliant to the proposed one from:
     https://github.com/open-component-model/ocm/blob/2b9ed814dee16e351636cb0d4ea0203f72224c0d/components/helmdemo/README.md
+    Additionally, the `component` property might contain the `name` attribute to reference resources
+    of sub-components.
     '''
-    attrs_by_resource_and_value_key = collections.defaultdict(lambda: collections.defaultdict(dict))
+    attrs_by_comp_and_resource_and_value_key = collections.defaultdict(
+        lambda: collections.defaultdict(
+            lambda: collections.defaultdict(dict)
+        )
+    )
+
     for mapping in mappings:
-        resource_name, ref_name = mapping.referenced_resource_and_attribute
+        component_ref_name, resource_name, ref_name = mapping.resolved_ocm_ref
         value_key = mapping.attribute.split('.')[0]
-        attrs_by_resource_and_value_key[resource_name][value_key][ref_name] = mapping.attribute
+        attrs_by_comp_and_resource_and_value_key[component_ref_name][resource_name][value_key][ref_name] = mapping.attribute # noqa: E501
 
     image_mappings = []
 
-    for resource_name, attrs_by_value_key in attrs_by_resource_and_value_key.items():
-        for attribute_mappings in attrs_by_value_key.values():
-            image_mapping = {
-                'resource': {'name': resource_name},
-            }
-            for ref, attr in attribute_mappings.items():
-                image_mapping[ref] = attr
+    for component_ref_name, attrs_by_resource_and_value_key in attrs_by_comp_and_resource_and_value_key.items(): # noqa: E501
+        for resource_name, attrs_by_value_key in attrs_by_resource_and_value_key.items():
+            for attribute_mappings in attrs_by_value_key.values():
+                image_mapping = {
+                    'resource': {'name': resource_name},
+                }
+                if component_ref_name:
+                    image_mapping['component'] = {
+                        'name': component_ref_name,
+                    }
+                for ref, attr in attribute_mappings.items():
+                    image_mapping[ref] = attr
 
-            image_mappings.append(image_mapping)
+                image_mappings.append(image_mapping)
 
     return {
         'helmchartResource': {
@@ -265,17 +280,17 @@ def helmchart_resource(
     target_ref: str | oci.model.OciImageReference,
 ) -> ocm.Resource:
     return ocm.Resource(
-      name=helmchart_name,
-      version=version,
-      type='helmChart',
-      extraIdentity={
-        'type': 'helmChart', # avoid clashes w/ equally-named images (or other resources)
-      },
-      relation=ocm.ResourceRelation.LOCAL,
-      access=ocm.OciAccess(
-        type=ocm.AccessType.OCI_REGISTRY,
-        imageReference=str(target_ref),
-      ),
+        name=helmchart_name,
+        version=version,
+        type='helmChart',
+        extraIdentity={
+            'type': 'helmChart', # avoid clashes w/ equally-named images (or other resources)
+        },
+        relation=ocm.ResourceRelation.LOCAL,
+        access=ocm.OciAccess(
+            type=ocm.AccessType.OCI_REGISTRY,
+            imageReference=str(target_ref),
+        ),
     )
 
 
