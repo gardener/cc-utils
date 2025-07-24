@@ -43,6 +43,24 @@ on:
         description: |
           A comma-separated list of additional tags to set. Existing tags will be updated.
           Commonly used to reset `latest`-tag.
+      oci-platforms-to-runners-map:
+        type: string
+        description: |
+          Specifies which runners to use for which target-platform. The value is expected to be
+          a YAML-document of the following form:
+            ```
+            <platform-name>: <runner-name>
+            ```
+
+          Example:
+            ```
+            linux/amd64: ubuntu-latest
+            ```
+
+          Unused platforms are ignored.
+        default: |
+          linux/arm64: ubuntu-24.04-arm
+          linux/amd64: ubuntu-latest
       push:
         description: |
           Whether or not to push the built image. Allowed values:
@@ -195,6 +213,8 @@ jobs:
           import os
           import pprint
 
+          import yaml
+
           platform_names = '${{ inputs.oci-platforms }}'.split(',')
           ref_parts = []
           if (oci_registry := '${{ inputs.oci-registry }}'):
@@ -210,10 +230,9 @@ jobs:
           # note: `version` must be in scope to resolve occurrences of `{version}`
           tag = f'${{ inputs.tag }}'
 
-          runners_by_platform = {
-            'linux/arm64': 'ubuntu-24.04-arm',
-            'linux/amd64': 'ubuntu-latest',
-          }
+          runners_by_platform = yaml.safe_load(
+          '''${{ inputs.oci-platforms-to-runners-map }}'''
+          )
 
           args = []
 
@@ -298,6 +317,7 @@ jobs:
           push: ${{ needs.preprocess.outputs.push }}
           tags: ${{ matrix.args.image-reference }}
           context: '.'
+          platforms: ${{ matrix.args.platform-name }}
           target: ${{ inputs.target }}
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
