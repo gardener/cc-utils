@@ -330,12 +330,12 @@ jobs:
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
 
       - name: 'push ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
-        uses: docker/build-push-action@v6
         if: ${{ needs.preprocess.outputs.push == 'true' }}
+        shell: bash
         id: push
-        with:
-          push: ${{ needs.preprocess.outputs.push }}
-          tags: ${{ matrix.args.image-reference }}
+        run: |
+          set -eu
+          docker push ${{ matrix.args.image-reference }}
 
   collect-images:
     needs:
