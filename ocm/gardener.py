@@ -11,6 +11,7 @@ import dataclasses
 import os
 
 import dacite
+import semver
 import yaml
 
 import oci.model
@@ -38,6 +39,18 @@ class UpgradeVector:
     @property
     def component_name(self) -> str:
         return self.whence.name
+
+    @property
+    def whence_version(self) -> semver.VersionInfo:
+        return version.parse_to_semver(self.whence.version)
+
+    @property
+    def whither_version(self) -> semver.VersionInfo:
+        return version.parse_to_semver(self.whither.version)
+
+    @property
+    def is_downgrade(self) -> bool:
+        return self.whence_version > self.whither_version
 
 
 def find_upgrade_vector(
