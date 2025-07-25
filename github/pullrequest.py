@@ -60,10 +60,10 @@ class UpgradePullRequest:
             return False # special case: we have a new reference
 
         greatest_reference_version = version.parse_to_semver(reference_refs[-1].version)
-        wither_version = version.parse_to_semver(self.upgrade_vector.whither.version)
+        whence_version = self.upgrade_vector.whence_version
 
-        # PR is obsolete if same or newer component version is already configured in reference
-        return greatest_reference_version >= wither_version
+        # PR is obsolete if same or greater component version is already configured in reference
+        return greatest_reference_version >= whence_version
 
     def purge(self):
         self.pull_request.close()
