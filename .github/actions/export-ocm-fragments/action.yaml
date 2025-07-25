@@ -226,7 +226,8 @@ runs:
           if local_ref.startswith('sha256:'):
             continue
           if not (local_fpath := find_local_blobfile(local_ref)):
-            continue
+            print(f'ERROR: did not find blobfile for {artefact=}')
+            exit(1)
           # local file exists, and it does not meet content-addresssing scheme (
           # <alg>:<hexdigest>). We should find it from previous step where we calculated
           # digests, and created symlinks.
