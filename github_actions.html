@@ -151,6 +151,43 @@ However, re-usable workflows from cc-utils will not attempt to push build-result
 the run be based on the changes from the pullrequest, which may be unintuitive.</p>
 <p>In such cases, a warning is emitted into the pipeline-run’s summary.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>There are the following “autor-associations” a pullrequest author can have:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>association</p></th>
+<th class="head"><p>explanation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>COLLABORATOR</p></td>
+<td><p>Author has been invited to collaborate on the repository</p></td>
+</tr>
+<tr class="row-odd"><td><p>CONTRIBUTOR</p></td>
+<td><p>Author has previously committed to the repository</p></td>
+</tr>
+<tr class="row-even"><td><p>FIRST_TIMER</p></td>
+<td><p>Author has not previously committed to GitHub</p></td>
+</tr>
+<tr class="row-odd"><td><p>FIRST_TIME_CONTRIBUTOR</p></td>
+<td><p>Author has not previously committed to the repository</p></td>
+</tr>
+<tr class="row-even"><td><p>MANNEQUIN</p></td>
+<td><p>Author is a placeholder for an unclaimed user</p></td>
+</tr>
+<tr class="row-odd"><td><p>MEMBER</p></td>
+<td><p>Author is a member of the organization that owns the repository</p></td>
+</tr>
+<tr class="row-even"><td><p>NONE</p></td>
+<td><p>Author has no association with the repository</p></td>
+</tr>
+<tr class="row-odd"><td><p>OWNER</p></td>
+<td><p>Author is the owner of the repository.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <section id="when-to-use-what">
 <h3>When to use what<a class="headerlink" href="#when-to-use-what" title="Link to this heading"></a></h3>
 <p>If a workflow does not need to publish changes from pullrequests, use <code class="code docutils literal notranslate"><span class="pre">on.pull_request</span></code>.
