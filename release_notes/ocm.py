@@ -144,6 +144,9 @@ def release_notes_range_recursive(
             whence=whence_component,
             whither=whither_component,
         )
+        if version_vector.is_downgrade:
+            logger.warn(f'skipping retrieval of release-notes for downgrade: {version_vector=}')
+            continue
         yield from release_notes_range(
             version_vector=version_vector,
             versions=versions,
