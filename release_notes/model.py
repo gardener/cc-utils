@@ -1,10 +1,13 @@
 import dataclasses
+import enum
+import functools
 import logging
 import re
 import traceback
 import typing
+import uuid
 
-import ocm
+import ocm as ocm_model
 import ocm.util
 import git
 import github3.pulls
@@ -12,6 +15,121 @@ import github3.pulls
 import version
 
 logger = logging.getLogger(__name__)
+
+
+class ReleaseNotesType(enum.StrEnum):
+    STANDARD = 'standard'
+    PRERENDERED = 'prerendered'
+
+
+class ReleaseNotesCategory(enum.StrEnum):
+    ACTION = 'action'
+    BREAKING = 'breaking'
+    BUGFIX = 'bugfix'
+    DOCUMENTATION = 'doc'
+    FEATURE = 'feature'
+    FIX = 'fix'
+    IMPROVEMENT = 'improvement'
+    NOTEWORTHY = 'noteworthy'
+    OTHER = 'other'
+
+    @staticmethod
+    def category_title(category: typing.Self) -> str:
+        return {
+            ReleaseNotesCategory.ACTION: '⚠️ Breaking Changes',
+            ReleaseNotesCategory.BREAKING: '⚠️ Breaking Changes',
+            ReleaseNotesCategory.BUGFIX: '🐛 Bug Fixes',
+            ReleaseNotesCategory.DOCUMENTATION: '📖 Documentation',
+            ReleaseNotesCategory.FEATURE: '✨ New Features',
+            ReleaseNotesCategory.FIX: '🐛 Bug Fixes',
+            ReleaseNotesCategory.IMPROVEMENT: '🏃 Others',
+            ReleaseNotesCategory.NOTEWORTHY: '📰 Noteworthy',
+            ReleaseNotesCategory.OTHER: '🏃 Others',
+        }[category]
+
+    @staticmethod
+    def category_priority(category: typing.Self) -> int:
+        return {
+            ReleaseNotesCategory.ACTION: 0,
+            ReleaseNotesCategory.BREAKING: 0,
+            ReleaseNotesCategory.NOTEWORTHY: 1,
+            ReleaseNotesCategory.FEATURE: 2,
+            ReleaseNotesCategory.BUGFIX: 3,
+            ReleaseNotesCategory.FIX: 3,
+            ReleaseNotesCategory.IMPROVEMENT: 4,
+            ReleaseNotesCategory.OTHER: 4,
+            ReleaseNotesCategory.DOCUMENTATION: 5,
+        }[category]
+
+
+class ReleaseNotesAudience(enum.StrEnum):
+    DEPENDENCY = 'dependency'
+    DEVELOPER = 'developer'
+    OPERATOR = 'operator'
+    USER = 'user'
+
+
+class AuthorType(enum.StrEnum):
+    GITHUB_USER = 'githubUser'
+
+
+@dataclasses.dataclass(kw_only=True)
+class ReleaseNotesAuthor:
+    type: AuthorType = AuthorType.GITHUB_USER
+    hostname: str
+    username: str
+
+
+@dataclasses.dataclass(kw_only=True)
+class ReleaseNoteEntry:
+    type: ReleaseNotesType = ReleaseNotesType.STANDARD
+    mimetype: str
+    contents: str
+    category: ReleaseNotesCategory | None = None
+    audience: ReleaseNotesAudience | None = None
+    author: ReleaseNotesAuthor | None = None
+    pullrequest: str | None = None
+
+
+@dataclasses.dataclass
+class ReleaseNotesOcmRef:
+    component_name: str
+    component_version: str | None
+
+
+@dataclasses.dataclass
+class ReleaseNotesDoc:
+    ocm: ReleaseNotesOcmRef | None
+    release_notes: list[ReleaseNoteEntry]
+
+    @functools.cached_property
+    def component_id(self) -> ocm_model.ComponentIdentity | None:
+        if not self.ocm:
+            return None
+
+        return ocm_model.ComponentIdentity(
+            name=self.ocm.component_name,
+            version=self.ocm.component_version,
+        )
+
+    @functools.cached_property
+    def fname(self) -> str:
+        if self.ocm and self.ocm.component_name and self.ocm.component_version:
+            # this is usually the case for release notes of sub-components (upgrade-PRs)
+            return f'{self.ocm.component_name.replace('/', '_')}_{self.ocm.component_version}.yaml'
+
+        # generate a random filename for now, we might use a stable one later
+        return f'{uuid.uuid4()}.yaml'
+
+    def as_markdown(self) -> str | None:
+        if not self.release_notes:
+            return None
+
+        header = f'[{self.ocm.component_name}:{self.ocm.component_version}]'
+        release_notes = '\n'.join(release_note.contents for release_note in self.release_notes)
+
+        return f'{header}\n{release_notes}'
+
 
 r'''
 This pattern matches code-blocks in the following format:
@@ -240,7 +358,7 @@ class ReleaseNote:
     author: typing.Optional[Author]  # the author of the commit / pull request
     reference: _Reference
 
-    source_component: ocm.Component
+    source_component: ocm_model.Component
     is_current_repo: bool
     from_same_github_instance: bool
 
@@ -272,15 +390,15 @@ class ReleaseNote:
 def _source_component(
     component_descriptor_lookup,
     version_lookup,
-    current_component: ocm.Component,
+    current_component: ocm_model.Component,
     source_component_name: str,
-) -> ocm.Component | None:
+) -> ocm_model.Component | None:
     try:
         # try to fetch greatest component-descriptor for source component. The
         # actual version (hopefully) does not matter, as we assume the GithubAccess
         # (which we need to lookup release-notes) will rarely change.
         source_component_descriptor = component_descriptor_lookup(
-            ocm.ComponentIdentity(
+            ocm_model.ComponentIdentity(
                 name=source_component_name,
                 version=version.greatest_version(
                     versions=version_lookup(source_component_name),
@@ -301,8 +419,8 @@ def create_release_notes_obj(
     component_descriptor_lookup,
     version_lookup,
     source_block: SourceBlock,
-    source_component: ocm.Component,
-    current_component: ocm.Component,
+    source_component: ocm_model.Component,
+    current_component: ocm_model.Component,
 ) -> ReleaseNote:
     target = source_block.source
     if isinstance(target, git.Commit):
