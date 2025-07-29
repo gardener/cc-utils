@@ -324,6 +324,10 @@ def create_and_push_bump_commit(
         path=version_path,
     )
 
+    rno.purge_release_notes_dir(
+      repo_dir=repo_dir,
+    )
+
     # call optional dev cycle commit callback
     if next_version_callback:
         _invoke_callback(
