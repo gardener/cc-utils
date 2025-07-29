@@ -243,3 +243,39 @@ def release_notes_docs_as_markdown(
         for release_notes_doc in release_notes_docs
         if (markdown := release_notes_doc.as_markdown())
     )
+
+
+def purge_release_notes_dir(
+    repo_dir: str,
+    rel_path: str='.ocm/release-notes',
+    absent_ok: bool=True,
+):
+    repo_dir = os.path.abspath(repo_dir)
+    dir_path = os.path.abspath(os.path.join(repo_dir, rel_path))
+
+    if not os.path.commonpath([repo_dir, dir_path]) == repo_dir:
+        raise ValueError(f'{rel_path=} points outside of {repo_dir=}')
+
+    if not os.path.isdir(dir_path):
+        if not absent_ok:
+            raise RuntimeError(f'{dir_path=} is not a directory')
+
+        logger.info(f'{dir_path=} is not a directory, skipping purging of release-notes documents')
+        return
+
+    logger.info(
+        f'going to purge release-notes docs with {rnm.RELEASE_NOTES_DOC_SUFFIX=} in {dir_path=}'
+    )
+    for cur_dir_path, dirnames, fnames in os.walk(dir_path):
+        for dirname in dirnames:
+            if dirname.endswith(rnm.RELEASE_NOTES_DOC_SUFFIX):
+                raise ValueError(f'found {dirname=} with matching {rnm.RELEASE_NOTES_DOC_SUFFIX=}')
+
+        for fname in fnames:
+            file_path = os.path.join(cur_dir_path, fname)
+
+            if not file_path.endswith(rnm.RELEASE_NOTES_DOC_SUFFIX):
+                logger.info(f'skipping deletion of {file_path=} (suffix does not match)')
+                continue
+
+            os.remove(file_path)

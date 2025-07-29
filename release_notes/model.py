@@ -17,6 +17,9 @@ import version
 logger = logging.getLogger(__name__)
 
 
+RELEASE_NOTES_DOC_SUFFIX = '.release-notes.yaml'
+
+
 class ReleaseNotesType(enum.StrEnum):
     STANDARD = 'standard'
     PRERENDERED = 'prerendered'
@@ -116,10 +119,13 @@ class ReleaseNotesDoc:
     def fname(self) -> str:
         if self.ocm and self.ocm.component_name and self.ocm.component_version:
             # this is usually the case for release notes of sub-components (upgrade-PRs)
-            return f'{self.ocm.component_name.replace('/', '_')}_{self.ocm.component_version}.yaml'
+            return (
+                f'{self.ocm.component_name.replace('/', '_')}_{self.ocm.component_version}'
+                f'{RELEASE_NOTES_DOC_SUFFIX}'
+            )
 
         # generate a random filename for now, we might use a stable one later
-        return f'{uuid.uuid4()}.yaml'
+        return f'{uuid.uuid4()}{RELEASE_NOTES_DOC_SUFFIX}'
 
     def as_markdown(self) -> str | None:
         if not self.release_notes:

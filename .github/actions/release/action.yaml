@@ -470,6 +470,7 @@ runs:
         prerelease: 'dev'
         commit-message: ${{ inputs.next-version-commit-message }}
         repository-operation: commit-to-head
+        purge-release-notes: true
 
     - name: push-bump-commit
       shell: bash
