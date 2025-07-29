@@ -18,7 +18,9 @@ import model.container_registry as cr
 import oci.client
 import ocm
 import ocm.gardener
-import release_notes.ocm
+import release_notes.model as rnm
+import release_notes.ocm as rno
+import release_notes.tarutil as rnt
 import version
 
 UpgradePullRequest = github.pullrequest.UpgradePullRequest
@@ -364,22 +366,27 @@ def create_upgrade_pr(
     cname = upgrade_vector.component_name
     commit_message = f'Upgrade {cname}\n\nfrom {from_version} to {to_version}'
 
-    try:
-        release_notes = fetch_release_notes(
-            from_component=from_component,
-            to_version=to_version,
-            version_lookup=version_lookup,
-            component_descriptor_lookup=component_descriptor_lookup,
-            oci_client=oci_client,
-        )
-    except Exception:
-        logger.warning('failed to retrieve release-notes')
-        traceback.print_exc()
-        release_notes = 'failed to retrieve release-notes'
+    release_notes_docs = fetch_release_notes(
+        from_component=from_component,
+        to_version=to_version,
+        version_lookup=version_lookup,
+        component_descriptor_lookup=component_descriptor_lookup,
+        oci_client=oci_client,
+    )
+
+    grouped_release_notes_docs = rno.group_release_notes_docs(release_notes_docs)
+    logger.info(f'grouped into {len(grouped_release_notes_docs)} release-notes documents')
+
+    release_notes_markdown = rno.release_notes_docs_as_markdown(grouped_release_notes_docs)
 
     pr_body, additional_notes = github.pullrequest.upgrade_pullrequest_body(
-        release_notes=release_notes,
+        release_notes=release_notes_markdown,
         bom_diff_markdown=bom_diff_markdown,
+    )
+
+    rnt.release_notes_docs_into_files(
+        release_notes_docs=grouped_release_notes_docs,
+        repo_dir=repo_dir,
     )
 
     if pullrequest_body_suffix:
@@ -441,7 +448,7 @@ def fetch_release_notes(
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
     version_lookup: ocm.VersionLookup,
     oci_client: oci.client.Client,
-):
+) -> list[rnm.ReleaseNotesDoc]:
     upgrade_vector = ocm.gardener.UpgradeVector(
         whence=from_component,
         whither=ocm.ComponentIdentity(
@@ -450,22 +457,20 @@ def fetch_release_notes(
         ),
     )
 
-    release_notes_md = ''
+    logger.info(f'fetching release-notes for {upgrade_vector=}')
+
     try:
-        release_notes_md = '\n'.join((
-            release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
-            for cid, rn in release_notes.ocm.release_notes_range_recursive(
-                version_vector=upgrade_vector,
-                component_descriptor_lookup=component_descriptor_lookup,
-                version_lookup=version_lookup,
-                oci_client=oci_client,
-                version_filter=version.is_final,
-            )
-        )) or ''
+        release_notes_docs = list(rno.release_notes_for_vector(
+            upgrade_vector=upgrade_vector,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            oci_client=oci_client,
+            version_filter=version.is_final,
+        ))
+        logger.info(f'fetched {len(release_notes_docs)} release-notes documents')
     except:
         logger.warning('an error occurred during release notes processing (ignoring)')
-        import traceback
         logger.warning(traceback.format_exc())
+        release_notes_docs = []
 
-    if release_notes_md:
-        return f'**Release Notes**:\n{release_notes_md}'
+    return release_notes_docs
