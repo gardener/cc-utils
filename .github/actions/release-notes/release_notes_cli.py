@@ -25,6 +25,7 @@ import github
 import gitutil
 import oci.auth
 import oci.client
+import ocm.gardener
 import release_notes.fetch
 import release_notes.markdown
 import release_notes.ocm
