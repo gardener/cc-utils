@@ -5,6 +5,7 @@ OCM-Component-Descriptors
 
 import collections.abc
 import logging
+import os
 import zlib
 
 import cnudie.retrieve
@@ -154,3 +155,25 @@ def release_notes_range_recursive(
             component_descriptor_lookup=component_descriptor_lookup,
             absent_ok=True,
         )
+
+
+def add_release_notes_resource(
+    component: ocm.Component,
+    archive_path: str,
+    resource_name: str = 'release-notes-archive',
+    media_type: str = 'application/tar',
+):
+    logger.info(f'adding release-notes {resource_name=} from {archive_path}')
+
+    resource = ocm.Resource(
+        name=resource_name,
+        version=component.version,
+        type=ocm.ArtefactType.BLOB,
+        relation=ocm.ResourceRelation.LOCAL,
+        access=ocm.LocalBlobAccess(
+            localReference=os.path.abspath(archive_path),
+            mediaType=media_type
+        ),
+    )
+
+    component.resources.append(resource)
