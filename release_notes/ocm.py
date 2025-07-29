@@ -16,7 +16,17 @@ import version as version_mod
 logger = logging.getLogger(__name__)
 
 
-release_notes_resource_name = 'release-notes'
+'''
+Initially, the release-notes were attached as a plain markdown text document as local blob to the
+OCM component descriptor. Those artefacts have the name `release_notes_resource_name_old`
+(-> `release-notes`). After a refactoring, the release-notes are expected to be added in a
+machine-readable format to the component descriptor (based on `release_notes.model.ReleaseNotesDoc`).
+Those "new" artefacts have the name `release_notes_resource_name` (-> 'release-notes-archive'), since
+they contain an archive of all recursively retrieved release-notes.
+Once there are no component upgrades for components which have been release prior to the refactoring,
+the support for the "old" release notes artefact can be dropped eventually.
+'''
+release_notes_resource_name_old = 'release-notes'
 
 
 def release_notes(
