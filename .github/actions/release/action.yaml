@@ -157,6 +157,13 @@ inputs:
       - skip
       - overwrite
       - fail
+  release-notes-path:
+    required: false
+    type: string
+    default: .ocm/release-notes
+    description: |
+      The relative path (from repository root) to the directory containing the release-notes docs.
+
 outputs:
   component-descriptor:
     description: |
@@ -484,7 +491,26 @@ runs:
         commit-message: ${{ inputs.next-version-commit-message }}
         repository-operation: commit-to-head
 
+    - name: reset-release-notes-directory
+      if: ${{ inputs.release-notes-path }}
+      shell: python
+      run: |
+        import os
+
+        import release_notes.ocm
+
+
+        release_notes.ocm.purge_release_notes_dir(
+          repo_dir=os.getcwd(),
+          rel_path='${{ inputs.release-notes-path }}',
+        )
+
     - name: push-bump-commit
       shell: bash
       run: |
+        if [ -n "${{ inputs.release-notes-path }}" ]; then
+          git add "${{ inputs.release-notes-path }}"
+          git commit --amend --no-edit --allow-empty
+        fi
+
         git push origin "${{ github.ref }}"
