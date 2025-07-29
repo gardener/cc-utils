@@ -151,11 +151,11 @@ def create_upgrade_pullrequest_diff(
 
 
 def retrieve_release_notes(
-    upgrade_vector,
-    version_lookup,
-    version_filter,
+    upgrade_vector: ocm.gardener.UpgradeVector,
+    version_lookup: ocm.VersionLookup,
+    version_filter: collections.abc.Callable[[str], bool],
     oci_client: oci.client.Client,
-    component_descriptor_lookup,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
 ) -> str | None:
     logger.info(f'fetching release-notes for {upgrade_vector=}')
 
@@ -182,10 +182,10 @@ def retrieve_release_notes(
 
 
 def create_upgrade_pullrequest(
-    upgrade_vector,
+    upgrade_vector: ocm.gardener.UpgradeVector,
     component: ocm.Component,
-    component_descriptor_lookup,
-    version_lookup,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
     github_api_lookup,
     repo_dir: str,
     repo_url: str,
@@ -281,8 +281,8 @@ def upgrade_pullrequest_exists(
 
 def create_upgrade_pullrequests(
     component: ocm.Component,
-    component_descriptor_lookup,
-    version_lookup,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
     github_api_lookup,
     upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
     repo_dir: str,

@@ -5,11 +5,8 @@ import subprocess
 import tempfile
 import traceback
 
-import ocm
-import ocm.gardener
-import ocm.util
 import github3.exceptions
-import github3.repos.repo
+import github3.repos
 
 import ci.util
 import concourse.model.traits.update_component_deps as ucd
@@ -18,6 +15,9 @@ import dockerutil
 import github.pullrequest
 import gitutil
 import model.container_registry as cr
+import oci.client
+import ocm
+import ocm.gardener
 import release_notes.ocm
 import version
 
@@ -245,14 +245,11 @@ def determine_upgrade_vectors(
 
 def create_upgrade_commit_diff(
     repo_dir: str,
-    container_image,
-    upgrade_script_path,
-    upgrade_script_relpath,
+    container_image: str | None,
+    upgrade_script_path: str,
+    upgrade_script_relpath: str,
     cmd_env: dict[str, str],
 ):
-    if container_image:
-        cmd_env['REPO_DIR'] = (repo_dir_in_container := '/mnt/main_repo')
-
     if not container_image:
         # create upgrade diff
         subprocess.run(
@@ -260,66 +257,69 @@ def create_upgrade_commit_diff(
             check=True,
             env=cmd_env
         )
-    else:
-        # run check-script in container
-        oci_registry_cfg = cr.find_config(image_reference=container_image)
-        if oci_registry_cfg:
-            docker_cfg_dir = tempfile.TemporaryDirectory()
-            dockerutil.mk_docker_cfg_dir(
-                cfg={'auths': oci_registry_cfg.as_docker_auths()},
-                cfg_dir=docker_cfg_dir.name,
-                exist_ok=True,
-            )
-        else:
-            docker_cfg_dir = None
+        return
 
-        upgrade_script_path_in_container = os.path.join(
-            repo_dir_in_container,
-            upgrade_script_relpath,
-        )
+    cmd_env['REPO_DIR'] = (repo_dir_in_container := '/mnt/main_repo')
 
-        docker_argv = dockerutil.docker_run_argv(
-            image_reference=container_image,
-            argv=(
-                upgrade_script_path_in_container,
-            ),
-            env=cmd_env,
-            mounts={
-                repo_dir: repo_dir_in_container,
-            },
+    # run check-script in container
+    oci_registry_cfg = cr.find_config(image_reference=container_image)
+    if oci_registry_cfg:
+        docker_cfg_dir = tempfile.TemporaryDirectory()
+        dockerutil.mk_docker_cfg_dir(
+            cfg={'auths': oci_registry_cfg.as_docker_auths()},
             cfg_dir=docker_cfg_dir.name,
+            exist_ok=True,
         )
+    else:
+        docker_cfg_dir = None
 
-        logger.info(f'will run: ${docker_argv=}')
+    upgrade_script_path_in_container = os.path.join(
+        repo_dir_in_container,
+        upgrade_script_relpath,
+    )
 
-        try:
-            subprocess.run(
-                docker_argv,
-                check=True,
-            )
-        finally:
-            if docker_cfg_dir:
-                docker_cfg_dir.cleanup()
+    docker_argv = dockerutil.docker_run_argv(
+        image_reference=container_image,
+        argv=(
+            upgrade_script_path_in_container,
+        ),
+        env=cmd_env,
+        mounts={
+            repo_dir: repo_dir_in_container,
+        },
+        cfg_dir=docker_cfg_dir.name,
+    )
+
+    logger.info(f'will run: ${docker_argv=}')
+
+    try:
+        subprocess.run(
+            docker_argv,
+            check=True,
+        )
+    finally:
+        if docker_cfg_dir:
+            docker_cfg_dir.cleanup()
 
 
 def create_upgrade_pr(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repository: github3.repos.Repository,
-    upgrade_script_path,
-    upgrade_script_relpath,
+    upgrade_script_path: str,
+    upgrade_script_relpath: str,
     branch: str,
-    repo_dir,
+    repo_dir: str,
     git_helper: gitutil.GitHelper,
-    github_cfg_name,
+    github_cfg_name: str,
     merge_policy: ucd.MergePolicy,
     merge_method: ucd.MergeMethod,
-    version_lookup,
-    component_descriptor_lookup,
-    oci_client,
-    delivery_dashboard_url: str=None,
-    after_merge_callback=None,
-    container_image:str=None,
-    pullrequest_body_suffix: str=None,
+    version_lookup: ocm.VersionLookup,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    oci_client: oci.client.Client,
+    delivery_dashboard_url: str | None=None,
+    after_merge_callback: str | None=None,
+    container_image: str | None=None,
+    pullrequest_body_suffix: str | None=None,
     include_bom_diff: bool=True,
 ) -> github.pullrequest.UpgradePullRequest:
     if container_image:
@@ -334,7 +334,6 @@ def create_upgrade_pr(
     to_component_descriptor = component_descriptor_lookup(
         upgrade_vector.whither,
     )
-
     to_component = to_component_descriptor.component
 
     bom_diff_markdown = None
@@ -439,11 +438,11 @@ def create_upgrade_pr(
 def fetch_release_notes(
     from_component: ocm.Component,
     to_version: str,
-    component_descriptor_lookup,
-    version_lookup,
-    oci_client,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
+    oci_client: oci.client.Client,
 ):
-    version_vector = ocm.gardener.UpgradeVector(
+    upgrade_vector = ocm.gardener.UpgradeVector(
         whence=from_component,
         whither=ocm.ComponentIdentity(
             name=from_component.name,
@@ -456,7 +455,7 @@ def fetch_release_notes(
         release_notes_md = '\n'.join((
             release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
             for cid, rn in release_notes.ocm.release_notes_range_recursive(
-                version_vector=version_vector,
+                version_vector=upgrade_vector,
                 component_descriptor_lookup=component_descriptor_lookup,
                 version_lookup=version_lookup,
                 oci_client=oci_client,
