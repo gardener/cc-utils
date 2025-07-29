@@ -5,12 +5,16 @@ OCM-Component-Descriptors
 
 import collections.abc
 import logging
+import os
+import tarfile
 import zlib
 
 import cnudie.retrieve
 import oci.client
 import ocm
 import ocm.gardener
+import release_notes.model as rnm
+import release_notes.tarutil as rnt
 import version as version_mod
 
 logger = logging.getLogger(__name__)
@@ -26,141 +30,216 @@ they contain an archive of all recursively retrieved release-notes.
 Once there are no component upgrades for components which have been release prior to the refactoring,
 the support for the "old" release notes artefact can be dropped eventually.
 '''
+release_notes_resource_name = 'release-notes-archive'
 release_notes_resource_name_old = 'release-notes'
 
 
-def release_notes(
-    component: ocm.ComponentIdentity | ocm.Component,
+def iter_parsed_release_notes(
+    component: ocm.Component,
+    resource: ocm.Resource,
     oci_client: oci.client.Client,
-    component_descriptor_lookup: ocm.ComponentDescriptorLookup | None=None,
+) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
+    if resource.access.type is not ocm.AccessType.LOCAL_BLOB:
+        raise ValueError(f'do not know how to handle {resource.access.type=} ({component=})')
+
+    access: ocm.LocalBlobAccess = resource.access
+
+    image_reference = component.current_ocm_repo.component_oci_ref(component)
+    digest = access.globalAccess.digest if access.globalAccess else access.localReference
+
+    if resource.name == release_notes_resource_name_old:
+        release_notes_blob = oci_client.blob(
+            image_reference=image_reference,
+            digest=digest,
+        )
+
+        if access.mediaType.endswith('/gzip'):
+            release_notes_bytes = zlib.decompress(release_notes_blob.content, wbits=31)
+        else:
+            release_notes_bytes = release_notes_blob.content
+
+        yield rnm.ReleaseNotesDoc(
+            ocm=rnm.ReleaseNotesOcmRef(
+                component_name=component.name,
+                component_version=component.version,
+            ),
+            release_notes=[
+                rnm.ReleaseNoteEntry(
+                    type=rnm.ReleaseNotesType.PRERENDERED,
+                    contents=release_notes_bytes.decode('utf-8'),
+                    mimetype=access.mediaType.split('.')[0],
+                ),
+            ],
+        )
+        return
+
+    release_notes_blob_tarstream = oci_client.blob(
+        image_reference=image_reference,
+        digest=digest,
+    ).iter_content(chunk_size=tarfile.RECORDSIZE)
+
+    return rnt.tarstream_into_release_notes_docs(release_notes_blob_tarstream)
+
+
+def find_release_notes_resource(
+    component: ocm.Component,
+    resource_name: str=release_notes_resource_name,
     absent_ok: bool=True,
-) -> str | None:
-    '''
-    retrieves (raw, i.e. in markdown / text fmt) release-notes for the given component version.
-
-    The release-notes are expected to be stored as a local-blob, and referenced from a resource
-    named `release-notes`.
-
-    If a full ocm.Component is passed-in, component_descriptor_lookup can be omitted (it is
-    otherwise used to retrieve component-descriptor). Either way, the component-descriptor is
-    expected to be stored in an OCI-Registry (hence the need for passing-in an oci-client).
-    '''
-    if not isinstance(component, ocm.Component):
-        component = component_descriptor_lookup(component).component
-
+) -> ocm.Resource | None:
     for resource in component.resources:
-        if resource.name == release_notes_resource_name:
-            break
-    else:
-        if absent_ok:
-            return None
-        raise ValueError(f'{component=} has no resource named `release-notes`')
+        if resource.name == resource_name:
+            return resource
 
-    access = resource.access
-    if not access.type is ocm.AccessType.LOCAL_BLOB:
-        raise ValueError(f'do not know how to handle {access.type=} ({component=})')
-    access: ocm.LocalBlobAccess
+    if absent_ok:
+        return None
 
-    oci_ref = component.current_ocm_repo.component_version_oci_ref(
-        name=component.name,
-        version=component.version,
-    )
-
-    release_notes_blob = oci_client.blob(
-        image_reference=oci_ref,
-        digest=access.localReference,
-    )
-
-    if access.mediaType.endswith('/gzip'):
-        release_notes_bytes = zlib.decompress(release_notes_blob.content, wbits=31)
-    else:
-        release_notes_bytes = release_notes_blob.content
-
-    return release_notes_bytes.decode('utf-8')
+    raise ValueError(f'{component=} has no resource named `{resource_name}`')
 
 
-def release_notes_markdown_with_heading(
-    component_id: ocm.ComponentIdentity,
-    release_notes: str,
-) -> str:
-    header = f'[{component_id.name}:{component_id.version}]'
-    return f'{header}\n{release_notes}'
-
-
-def release_notes_range(
-    version_vector: ocm.gardener.UpgradeVector,
-    versions: collections.abc.Iterable[version_mod.Version],
-    oci_client: oci.client.Client,
-    component_descriptor_lookup: ocm.ComponentDescriptorLookup | None=None,
-    absent_ok: bool=True,
-) -> collections.abc.Iterable[tuple[ocm.ComponentIdentity, str]]:
-    '''
-    yields pairs of component-id and release-notes in specified range,
-    excluding release-notes for `whence`-version,
-    including release-notes for `whither`-version.
-    '''
-    versions_in_range = version_mod.iter_upgrade_path(
-        whence=version_vector.whence.version,
-        whither=version_vector.whither.version,
-        versions=versions,
-    )
-
-    for version in versions_in_range:
-        component_id = ocm.ComponentIdentity(
-            name=version_vector.component_name,
-            version=version,
-        )
-        logger.info(f'retrieving release-notes for {component_id=}')
-        notes = release_notes(
-           component=component_id,
-           oci_client=oci_client,
-           component_descriptor_lookup=component_descriptor_lookup,
-           absent_ok=absent_ok,
-        )
-
-        if not notes: # previous call would already have failed, if absent_ok were falsy
-            logger.info(f'did not find release-notes for {component_id=}')
-            continue
-
-        logger.info(f'found {len(notes)=} characters of release-notes for {component_id=}')
-        yield component_id, notes
-
-
-def release_notes_range_recursive(
-    version_vector: ocm.gardener.UpgradeVector,
+def release_notes_for_vector(
+    upgrade_vector: ocm.gardener.UpgradeVector,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
     version_lookup: ocm.VersionLookup,
     oci_client: oci.client.Client,
-    version_filter=lambda v: True,
-    whither_component=None,
-) -> collections.abc.Iterable[tuple[ocm.ComponentIdentity, str]]:
+    version_filter: collections.abc.Callable[[str], bool]=lambda _: True,
+) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
     '''
-    recursively retrieves release-notes for the given version-vector. Yields pairs of
-    component-id and corresponding release-notes.
+    Yields release-notes documents (pairs of OCM component-ids together with their release-notes)
+    for all (sub-)components within the provided `upgrade_vector`. If a component-id does not have
+    any release-notes, it may just be omitted.
+
+    If a component contains a "new" release-notes blob, it is retrieved and yielded and stopped
+    afterwards because it already contains the (modified) release-notes of all sub-components as
+    well.
+    If a component still only contains an "old" release-notes blob (or none), it is parsed and
+    yielded (if it exists) but this function will be invoked again for all direct sub-components.
     '''
-    whence_component = component_descriptor_lookup(version_vector.whence).component
-    if not whither_component:
-        whither_component = component_descriptor_lookup(version_vector.whither).component
+    versions = [
+        version
+        for version in version_lookup(upgrade_vector.component_name)
+        if version_filter(version)
+    ]
+
+    versions_in_range = list(version_mod.iter_upgrade_path(
+        whence=upgrade_vector.whence_version,
+        whither=upgrade_vector.whither_version,
+        versions=versions,
+    ))
+
+    for idx, version in enumerate(versions_in_range):
+        component_id = ocm.ComponentIdentity(
+            name=upgrade_vector.component_name,
+            version=version,
+        )
+
+        component = component_descriptor_lookup(component_id).component
+
+        if release_notes_resource := find_release_notes_resource(
+            component=component,
+        ):
+            logger.info(f'found release-notes resource for {component_id=}')
+            yield from iter_parsed_release_notes(
+                component=component,
+                resource=release_notes_resource,
+                oci_client=oci_client,
+            )
+            continue
+
+        if release_notes_resource := find_release_notes_resource(
+            component=component,
+            resource_name=release_notes_resource_name_old,
+        ):
+            logger.info(f'found "old" release-notes resource for {component_id=}')
+            yield from iter_parsed_release_notes(
+                component=component,
+                resource=release_notes_resource,
+                oci_client=oci_client,
+            )
+
+        # get the predecessor version of the upgrade-path to build "whence" component for diff
+        if idx > 0:
+            predecessor_version = versions_in_range[idx - 1]
+        else:
+            # the initial "whence" version is excluded in the upgrade-path
+            predecessor_version = upgrade_vector.whence.version
+
+        whence_component = component_descriptor_lookup(ocm.ComponentIdentity(
+            name=upgrade_vector.component_name,
+            version=predecessor_version,
+        )).component
+
+        yield from release_notes_for_subcomponents(
+            whence_component=whence_component,
+            whither_component=component,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            oci_client=oci_client,
+            version_filter=version_filter,
+        )
+
+
+def release_notes_for_subcomponents(
+    whence_component: ocm.Component,
+    whither_component: ocm.Component,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
+    oci_client: oci.client.Client,
+    version_filter: collections.abc.Callable[[str], bool]=lambda _: True,
+) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
     component_diff = cnudie.retrieve.component_diff(
         left_component=whence_component,
         right_component=whither_component,
         component_descriptor_lookup=component_descriptor_lookup,
+        recursion_depth=1, # only calculate diff of direct sub-components
     )
 
-    for whence_component, whither_component in component_diff.cpairs_version_changed:
-        versions = [v for v in version_lookup(whence_component) if version_filter(v)]
-
-        version_vector = ocm.gardener.UpgradeVector(
-            whence=whence_component,
-            whither=whither_component,
-        )
-        if version_vector.is_downgrade:
-            logger.warn(f'skipping retrieval of release-notes for downgrade: {version_vector=}')
+    for whence, whither in component_diff.cpairs_version_changed:
+        if whither.identity() == whither_component.identity():
+            # we are only interested in the release-notes for sub-components here, not the root
             continue
-        yield from release_notes_range(
-            version_vector=version_vector,
-            versions=versions,
-            oci_client=oci_client,
-            component_descriptor_lookup=component_descriptor_lookup,
-            absent_ok=True,
+
+        upgrade_vector = ocm.gardener.UpgradeVector(
+            whence=whence.identity(),
+            whither=whither.identity(),
         )
+
+        yield from release_notes_for_vector(
+            upgrade_vector=upgrade_vector,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            oci_client=oci_client,
+            version_filter=version_filter,
+        )
+
+
+def group_release_notes_docs(
+    release_notes_docs: collections.abc.Iterable[rnm.ReleaseNotesDoc],
+) -> list[rnm.ReleaseNotesDoc]:
+    docs_by_component_id: dict[ocm.ComponentIdentity, rnm.ReleaseNotesDoc] = {}
+
+    for doc in release_notes_docs:
+        if doc.component_id in docs_by_component_id:
+            docs_by_component_id[doc.component_id].release_notes.extend(doc.release_notes)
+        else:
+            docs_by_component_id[doc.component_id] = doc
+
+    return list(docs_by_component_id.values())
+
+
+def release_notes_docs_as_markdown(
+    release_notes_docs: collections.abc.Sequence[rnm.ReleaseNotesDoc],
+    prepend_title: bool=True,
+) -> str | None:
+    if not release_notes_docs:
+        return None
+
+    if prepend_title:
+        release_notes_md = '**Release Notes**:\n\n'
+    else:
+        release_notes_md = ''
+
+    return release_notes_md + '\n\n'.join(
+        markdown
+        for release_notes_doc in release_notes_docs
+        if (markdown := release_notes_doc.as_markdown())
+    )

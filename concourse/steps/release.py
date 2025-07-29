@@ -27,7 +27,7 @@ import github.util
 import oci.client
 import release_notes.fetch
 import release_notes.markdown
-import release_notes.ocm
+import release_notes.ocm as rno
 import slackclient.util
 
 from gitutil import GitHelper
@@ -170,17 +170,25 @@ def collect_release_notes(
     )
 
     # retrieve release-notes from sub-components
-    sub_component_release_notes = '\n'.join((
-        release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
-        for cid, rn in release_notes.ocm.release_notes_range_recursive(
-            version_vector=version_vector,
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            oci_client=oci_client,
-            version_filter=version.is_final,
-            whither_component=component,
-        )
+    whence_component = component_descriptor_lookup(version_vector.whence).component
+
+    sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
+        whence_component=whence_component,
+        whither_component=component,
+        component_descriptor_lookup=component_descriptor_lookup,
+        version_lookup=version_lookup,
+        oci_client=oci_client,
+        version_filter=version.is_final,
     ))
+
+    grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
+        release_notes_docs=sub_component_release_notes_docs,
+    )
+
+    sub_component_release_notes = rno.release_notes_docs_as_markdown(
+        release_notes_docs=grouped_sub_component_release_notes_docs,
+        prepend_title=False,
+    )
 
     if sub_component_release_notes:
         full_release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
