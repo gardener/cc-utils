@@ -487,7 +487,7 @@ if release_notes_md:
 
   component.resources.append(
     ocm.Resource(
-      name=release_notes.ocm.release_notes_resource_name,
+      name=release_notes.ocm.release_notes_resource_name_old,
       version=component.version,
       type='text/markdown.release-notes',
       access=ocm.LocalBlobAccess(
