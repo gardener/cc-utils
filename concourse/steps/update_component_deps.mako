@@ -205,8 +205,6 @@ for component_reference in greatest_component_references:
 % endif
 % if set_version_script_image:
         container_image='${set_version_script_image}',
-% else:
-        container_image = None,
 % endif
     )
     # add pr to the list of known upgrade pull requests, so next iteration

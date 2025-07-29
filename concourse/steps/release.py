@@ -14,7 +14,7 @@ from github3.exceptions import (
 from git.exc import (
     GitCommandError
 )
-import git.types
+import git
 
 import ocm
 import ocm.gardener
@@ -24,6 +24,7 @@ import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
 import github.util
+import oci.client
 import release_notes.fetch
 import release_notes.markdown
 import release_notes.ocm
@@ -139,10 +140,10 @@ def _calculate_tags(
 def collect_release_notes(
     git_helper: GitHelper,
     release_version: str,
-    component,
-    component_descriptor_lookup,
-    version_lookup,
-    oci_client,
+    component: ocm.Component,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
+    oci_client: oci.client.Client,
 ) -> tuple[str, str]:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         component=component,
