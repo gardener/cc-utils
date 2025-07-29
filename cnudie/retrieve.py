@@ -726,6 +726,7 @@ def component_diff(
     right_component: ocm.Component | ocm.ComponentDescriptor,
     ignore_component_names=(),
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
+    recursion_depth: int=-1,
 ) -> cnudie.util.ComponentDiff:
     import cnudie.iter as ci # late import to avoid cyclic dependencies
 
@@ -740,6 +741,7 @@ def component_diff(
             component=left_component,
             lookup=component_descriptor_lookup,
             node_filter=ci.Filter.components,
+            recursion_depth=recursion_depth,
         ) if component_node.component.name not in ignore_component_names
     )
     right_components = tuple(
@@ -747,6 +749,7 @@ def component_diff(
             component=right_component,
             lookup=component_descriptor_lookup,
             node_filter=ci.Filter.components,
+            recursion_depth=recursion_depth,
         ) if component_node.component.name not in ignore_component_names
     )
 
