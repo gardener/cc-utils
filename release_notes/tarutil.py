@@ -9,6 +9,7 @@ import tarfile
 import dacite
 import yaml
 
+import ioutil
 import ocm
 import release_notes.model as rnm
 import tarutil
@@ -46,41 +47,27 @@ def release_notes_docs_into_tarstream(
         Dumper=ocm.EnumValueYamlDumper,
     )
 
-    offset = 0
-
-    for release_notes_doc in release_notes_docs:
+    def release_notes_doc_to_blob_descriptor(
+        release_notes_doc: rnm.ReleaseNotesDoc,
+    ) -> ioutil.BlobDescriptor:
         release_notes_doc_bytes = yaml.dump(
             data=dataclasses.asdict(release_notes_doc),
             Dumper=ocm.EnumValueYamlDumper,
             allow_unicode=True,
         ).encode('utf-8')
 
-        buffer = io.BytesIO(release_notes_doc_bytes)
-        buffer_size = len(release_notes_doc_bytes)
+        return ioutil.BlobDescriptor(
+            content=io.BytesIO(release_notes_doc_bytes),
+            size=len(release_notes_doc_bytes),
+            name=release_notes_doc.fname
+        )
 
-        tarinfo = tarfile.TarInfo(name=release_notes_doc.fname)
-        tarinfo.size = buffer_size
-        tarinfo.offset = offset
-        tarinfo.offset_data = offset + tarfile.BLOCKSIZE
-
-        offset += buffer_size + tarfile.BLOCKSIZE
-
-        tarinfo_bytes = tarinfo.tobuf()
-        yield tarinfo_bytes
-
-        uploaded_bytes = len(tarinfo_bytes)
-
-        for chunk in buffer:
-            uploaded_bytes += len(chunk)
-            yield chunk
-
-        # pad to full blocks
-        if missing := tarfile.BLOCKSIZE - (uploaded_bytes % tarfile.BLOCKSIZE):
-            offset += missing
-            yield tarfile.NUL * missing
-
-    # terminate tarchive w/ two empty blocks
-    yield tarfile.NUL * tarfile.BLOCKSIZE * 2
+    return tarutil.concat_blobs_as_tarstream(
+        blobs=(
+            release_notes_doc_to_blob_descriptor(release_notes_doc)
+            for release_notes_doc in release_notes_docs
+        ),
+    )
 
 
 def tarstream_into_release_notes_docs(
