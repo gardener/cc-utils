@@ -25,6 +25,19 @@ inputs:
       passed to `actions/checkout`'s as `fetch-depth` input.
 
       useful for cases where longer history is required.
+  trusted-label:
+    type: string
+    default: 'reviewed/ok-to-test'
+    description: |
+      a label, that can be used to mark pullrequests as trusted, regarless of author's association.
+
+      For security-reasons, this action will remove the label, such that it will have to be
+      added again (adding the label will work as trigger).
+  needs-trusted-label:
+    type: string
+    default: 'needs/ok-to-test'
+    description: |
+      a label that is added as a marker in order to notify lack of "trusted-label"
 
 runs:
   using: composite
@@ -48,6 +61,16 @@ runs:
         )
         author_association = '${{ github.event.pull_request.author_association }}'
         allowed_to_checkout = author_association in allowed_author_associations
+
+        # if pullrequest is labelled, it is also considered trusted, regardless of
+        # author's association (rationale: only codeowners can add labels)
+        trusted_label = '${{ inputs.trusted-label }}'
+
+        if '${{ github.event.action }}' == 'labeled':
+          if '${{ github.event.label.name }}' == trusted_label:
+            allowed_to_checkout = True
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'remove-label={trusted_label}\n')
 
         if not allowed_to_checkout:
           summary = textwrap.dedent(f'''\
@@ -75,3 +98,26 @@ runs:
           ),
           check=True,
         )
+    - if: ${{ steps.calc.outputs.remove-label }}
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: remove-trusted-and-add-needs-label
+      if: ${{ steps.calc.outputs.remove-label }}
+      shell: python
+      run: |
+        import github3.exceptions
+        import github
+        gh_api = github.github_api(token='${{ github.token }}')
+        _, org, repo = github.host_org_and_repo()
+        gh_repo = gh_api.repository(org, repo)
+
+        # we need issue-api to rm label (id is equal for pr and issue)
+        pull_request = gh_repo.issue(${{ github.event.number }})
+
+        try:
+          pull_request.remove_label('${{ steps.calc.outputs.remove-label }}')
+        except github3.exceptions.NotFoundError:
+          # trusted-checkout typically runs multiple times, so the label already being absent
+          # is an expected, and of course, acceptable case
+          exit(0)
+
+        pull_request.add_labels('${{ inputs.needs-trusted-label }}')
