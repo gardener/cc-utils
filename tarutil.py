@@ -52,7 +52,8 @@ def concat_blobs_as_tarstream(
             yield chunk
 
         # pad to full blocks
-        if (missing := tarfile.BLOCKSIZE - (uploaded_bytes % tarfile.BLOCKSIZE)):
+        if (remainder := uploaded_bytes % tarfile.BLOCKSIZE):
+            missing = tarfile.BLOCKSIZE - remainder
             offset += missing
             yield tarfile.NUL * missing
 
