@@ -11,11 +11,13 @@ import zlib
 import dacite
 import requests
 
+import tarutil
 import oci.auth as oa
 import oci.client as oc
 import oci.convert as oconv
 import oci.model as om
 import oci.platform as op
+import ioutil
 
 logger = logging.getLogger(__name__)
 
@@ -530,34 +532,33 @@ def image_layers_as_tarfile_generator(
             image_reference=f'{image_reference.ref_without_tag}@{manifest_ref.digest}',
         )
 
-    offset = 0
-    for blob in manifest.blobs() if include_config_blob else manifest.layers:
-        logger.debug(f'getting blob {blob.digest}')
-        if not include_config_blob:
-            logger.debug('skipping config blob')
-        tarinfo = tarfile.TarInfo(name=blob.digest + '.tar') # note: may be gzipped
-        tarinfo.size = blob.size
-        tarinfo.offset = offset
-        tarinfo.offset_data = offset + tarfile.BLOCKSIZE
+    blob_refs = manifest.blobs() if include_config_blob else manifest.layers
 
-        offset += blob.size + tarfile.BLOCKSIZE
+    if not include_config_blob:
+        logger.debug('skipping config blob')
 
-        tarinfo_bytes = tarinfo.tobuf()
-        yield tarinfo_bytes
-
-        uploaded_bytes = len(tarinfo_bytes)
-        for chunk in oci_client.blob(
+    def resolve_blob(
+        blob_ref: om.OciBlobRef,
+        image_reference: str,
+    ) -> ioutil.BlobDescriptor:
+        content = oci_client.blob(
             image_reference=image_reference,
-            digest=blob.digest,
+            digest=blob_ref.digest,
             stream=True,
-            ).iter_content(chunk_size=chunk_size):
-            uploaded_bytes += len(chunk)
-            yield chunk
+        ).iter_content(chunk_size=chunk_size)
 
-        # need to pad full blocks w/ NUL-bytes
-        if (missing := tarfile.BLOCKSIZE - (uploaded_bytes % tarfile.BLOCKSIZE)):
-            offset += missing
-            yield tarfile.NUL * missing
+        return ioutil.BlobDescriptor(
+            content=content,
+            size=blob_ref.size,
+            name=f'{blob_ref.digest}.tar',
+        )
 
-    # tarchives should be terminated w/ two empty blocks
-    yield tarfile.NUL * tarfile.BLOCKSIZE * 2
+    return tarutil.concat_blobs_as_tarstream(
+        blobs=(
+            resolve_blob(
+                blob_ref=blob_ref,
+                image_reference=image_reference,
+            )
+            for blob_ref in blob_refs
+        ),
+    )
