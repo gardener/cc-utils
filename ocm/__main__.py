@@ -232,6 +232,7 @@ def upload(parsed):
     ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
         oci_client=oci_client,
+        on_exist=ocm.UploadMode.OVERWRITE,
     )
 
 
