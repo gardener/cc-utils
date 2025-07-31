@@ -294,6 +294,14 @@ runs:
           --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}' \
           --on-exist ${{ inputs.on-existing-component-descriptor }}
 
+        tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
+
+    - name: upload OCM Component-Descriptor as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: /tmp/component-descriptor.tar.gz
+        name: component-descriptor
+
     - name: push release-tag
       shell: bash
       run: |
