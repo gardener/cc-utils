@@ -147,6 +147,16 @@ inputs:
       GitHub tag template to use for the created release tag. Currently only supported template-var:
       ${version} (bash-syntax): Version read from local component descriptor (i.e. previous version
       operations are honoured).
+  on-existing-component-descriptor:
+    default: fail
+    type: choice
+    description: |
+      Defines how the action should behave if the (to-be-released) component-descriptor already
+      exists.
+    options:
+      - skip
+      - overwrite
+      - fail
 
 defaults:
   run:
@@ -281,7 +291,8 @@ runs:
       run: |
         python -m ocm upload \
           --file /tmp/component-descriptor.yaml \
-          --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}'
+          --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}' \
+          --on-exist ${{ inputs.on-existing-component-descriptor }}
 
     - name: push release-tag
       shell: bash
