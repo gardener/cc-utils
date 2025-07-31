@@ -134,6 +134,7 @@ def find_imagevector_file(
         'internal/images/images.yaml', # etcd-druid
         'charts/images.yaml',
         'imagevector/images.yaml',
+        'imagevector/containers.yaml',
         'imagevector/container.yaml',
     ):
         if repo_root:
