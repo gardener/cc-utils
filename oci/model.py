@@ -66,7 +66,9 @@ class OciRegistryType(enum.Enum):
             return OciRegistryType.GHCR
         if 'cr.aliyuncs.com' in netloc:
             return OciRegistryType.ALIYUN
-        if 'amazonaws.com' in netloc:
+        if 'amazonaws.com' in netloc: # AWS ECR private
+            return OciRegistryType.AWS
+        if 'public.ecr.aws' in netloc: # AWS ECR public
             return OciRegistryType.AWS
 
         return OciRegistryType.UNKNOWN
