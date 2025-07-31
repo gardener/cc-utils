@@ -85,13 +85,19 @@ jobs:
         with:
           oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: upload-component-descriptor
+      - name: upload-component-descriptor-to-ocm-repository
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         run: |
           python -m ocm upload \
             --file /tmp/ocm/component-descriptor.yaml \
             --blobs-dir /tmp/ocm/blobs.d \
             --on-exist ${{ inputs.on-existing-component-descriptor }}
+          tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
+      - name: upload-component-descriptor-as-artefact
+        uses: actions/upload-artifact@v4
+        with:
+          path: component-descriptor.tar.gz
+          name: component-descriptor
 
   repo-metadata:
     runs-on: ubuntu-latest
