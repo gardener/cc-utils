@@ -19,6 +19,15 @@ on:
           `prepare-workflow-values` artefact, which is by default emitted by the
           `prepare.yaml` workflow (which must have been run prior to calling this workflow for
           this to succeed).
+      on-existing-component-descriptor:
+        type: string
+        default: overwrite
+        description: |
+          defines how to behave in case the to-be-uploaded component-descriptor already exists.
+          allowed values are:
+            - overwrite
+            - skip # silently ignore
+            - fail
 
 jobs:
   component-descriptor:
@@ -81,7 +90,8 @@ jobs:
         run: |
           python -m ocm upload \
             --file /tmp/ocm/component-descriptor.yaml \
-            --blobs-dir /tmp/ocm/blobs.d
+            --blobs-dir /tmp/ocm/blobs.d \
+            --on-exist ${{ inputs.on-existing-component-descriptor }}
 
   repo-metadata:
     runs-on: ubuntu-latest
