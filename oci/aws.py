@@ -27,12 +27,12 @@ class AwsAction(enum.StrEnum):
     GET_AUTHORIZATION_TOKEN = 'GetAuthorizationToken'
 
 
-def parse_aws_registry(
+def _parse_aws_private_registry(
     image_reference: oci.model.OciImageReference | str,
 ) -> tuple[str, str, str]:
     '''
-    This function makes the assumption that an AWS registry is always structured according to the
-    following pattern: `<registry-id>.dkr.<service-name>.<region-name>.amazonaws.com`
+    This function makes the assumption that an AWS private registry is always structured according to
+    the following pattern: `<registry-id>.dkr.<service-name>.<region-name>.amazonaws.com`
     '''
     image_reference = oci.model.OciImageReference(image_reference)
 
@@ -48,11 +48,56 @@ def parse_aws_registry(
     return registry_id, service_name, region_name
 
 
+def _parse_aws_public_registry(
+    image_reference: oci.model.OciImageReference | str,
+    service_name: str='ecr-public',
+    region: str='us-east-1',
+) -> tuple[str, str, str]:
+    '''
+    This function makes the assumption that an AWS public registry is always structured according to
+    the following pattern: `public.ecr.aws/<registry-alias>`
+
+    Since the service- and region-name are not part of the url, those are configured statically. The
+    possible regions are independent of the ones where the images are being replicated to (images are
+    replicated across multiple regions automatically), and the only available regions for the api url
+    are either `us-east-1` or `us-west-2`
+    (see https://docs.aws.amazon.com/general/latest/gr/ecr-public.html).
+    '''
+    image_reference = oci.model.OciImageReference(image_reference)
+
+    if image_reference.netloc != 'public.ecr.aws':
+        raise ValueError(
+            'unexpected image reference netloc for aws, expected: "public.ecr.aws", actual: '
+            f'"{image_reference.netloc}"'
+        )
+
+    return image_reference.name.split('/')[0], service_name, region
+
+
+def is_public_registry(
+    image_reference: oci.model.OciImageReference | str,
+) -> bool:
+    image_reference = oci.model.OciImageReference(image_reference)
+
+    return image_reference.netloc == 'public.ecr.aws'
+
+
+def parse_aws_registry(
+    image_reference: oci.model.OciImageReference | str,
+) -> tuple[str, str, str]:
+    '''
+    Based on the passed-in `image_reference`, returns a tuple containing (in-order) the registry-id
+    (alias), the service-name (`ecr` or `ecr-public`), and the region-name.
+    '''
+    if is_public_registry(image_reference):
+        return _parse_aws_public_registry(image_reference)
+
+    return _parse_aws_private_registry(image_reference)
+
+
 def as_aws_api_url(
     image_reference: oci.model.OciImageReference | str,
 ) -> tuple[str, str, str]:
-    image_reference = oci.model.OciImageReference(image_reference)
-
     _, service_name, region_name = parse_aws_registry(image_reference)
 
     return f'https://api.{service_name}.{region_name}.amazonaws.com/'
@@ -83,8 +128,12 @@ def prepare_headers(
     headers |= {
         'Content-Type': 'application/x-amz-json-1.1',
         'X-Amz-Date': timestamp,
-        'X-Amz-Target': f'AmazonEC2ContainerRegistry_V20150921.{action}',
     }
+
+    if is_public_registry(image_reference):
+        headers['X-Amz-Target'] = f'SpencerFrontendService.{action}'
+    else:
+        headers['X-Amz-Target'] = f'AmazonEC2ContainerRegistry_V20150921.{action}'
 
     signed_headers = 'content-type;host;x-amz-date;x-amz-target'
 
@@ -182,11 +231,14 @@ def basic_auth_credentials(
     AWS requires a short-lived password to be created from the access token together with the static
     username "AWS" for authentication.
     '''
-    registry_id, _, _ = parse_aws_registry(image_reference=image_reference)
+    payload = {}
 
-    body = json.dumps({
-        'registryIds': [registry_id],
-    }).encode()
+    if not (is_public := is_public_registry(image_reference)):
+        # AWS ECR private requires the requested registry-ids for the auth-token to be specified
+        registry_id, _, _ = _parse_aws_private_registry(image_reference=image_reference)
+        payload['registryIds'] = [registry_id]
+
+    body = json.dumps(payload).encode()
 
     res = request(
         action=AwsAction.GET_AUTHORIZATION_TOKEN,
@@ -197,8 +249,11 @@ def basic_auth_credentials(
         session=session,
     )
 
-    # because we specified only a single registry-id, there must be only one token in the response
-    token = res.json()['authorizationData'][0]['authorizationToken']
+    if is_public:
+        token = res.json()['authorizationData']['authorizationToken']
+    else:
+        # because we specified only one registry-id, there must be only one token in the response
+        token = res.json()['authorizationData'][0]['authorizationToken']
 
     token_decoded = base64.b64decode(token).decode()
 
@@ -214,14 +269,30 @@ def create_repository(
 ):
     image_reference = oci.model.OciImageReference(image_reference)
 
-    registry_id, _, _ = parse_aws_registry(image_reference=image_reference)
+    if not is_public_registry(image_reference):
+        repository_name = image_reference.name
+        registry_id, _, _ = _parse_aws_private_registry(image_reference)
 
-    body = json.dumps({
-        'registryId': registry_id,
-        'repositoryName': image_reference.name,
-    }).encode()
+        payload = {
+            'repositoryName': repository_name,
+            'registryId': registry_id,
+        }
 
-    logger.info(f'attempting to create AWS ECR repository {image_reference.name} for {registry_id=}')
+        logger.info(
+            f'attempting to create AWS ECR private repo "{repository_name}" for {registry_id=}'
+        )
+    else:
+        registry_alias, repository_name = image_reference.name.split('/', 1)
+
+        payload = {
+            'repositoryName': repository_name,
+        }
+
+        logger.info(
+            f'attempting to create AWS ECR public repo "{repository_name}" for {registry_alias=}'
+        )
+
+    body = json.dumps(payload).encode()
 
     request(
         action=AwsAction.CREATE_REPOSITORY,
