@@ -229,6 +229,7 @@ def upload(parsed):
             )
 
     print(f'Uploading OCM Component-Descriptor to: {oci_target_ref=}')
+    print(f'{parsed.on_exist=}')
     ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
         oci_client=oci_client,
