@@ -232,7 +232,7 @@ def upload(parsed):
     ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
         oci_client=oci_client,
-        on_exist='overwrite',
+        on_exist=parsed.on_exist,
     )
 
 
@@ -397,6 +397,11 @@ def main():
         help='optional path to lookup local-blobs. fnames must equal sha256-hexdigest',
     )
     upload_parser.add_argument('--ocm-repo', default=None)
+    upload_parser.add_argument(
+        '--on-exist',
+        type=ocm.upload.UploadMode,
+        default=ocm.upload.UploadMode.SKIP,
+    )
     upload_parser.set_defaults(callable=upload)
 
     download_parser = maincmd_parsers.add_parser(
