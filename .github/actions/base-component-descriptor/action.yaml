@@ -67,6 +67,14 @@ inputs:
     description: |
       used while translating Gardener's imagevector-files into OCM-Resources or
       OCM Component-References.
+  post-process:
+    type: choice
+    default: none
+    options:
+      - component-cli
+      - none
+    description: |
+      configures how generated base-component-descriptor should be post-processed
 
 outputs:
   component-descriptor:
@@ -149,7 +157,12 @@ runs:
           creation_time=datetime.datetime.now(),
         )
 
-        if imagevector_file := ocm.gardener.find_imagevector_file(repo_root=os.getcwd()):
+        if '${{ inputs.post-process }}' == 'component-cli':
+          imagevector_file = ocm.gardener.find_imagevector_file(repo_root=os.getcwd())
+        else:
+          imagevector_file = None
+
+        if imagevector_file:
           prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
           for prefix in prefixes:
             # hack: in some (/all?) cases, images in imagevectors use `public` oci-registry,
