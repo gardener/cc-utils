@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
+import dataclasses
 import pprint
+
+import yaml
 
 import ocm
 import ocm.gardener
@@ -17,6 +20,11 @@ def main():
             'europe-docker.pkg.dev/gardener-project/releases/gardener',
             'europe-docker.pkg.dev/gardener-project/snapshots/gardener',
         ],
+    )
+    parser.add_argument(
+        '--format',
+        default='yaml',
+        choices=('yaml', 'pretty',),
     )
 
     parsed = parser.parse_args()
@@ -50,7 +58,15 @@ def main():
         component_prefixes=parsed.component_prefixes,
     )
 
-    pprint.pprint(component)
+    if parsed.format == 'pretty':
+        pprint.pprint(component)
+    elif parsed.format == 'yaml':
+        print(
+            yaml.dump(
+                dataclasses.asdict(component),
+                Dumper=ocm.EnumValueYamlDumper,
+            )
+        )
 
 
 if __name__ == '__main__':
