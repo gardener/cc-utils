@@ -201,6 +201,9 @@ def add_resources_from_imagevector(
         if resource.name != resource_name:
           continue
 
+        if resource.type != ocm.ArtefactType.OCI_IMAGE:
+          continue
+
         tag = resource.version
         # image-references from pipeline (base_component_descriptor) has precedence
         img_repo = oci.model.OciImageReference(resource.access.imageReference).ref_without_tag
