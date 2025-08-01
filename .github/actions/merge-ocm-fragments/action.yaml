@@ -223,7 +223,7 @@ runs:
           f.write(f'component-version={name}:{version}\n')
 
     - name: checkout-for-postprocessing
-      uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      uses: gardener/cc-utils/.github/actions/trusted-checkout@mv-ocm-postprocessing
       if: ${{ inputs.post-process == 'component-cli' }}
       with:
         path: repo.d # avoid conflicts w/ component-descriptor

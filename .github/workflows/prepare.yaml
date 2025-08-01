@@ -174,7 +174,7 @@ jobs:
           callback-action-path: ${{ inputs.version-commit-callback-action-path }}
           versionfile: ${{ inputs.versionfile }}
           version-operation: ${{ inputs.version-operation }}
-      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
+      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@mv-ocm-postprocessing
         id: component-descriptor
         with:
           base-component: ${{ inputs.base-component-file }}
