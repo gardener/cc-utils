@@ -24,6 +24,7 @@ import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
 import github.util
+import release_notes.archive
 import release_notes.fetch
 import release_notes.markdown
 import release_notes.ocm
@@ -143,6 +144,7 @@ def collect_release_notes(
     component_descriptor_lookup,
     version_lookup,
     oci_client,
+    base_path: str='.',
 ) -> tuple[str, str]:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         component=component,
@@ -151,6 +153,21 @@ def collect_release_notes(
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
         version_whither=release_version,
+    )
+
+    archive_path = release_notes.archive.persist_release_notes(
+        notes=release_note_blocks,
+        base_path=base_path,
+    )
+
+    release_notes.ocm.add_release_notes_resource(
+        component=component,
+        archive_path=archive_path
+    )
+
+    release_notes.archive.extract_release_notes(
+        archive_path=archive_path,
+        repo_dir=base_path,
     )
 
     release_notes_markdown = '\n'.join(

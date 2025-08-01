@@ -100,84 +100,61 @@ def get_repo_name(full_name: str) -> str:
     return full_name[full_name.index('/') + 1:]
 
 
-def get_reference_for_note(note: rnm.ReleaseNote) -> str:
-    if note.is_current_repo:
-        return note.reference_str
-    return get_repo_name(
-        note.source_component.name
-    ) + note.reference.type.prefix + note.reference.identifier
-
-
-def list_item_header_from_notes(
-        line: str,
-        note: rnm.ReleaseNote,
-        category: Title,
-        group: Title,
-    ) -> ListItem:
-    return ListItem(
-        level=1,
-        text=(
-            f'`[{group.display}]` {line} by '
-            f'{note.source_block.author or note.author} [{get_reference_for_note(note)}]'
-        ),
-    )
-
-
-def list_item_from_note(
-        message: str,
-        note: rnm.ReleaseNote,
-        group: Title,
+def list_item_from_entry(
+    entry: rnm.ReleaseNoteEntry,
+    audience: rnm.ReleaseNotesAudience
 ) -> ListItem:
-    # Replace newlines with two spaces _followed by_ newlines, as this is the proper way to do
-    # a line-break in a list-item.
-    # Also indent the next line, of course.
-    message = message.replace('\n', '  \n  ')
+    # Replace newlines with proper Markdown line breaks
+    message = entry.contents.replace('\n', '  \n  ')
+    author_str = f'@{entry.author.username}' if entry.author else ''
+    reference_str = entry.pullrequest or ''
+
     return ListItem(
         level=1,
-        text=(
-            f'`[{group.display}]` {message} by '
-            f'{note.source_block.author or note.author} [{get_reference_for_note(note)}]'
-        ),
+        text=f'`[{audience.value}]` {message} by {author_str} {reference_str}'
     )
 
 
-def render(notes: set[rnm.ReleaseNote]):
+def render(notes: set[rnm.ReleaseNotesDoc]):
     objs = []
 
-    # order by component
-    components: dict[str, list[rnm.ReleaseNote]] = defaultdict(list)
+    # Order by component
+    components: dict[str, list[rnm.ReleaseNotesDoc]] = defaultdict(list)
     for note in notes:
-        components[note.source_component.name].append(note)
+        comp_name = note.ocm.component_name
+        components[comp_name].append(note)
 
-    for component, notes in components.items():
-        objs.append(Header(level=1, title=f'[{get_repo_name(component)}]'))
+    for component, comp_notes in components.items():
+        objs.append(Header(level=1, title=f'[{component}]'))
 
-        # group by category
-        cats: dict[Title, list[rnm.ReleaseNote]] = defaultdict(list)
-        for note in notes:
-            cat_title = categories_by_identifier.get(note.source_block.category)
-            if not cat_title:
-                logger.info(f"cannot find category '{note.source_block.category}'")
-                continue
-            cats[cat_title].append(note)
+        # Group by category
+        categories: dict[rnm.ReleaseNotesCategory, list[rnm.ReleaseNoteEntry]] = defaultdict(list)
+        for note in comp_notes:
+            for entry in note.release_notes:
+                if entry.category:
+                    categories[entry.category].append(entry)
 
-        # sort by category-priority, ascending. This will keep the order stable.
-        for cat, notes in sorted(cats.items(), key=lambda tuple: tuple[0]):
-            objs.append(Header(level=2, title=cat.display))
+        sorted_categories = sorted(
+            categories.items(),
+            key=lambda t: rnm.ReleaseNotesCategory.category_priority(t[0])
+        )
 
-            # group by target group
-            groups: dict[Title, list[rnm.ReleaseNote]] = defaultdict(list)
-            for note in notes:
-                group_title = target_groups_by_identifier.get(note.source_block.target_group)
-                if not group_title:
-                    logger.info(f"cannot find target group '{note.source_block.target_group}'")
-                    continue
-                groups[group_title].append(note)
+        for category, entries in sorted_categories:
+            objs.append(Header(level=2, title=rnm.ReleaseNotesCategory.category_title(category)))
 
-            for group, notes in groups.items():
-                for note in notes:
-                    message = note.source_block.note_message
-                    objs.append(list_item_from_note(message, note, group))
+            # Group by audience
+            audiences: dict[rnm.ReleaseNotesAudience, list[rnm.ReleaseNoteEntry]] = defaultdict(list)
+            for entry in entries:
+                audience = entry.audience or rnm.ReleaseNotesAudience.USER
+                audiences[audience].append(entry)
+
+            for audience, audience_entries in audiences.items():
+                for entry in audience_entries:
+                    objs.append(list_item_from_entry(
+                        entry=entry,
+                        audience=audience,
+                    ))
+
     return objs
 
 
