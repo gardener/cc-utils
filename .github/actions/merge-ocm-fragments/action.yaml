@@ -47,11 +47,30 @@ inputs:
       the directory into which the merged component-descriptor, as well as the imported blobs
       are to be written.
 
+  post-process:
+    type: choice
+    default: component-cli
+    options:
+      - component-cli
+      - none
+    description: |
+      configures how the merged component-descriptor should be post-processed.
+
+      `component-cli` option is needed for properly honouring imagevectors (this will both
+      add component-references, and referenced oci-image-resources, as well as adding
+      labels for calculating image-vector-overwrites).
+
+  ocm-component-prefixes:
+    type: string
+    default: europe-docker.pkg.dev/gardener-project/releases/gardener,europe-docker.pkg.dev/gardener-project/snapshots/gardener
+    description: |
+      the ocm-component-prefixes to use in case post-processing is set to `component-cli`.
+
 outputs:
   component-descriptor:
     description: |
       the resulting component-descriptor
-    value: ${{ steps.merge.outputs.component-descriptor }}
+    value: ${{ steps.output.outputs.component-descriptor }}
   name:
     description: |
       the component-name (for convenience)
@@ -197,12 +216,79 @@ runs:
           yaml.safe_dump(component_descriptor, f)
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          f.write('component-descriptor<<EOF\n')
-          yaml.safe_dump(component_descriptor, f)
-          f.write('EOF\n')
-
           name = component['name']
           version = component['version']
           f.write(f'name={name}\n')
           f.write(f'version={version}\n')
           f.write(f'component-version={name}:{version}\n')
+
+    - name: checkout-for-postprocessing
+      uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      if: ${{ inputs.post-process == 'component-cli' }}
+      with:
+        path: repo.d # avoid conflicts w/ component-descriptor
+    - name: post-process
+      if: ${{ inputs.post-process == 'component-cli' }}
+      shell: python
+      run: |
+        import dataclasses
+        import logging
+
+        import yaml
+
+        import ocm
+        import ocm.gardener
+
+        logger = logging.getLogger('post-process')
+
+        logger.info('looking for imagevector')
+        if not (imagevector_file := ocm.gardener.find_imagevector_file(repo_root='repo.d')):
+          logger.info('did not find imagevector')
+          exit(0)
+
+        out_dir = '${{ inputs.outdir }}'
+        with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f),
+          )
+
+        component = component_descriptor.component
+
+        prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
+        logger.info(f'{prefixes=}')
+        for prefix in prefixes:
+          # hack: in some (/all?) cases, images in imagevectors use `public` oci-registry,
+          #       which is a virtual oci-registry including both snapshots and releases
+          #       add to prefixes so ocm-component-references are correctly being detected
+          prefix = prefix.rstrip('/')
+          if prefix.endswith('snapshots/gardener'):
+            prefixes.append(f'{prefix.removesuffix("snapshots/gardener")}public/gardener')
+          elif prefix.endswith('releases/gardener'):
+            prefixes.append(f'{prefix.removesuffix("releases/gardener")}public/gardener')
+
+        prefixes = set(prefixes) # deduplicate
+
+        logger.info(f'{prefixes=}')
+
+        ocm.gardener.add_resources_from_imagevector(
+          component=component,
+          images=ocm.gardener.iter_images_from_imagevector(
+            images_yaml_path=imagevector_file,
+          ),
+          component_prefixes=prefixes,
+        )
+        with open(component_descriptor_path, 'w') as f:
+          yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
+          )
+
+    - name: output-component-descriptor
+      id: output
+      shell: bash
+      run: |
+        set -eu
+        echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
+        cat "${{ inputs.outdir }}/component-descriptor.yaml" >> "${GITHUB_OUTPUT}"
+        echo EOF >> ${GITHUB_OUTPUT}
