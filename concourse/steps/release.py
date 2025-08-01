@@ -14,7 +14,7 @@ from github3.exceptions import (
 from git.exc import (
     GitCommandError
 )
-import git.types
+import git
 
 import ocm
 import ocm.gardener
@@ -24,9 +24,10 @@ import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
 import github.util
+import oci.client
 import release_notes.fetch
 import release_notes.markdown
-import release_notes.ocm
+import release_notes.ocm as rno
 import slackclient.util
 
 from gitutil import GitHelper
@@ -139,10 +140,10 @@ def _calculate_tags(
 def collect_release_notes(
     git_helper: GitHelper,
     release_version: str,
-    component,
-    component_descriptor_lookup,
-    version_lookup,
-    oci_client,
+    component: ocm.Component,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
+    oci_client: oci.client.Client,
 ) -> tuple[str, str]:
     release_note_blocks = release_notes.fetch.fetch_release_notes(
         component=component,
@@ -169,17 +170,25 @@ def collect_release_notes(
     )
 
     # retrieve release-notes from sub-components
-    sub_component_release_notes = '\n'.join((
-        release_notes.ocm.release_notes_markdown_with_heading(cid, rn)
-        for cid, rn in release_notes.ocm.release_notes_range_recursive(
-            version_vector=version_vector,
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            oci_client=oci_client,
-            version_filter=version.is_final,
-            whither_component=component,
-        )
+    whence_component = component_descriptor_lookup(version_vector.whence).component
+
+    sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
+        whence_component=whence_component,
+        whither_component=component,
+        component_descriptor_lookup=component_descriptor_lookup,
+        version_lookup=version_lookup,
+        oci_client=oci_client,
+        version_filter=version.is_final,
     ))
+
+    grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
+        release_notes_docs=sub_component_release_notes_docs,
+    )
+
+    sub_component_release_notes = rno.release_notes_docs_as_markdown(
+        release_notes_docs=grouped_sub_component_release_notes_docs,
+        prepend_title=False,
+    )
 
     if sub_component_release_notes:
         full_release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
@@ -313,6 +322,10 @@ def create_and_push_bump_commit(
         version_interface=version_interface,
         version_str=next_version,
         path=version_path,
+    )
+
+    rno.purge_release_notes_dir(
+      repo_dir=repo_dir,
     )
 
     # call optional dev cycle commit callback

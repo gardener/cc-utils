@@ -24,7 +24,9 @@ import oci.auth
 import oci.client
 import ocm.base_component
 import ocm.gardener
+import release_notes.model as rnm
 import release_notes.ocm as rno
+import release_notes.tarutil as rnt
 import version
 
 logger = logging.getLogger(__name__)
@@ -131,6 +133,7 @@ def create_diff_using_callback(
 def create_upgrade_pullrequest_diff(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
+    release_notes_docs: collections.abc.Iterable[rnm.ReleaseNotesDoc],
 ) -> bool:
     created_diff = False
 
@@ -150,45 +153,41 @@ def create_upgrade_pullrequest_diff(
         logger.info('created upgrade-diff using callback')
         created_diff = True
 
+    rnt.release_notes_docs_into_files(
+        release_notes_docs=release_notes_docs,
+        repo_dir=repo_dir,
+    )
+
     return created_diff
 
 
 def retrieve_release_notes(
-    upgrade_vector,
-    version_lookup,
-    version_filter,
+    upgrade_vector: ocm.gardener.UpgradeVector,
+    version_lookup: ocm.VersionLookup,
+    version_filter: collections.abc.Callable[[str], bool],
     oci_client: oci.client.Client,
-    component_descriptor_lookup,
-) -> str | None:
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+) -> list[rnm.ReleaseNotesDoc]:
     logger.info(f'fetching release-notes for {upgrade_vector=}')
 
-    release_notes = '\n'.join((
-        rno.release_notes_markdown_with_heading(cid, rn)
-        for cid, rn in rno.release_notes_range_recursive(
-            version_vector=upgrade_vector,
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            version_filter=version_filter,
-            oci_client=oci_client,
-        )
+    release_notes_docs = list(rno.release_notes_for_vector(
+        upgrade_vector=upgrade_vector,
+        component_descriptor_lookup=component_descriptor_lookup,
+        version_lookup=version_lookup,
+        oci_client=oci_client,
+        version_filter=version_filter,
     ))
 
-    if release_notes:
-        logger.info(f'fetched {len(release_notes)=} characters of release-notes')
-    else:
-        logger.warning('did not find any release-notes')
+    logger.info(f'fetched {len(release_notes_docs)} release-notes documents')
 
-    if not release_notes:
-        return None
-
-    return f'**Release Notes**:\n{release_notes}'
+    return release_notes_docs
 
 
 def create_upgrade_pullrequest(
-    upgrade_vector,
+    upgrade_vector: ocm.gardener.UpgradeVector,
     component: ocm.Component,
-    component_descriptor_lookup,
-    version_lookup,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
     github_api_lookup,
     repo_dir: str,
     repo_url: str,
@@ -215,13 +214,18 @@ def create_upgrade_pullrequest(
     )
     to_component = to_component_descriptor.component
 
-    release_notes = retrieve_release_notes(
+    release_notes_docs = retrieve_release_notes(
         upgrade_vector=upgrade_vector,
         version_lookup=version_lookup,
         version_filter=version.is_final,
         oci_client=oci_client,
         component_descriptor_lookup=component_descriptor_lookup,
     )
+
+    grouped_release_notes_docs = rno.group_release_notes_docs(release_notes_docs)
+    logger.info(f'grouped into {len(grouped_release_notes_docs)} release-notes documents')
+
+    release_notes_markdown = rno.release_notes_docs_as_markdown(grouped_release_notes_docs)
 
     bom_diff_markdown = github.pullrequest.bom_diff(
         delivery_dashboard_url=None, # XXX add URL once delivery-dashboard is available publicly
@@ -231,13 +235,14 @@ def create_upgrade_pullrequest(
     )
 
     pullrequest_body, extra_bodyparts = github.pullrequest.upgrade_pullrequest_body(
-        release_notes=release_notes,
+        release_notes=release_notes_markdown,
         bom_diff_markdown=bom_diff_markdown,
     )
 
     create_upgrade_pullrequest_diff(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
+        release_notes_docs=grouped_release_notes_docs,
     )
 
     fv = upgrade_vector.whence.version
@@ -284,8 +289,8 @@ def upgrade_pullrequest_exists(
 
 def create_upgrade_pullrequests(
     component: ocm.Component,
-    component_descriptor_lookup,
-    version_lookup,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    version_lookup: ocm.VersionLookup,
     github_api_lookup,
     upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
     repo_dir: str,
