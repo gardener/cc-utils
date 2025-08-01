@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: collect-component-descriptor
         id: collect
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@mv-ocm-postprocessing
         with:
           component-descriptor-artefact: base-component-descriptor
           outdir: /tmp/ocm

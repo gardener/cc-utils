@@ -38,6 +38,10 @@ inputs:
     default: 'needs/ok-to-test'
     description: |
       a label that is added as a marker in order to notify lack of "trusted-label"
+  path:
+    type: string
+    description: |
+      passed as `path` input to checkout-action (relative path to checkout into)
 
 runs:
   using: composite
@@ -45,6 +49,7 @@ runs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
+        path: ${{ inputs.path }}
     - name: checkout-pullrequest
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc
