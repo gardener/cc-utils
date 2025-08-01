@@ -158,7 +158,13 @@ def add_resources_from_imagevector(
     component: ocm.Component,
     images: collections.abc.Iterable[dict],
     component_prefixes: list[str],
+    deduplicate_resources: bool=True,
 ) -> ocm.Component:
+  '''
+  deduplicate_resources: in concourse-case, resources built from pipeline are already present
+  in (base-)component-descriptor. To remove those, set deduplicate_resources as True.
+  in other cases (GitHub-Actions), where resources are not added redundantly, set to False.
+  '''
   imagevector_label_name = 'imagevector.gardener.cloud/images'
   imagevector_label = component.find_label(imagevector_label_name)
   if not imagevector_label:
@@ -207,7 +213,8 @@ def add_resources_from_imagevector(
         tag = resource.version
         # image-references from pipeline (base_component_descriptor) has precedence
         img_repo = oci.model.OciImageReference(resource.access.imageReference).ref_without_tag
-        component.resources.remove(resource)
+        if deduplicate_resources:
+            component.resources.remove(resource)
         if not 'relation' in image_dict:
           relation = resource.relation.value
           pass
