@@ -1,0 +1,133 @@
+name: Pull-Request-Trust Helper
+description: |
+  Inspects a pullrequest, and helps with the pullrequest to be trusted by privileged
+  GitHub-Actions. This is specifically useful if `on.pull_request_target` is used in
+  conjunction w/ `trusted-checkout`-action, using "label-based trust" (i.e. triggering
+  of privileged pipeline-runs is restricted to presence of a certain label - default
+  being `reviewed/ok-to-test`).
+
+  If "trust-label" is absent, it will be conveyed to users that it needs to be set (by
+  adding a "trust-label needed" label). If pullrequest-author is trusted, this action will
+  add said label.
+
+inputs:
+  trusted-label:
+    type: string
+    default: 'reviewed/ok-to-test'
+  needs-trusted-label:
+    type: string
+    default: 'needs/ok-to-test'
+  trusted-teams:
+    type: string
+    description: |
+      an optional, comma-separated list of teams whose members are to be considered trusted.
+      If pullrequest-author is member of any configured team, `trusted-label` will be
+      automatically added for convenience.
+  github-token:
+    type: string
+    description: |
+      the github-token to use instead of default one (the token must grant permission to
+      read group-memberships). If not passed-in, `trusted-teams` input will not be honoured.
+  debug:
+    type: boolean
+    default: false
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: check-event
+      id: check
+      shell: python
+      run: |
+        import json
+        import os
+
+        event_name = '${{ github.event_name }}'
+        skip = False
+        if not event_name in ('pull_request', 'pull_request_target'):
+          print(f'Warning: this action is not intended to be run for {event_name=}')
+          skip = True
+        action = '${{ github.event.action }}'
+        if not action in (
+          'opened',
+          'edited',
+          'reopened',
+          'synchronize',
+        ):
+          print(f'Warning: this action is not intended to be run for {action=}')
+          skip = True
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write(f'skip={json.dumps(skip)}\n')
+
+    - name: handle-labels
+      if: ${{ steps.check.outputs.skip != 'true' }}
+      shell: python
+      run: |
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import github3
+
+        import trust_helper
+
+        host = os.environ['GITHUB_SERVER_URL'].removeprefix('https://')
+        org, repo = os.environ['GITHUB_REPOSITORY'].split('/')
+
+        token = '${{ inputs.github-token || github.token }}'
+        if host == 'github.com':
+          github_api = github3.GitHub(token=token)
+        else:
+          github_api = github3.GitHubEnterprise(
+            url=f'https://{host}',
+            token=token,
+          )
+
+        repository = github_api.repository(org, repo)
+        # we need issue's API (not exposed by `pull_request`s)
+        pull_request =  repository.issue(${{ github.event.number }})
+
+        trusted_label = '${{ inputs.trusted-label }}'
+        needs_trusted_label = '${{ inputs.needs-trusted-label }}'
+
+        has_needs_trusted_label = False
+
+        for label in pull_request.labels():
+          if label.name == trusted_label:
+            print(f'{trusted_label=} already present - exiting')
+            exit(0)
+          if label.name == needs_trusted_label:
+            has_needs_trusted_label = True
+
+        author_association = '${{ github.event.pull_request.author_association }}'
+        allowed_author_associations = (
+          'COLLABORATOR',
+          'MEMBER',
+          'OWNER',
+        )
+
+        okay_to_add_trusted_label = False
+
+        if author_association in allowed_author_associations:
+          okay_to_add_trusted_label = True
+
+        author = '${{ github.event.pull_request.user.login }}'
+
+        trusted_teams = [t for t in '${{ inputs.trusted-teams }}'.split(',') if t]
+
+        if not okay_to_add_trusted_label:
+          okay_to_add_trusted_label = trust_helper.is_user_trusted(
+            login=author,
+            github_api=github_api,
+            trusted_org=org, # hardcode to local organisation
+            trusted_teams=trusted_teams,
+            missing_privileges_ok=True,
+            debug=${{ inputs.debug && 'True' || 'False' }},
+          )
+
+        if okay_to_add_trusted_label:
+          pull_request.add_labels(trusted_label)
+        elif not has_needs_trusted_label:
+          pull_request.add_labels(needs_trusted_label)
