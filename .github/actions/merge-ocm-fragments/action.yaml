@@ -276,7 +276,7 @@ runs:
             images_yaml_path=imagevector_file,
           ),
           component_prefixes=prefixes,
-          deduplicate_resources=False,
+          deduplicate_resources=True,
         )
         with open(component_descriptor_path, 'w') as f:
           yaml.dump(
