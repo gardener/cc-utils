@@ -8,6 +8,10 @@ jobs:
     with:
       mode: snapshot
     secrets: inherit
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
   post-build:
     needs:
       - build-and-test
