@@ -29,7 +29,7 @@ inputs:
     type: string
     default: 'reviewed/ok-to-test'
     description: |
-      a label, that can be used to mark pullrequests as trusted, regarless of author's association.
+      a label, that can be used to mark pullrequests as trusted, regardless of author's association.
 
       For security-reasons, this action will remove the label, such that it will have to be
       added again (adding the label will work as trigger).
