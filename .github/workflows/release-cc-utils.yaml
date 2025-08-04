@@ -23,6 +23,10 @@ defaults:
 jobs:
   build:
     uses: ./.github/workflows/build-and-test.yaml
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
     with:
       mode: 'release'
 
@@ -31,6 +35,10 @@ jobs:
     needs:
       - build
     secrets: inherit
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
     with:
       release-commit-target: branch
       next-version: bump-minor
