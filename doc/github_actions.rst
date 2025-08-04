@@ -75,8 +75,12 @@ OR
   - `CONTRIBUTOR`
   - `MEMBER` (org-member)
   - `OWNER` (repository-owner)
+- the pullrequest has a certain label (default: `reviewed/ok-to-test`) set
 
-.. note::
+The preferred approach (because it will also work for first-time contributors) is using
+"label-based trust".
+
+.. warning::
    For pullrequests that are not considered to be trusted, the workflow-run will still be executed.
    However, re-usable workflows from cc-utils will not attempt to push build-results, nor will
    the run be based on the changes from the pullrequest, which may be unintuitive.
@@ -110,6 +114,47 @@ of `actions/checkout`.
 .. warning::
    If using `pull_request_target`, special care needs to be done to catch malicious changes,
    especially such changes that are done in buildscripts.
+
+Example configuration for label-based trust
+-------------------------------------------
+
+If privileged pipelines are needed, use the following event-trigger:
+
+.. code:: yaml
+   on:
+      pull_request_target:
+         types:
+            - labeled
+
+   jobs:
+      example:
+         # the left condition (!= labeled) is only needed, if different triggers (e.g. push) are
+         # used.
+         # it is important to add the explicit check for label's name to prevent accidental
+         # triggering (e.g. from gardener-robot setting initial set of labels)
+         if: ${{ github.event.action != 'labeled' || github.event.label.name == 'revieved/ok-to-test' }}
+         ...
+
+The following workflow can be added for convenience:
+
+.. code:: yaml
+   # pullrequest-trust-helper.yaml
+   on:
+      pull_request_target:
+         types:
+            - opened
+            - edited
+            - reopened
+            - synchronize
+
+   jobs:
+      pullrequest-trusted-helper:
+         permissions:
+            pull-requests: write
+         uses: gardener/cc-utils/.github/workflows/pullrequest-trust-helper@master
+         with:
+            # members will be trusted (-> get okay-to-test-label automatically)
+            trusted-teams: 'first-team,second-team'
 
 Caveats
 -------
