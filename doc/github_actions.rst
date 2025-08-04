@@ -65,7 +65,7 @@ i.e. the actual changes proposed by a Pull-Request will not be visible to the pi
 
 For the latter case, there is the
 `trusted-checkout <https://github.com/gardener/cc-utils/tree/master/.github/actions/trusted-checkout>`_
-action, which will circumvent this limiation, and explicitly checkout commits from trusted
+action, which will circumvent this limitation, and explicitly checkout commits from trusted
 pullrequests. Pullrequests are considered to be trusted, if
 
 - the fork's owner is the same as the target-repository (i.e. a fork within the same organisation)
