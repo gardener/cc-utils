@@ -16,3 +16,6 @@ jobs:
     needs:
       - build-and-test
     uses: ./.github/workflows/post-build.yaml
+    permissions:
+      contents: write
+      id-token: write
