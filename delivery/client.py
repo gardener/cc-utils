@@ -185,6 +185,16 @@ class DeliveryServiceClient:
             logger.info('DeliverService-Client has no auth-token-lookup - attempting anonymous auth')
             return
 
+        if (
+            self.auth_credentials
+            and self.auth_credentials.auth_token.startswith('ey')
+            and delivery.jwt.is_jwt_token_expired(
+                token=self.auth_credentials.auth_token,
+                token_expiration_buffer_seconds=30,
+            )
+        ):
+            self.auth_credentials = None
+
         if not self.auth_credentials:
             res = self._session.get(
                 url=self._routes.auth_configs(),
