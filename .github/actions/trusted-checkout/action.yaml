@@ -91,15 +91,23 @@ runs:
         remote = f'${{ github.server_url }}/{repository}'
         summary = ''
 
+        repo_path = '${{ inputs.path }}'
+        if repo_path == '.':
+          repo_path = ''
+
         subprocess.run(
           (
-            'git', 'fetch', remote, 'refs/heads/${{ github.head_ref }}',
+            'git',
+            '-C',  repo_path,
+            'fetch', remote, 'refs/heads/${{ github.head_ref }}',
           ),
           check=True,
         )
         subprocess.run(
           (
-            'git', 'checkout', '-B', 'refs/heads/${{ github.head_ref }}', 'FETCH_HEAD',
+            'git',
+            '-C',  repo_path,
+            'checkout', '-B', 'refs/heads/${{ github.head_ref }}', 'FETCH_HEAD',
           ),
           check=True,
         )
