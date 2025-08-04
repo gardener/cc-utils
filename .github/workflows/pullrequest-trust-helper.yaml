@@ -1,0 +1,70 @@
+name: Pull-Request-Trust Helper
+description: |
+  An opinionated re-usable workflow to help with trusting Pull-Requests. Depending on the
+  trustedness of a pullrequest's author, the workflow will either add an indication (via
+  a "needs-review"-label) that a label needs to be added, or automatically add a "trusted-label".
+
+  A user is considered trusted, if:
+    - he is member of the pullrequest-target-repository's organisation
+    - he is member of any of the `trusted-teams` (input to this workflow)
+    - his association w/ target-repository is any of:
+      - COLLABORATOR
+      - MEMBER
+      - OWNER
+
+  Note: This workflow is intended to only by triggered for the following actions for pull-requests:
+  - opened
+  - edited
+  - reopened
+  - synchronize
+
+  If triggered from other sources, the workflow will early-exit with a warning, and have no
+  effect.
+
+on:
+  workflow_call:
+    secrets:
+      github-app-secret-key:
+        required: false
+        description: |
+          The secret-key for the `Gardener-GitHub-App` (`vars.GARDENER_GITHUB_ACTIONS_APP_ID`)
+          If not passed (in which case calling workflows need to set `secrets: inherit`), defaults
+          to `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
+
+    inputs:
+      trusted-label:
+        description: |
+          the label to set in order to trigger pipeline-runs trusting that label
+          needs to exist for the target-repository
+        type: string
+        default: 'reviewed/ok-to-test'
+      needs-trusted-label:
+        description: |
+          the label used to indicate the `trusted-label` needs to be set
+          needs to exist for the target-repository
+        type: string
+        default: 'needs/ok-to-test'
+      trusted-teams:
+        description: |
+          an optional, comma-separated list of team-names. Members of any of those teams
+          are considered to be trusted.
+        type: string
+        default: ''
+
+jobs:
+  pullrequest-trust-helper:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+      - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@master
+        with:
+          trusted-label: ${{ inputs.trusted-label }}
+          needs-trusted-label: ${{ inputs.needs-trusted-label }}
+          trusted-teams: ${{ inputs.trusted-teams }}
+          github-token: ${{ steps.app-token.outputs.token }}
