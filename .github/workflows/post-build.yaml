@@ -28,6 +28,15 @@ on:
             - overwrite
             - skip # silently ignore
             - fail
+      ocm-post-process:
+        type: string
+        default: component-cli
+        description: |
+          passed as `post-process`-input to merge-ocm-fragments. Allowed values are:
+          - component-cli
+          - none
+
+          Defines how component-descriptor should be post-processed.
 
 jobs:
   component-descriptor:
@@ -46,6 +55,7 @@ jobs:
         with:
           component-descriptor-artefact: base-component-descriptor
           outdir: /tmp/ocm
+          post-process: ${{ inputs.ocm-post-process }}
       - name: read-target-oci-ref
         id: read-oci-ref
         shell: python
