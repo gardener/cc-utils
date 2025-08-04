@@ -107,7 +107,7 @@ runs:
           (
             'git',
             '-C',  repo_path,
-            'checkout', '-B', 'refs/heads/${{ github.head_ref }}', 'FETCH_HEAD',
+            'checkout', '-B', '${{ github.head_ref }}', 'FETCH_HEAD',
           ),
           check=True,
         )
