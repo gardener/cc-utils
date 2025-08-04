@@ -129,7 +129,7 @@ However, by default, thus-triggered runs will be based on the pull-request’s t
 i.e. the actual changes proposed by a Pull-Request will not be visible to the pipeline-run.</p>
 <p>For the latter case, there is the
 <a class="reference external" href="https://github.com/gardener/cc-utils/tree/master/.github/actions/trusted-checkout">trusted-checkout</a>
-action, which will circumvent this limiation, and explicitly checkout commits from trusted
+action, which will circumvent this limitation, and explicitly checkout commits from trusted
 pullrequests. Pullrequests are considered to be trusted, if</p>
 <ul class="simple">
 <li><p>the fork’s owner is the same as the target-repository (i.e. a fork within the same organisation)</p></li>
@@ -144,8 +144,13 @@ pullrequests. Pullrequests are considered to be trusted, if</p>
 <li><p><code class="code docutils literal notranslate"><span class="pre">OWNER</span></code> (repository-owner)</p></li>
 </ul>
 </div></blockquote>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
+<ul class="simple">
+<li><p>the pullrequest has a certain label (default: <code class="code docutils literal notranslate"><span class="pre">reviewed/ok-to-test</span></code>) set</p></li>
+</ul>
+<p>The preferred approach (because it will also work for first-time contributors) is using
+“label-based trust”.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
 <p>For pullrequests that are not considered to be trusted, the workflow-run will still be executed.
 However, re-usable workflows from cc-utils will not attempt to push build-results, nor will
 the run be based on the changes from the pullrequest, which may be unintuitive.</p>
@@ -198,6 +203,11 @@ of <code class="code docutils literal notranslate"><span class="pre">actions/che
 <p>If using <code class="code docutils literal notranslate"><span class="pre">pull_request_target</span></code>, special care needs to be done to catch malicious changes,
 especially such changes that are done in buildscripts.</p>
 </div>
+</section>
+<section id="example-configuration-for-label-based-trust">
+<h3>Example configuration for label-based trust<a class="headerlink" href="#example-configuration-for-label-based-trust" title="Link to this heading"></a></h3>
+<p>If privileged pipelines are needed, use the following event-trigger:</p>
+<p>The following workflow can be added for convenience:</p>
 </section>
 <section id="caveats">
 <h3>Caveats<a class="headerlink" href="#caveats" title="Link to this heading"></a></h3>
