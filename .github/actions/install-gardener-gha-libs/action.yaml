@@ -37,7 +37,11 @@ runs:
         if not which pip &>/dev/null; then
           pip=pip3
         fi
-        $pip install setuptools >/dev/null
+        if not $pip install setuptools &>/tmp/install.log; then
+          cat /tmp/install.log
+          echo 'failed to install setuptools'
+          exit 1
+        fi
 
         version=$(.ci/read-version)
         if [[ "${version}" == *-* ]]; then
@@ -74,5 +78,3 @@ runs:
             cat /tmp/pip-install.log
             exit 1
         fi
-
-        pip show gardener-gha-libs
