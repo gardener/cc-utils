@@ -183,14 +183,16 @@ runs:
       shell: bash
       run: |
         # pass to next steps
-        echo "${{ inputs.component-descriptor }}" > /tmp/component-descriptor.yaml
+        cat <<"EOF" > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
         version=$(yq .component.version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
         tag_name="${{ inputs.github-tag-template }}"
         tag_ref="refs/tags/${tag_name}"
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
-        cat <<EOF > /tmp/assets.yaml
+        cat <<"EOF" > /tmp/assets.yaml
         ${{ inputs.assets }}
         EOF
 
