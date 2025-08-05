@@ -72,12 +72,6 @@ def create_diff_in_base_component(
         absent_ok=False,
     )
 
-    for cref in base_component.componentReferences:
-        if cref.componentName == upgrade_vector.component_name:
-            break
-    else:
-        return False # did not find matching cref
-
     # need to take low-level approach, as we need to avoid adding default attributes from
     # BaseComponent (or dropping extra attributes)
     with open(path) as f:
