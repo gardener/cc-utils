@@ -237,8 +237,7 @@ def determine_upgrade_vector(
             # downgrades are permitted iff the version is tracking a _dependency_ of another
             # component and we are to follow strictly
             if (
-                candidate_version_semver == reference_version_semver or
-                not upstream_component_name
+                candidate_version_semver == reference_version_semver
                 or upstream_update_policy is not ucd.UpstreamUpdatePolicy.STRICTLY_FOLLOW
             ):
                 logger.info(
