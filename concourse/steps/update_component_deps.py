@@ -59,23 +59,6 @@ def close_obsolete_pull_requests(
         obsolete_request.purge()
 
 
-def upgrade_pr_exists(
-    component_reference: ocm.ComponentReference,
-    component_version: str,
-    upgrade_requests: collections.abc.Iterable[UpgradePullRequest],
-    request_filter: collections.abc.Callable[[UpgradePullRequest], bool] = lambda rq: True,
-) -> UpgradePullRequest | None:
-    if any(
-        (matching_rq := upgrade_rq).target_matches(
-            reference=component_reference,
-            reference_version=component_version,
-        ) and request_filter(upgrade_rq)
-        for upgrade_rq in upgrade_requests
-    ):
-        return matching_rq
-    return None
-
-
 def greatest_component_version(
     component_name,
     version_lookup,
@@ -186,22 +169,24 @@ def determine_reference_versions(
         raise NotImplementedError
 
 
-def determine_upgrade_vector(
+def determine_upgrade_vectors(
     component_reference: ocm.ComponentReference,
-    upstream_component_name: str|None,
+    upstream_component_name: str | None,
     upstream_update_policy: ucd.UpstreamUpdatePolicy,
-    upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
     version_lookup,
     ocm_lookup,
     ignore_prerelease_versions=False,
-) -> ocm.gardener.UpgradeVector | None:
+) -> collections.abc.Iterable[ocm.gardener.UpgradeVector]:
     if not upstream_component_name:
-        return ocm.gardener.find_upgrade_vector(
+        upgrade_vector_or_none = ocm.gardener.find_upgrade_vector(
             component_id=component_reference.component_id,
             version_lookup=version_lookup,
             ignore_prerelease_versions=ignore_prerelease_versions,
             ignore_invalid_semver_versions=True,
         )
+        if upgrade_vector_or_none:
+            yield upgrade_vector_or_none
+        return
 
     # below this line, we handle following upstream-component
     versions_to_consider = determine_reference_versions(
@@ -233,7 +218,6 @@ def determine_upgrade_vector(
         logger.info(f'{candidate_version=}, ours: {component_reference}')
 
         if candidate_version_semver <= reference_version_semver:
-            downgrade_pr = True
             # downgrades are permitted iff the version is tracking a _dependency_ of another
             # component and we are to follow strictly
             if (
@@ -246,44 +230,17 @@ def determine_upgrade_vector(
                     f'found: {candidate_version=}'
                 )
                 continue
-        else:
-            downgrade_pr = False
 
-        if not downgrade_pr and (matching_pr := upgrade_pr_exists(
-            component_reference=component_reference,
-            component_version=candidate_version,
-            upgrade_requests=upgrade_pull_requests,
-            request_filter=lambda rq: not rq.is_downgrade,
-        )):
-            logger.info(
-                'skipping upgrade (PR already exists): '
-                f'{component_reference=} '
-                f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
-            )
-            continue
-        elif downgrade_pr and (matching_pr := upgrade_pr_exists(
-            component_reference=component_reference,
-            component_version=candidate_version,
-            upgrade_requests=upgrade_pull_requests,
-            request_filter=lambda rq: rq.is_downgrade,
-        )):
-            logger.info(
-                'skipping downgrade (PR already exists): '
-                f'{component_reference=} '
-                f'to {candidate_version=} ({matching_pr.pull_request.html_url})'
-            )
-            continue
-        else:
-            return ocm.gardener.UpgradeVector(
-                whence=ocm.ComponentIdentity(
-                    name=component_reference.componentName,
-                    version=component_reference.version,
-                ),
-                whither=ocm.ComponentIdentity(
-                    name=component_reference.componentName,
-                    version=candidate_version,
-                ),
-            )
+        yield ocm.gardener.UpgradeVector(
+            whence=ocm.ComponentIdentity(
+                name=component_reference.componentName,
+                version=component_reference.version,
+            ),
+            whither=ocm.ComponentIdentity(
+                name=component_reference.componentName,
+                version=candidate_version,
+            ),
+        )
 
 
 def create_upgrade_commit_diff(

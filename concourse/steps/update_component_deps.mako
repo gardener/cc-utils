@@ -155,64 +155,61 @@ greatest_component_references = ocm.gardener.iter_greatest_component_references(
 existing_upgrade_vectors = [u.upgrade_vector for u in upgrade_pull_requests]
 
 for component_reference in greatest_component_references:
-    upgrade_vector = determine_upgrade_vector(
+    upgrade_vectors = list(determine_upgrade_vectors(
         component_reference=component_reference,
         upstream_component_name=upstream_component_name,
         upstream_update_policy=upstream_update_policy,
-        upgrade_pull_requests=upgrade_pull_requests,
         ocm_lookup=ocm_lookup,
         version_lookup=version_lookup,
         ignore_prerelease_versions=${ignore_prerelease_versions},
-    )
+    ))
 
-    if upgrade_vector is None:
-        continue # did not find a suitable update-vector
+    for upgrade_vector in upgrade_vectors:
+        if upgrade_vector in existing_upgrade_vectors:
+            logger.info(f'found existing pullrequest for {upgrade_vector=} - skipping')
+            continue
 
-    if upgrade_vector in existing_upgrade_vectors:
-        logger.info(f'found existing pullrequest for {upgrade_vector=} - skipping')
-        continue
+        merge_policy = merge_policies.merge_policy_for(upgrade_vector.component_name)
+        merge_method = merge_policies.merge_method_for(upgrade_vector.component_name)
 
-    merge_policy = merge_policies.merge_policy_for(upgrade_vector.component_name)
-    merge_method = merge_policies.merge_method_for(upgrade_vector.component_name)
+        if not merge_policy:
+            merge_policy = concourse.model.traits.update_component_deps.MergePolicy.MANUAL
 
-    if not merge_policy:
-        merge_policy = concourse.model.traits.update_component_deps.MergePolicy.MANUAL
+        if not merge_method:
+            merge_method = concourse.model.traits.update_component_deps.MergeMethod.MERGE
 
-    if not merge_method:
-        merge_method = concourse.model.traits.update_component_deps.MergeMethod.MERGE
-
-    pull_request = create_upgrade_pr(
-        upgrade_vector=upgrade_vector,
-        repository=repository,
-        upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
-        upgrade_script_relpath='${set_dependency_version_script_path}',
-        git_helper=git_helper,
-        branch=REPO_BRANCH,
-        repo_dir=REPO_ROOT,
-        github_cfg_name=github_cfg_name,
-        component_descriptor_lookup=ocm_lookup,
-        oci_client=oci_client,
-        delivery_dashboard_url=delivery_dashboard_url,
-        version_lookup=version_lookup,
-        merge_policy=merge_policy,
-        merge_method=merge_method,
-        include_bom_diff=${include_bom_diff},
+        pull_request = create_upgrade_pr(
+            upgrade_vector=upgrade_vector,
+            repository=repository,
+            upgrade_script_path=os.path.join(REPO_ROOT, '${set_dependency_version_script_path}'),
+            upgrade_script_relpath='${set_dependency_version_script_path}',
+            git_helper=git_helper,
+            branch=REPO_BRANCH,
+            repo_dir=REPO_ROOT,
+            github_cfg_name=github_cfg_name,
+            component_descriptor_lookup=ocm_lookup,
+            oci_client=oci_client,
+            delivery_dashboard_url=delivery_dashboard_url,
+            version_lookup=version_lookup,
+            merge_policy=merge_policy,
+            merge_method=merge_method,
+            include_bom_diff=${include_bom_diff},
 % if after_merge_callback:
-        after_merge_callback='${after_merge_callback}',
+            after_merge_callback='${after_merge_callback}',
 % endif
 % if pullrequest_body_suffix:
-        pullrequest_body_suffix=textwrap.dedent('''${pullrequest_body_suffix}'''),
+            pullrequest_body_suffix=textwrap.dedent('''${pullrequest_body_suffix}'''),
 % endif
 % if set_version_script_image:
-        container_image='${set_version_script_image}',
+            container_image='${set_version_script_image}',
 % else:
-        container_image = None,
+            container_image=None,
 % endif
-    )
-    # add pr to the list of known upgrade pull requests, so next iteration
-    # on the generator returned by determine_upgrade_prs takes it into
-    # consideration
-    upgrade_pull_requests.append(pull_request)
+        )
+        # add pr to the list of known upgrade pull requests, so next iteration
+        # on the generator returned by determine_upgrade_prs takes it into
+        # consideration
+        upgrade_pull_requests.append(pull_request)
 
 for upgrade_pull_request in github.pullrequest.iter_obsolete_upgrade_pull_requests(
     list(upgrade_pull_requests)

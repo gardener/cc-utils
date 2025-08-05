@@ -70,22 +70,6 @@ class UpgradePullRequest:
         head_ref = f'heads/{self.pull_request.head.ref}'
         self.pull_request.repository.ref(head_ref).delete()
 
-    def target_matches(
-        self,
-        reference: ocm.ComponentReference,
-        reference_version: str,
-    ):
-        if not isinstance(reference, ocm.ComponentReference):
-            return False
-        if reference.componentName != self.component_name:
-            return False
-
-        reference_version = reference_version or reference.version
-        if reference_version != self.upgrade_vector.whither.version:
-            return False
-
-        return True
-
 
 def parse_pullrequest_title(
     title: str,
