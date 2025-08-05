@@ -87,6 +87,9 @@ def create_diff_in_base_component(
         cname = cref['componentName']
         cver = cref['version']
 
+        if cname != upgrade_vector.component_name:
+            continue
+
         # sanity-check: whence-version must match
         if cver != upgrade_vector.whence.version:
             logger.warning(f'{cname}:{cver} does not match {upgrade_vector.whence=} - skipping')
