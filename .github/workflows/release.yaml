@@ -143,6 +143,10 @@ on:
           published as part of component-descriptor, as well as via slack, if `slack-channel-id`
           input is specified).
         value: ${{ jobs.release-and-bump.outputs.release-notes }}
+      component-descriptor:
+        description: |
+          The component-descriptor document, as it was uploaded during release
+        value: ${{ jobs.release-and-bump.outputs.component-descriptor }}
 jobs:
   release-and-bump:
     runs-on: ubuntu-latest
@@ -153,6 +157,7 @@ jobs:
 
     outputs:
       release-notes: ${{ steps.release-notes.outputs.release-notes }}
+      component-descriptor: ${{ steps.release.outputs.component-descriptor }}
 
     steps:
       - name: collect-component-descriptor
@@ -174,6 +179,7 @@ jobs:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
           private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/release@master
+        id: release
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           component-descriptor-blobs-dir: /tmp/ocm/blobs.d
