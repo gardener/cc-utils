@@ -157,6 +157,12 @@ inputs:
       - skip
       - overwrite
       - fail
+outputs:
+  component-descriptor:
+    description: |
+      the Component-Descriptor as it was published (which may contain modifications compared
+      to the component-descriptor that was passed-in as input).
+    value: ${{ steps.publish-component-descriptor.outputs.component-descriptor }}
 
 defaults:
   run:
@@ -290,6 +296,7 @@ runs:
 
     - name: publish OCM Component-Descriptor
       shell: bash
+      id: publish-component-descriptor
       run: |
         python -m ocm upload \
           --file /tmp/component-descriptor.yaml \
@@ -297,6 +304,10 @@ runs:
           --on-exist ${{ inputs.on-existing-component-descriptor }}
 
         tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
+
+        echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
+        cat /tmp/component-descriptor.yaml >> "${GITHUB_OUTPUT}"
+        echo EOF >> "${GITHUB_OUTPUT}"
 
     - name: upload OCM Component-Descriptor as artifact
       uses: actions/upload-artifact@v4
