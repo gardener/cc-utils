@@ -38,6 +38,13 @@ inputs:
     default: 'needs/ok-to-test'
     description: |
       a label that is added as a marker in order to notify lack of "trusted-label"
+  remove-trusted-label:
+    type: boolean
+    default: true
+    description: |
+      if set to false, will not attempt to remove "trusted-label". Use to run from workflows
+      that do not have `pull-requests: write` permission. Be sure to run w/ this input
+      set to true (the default) in an early run.
   path:
     type: string
     description: |
@@ -144,7 +151,7 @@ runs:
     - if: ${{ steps.calc.outputs.remove-label }}
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - name: remove-trusted-and-add-needs-label
-      if: ${{ steps.calc.outputs.remove-label }}
+      if: ${{ steps.calc.outputs.remove-label &&  inputs.remove-trusted-label }}
       shell: python
       run: |
         import github3.exceptions
