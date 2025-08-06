@@ -62,12 +62,19 @@ on:
       base-component-file:
         default: .ocm/base-component.yaml
         type: string
-
       checkout-fetch-depth:
         default: 1
         type: number
         description: |
           passed to checkout. Useful longer history is required.
+      post-process:
+        type: string
+        required: false
+        default: none
+        description: |
+          configures how generated base-component-descriptor should be post-processed. Options:
+          - component-cli
+          - none
 
     outputs:
       ocm-repository:
@@ -181,7 +188,7 @@ jobs:
           version: ${{ steps.version.outputs.version }}
           ocm-repository: ${{ needs.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
-          post-process: 'none'
+          post-process: ${{ inputs.post-process }}
 
   upload-artefact:
     needs:
