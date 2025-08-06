@@ -21,6 +21,12 @@ inputs:
     description: |
       Pass-in GITHUB_TOKEN. Needs permissions to read-contents (for accessing metadata about current
       repository).
+  trusted-label:
+    type: string
+    default: reviewed/ok-to-test
+    description: |
+      a label that, in case of pullrequests, is considered a marker for a pullrequest to be
+      trusted.
 
 outputs:
   oci-registry:
@@ -137,6 +143,12 @@ runs:
               can_push=false
               can_push_reason='untrusted fork'
           esac
+          if [ '${{ github.event.action }}' == 'labeled' -a ! $can_push ]; then
+            if ${{ github.event.label.name == inputs.trusted-label }}; then
+              can_push=true
+              can_push_reason='label ${{ inputs.trusted-label }} present'
+            fi
+          fi
         else
           is_pr_from_fork=false
           can_push=true
