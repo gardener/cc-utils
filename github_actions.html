@@ -219,6 +219,10 @@ especially such changes that are done in buildscripts.</p>
 <span class="w">      </span><span class="c1"># it is important to add the explicit check for label&#39;s name to prevent accidental</span>
 <span class="w">      </span><span class="c1"># triggering (e.g. from gardener-robot setting initial set of labels)</span>
 <span class="w">      </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.event.action != &#39;labeled&#39; || github.event.label.name == &#39;revieved/ok-to-test&#39; }}</span>
+<span class="w">      </span><span class="nt">permissions</span><span class="p">:</span>
+<span class="w">         </span><span class="nt">pull-requests</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span><span class="w"> </span><span class="c1"># needed so trusted-checkout can remove trusted-label</span>
+<span class="w">                              </span><span class="c1"># caveat: also needs to be set for all called workflows</span>
+<span class="w">                              </span><span class="c1"># that use trusted-checkout (action)</span>
 <span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">...</span>
 </pre></div>
 </div>
@@ -248,6 +252,12 @@ especially such changes that are done in buildscripts.</p>
 <h3>Caveats<a class="headerlink" href="#caveats" title="Link to this heading"></a></h3>
 <p>Regardless which of <code class="code docutils literal notranslate"><span class="pre">on.pull_request</span></code> or <code class="code docutils literal notranslate"><span class="pre">on.pull_request_target</span></code> is used, workflow-runs will
 always be based on target-repository’s local workflow- and actions-definitions.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Be sure to grant <code class="code docutils literal notranslate"><span class="pre">pull-requests:</span> <span class="pre">write</span></code>-permission to all workflows called from
+pull_request_target-event (this is needed so trusted-checkout action is able to remove
+trusted-label).</p>
+</div>
 </section>
 </section>
 </section>
