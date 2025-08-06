@@ -134,6 +134,10 @@ If privileged pipelines are needed, use the following event-trigger:
          # it is important to add the explicit check for label's name to prevent accidental
          # triggering (e.g. from gardener-robot setting initial set of labels)
          if: ${{ github.event.action != 'labeled' || github.event.label.name == 'revieved/ok-to-test' }}
+         permissions:
+            pull-requests: write # needed so trusted-checkout can remove trusted-label
+                                 # caveat: also needs to be set for all called workflows
+                                 # that use trusted-checkout (action)
          ...
 
 The following workflow can be added for convenience:
@@ -164,3 +168,8 @@ Caveats
 
 Regardless which of `on.pull_request` or `on.pull_request_target` is used, workflow-runs will
 always be based on target-repository's local workflow- and actions-definitions.
+
+.. note::
+   Be sure to grant `pull-requests: write`-permission to all workflows called from
+   pull_request_target-event (this is needed so trusted-checkout action is able to remove
+   trusted-label).
