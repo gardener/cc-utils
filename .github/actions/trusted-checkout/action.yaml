@@ -151,7 +151,7 @@ runs:
     - if: ${{ steps.calc.outputs.remove-label }}
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - name: remove-trusted-and-add-needs-label
-      if: ${{ steps.calc.outputs.remove-label &&  inputs.remove-trusted-label }}
+      if: ${{ steps.calc.outputs.remove-label != '' && inputs.remove-trusted-label }}
       shell: python
       run: |
         import github3.exceptions
