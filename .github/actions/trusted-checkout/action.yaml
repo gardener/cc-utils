@@ -79,8 +79,8 @@ runs:
 
         if not allowed_to_checkout:
           summary = textwrap.dedent(f'''\
-          [!WARNING]
-          Checked out target-repository's contents, as pullrequest author is not trusted
+          > [!WARNING]
+          > Checked out target-repository's contents, as pullrequest author is not trusted
           ''')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
             f.write(summary)
@@ -104,7 +104,34 @@ runs:
           check=True,
         )
 
+        output = subprocess.run(
+          (
+            'git',
+            '-C',  repo_path,
+            'rev-parse', 'FETCH_HEAD',
+          ),
+          check=True,
+          capture_output=True,
+          encoding='utf-8',
+        )
+
+        fetched_head_digest = output.stdout.strip()
         checkout_ref = '${{ github.event.pull_request.head.sha }}'
+        if checkout_ref != fetched_head_digest:
+          print('WARNING: pullrequest seems to have been modified')
+          print(f'{fetched_head_digest=} vs {checkout_ref=}')
+
+          summary = textwrap.dedent(f'''\
+          > [!WARNING]
+          > The pullrequest was modified after pipeline was triggered:
+          > initial: {checkout_ref}
+          > after change: {fetched_head_digest}
+          >
+          > The pipeline will run based on `initial` commit
+          ''')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(summary)
+          exit(0)
 
         subprocess.run(
           (
