@@ -120,7 +120,7 @@ Example configuration for label-based trust
 
 If privileged pipelines are needed, use the following event-trigger:
 
-.. code:: yaml
+.. code-block:: yaml
    on:
       pull_request_target:
          types:
@@ -137,7 +137,7 @@ If privileged pipelines are needed, use the following event-trigger:
 
 The following workflow can be added for convenience:
 
-.. code:: yaml
+.. code-block:: yaml
    # pullrequest-trust-helper.yaml
    on:
       pull_request_target:
