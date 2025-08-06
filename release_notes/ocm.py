@@ -229,9 +229,9 @@ def group_release_notes_docs(
 def release_notes_docs_as_markdown(
     release_notes_docs: collections.abc.Sequence[rnm.ReleaseNotesDoc],
     prepend_title: bool=True,
-) -> str | None:
+) -> str:
     if not release_notes_docs:
-        return None
+        return ''
 
     if prepend_title:
         release_notes_md = '**Release Notes**:\n\n'
