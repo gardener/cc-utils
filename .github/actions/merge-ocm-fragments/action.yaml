@@ -227,6 +227,7 @@ runs:
       if: ${{ inputs.post-process == 'component-cli' }}
       with:
         path: repo.d # avoid conflicts w/ component-descriptor
+        remove-trusted-label: false
     - name: post-process
       if: ${{ inputs.post-process == 'component-cli' }}
       shell: python
