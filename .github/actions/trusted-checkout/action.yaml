@@ -103,11 +103,14 @@ runs:
           ),
           check=True,
         )
+
+        checkout_ref = '${{ github.event.pull_request.head.sha }}'
+
         subprocess.run(
           (
             'git',
             '-C',  repo_path,
-            'checkout', '-B', '${{ github.head_ref }}', 'FETCH_HEAD',
+            'checkout', '-B', '${{ github.head_ref }}', checkout_ref,
           ),
           check=True,
         )
