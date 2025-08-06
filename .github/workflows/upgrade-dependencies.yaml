@@ -50,6 +50,7 @@ jobs:
     uses: ./.github/workflows/prepare.yaml
     with:
       mode: release
+      post-process: component-cli
 
   create-upgrade-pullrequests:
     runs-on: ubuntu-latest
