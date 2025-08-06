@@ -37,6 +37,13 @@ on:
           - none
 
           Defines how component-descriptor should be post-processed.
+    outputs:
+      component-descriptor:
+        type: string
+        description: |
+          the final component-descriptor after base-component-descriptor and any emitted
+          fragments from other jobs.
+      value: ${{ jobs.component-descriptor.outputs.component-descriptor }}
 
 jobs:
   component-descriptor:
