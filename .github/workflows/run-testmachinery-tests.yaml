@@ -79,6 +79,8 @@ jobs:
       - uses: azure/setup-kubectl@v4
       - uses: gardener/cc-utils/.github/actions/setup-testrunner@master
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          remove-trusted-label: false
       - uses: gardener/cc-utils/.github/actions/kubernetes-auth@master
         with:
           server: ${{ inputs.k8s-api-endpoint }}

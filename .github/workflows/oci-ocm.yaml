@@ -288,6 +288,8 @@ jobs:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          remove-trusted-label: false
       - name: import-release-commit
         if: ${{ inputs.commit-objects-artefact != '' }}
         uses: gardener/cc-utils/.github/actions/import-commit@master
