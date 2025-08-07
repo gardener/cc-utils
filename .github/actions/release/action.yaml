@@ -508,7 +508,7 @@ runs:
     - name: push-bump-commit
       shell: bash
       run: |
-        if [ -n "${{ inputs.release-notes-path }}" ]; then
+        if [ -n "${{ inputs.release-notes-path }}" -a -d "${{ inputs.release-notes-path }}" ]; then
           git add "${{ inputs.release-notes-path }}"
           git commit --amend --no-edit --allow-empty
         fi
