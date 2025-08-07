@@ -251,12 +251,11 @@ def _determine_blocks_to_include(
 
 def fetch_draft_release_notes(
     component: ocm.Component,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
     version_whither: str,
-) -> set[rnm.ReleaseNote]:
+) -> rnm.ReleaseNotesDoc | None:
     known_versions: list[str] = [
         v for v in
         version_lookup(component.identity())
@@ -277,6 +276,7 @@ def fetch_draft_release_notes(
     # todo: need to check access-type / handle unsupported types (!= GitHub)
     github_access = ocm.util.main_source(component).access
     repo_url = github_access.repoUrl
+    hostname = github_access.hostname()
 
     # make sure _all_ tags are available locally
     git_helper.fetch_tags()
@@ -302,29 +302,32 @@ def fetch_draft_release_notes(
         github_api_lookup=github_api_lookup,
     )
 
-    release_notes: set[rnm.ReleaseNote] = {
-        rnm.create_release_notes_obj(
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            source_block=source_block,
-            source_component=component,
-            current_component=component,
-        ) for source_block in release_note_blocks
-    }
+    entries = [
+        b.as_release_note_entry(hostname=hostname)
+        for b in release_note_blocks
+    ]
 
-    return release_notes
+    if not entries:
+        return None
+
+    return rnm.ReleaseNotesDoc(
+        ocm=rnm.ReleaseNotesOcmRef(
+            component_name=component.name,
+            component_version=component.version,
+        ),
+        release_notes=entries,
+    )
 
 
 def fetch_release_notes(
     component: ocm.Component,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
     version_whither: str | None = None,
     version_whence: str | None = None,
     version_whither_ref_commit: git.Commit | None = None,
-) -> set[rnm.ReleaseNote]:
+) -> rnm.ReleaseNotesDoc | None:
     ''' Fetches and returns a set of release notes for the specified component.
 
     :param component: the OCM Component for which to retrieve release-notes.
@@ -333,7 +336,7 @@ def fetch_release_notes(
     :param version_whence: Optional argument to retrieve release notes starting at a specific \
         version. If not given, the closest version to `version_whither` is used.
 
-    :return: A set of ReleaseNote objects for the specified component.
+    :return: A set of ReleaseNotesDoc objects for the specified component.
     '''
 
     # sanity-checks / validation
@@ -391,6 +394,8 @@ def fetch_release_notes(
     # todo: check access-type / handle unsupported types (non-github)
     github_access: ocm.GithubAccess = source.access
 
+    hostname = github_access.hostname()
+
     github_api = github_api_lookup(github_access.repoUrl)
 
     # make sure _all_ tags are available locally
@@ -417,14 +422,18 @@ def fetch_release_notes(
         github_api_lookup=github_api_lookup,
     )
 
-    release_notes: set[rnm.ReleaseNote] = {
-        rnm.create_release_notes_obj(
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            source_block=source_block,
-            source_component=component,
-            current_component=component,
-        ) for source_block in release_note_blocks
-    }
+    entries = [
+        b.as_release_note_entry(hostname=hostname)
+        for b in release_note_blocks
+    ]
 
-    return release_notes
+    if not entries:
+        return None
+
+    return rnm.ReleaseNotesDoc(
+        ocm=rnm.ReleaseNotesOcmRef(
+            component_name=component.name,
+            component_version=component.version,
+        ),
+        release_notes=entries,
+    )

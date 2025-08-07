@@ -1,18 +1,15 @@
+import collections
 import dataclasses
 import enum
 import functools
 import logging
 import re
-import traceback
 import typing
 import uuid
 
 import ocm as ocm_model
-import ocm.util
 import git
 import github3.pulls
-
-import version
 
 logger = logging.getLogger(__name__)
 
@@ -132,9 +129,43 @@ class ReleaseNotesDoc:
             return None
 
         header = f'[{self.ocm.component_name}:{self.ocm.component_version}]'
-        release_notes = '\n'.join(release_note.contents for release_note in self.release_notes)
+        categorized_entries = collections.defaultdict(list)
 
-        return f'{header}\n{release_notes}'
+        for entry in self.release_notes:
+            if entry.type is ReleaseNotesType.PRERENDERED:
+                if len(self.release_notes) != 1:
+                    raise RuntimeError(
+                        f'Only expected one prerendered release-note for {self.ocm=} '
+                        f'(found {len(self.release_notes)})'
+                    )
+                return f'{header}\n{entry.contents.strip()}'
+            categorized_entries[entry.category].append(entry)
+
+        markdown_blocks = []
+        # Sort categories by priority
+        sorted_categories = sorted(
+            categorized_entries.keys(),
+            key=lambda cat: ReleaseNotesCategory.category_priority(cat)
+        )
+
+        for category in sorted_categories:
+            entries = categorized_entries[category]
+            title = ReleaseNotesCategory.category_title(category)
+
+            block_lines = [f'## {title}']
+
+            for entry in entries:
+                entry: ReleaseNoteEntry
+                author = f'@{entry.author.username}'
+                audience = entry.audience
+                pullrequest = entry.pullrequest
+                block_lines.append(
+                    f'- `[{audience.name}]` {entry.contents.strip()} by {author} [{pullrequest}]'
+                )
+
+            markdown_blocks.append('\n'.join(block_lines))
+
+        return f'{header}\n\n' + '\n\n'.join(markdown_blocks)
 
 
 r'''
@@ -289,6 +320,22 @@ class SourceBlock:
             return False
         return all(z and z.strip() for z in (self.category, self.target_group, self.note_message))
 
+    def as_release_note_entry(
+        self,
+        hostname: str
+    ) -> ReleaseNoteEntry:
+        return ReleaseNoteEntry(
+            mimetype='text/markdown',
+            contents=self.note_message,
+            category=ReleaseNotesCategory(self.category.lower()),
+            audience=ReleaseNotesAudience(self.target_group.lower()),
+            author=ReleaseNotesAuthor(
+                hostname=hostname,
+                username=self.author,
+            ),
+            pullrequest=self.reference_identifier,
+        )
+
     def __hash__(self):
         return hash(self.identifier)
 
@@ -391,85 +438,6 @@ class ReleaseNote:
             f'{self.reference_str} {author}\n'
             f'{src_blk.note_message}\n```'
         )
-
-
-def _source_component(
-    component_descriptor_lookup,
-    version_lookup,
-    current_component: ocm_model.Component,
-    source_component_name: str,
-) -> ocm_model.Component | None:
-    try:
-        # try to fetch greatest component-descriptor for source component. The
-        # actual version (hopefully) does not matter, as we assume the GithubAccess
-        # (which we need to lookup release-notes) will rarely change.
-        source_component_descriptor = component_descriptor_lookup(
-            ocm_model.ComponentIdentity(
-                name=source_component_name,
-                version=version.greatest_version(
-                    versions=version_lookup(source_component_name),
-                    ignore_prerelease_versions=True,
-                ),
-            ),
-        )
-        return source_component_descriptor.component
-    except Exception:
-        logger.warning(
-            f'Unable to retrieve component descriptor for source component {source_component_name}'
-        )
-        traceback.print_exc()
-        return None
-
-
-def create_release_notes_obj(
-    component_descriptor_lookup,
-    version_lookup,
-    source_block: SourceBlock,
-    source_component: ocm_model.Component,
-    current_component: ocm_model.Component,
-) -> ReleaseNote:
-    target = source_block.source
-    if isinstance(target, git.Commit):
-        ref = create_commit_ref(target, source_block)
-    elif isinstance(target, github3.pulls.ShortPullRequest):
-        ref = create_pull_request_ref(target, source_block)
-    else:
-        raise NotImplementedError(
-            f"Release note creation not implemented for target-type {type(target)}"
-        )
-
-    author = author_from_source(target)
-
-    if source_block.component_name:
-        source_component = _source_component(
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            current_component=current_component,
-            source_component_name=source_block.component_name,
-        )
-
-    # access
-    source_component_access = ocm.util.main_source(
-        component=source_component,
-        no_source_ok=False,
-    ).access
-
-    current_src_access = ocm.util.main_source(
-        component=current_component,
-        no_source_ok=False,
-    ).access
-
-    from_same_github_instance = current_src_access.hostname() in source_component_access.hostname()
-    is_current_repo = current_component.name == source_component.name
-
-    return ReleaseNote(
-        source_block=source_block,
-        author=author,
-        reference=ref,
-        source_component=source_component,
-        is_current_repo=is_current_repo,
-        from_same_github_instance=from_same_github_instance
-    )
 
 
 @dataclasses.dataclass(frozen=True)

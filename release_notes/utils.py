@@ -1,10 +1,14 @@
 import collections
+import collections.abc
 import dataclasses
+import enum
 import itertools
 import logging
+import os
 import time
 import typing
 
+import dacite
 import git
 import git.exc as gitexc
 import github3
@@ -272,3 +276,24 @@ def request_pull_requests_from_api(
                            f'{pending.keys()} is/are either not closed or cannot be found')
 
     return result
+
+
+def read_release_notes_from_dir(
+    release_notes_docs_dir: str,
+) -> collections.abc.Iterator[rnm.ReleaseNotesDoc]:
+    for root, _, files in os.walk(release_notes_docs_dir):
+        for fname in files:
+            if not fname.endswith(rnm.RELEASE_NOTES_DOC_SUFFIX):
+                continue
+
+            fpath = os.path.join(root, fname)
+            with open(fpath) as f:
+                raw_data = yaml.safe_load(f)
+
+            yield dacite.from_dict(
+                data_class=rnm.ReleaseNotesDoc,
+                data=raw_data,
+                config=dacite.Config(
+                    cast=[enum.Enum],
+                ),
+            )
