@@ -98,8 +98,19 @@ def main():
         default=None,
         help='release-notes from sub-components',
     )
+    parser.add_argument(
+        '--no-subcomponent-release-notes',
+        action='store_true',
+        default=False,
+        help='if passed, no subcomponent-release-notes will be fetched',
+    )
 
     parsed = parser.parse_args()
+    if parsed.no_subcomponent_release_notes:
+        # patch passed outfile for convenience (so caller may always specify it, and does not need
+        # to calculate ARGV dynamically
+        parsed.subcomponent_release_notes = False
+
     print(pprint.pformat(parsed), file=sys.stderr)
 
     with open(parsed.component_descriptor) as f:
@@ -206,25 +217,28 @@ def main():
     # retrieve release-notes from sub-components
     whence_component = component_descriptor_lookup(version_vector.whence).component
 
-    sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
-        whence_component=whence_component,
-        whither_component=component,
-        component_descriptor_lookup=component_descriptor_lookup,
-        version_lookup=ocm_version_lookup,
-        oci_client=oci_client,
-        version_filter=version.is_final,
-    ))
+    if parsed.subcomponent_release_notes:
+        sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
+            whence_component=whence_component,
+            whither_component=component,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=ocm_version_lookup,
+            oci_client=oci_client,
+            version_filter=version.is_final,
+        ))
 
-    grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
-        release_notes_docs=sub_component_release_notes_docs,
-    )
+        grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
+            release_notes_docs=sub_component_release_notes_docs,
+        )
 
-    sub_component_release_notes = ensure_trailing_newline(
-        rno.release_notes_docs_as_markdown(
-            release_notes_docs=grouped_sub_component_release_notes_docs,
-            prepend_title=False,
-        ),
-    )
+        sub_component_release_notes = ensure_trailing_newline(
+            rno.release_notes_docs_as_markdown(
+                release_notes_docs=grouped_sub_component_release_notes_docs,
+                prepend_title=False,
+            ),
+        )
+    else:
+        sub_component_release_notes = None
 
     if sub_component_release_notes:
         full_release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
