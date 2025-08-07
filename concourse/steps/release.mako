@@ -126,6 +126,7 @@ import concourse.util
 import ocm
 import ocm.upload
 import ocm.util
+import release_notes.markdown
 import release_notes.ocm
 import github.release
 import github.util
@@ -451,11 +452,11 @@ for validation_error in cnudie.validate.iter_violations(
 ):
   logger.warning(f'{validation_error=}')
 
+release_notes_docs = []
+subcomponent_release_notes_docs = []
 % if process_release_notes:
-release_notes_md = None
-full_release_notes_md = None
 try:
-  release_notes_md, full_release_notes_md = collect_release_notes(
+  release_notes_docs, subcomponent_release_notes_docs = collect_release_notes(
     git_helper=git_helper,
     release_version=version_str,
     component=component,
@@ -468,37 +469,85 @@ except:
   logger.warning('an error occurred whilst trying to collect release-notes')
   logger.warning('release will continue')
   traceback.print_exc()
-% else:
-release_notes_md = None
-full_release_notes_md = None
 % endif
 
 tgt_ref = cnudie.util.target_oci_ref(component=component)
 
-if release_notes_md:
-  release_notes_octets = release_notes_md.encode('utf-8')
-  release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
-  oci_client.put_blob(
-    image_reference=tgt_ref,
-    digest=release_notes_digest,
-    octets_count=len(release_notes_octets),
-    data=release_notes_octets,
-  )
+<%
+release_notes_md = release_notes.ocm.release_notes_docs_as_markdown(
+  release_notes_docs,
+)
 
-  component.resources.append(
-    ocm.Resource(
-      name=release_notes.ocm.release_notes_resource_name_old,
-      version=component.version,
-      type='text/markdown.release-notes',
-      access=ocm.LocalBlobAccess(
-        localReference=release_notes_digest,
-        size=len(release_notes_octets),
-        mediaType='text/markdown.release-notes',
-      ),
+subcomponent_md = release_notes.ocm.release_notes_docs_as_markdown(
+  release_notes_docs=subcomponent_release_notes_docs,
+  prepend_title=False,
+)
+
+if subcomponent_md:
+  full_release_notes_md = f'{release_notes_md}\n{subcomponent_md}'
+else:
+  full_release_notes_md = release_notes_md
+
+component_resources_markdown = release_notes.markdown.release_note_for_ocm_component(
+  component=component,
+)
+if component_resources_markdown:
+  full_release_notes_md = f'{full_release_notes_md}\n\n{component_resources_markdown}'
+%>
+
+% if release_notes_md:
+release_notes_octets = release_notes_md.encode('utf-8')
+release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
+oci_client.put_blob(
+  image_reference=tgt_ref,
+  digest=release_notes_digest,
+  octets_count=len(release_notes_octets),
+  data=release_notes_octets,
+)
+
+component.resources.append(
+  ocm.Resource(
+    name=release_notes.ocm.release_notes_resource_name_old,
+    version=component.version,
+    type='text/markdown.release-notes',
+    access=ocm.LocalBlobAccess(
+      localReference=release_notes_digest,
+      size=len(release_notes_octets),
+      mediaType='text/markdown.release-notes',
     ),
-  )
-  logger.info('added release-notes to component-descriptor:')
-  logger.info(f'{component.resources[-1]}')
+  ),
+)
+logger.info('added legacy release-notes to component-descriptor:')
+logger.info(f'{component.resources[-1]}')
+% endif
+
+% if release_notes_docs or subcomponent_release_notes_docs:
+all_docs = release_notes_docs + subcomponent_release_notes_docs
+tar_stream = b''.join(release_notes.tarutil.release_notes_docs_into_tarstream(all_docs))
+tar_digest = f'sha256:{hashlib.sha256(tar_stream).hexdigest()}'
+
+
+oci_client.put_blob(
+  image_reference=tgt_ref,
+  digest=tar_digest,
+  octets_count=len(tar_stream),
+  data=tar_stream,
+)
+
+component.resources.append(
+  ocm.Resource(
+    name=release_notes.ocm.release_notes_resource_name,
+    version=component.version,
+    type='vnd.gardener/release-notes-archive',
+    access=ocm.LocalBlobAccess(
+      localReference=tar_digest,
+      size=len(tar_stream),
+      mediaType='application/tar',
+    ),
+  ),
+)
+logger.info('added release-notes archive to component-descriptor')
+% endif
 
 logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
 uploaded_oci_manifest_bytes = ocm.upload.upload_component_descriptor(

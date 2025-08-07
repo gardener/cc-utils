@@ -17,17 +17,16 @@ from git.exc import (
 import git
 
 import ocm
-import ocm.gardener
 
 import ccc.github
 import concourse.steps.version
 import concourse.model.traits.version as version_trait
 import dockerutil
 import github.util
-import oci.client
 import release_notes.fetch
-import release_notes.markdown
+import release_notes.model as rnm
 import release_notes.ocm as rno
+import release_notes.utils as rnu
 import slackclient.util
 
 from gitutil import GitHelper
@@ -141,66 +140,52 @@ def collect_release_notes(
     git_helper: GitHelper,
     release_version: str,
     component: ocm.Component,
-    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
     version_lookup: ocm.VersionLookup,
-    oci_client: oci.client.Client,
-) -> tuple[str, str]:
-    release_note_blocks = release_notes.fetch.fetch_release_notes(
+) -> tuple[rnm.ReleaseNotesDoc, list[rnm.ReleaseNotesDoc]]:
+    repo_path = git_helper.repo_path
+    local_release_notes_path = os.path.join(repo_path, '.ocm/release-notes')
+
+    local_release_notes_docs = list(
+        rnu.read_release_notes_from_dir(local_release_notes_path)
+    )
+    for doc in local_release_notes_docs:
+        if(
+            not doc.ocm
+            or not doc.ocm.component_name
+            or not doc.ocm.component_version
+        ):
+            doc.ocm = rnm.ReleaseNotesOcmRef(
+                component_name=component.name,
+                component_version=component.version,
+            )
+
+    fetched_release_notes_doc = release_notes.fetch.fetch_release_notes(
         component=component,
-        component_descriptor_lookup=component_descriptor_lookup,
         version_lookup=version_lookup,
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
         version_whither=release_version,
     )
 
-    release_notes_markdown = '\n'.join(
-        str(i) for i in release_notes.markdown.render(release_note_blocks)
-    ) or ''
+    all_release_notes_docs = local_release_notes_docs + fetched_release_notes_doc
+    grouped_release_notes_docs = rno.group_release_notes_docs(all_release_notes_docs)
 
-    version_vector = ocm.gardener.UpgradeVector(
-        whence=ocm.ComponentIdentity(
-            name=component.name,
-            version=version.find_predecessor(
-                version=component.version,
-                versions=[v for v in version_lookup(component) if version.is_final(v)],
-            ),
-        ),
-        whither=component,
-    )
+    component_id = component.identity()
 
-    # retrieve release-notes from sub-components
-    whence_component = component_descriptor_lookup(version_vector.whence).component
+    component_matches = [
+        doc for doc in grouped_release_notes_docs
+        if doc.component_id == component_id
+    ]
+    if len(component_matches) > 1:
+        raise RuntimeError(f'Multiple ReleaseNotesDoc found for {component_id=}')
 
-    sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
-        whence_component=whence_component,
-        whither_component=component,
-        component_descriptor_lookup=component_descriptor_lookup,
-        version_lookup=version_lookup,
-        oci_client=oci_client,
-        version_filter=version.is_final,
-    ))
+    component_release_notes_docs = component_matches[0]
+    subcomponent_release_notes_docs = [
+        doc for doc in grouped_release_notes_docs
+        if doc.component_id != component_id
+    ]
 
-    grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
-        release_notes_docs=sub_component_release_notes_docs,
-    )
-
-    sub_component_release_notes = rno.release_notes_docs_as_markdown(
-        release_notes_docs=grouped_sub_component_release_notes_docs,
-        prepend_title=False,
-    )
-
-    if sub_component_release_notes:
-        full_release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
-    else:
-        full_release_notes_markdown = release_notes_markdown
-
-    if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
-        component=component,
-    )):
-        full_release_notes_markdown += '\n\n' + component_resources_markdown
-
-    return release_notes_markdown, full_release_notes_markdown
+    return component_release_notes_docs, subcomponent_release_notes_docs
 
 
 def have_tag_conflicts(
