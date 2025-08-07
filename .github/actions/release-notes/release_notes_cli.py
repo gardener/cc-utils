@@ -27,8 +27,8 @@ import oci.auth
 import oci.client
 import ocm.gardener
 import release_notes.fetch
-import release_notes.markdown
 import release_notes.ocm as rno
+import release_notes.tarutil as rnt
 import version
 
 logging.basicConfig(
@@ -105,6 +105,12 @@ def main():
         help='if passed, no subcomponent-release-notes will be fetched',
     )
 
+    parser.add_argument(
+        '--tar-output',
+        default=None,
+        help='Path to write machine-readable release-notes archive (.tar)',
+    )
+
     parsed = parser.parse_args()
     if parsed.no_subcomponent_release_notes:
         # patch passed outfile for convenience (so caller may always specify it, and does not need
@@ -168,20 +174,18 @@ def main():
         return github_api
 
     try:
-        release_notes_md = ''
+        release_notes_docs = []
         if parsed.draft:
-            release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
+            release_notes_docs = release_notes.fetch.fetch_draft_release_notes(
                 component=component,
-                component_descriptor_lookup=component_descriptor_lookup,
                 version_lookup=ocm_version_lookup,
                 git_helper=git_helper,
                 github_api_lookup=github_api_lookup,
                 version_whither=component.version,
             )
         else:
-            release_note_blocks = release_notes.fetch.fetch_release_notes(
+            release_notes_docs = release_notes.fetch.fetch_release_notes(
                 component=component,
-                component_descriptor_lookup=component_descriptor_lookup,
                 version_lookup=ocm_version_lookup,
                 git_helper=git_helper,
                 github_api_lookup=github_api_lookup,
@@ -192,13 +196,14 @@ def main():
         print(f'Warning: error whilst fetch draft-release-notes: {ve=}')
         import traceback
         traceback.print_exc(file=sys.stderr)
-        release_note_blocks = None
+        release_notes_docs = []
 
-    if release_note_blocks:
-        release_notes_md = ensure_trailing_newline('\n'.join(
-            str(rn) for rn
-            in release_notes.markdown.render(release_note_blocks)
-        ))
+    if release_notes_docs:
+        release_notes_docs_markdown = ensure_trailing_newline(
+            rno.release_notes_docs_as_markdown(
+                release_notes_docs=release_notes_docs,
+            )
+        )
 
     version_vector = ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
@@ -241,9 +246,9 @@ def main():
         sub_component_release_notes = None
 
     if sub_component_release_notes:
-        full_release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
+        full_release_notes_md = f'{release_notes_docs_markdown}\n{sub_component_release_notes}'
     else:
-        full_release_notes_md = release_notes_md
+        full_release_notes_md = release_notes_docs_markdown
 
     if parsed.full_release_notes == '-':
         sys.stdout.write(full_release_notes_md)
@@ -253,11 +258,18 @@ def main():
 
     if parsed.local_release_notes:
         with open(parsed.local_release_notes, 'w') as f:
-            f.write(release_notes_md)
+            f.write(release_notes_docs_markdown)
 
     if parsed.subcomponent_release_notes:
         with open(parsed.subcomponent_release_notes, 'w') as f:
             f.write(sub_component_release_notes)
+
+    if parsed.tar_output:
+        with open(parsed.tar_output, 'wb') as f:
+            for chunk in rnt.release_notes_docs_into_tarstream(
+                release_notes_docs=release_notes_docs + grouped_sub_component_release_notes_docs
+            ):
+                f.write(chunk)
 
 
 if __name__ == '__main__':
