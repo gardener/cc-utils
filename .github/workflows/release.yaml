@@ -135,6 +135,12 @@ on:
               os: linux
               arch: x86_64
           ```
+      include-subcomponent-release-notes:
+        type: boolean
+        default: false
+        description: |
+          passed as same-named input to release-notes action. Controls whether copies of
+          release-notes of sub-components are included.
 
     outputs:
       release-notes:
@@ -173,6 +179,7 @@ jobs:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
+          include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:

@@ -24,6 +24,11 @@ inputs:
       the github-auth-token to use for authenticating against GitHub.
       Use `secrets.GITHUB_TOKEN`. If not passed-on via input, env-var GITHUB_TOKEN will be
       honoured
+  include-subcomponent-release-notes:
+    description: |
+      if set to `true`, release-notes of subcomponents will be included in full-release-notes
+    default: false
+    type: boolean
   draft:
     type: boolean
     default: false
@@ -78,6 +83,10 @@ runs:
           ocm_repositories_arg="--ocm-repositories ${{ inputs.ocm-repositories }}"
         fi
 
+        if ! ${{ inputs.include-subcomponent-release-notes }}; then
+          extra_args='--no-subcomponent-release-notes'
+        fi
+
         echo 'Fetching release-notes'
         "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
           --component-descriptor component-descriptor.yaml \
@@ -86,7 +95,7 @@ runs:
           ${ocm_repositories_arg:-} \
           --full-release-notes full-release-notes.md \
           --local-release-notes release-notes.md \
-          --subcomponent-release-notes subcomponent-release-notes.md
+          --subcomponent-release-notes subcomponent-release-notes.md ${extra_args:-}
 
         echo 'Full Release-notes written to `full-release-nodes.md`'
         echo 'Local Release-notes written to `release-notes.md`'

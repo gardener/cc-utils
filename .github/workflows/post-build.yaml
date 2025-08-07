@@ -37,6 +37,12 @@ on:
           - none
 
           Defines how component-descriptor should be post-processed.
+      include-subcomponent-release-notes:
+        type: boolean
+        default: false
+        description: |
+          passed as same-named input to release-notes action. Controls whether copies of
+          release-notes of subcomponents should be included.
     outputs:
       component-descriptor:
         description: |
@@ -165,6 +171,7 @@ jobs:
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
+          include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
       - name: update-draft-release
         uses: gardener/cc-utils/.github/actions/draft-release@master
         with:
