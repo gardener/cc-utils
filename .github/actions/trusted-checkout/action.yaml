@@ -78,7 +78,7 @@ runs:
         # author's association (rationale: only codeowners can add labels)
         trusted_label = '${{ inputs.trusted-label }}'
 
-        if '${{ github.event.action }}' == 'labeled':
+        if '${{ github.event.action }}' == 'labeled' and '${{ github.event_name }}' == 'pull_request_target':
           if '${{ github.event.label.name }}' == trusted_label:
             allowed_to_checkout = True
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
