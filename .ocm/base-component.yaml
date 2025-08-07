@@ -18,4 +18,4 @@ main-source:
     - name: gardener.cloud/comment
       value: |
         we use bandit (linter) for SAST scans
-      see: https://bandit.readthedocs.io/en/latest/
+        see: https://bandit.readthedocs.io/en/latest/
