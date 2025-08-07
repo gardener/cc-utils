@@ -99,7 +99,6 @@ runs:
 
         echo 'Full Release-notes written to `full-release-nodes.md`'
         echo 'Local Release-notes written to `release-notes.md`'
-        echo 'Subcomponent Release-notes written to `subcomponent-release-notes.md`'
 
         echo 'release-notes<<EOF' >> ${GITHUB_OUTPUT}
         cat release-notes.md >> ${GITHUB_OUTPUT}
@@ -109,14 +108,18 @@ runs:
         cat full-release-notes.md >> ${GITHUB_OUTPUT}
         echo EOF >> ${GITHUB_OUTPUT}
 
-        echo 'subcomponent-release-notes<<EOF' >> ${GITHUB_OUTPUT}
-        cat subcomponent-release-notes.md >> ${GITHUB_OUTPUT}
-        echo EOF >> ${GITHUB_OUTPUT}
-
         echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
         cat release-notes.md >> ${GITHUB_STEP_SUMMARY}
 
-        if [ $( stat -c%s subcomponent-release-notes.md) -gt 0 ]; then
-          echo '## Release-Notes (subcomponents)' >> ${GITHUB_STEP_SUMMARY}
-          cat subcomponent-release-notes.md >> ${GITHUB_STEP_SUMMARY}
+        if ${{ inputs.include-subcomponent-release-notes }}; then
+          echo 'Subcomponent Release-notes written to `subcomponent-release-notes.md`'
+
+          echo 'subcomponent-release-notes<<EOF' >> ${GITHUB_OUTPUT}
+          cat subcomponent-release-notes.md >> ${GITHUB_OUTPUT}
+          echo EOF >> ${GITHUB_OUTPUT}
+
+          if [ $( stat -c%s subcomponent-release-notes.md) -gt 0 ]; then
+            echo '## Release-Notes (subcomponents)' >> ${GITHUB_STEP_SUMMARY}
+            cat subcomponent-release-notes.md >> ${GITHUB_STEP_SUMMARY}
+          fi
         fi
