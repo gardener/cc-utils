@@ -279,7 +279,7 @@ jobs:
             exit 0
           fi
           echo 'extra-auths<<EOF' >> "${GITHUB_OUTPUT}"
-          cat <<EOF >> ${GITHUB_OUTPUT}
+          cat <<EOF >> "${GITHUB_OUTPUT}"
           {
             "registry-1.docker.io": {
               "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
@@ -289,9 +289,13 @@ jobs:
             },
             "index.docker.io": {
               "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
+            },
+            "https://index.docker.io/v1/": {
+              "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
             }
           }
           EOF
+          echo EOF >> "${GITHUB_OUTPUT}"
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
