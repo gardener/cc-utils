@@ -163,8 +163,16 @@ runs:
         # we need issue-api to rm label (id is equal for pr and issue)
         pull_request = gh_repo.issue(${{ github.event.number }})
 
+        label_to_rm = '${{ steps.calc.outputs.remove-label }}'
+        for label in pull_request.labels():
+          if label.name == label_to_rm:
+            break
+        else:
+          # label not present - hence do not need to attempt removal
+          exit(0)
+
         try:
-          pull_request.remove_label('${{ steps.calc.outputs.remove-label }}')
+          pull_request.remove_label(label_to_rm)
         except github3.exceptions.NotFoundError:
           # trusted-checkout typically runs multiple times, so the label already being absent
           # is an expected, and of course, acceptable case
