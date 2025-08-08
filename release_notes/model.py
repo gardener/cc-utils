@@ -340,8 +340,6 @@ class SourceBlock:
         return hash(self.identifier)
 
     def __eq__(self, other):
-        if isinstance(other, ReleaseNote):
-            return self.__eq__(other.source_block)
         if isinstance(other, SourceBlock):
             return hash(other) == hash(self)
         return False
@@ -402,42 +400,6 @@ def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, No
             logger.debug(f'cannot find group in content: {e}')
             # group not found, ignore
             continue
-
-
-@dataclasses.dataclass(frozen=True)
-class ReleaseNote:
-    source_block: SourceBlock
-
-    author: typing.Optional[Author]  # the author of the commit / pull request
-    reference: _Reference
-
-    source_component: ocm_model.Component
-    is_current_repo: bool
-    from_same_github_instance: bool
-
-    def __hash__(self):
-        return hash(self.source_block.identifier)
-
-    def __eq__(self, other) -> bool:
-        return self.source_block.__eq__(other)
-
-    @property
-    def reference_str(self) -> str:
-        return f'{self.reference.type.identifier}{self.reference.identifier}'
-
-    @property
-    def block_str(self) -> str:
-        src_blk = self.source_block
-        author = (
-            src_blk.author or self.author.username or self.author.display_name.replace(' ', '-')
-        )
-        if not author.startswith('@'):
-            author = '@' + author
-        return (
-            f'```{src_blk.category} {src_blk.target_group} {self.source_component.name} '
-            f'{self.reference_str} {author}\n'
-            f'{src_blk.note_message}\n```'
-        )
 
 
 @dataclasses.dataclass(frozen=True)

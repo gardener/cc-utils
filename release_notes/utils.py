@@ -77,12 +77,6 @@ def shorten(
     return message
 
 
-def create_release_notes_blocks(
-        release_notes: set[rnm.ReleaseNote]
-) -> str:
-    return '\n\n'.join(z.block_str for z in release_notes)
-
-
 def _find_git_notes_for_commit(
         repo: git.Repo,
         commit: git.Commit
