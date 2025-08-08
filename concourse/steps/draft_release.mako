@@ -32,7 +32,6 @@ import github.release
 import gitutil
 import ocm
 import release_notes.fetch
-import release_notes.markdown
 
 
 logger = logging.getLogger('draft-release')
@@ -73,17 +72,13 @@ github_cfg = ccc.github.github_cfg_for_repo_url(
 
 <%
 import concourse.steps
+import concourse.steps.release
 template = concourse.steps.step_template('component_descriptor')
 ocm_repository_lookup = template.get_def('ocm_repository_lookup').render
 %>
 ${ocm_repository_lookup(component_descriptor_trait.ocm_repository_mappings())}
 
 oci_client = ccc.oci.oci_client()
-component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-    ocm_repository_lookup=ocm_repository_lookup,
-    oci_client=oci_client,
-    delivery_client=ccc.delivery.default_client_if_available(),
-)
 ocm_version_lookup = cnudie.retrieve.version_lookup(
     ocm_repository_lookup=ocm_repository_lookup,
     oci_client=oci_client,
@@ -102,17 +97,13 @@ git_helper = gitutil.GitHelper(
     ),
 )
 try:
-    release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
-        component=component,
-        component_descriptor_lookup=component_descriptor_lookup,
-        version_lookup=ocm_version_lookup,
+    component_doc, _ = concourse.steps.release.collect_release_notes(
         git_helper=git_helper,
-        github_api_lookup=ccc.github.github_api_lookup,
-        version_whither=version_str,
+        release_version=version_str,
+        component=component,
+        version_lookup=ocm_version_lookup,
     )
-    release_notes_md = '\n'.join(
-        str(i) for i in release_notes.markdown.render(release_note_blocks)
-    ) or ''
+    release_notes_md = component_doc.as_markdown() if component_doc else ''
 except ValueError as e:
     logger.warning(f'Error when computing release notes: {e}')
     # this will happen if a component-descriptor for a more recent version than what is available in the

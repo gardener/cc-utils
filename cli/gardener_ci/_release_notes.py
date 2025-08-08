@@ -88,9 +88,8 @@ def print_release_notes(
         ),
     )
 
-    blocks = release_notes.fetch.fetch_release_notes(
+    release_notes_docs = release_notes.fetch.fetch_release_notes(
         component=component,
-        component_descriptor_lookup=ocm_lookup,
         version_lookup=version_lookup,
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
@@ -99,8 +98,7 @@ def print_release_notes(
     )
 
     if output_raw:
-        print('\n'.join(block.block_str for block in blocks))
+        print('\n'.join(entry.contents for doc in release_notes_docs for entry in doc.release_notes))
         return
 
-    rendered_notes = release_notes.markdown.render(blocks)
-    print('\n'.join(str(n) for n in rendered_notes))
+    print('\n'.join(filter(None, (doc.as_markdown() for doc in release_notes_docs))))

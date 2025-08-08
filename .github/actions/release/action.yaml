@@ -90,6 +90,10 @@ inputs:
     description: |
       the release-notes to publish as body for GitHub-Release. Those should contain release-notes
       from sub-components (if any).
+  release-notes-tar:
+    description: |
+      tar-encoded structured release notes
+    required: false
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub and OCI-Registry.
@@ -240,9 +244,10 @@ runs:
         gh-token: ${{ inputs.github-token }}
 
     - name: attach-release-notes-to-component-descriptor
-      if: ${{ inputs.release-notes }}
+      if: ${{ inputs.release-notes || inputs.release-notes-tar }}
       shell: python
       run: |
+        import base64
         import dataclasses
         import hashlib
         import json
@@ -291,6 +296,29 @@ runs:
               mediaType='text/markdown.release-notes',
             ),
           ),
+        )
+        # TAR release notes
+        tar_bytes = base64.b64decode('''${{ inputs.release-notes-tar }}''')
+        tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
+
+        oci_client.put_blob(
+            image_reference=tgt_oci_ref,
+            digest=tar_digest,
+            octets_count=len(tar_bytes),
+            data=tar_bytes,
+        )
+
+        component.resources.append(
+            ocm.Resource(
+                name=release_notes.ocm.release_notes_resource_name,
+                version=component.version,
+                type='vnd.gardener/release-notes-archive',
+                access=ocm.LocalBlobAccess(
+                    localReference=tar_digest,
+                    size=len(tar_bytes),
+                    mediaType='application/tar',
+                ),
+            )
         )
 
         # pass modified component-descriptor to subsequent steps
