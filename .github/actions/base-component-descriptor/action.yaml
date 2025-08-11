@@ -95,6 +95,7 @@ runs:
 
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
+        import dataclasses
         import datetime
         import logging
         import tarfile
@@ -188,15 +189,25 @@ runs:
           component=base_component,
         )
         component_descriptor_str = yaml.dump(
-            data=base_component_dict,
-            Dumper=ocm.EnumValueYamlDumper,
+          data=base_component_dict,
+          Dumper=ocm.EnumValueYamlDumper,
+        )
+
+        base_component_str = yaml.dump(
+          data=dataclasses.asdict(base_component),
+          Dumper=ocm.EnumValueYamlDumper,
         )
 
         with open('component-descriptor.yaml', 'w') as f:
           f.write(component_descriptor_str)
+        with open('base-component.yaml', 'w') as f:
+          f.write(base_component_str)
         with tarfile.open(name='component-descriptor.tar.gz', mode='w:gz') as tf:
           tf.add(
             name='component-descriptor.yaml',
+          )
+          tf.add(
+            name='base-component.yaml',
           )
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
