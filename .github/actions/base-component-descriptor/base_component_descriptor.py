@@ -4,6 +4,7 @@ import datetime
 import ci.util
 import ocm
 import ocm.base_component
+import ocm.gardener
 
 BaseComponent = ocm.base_component.BaseComponent
 
@@ -49,7 +50,10 @@ def add_resources_from_imagevector(
     component: BaseComponent,
     component_prefixes: list[str],
 ) -> BaseComponent:
-    # wrap function-call so we have a hook for unittesting
+    if component.componentPrefixes:
+        # component-prefixes declared in base-component take precedence
+        component_prefixes = component.componentPrefixes
+
     return ocm.gardener.add_resources_from_imagevector(
         component=component,
         images=ocm.gardener.iter_images_from_imagevector(
@@ -65,6 +69,7 @@ def as_component_descriptor_dict(
     raw = dataclasses.asdict(component)
 
     raw.pop('main_source', None)
+    raw.pop('componentPrefixes', None)
 
     return {
         'meta': dataclasses.asdict(ocm.Metadata()),

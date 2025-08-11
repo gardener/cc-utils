@@ -234,6 +234,7 @@ runs:
       run: |
         import dataclasses
         import logging
+        import os
 
         import yaml
 
@@ -268,6 +269,13 @@ runs:
             prefixes.append(f'{prefix.removesuffix("releases/gardener")}public/gardener')
 
         prefixes = set(prefixes) # deduplicate
+
+        if os.path.isfile(base_component_path := 'base-component.yaml'):
+          with open(base_component_path) as f:
+            raw_base_component = yaml.safe_load(f)
+            if raw_base_component.get('componentPrefixes'):
+              logger.info(f'using component-prefixes from {base_component_path} file')
+              prefixes = raw_base_component.get('componentPrefixes')
 
         logger.info(f'{prefixes=}')
 

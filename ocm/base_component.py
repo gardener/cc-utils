@@ -14,7 +14,8 @@ class BaseComponent(ocm.LabelMethodsMixin):
 
     its attributes match some of those from ocm.Component, whith additional "short-cuts", e.g.
     `main_source` for conveniently customising the source-entry for repository for which
-    GitHub-Action is run.
+    GitHub-Action is run, and `component_prefixes` which are passed to instrumentation of
+    "component-cli".
 
     attributes `version`, and `creationTime` are special, in that they are rejected if read
     from `base-component.yaml` file (they are present as attributes so they can be filled at
@@ -41,6 +42,8 @@ class BaseComponent(ocm.LabelMethodsMixin):
     creationTime: str | None
 
     main_source: dict = dataclasses.field(default_factory=dict)
+
+    componentPrefixes: list[str] = dataclasses.field(default_factory=list)
 
 
 def load_base_component(
