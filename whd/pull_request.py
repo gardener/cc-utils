@@ -70,6 +70,10 @@ def process_pr_event(
             tagging_label='ci/broken-pipeline-definition',
         )
 
+    if pr_event.pr_state() != 'open':
+        logger.info(f'{pr_event.pr_id()=} has {pr_event.pr_state()=} - will not trigger refresh')
+        return
+
     for concourse_api in concourse_clients:
         resources = list(
             matching_resources(
