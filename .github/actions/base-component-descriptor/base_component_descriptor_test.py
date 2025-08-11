@@ -11,7 +11,6 @@ import dataclasses
 import base_component_descriptor as bcd
 import ocm
 import ocm.base_component
-import ocm.gardener
 
 
 BaseComponent = ocm.base_component.BaseComponent
@@ -35,6 +34,7 @@ def test_fill_in_defaults():
         labels=[dummy],
         creationTime='some-time',
         main_source=dummy_source,
+        componentPrefixes=['foo'],
     )
 
     # check that existing values are _not_ overwritten
@@ -63,6 +63,7 @@ def test_fill_in_defaults():
     assert component.resources == [dummy]
     assert component.sources == [dummy, dummy_source]
     assert component.main_source == dummy_source
+    assert component.componentPrefixes == ['foo']
     assert component.creationTime == 'some-time'
 
     # check creation-time is correctly formatted
@@ -93,6 +94,7 @@ def test_as_component_descriptor_dict():
         labels=[dummy],
         creationTime='creation-time',
         main_source=dummy,
+        componentPrefixes=['foo'],
     )
 
     res = bcd.as_component_descriptor_dict(
@@ -118,10 +120,6 @@ def test_as_component_descriptor_dict():
 
 
 def test_add_resources_from_imagevector():
-    image_dicts = tuple(ocm.gardener.iter_images_from_imagevector(
-        images_yaml_path=os.path.join(own_dir, 'imagevector-test.yaml'),
-    ))
-
     local_resource = ocm.Resource(
         name='apiserver',
         version='version',
@@ -146,9 +144,9 @@ def test_add_resources_from_imagevector():
 
     assert component.resources == []
 
-    component = ocm.gardener.add_resources_from_imagevector(
+    component = bcd.add_resources_from_imagevector(
+        imagevector_file=os.path.join(own_dir, 'imagevector-test.yaml'),
         component=component,
-        images=image_dicts,
         component_prefixes=[
             'europe-docker.pkg.dev/gardener-project/releases',
             'some-other-prefix',
