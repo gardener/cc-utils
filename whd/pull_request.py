@@ -1,6 +1,5 @@
 import collections.abc
 import logging
-import random
 import time
 import typing
 
@@ -135,7 +134,7 @@ def process_pr_event(
             resources=resources,
         )
         # Give concourse a chance to react
-        time.sleep(random.randint(5,10))
+        time.sleep(20)
         handle_untriggered_jobs(pr_event=pr_event, concourse_api=concourse_api)
 
 
