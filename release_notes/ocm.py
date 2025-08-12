@@ -82,7 +82,7 @@ def iter_parsed_release_notes(
         digest=digest,
     ).iter_content(chunk_size=tarfile.RECORDSIZE)
 
-    return rnt.tarstream_into_release_notes_docs(release_notes_blob_tarstream)
+    yield from rnt.tarstream_into_release_notes_docs(release_notes_blob_tarstream)
 
 
 def find_release_notes_resource(
