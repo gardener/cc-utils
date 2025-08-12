@@ -242,7 +242,7 @@ class SourceBlock:
             username = self.source.author.name
         elif isinstance(self.source, github3.pulls.ShortPullRequest):
             pr_number = self.source.number
-            reference = f'[{org}/{repo}#{pr_number}]({repo_url}/pull/{pr_number})'
+            reference = f'[#{pr_number}]({repo_url}/pull/{pr_number})'
             username = self.source.user.login
         else:
             raise ValueError(f'unsupported release-notes source: {type(self.source)=}')
