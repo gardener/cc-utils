@@ -309,6 +309,10 @@ class GitHelper:
             with remote.repo.git.custom_environment(**cmd_env):
                 remote.fetch(tags=True, recurse_submodules='no')
 
+    @property
+    def repo_path(self) -> str | None:
+        return self.repo.working_tree_dir
+
 
 def _url_with_credentials(
     git_cfg: GitCfg,

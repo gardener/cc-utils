@@ -1,9 +1,9 @@
 import collections
+import collections.abc
 import dataclasses
 import itertools
 import logging
 import time
-import typing
 
 import git
 import git.exc as gitexc
@@ -23,18 +23,18 @@ _meta_key = 'gardener.cloud/release-notes-metadata/v1'
 logger = logging.getLogger(__name__)
 
 
-RepoUrl: typing.TypeAlias = str
-GithubApiLookup = typing.Callable[[RepoUrl], github3.GitHub]
+RepoUrl = str
+GithubApiLookup = collections.abc.Callable[[RepoUrl], github3.GitHub]
 
 
 # pylint: disable=protected-access
 # noinspection PyProtectedMember
 def list_associated_pulls(
-        gh: github3.GitHub,
-        owner: str,
-        repo: str,
-        sha: str
-) -> typing.Optional[tuple[gh3p.ShortPullRequest]]:
+    gh: github3.GitHub,
+    owner: str,
+    repo: str,
+    sha: str
+) -> tuple[gh3p.ShortPullRequest] | str:
     ''' Returns a tuple with pull requests related to the specified commit.
 
     :param gh: Instance of the GitHub v3 API
@@ -54,51 +54,24 @@ def list_associated_pulls(
 # pylint: disable=protected-access
 # noinspection PyProtectedMember
 def list_pulls(
-        gh: github3.GitHub,
-        owner: str,
-        repo: str,
-        state: str = 'closed'
+    gh: github3.GitHub,
+    owner: str,
+    repo: str,
+    state: str = 'closed'
 ) -> gh3s.GitHubIterator[gh3p.ShortPullRequest]:
     url = f'{gh._build_url("repos", owner, repo, "pulls")}?state={state}'
     return gh._iter(-1, url, gh3p.ShortPullRequest)
 
 
-def shorten(
-        message: str,
-        max_len: int = 128
-) -> str:
-    message = message.replace('\n', '\\n')
-    if len(message) > max_len:
-        message = f'{message[:max_len - 3]}...'
-    return message
-
-
-def create_release_notes_blocks(
-        release_notes: set[rnm.ReleaseNote]
-) -> str:
-    return '\n\n'.join(z.block_str for z in release_notes)
-
-
 def _find_git_notes_for_commit(
-        repo: git.Repo,
-        commit: git.Commit
-) -> typing.Optional[str]:
+    repo: git.Repo,
+    commit: git.Commit
+) -> str | str:
     try:
         return repo.git.notes('show', commit.hexsha)
     except gitexc.GitCommandError as e:
         logger.debug(f'commit {commit.hexsha} does not have a git note: {e}')
         return None
-
-
-def _normalize_dict_keys(
-        dic: dict,
-        recursive: bool = False
-) -> dict:
-    return {
-        k.replace('-', '_').replace(' ', '_'):
-        _normalize_dict_keys(v) if recursive and isinstance(v, dict) else v
-        for k, v in dic.items()
-    }
 
 
 def _is_meta_document(doc) -> bool:
@@ -108,9 +81,9 @@ def _is_meta_document(doc) -> bool:
 
 
 def _find_first_document(
-        documents: list,
-        key: str,
-        ctor
+    documents: list,
+    key: str,
+    ctor
 ):
     for doc in documents:
         if not _is_meta_document(doc):
@@ -122,9 +95,9 @@ def _find_first_document(
 
 
 def _upsert_document(
-        documents: list,
-        type_key: str,
-        instance
+    documents: list,
+    type_key: str,
+    instance
 ) -> None:
     ''' The function searches for a (meta-) document in the given list of
     documents with the given type.  If a document was found, it updates the
@@ -162,12 +135,12 @@ def _grouper(iterable, n, *, incomplete='fill', fillvalue=None):
 
 
 def request_pull_requests_from_api(
-        git_helper: gitutil.GitHelper,
-        github_api_lookup: GithubApiLookup,
-        github_access: ocm.GithubAccess,
-        commits: list[git.Commit],
-        group_size: int = 200,
-        min_seconds_per_group: int = 300,
+    git_helper: gitutil.GitHelper,
+    github_api_lookup: GithubApiLookup,
+    github_access: ocm.GithubAccess,
+    commits: list[git.Commit],
+    group_size: int = 200,
+    min_seconds_per_group: int = 300,
 ) -> dict[str, list[gh3p.ShortPullRequest]]:
     ''' This function requests pull requests from the GitHub API and returns a
     dictionary mapping commit SHA to a list of pull requests.

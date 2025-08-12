@@ -7,7 +7,6 @@ import logging
 import os
 import pprint
 import sys
-import tempfile
 
 import yaml
 
@@ -25,10 +24,9 @@ import github
 import gitutil
 import oci.auth
 import oci.client
-import ocm.gardener
-import release_notes.fetch
-import release_notes.markdown
+import release_notes.fetch as rnf
 import release_notes.ocm as rno
+import release_notes.tarutil as rnt
 import version
 
 logging.basicConfig(
@@ -104,6 +102,11 @@ def main():
         default=False,
         help='if passed, no subcomponent-release-notes will be fetched',
     )
+    parser.add_argument(
+        '--tar-output',
+        default=None,
+        help='Path to write machine-readable release-notes archive (.tar)',
+    )
 
     parsed = parser.parse_args()
     if parsed.no_subcomponent_release_notes:
@@ -135,11 +138,6 @@ def main():
         component.current_ocm_repo,
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=ocm_repository_lookup,
-        oci_client=oci_client,
-        cache_dir=tempfile.TemporaryDirectory().name,
-    )
     ocm_version_lookup = cnudie.retrieve.version_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
@@ -168,75 +166,33 @@ def main():
         return github_api
 
     try:
-        release_notes_md = ''
-        if parsed.draft:
-            release_note_blocks = release_notes.fetch.fetch_draft_release_notes(
-                component=component,
-                component_descriptor_lookup=component_descriptor_lookup,
-                version_lookup=ocm_version_lookup,
-                git_helper=git_helper,
-                github_api_lookup=github_api_lookup,
-                version_whither=component.version,
-            )
-        else:
-            release_note_blocks = release_notes.fetch.fetch_release_notes(
-                component=component,
-                component_descriptor_lookup=component_descriptor_lookup,
-                version_lookup=ocm_version_lookup,
-                git_helper=git_helper,
-                github_api_lookup=github_api_lookup,
-                version_whither=component.version,
-                version_whither_ref_commit=version_whither_ref_commit,
-            )
-    except Exception as ve:
-        print(f'Warning: error whilst fetch draft-release-notes: {ve=}')
+        component_release_notes_doc, subcomponent_release_notes_docs = rnf.collect_release_notes(
+            git_helper=git_helper,
+            release_version=component.version,
+            component=component,
+            version_lookup=ocm_version_lookup,
+            github_api_lookup=github_api_lookup,
+            version_whither_ref_commit=version_whither_ref_commit,
+            is_draft=parsed.draft,
+        )
+    except Exception as e:
+        print(f'Warning: error whilst fetch release-notes: {e=}')
         import traceback
         traceback.print_exc(file=sys.stderr)
-        release_note_blocks = None
+        component_release_notes_doc = None
+        subcomponent_release_notes_docs = []
 
-    if release_note_blocks:
-        release_notes_md = ensure_trailing_newline('\n'.join(
-            str(rn) for rn
-            in release_notes.markdown.render(release_note_blocks)
+    if component_release_notes_doc:
+        release_notes_md = ensure_trailing_newline(rno.release_notes_docs_as_markdown(
+            release_notes_docs=[component_release_notes_doc],
         ))
-
-    version_vector = ocm.gardener.UpgradeVector(
-        whence=ocm.ComponentIdentity(
-            name=component.name,
-            version=version.find_predecessor(
-                version=component.version,
-                versions=[v for v in ocm_version_lookup(component) if version.is_final(v)],
-            ),
-        ),
-        whither=ocm.ComponentIdentity(
-            name=component.name,
-            version=component.version,
-        ),
-    )
-
-    # retrieve release-notes from sub-components
-    whence_component = component_descriptor_lookup(version_vector.whence).component
+    else:
+        release_notes_md = ''
 
     if parsed.subcomponent_release_notes:
-        sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
-            whence_component=whence_component,
-            whither_component=component,
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=ocm_version_lookup,
-            oci_client=oci_client,
-            version_filter=version.is_final,
+        sub_component_release_notes = ensure_trailing_newline(rno.release_notes_docs_as_markdown(
+            release_notes_docs=subcomponent_release_notes_docs,
         ))
-
-        grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
-            release_notes_docs=sub_component_release_notes_docs,
-        )
-
-        sub_component_release_notes = ensure_trailing_newline(
-            rno.release_notes_docs_as_markdown(
-                release_notes_docs=grouped_sub_component_release_notes_docs,
-                prepend_title=False,
-            ),
-        )
     else:
         sub_component_release_notes = None
 
@@ -258,6 +214,15 @@ def main():
     if parsed.subcomponent_release_notes:
         with open(parsed.subcomponent_release_notes, 'w') as f:
             f.write(sub_component_release_notes)
+
+    if parsed.tar_output:
+        all_release_note_docs = subcomponent_release_notes_docs
+        if component_release_notes_doc:
+            all_release_note_docs.append(component_release_notes_doc)
+
+        with open(parsed.tar_output, 'wb') as f:
+            for chunk in rnt.release_notes_docs_into_tarstream(all_release_note_docs):
+                f.write(chunk)
 
 
 if __name__ == '__main__':

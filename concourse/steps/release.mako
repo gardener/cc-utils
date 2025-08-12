@@ -126,7 +126,9 @@ import concourse.util
 import ocm
 import ocm.upload
 import ocm.util
+import release_notes.fetch as rnf
 import release_notes.ocm
+import release_notes.tarutil
 import github.release
 import github.util
 import gitutil
@@ -451,26 +453,43 @@ for validation_error in cnudie.validate.iter_violations(
 ):
   logger.warning(f'{validation_error=}')
 
+release_notes_md = ''
+full_release_notes_md = ''
+component_release_notes_doc = None
+subcomponent_release_notes_docs = []
 % if process_release_notes:
-release_notes_md = None
-full_release_notes_md = None
 try:
-  release_notes_md, full_release_notes_md = collect_release_notes(
+  component_release_notes_doc, subcomponent_release_notes_docs = rnf.collect_release_notes(
     git_helper=git_helper,
     release_version=version_str,
     component=component,
-    component_descriptor_lookup=component_descriptor_lookup,
     version_lookup=version_lookup,
-    oci_client=oci_client,
+    github_api_lookup=ccc.github.github_api_lookup,
   )
   git_helper.push('refs/notes/commits', 'refs/notes/commits')
 except:
   logger.warning('an error occurred whilst trying to collect release-notes')
   logger.warning('release will continue')
   traceback.print_exc()
-% else:
-release_notes_md = None
-full_release_notes_md = None
+
+if component_release_notes_doc:
+  release_notes_md = release_notes.ocm.release_notes_docs_as_markdown(
+    release_notes_docs=[component_release_notes_doc],
+  )
+
+subcomponent_md = release_notes.ocm.release_notes_docs_as_markdown(
+  release_notes_docs=subcomponent_release_notes_docs,
+)
+
+if subcomponent_md:
+  full_release_notes_md = f'{release_notes_md}\n{subcomponent_md}'
+else:
+  full_release_notes_md = release_notes_md
+
+component_resources_markdown = release_notes.ocm.release_note_for_ocm_component(component)
+
+if component_resources_markdown:
+  full_release_notes_md = f'{full_release_notes_md}\n\n{component_resources_markdown}'
 % endif
 
 tgt_ref = cnudie.util.target_oci_ref(component=component)
@@ -497,7 +516,39 @@ if release_notes_md:
       ),
     ),
   )
-  logger.info('added release-notes to component-descriptor:')
+  logger.info('added legacy release-notes to component-descriptor:')
+  logger.info(f'{component.resources[-1]}')
+
+all_release_note_docs = subcomponent_release_notes_docs
+if component_release_notes_doc:
+  all_release_note_docs.append(component_release_notes_doc)
+
+if all_release_note_docs:
+  tarstream = b''.join(release_notes.tarutil.release_notes_docs_into_tarstream(
+    release_notes_docs=all_release_note_docs,
+  ))
+  tar_digest = f'sha256:{hashlib.sha256(tarstream).hexdigest()}'
+
+  oci_client.put_blob(
+    image_reference=tgt_ref,
+    digest=tar_digest,
+    octets_count=len(tarstream),
+    data=tarstream,
+  )
+
+  component.resources.append(
+    ocm.Resource(
+      name=release_notes.ocm.release_notes_resource_name,
+      version=component.version,
+      type='application/tar.release-notes',
+      access=ocm.LocalBlobAccess(
+        localReference=tar_digest,
+        size=len(tarstream),
+        mediaType='application/tar.release-notes',
+      ),
+    ),
+  )
+  logger.info('added release-notes archive to component-descriptor')
   logger.info(f'{component.resources[-1]}')
 
 logger.info(f'publishing OCM-Component-Descriptor to {tgt_ref=}')
@@ -526,12 +577,12 @@ except:
 release_tag = tags[0].removeprefix('refs/tags/')
 draft_tag = f'{version_str}-draft'
 
-if release_notes_md is not None:
+if full_release_notes_md:
   full_release_notes_md, is_full_release_notes  = github.release.body_or_replacement(
     body=full_release_notes_md,
   )
 else:
-  is_full_release_notes = False
+  is_full_release_notes = True
 
 
 gh_release = github.release.find_draft_release(
@@ -541,7 +592,7 @@ gh_release = github.release.find_draft_release(
 if not gh_release:
   gh_release = repository.create_release(
     tag_name=release_tag,
-    body=full_release_notes_md or '',
+    body=full_release_notes_md,
     draft=False,
     prerelease=False,
   )
@@ -549,12 +600,12 @@ else:
   gh_release.edit(
     tag_name=release_tag,
     name=release_tag,
-    body=full_release_notes_md or '',
+    body=full_release_notes_md,
     draft=False,
     prerelease=False,
   )
 
-if full_release_notes_md is not None and not is_full_release_notes:
+if full_release_notes_md and not is_full_release_notes:
   gh_release.upload_asset(
     content_type='application/markdown',
     name='release-notes.md',

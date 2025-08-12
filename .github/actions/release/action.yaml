@@ -83,8 +83,8 @@ inputs:
       passed to `version` action as `versionfile`. see this action for documentation
   release-notes:
     description: |
-      the release-notes to publish as inline-resource in OCM-Component-Descriptor. Consider
-      full-release-notes input, as well.
+      the release-notes to publish as (legacy) inline-resource in OCM-Component-Descriptor.
+      Consider full-release-notes input, as well.
     required: false
   full-release-notes:
     description: |
@@ -239,8 +239,12 @@ runs:
         oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
         gh-token: ${{ inputs.github-token }}
 
+    - name: fetch-release-notes
+      uses: actions/download-artifact@v4
+      with:
+        name: release-notes
+
     - name: attach-release-notes-to-component-descriptor
-      if: ${{ inputs.release-notes }}
       shell: python
       run: |
         import dataclasses
@@ -289,6 +293,30 @@ runs:
               localReference=release_notes_digest,
               size=len(release_notes_octets),
               mediaType='text/markdown.release-notes',
+            ),
+          ),
+        )
+
+        with open('release-notes.tar', 'rb') as f:
+          tar_bytes = f.read()
+        tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
+
+        oci_client.put_blob(
+          image_reference=tgt_oci_ref,
+          digest=tar_digest,
+          octets_count=len(tar_bytes),
+          data=tar_bytes,
+        )
+
+        component.resources.append(
+          ocm.Resource(
+            name=release_notes.ocm.release_notes_resource_name,
+            version=component.version,
+            type='application/tar.release-notes',
+            access=ocm.LocalBlobAccess(
+              localReference=tar_digest,
+              size=len(tar_bytes),
+              mediaType='application/tar.release-notes',
             ),
           ),
         )

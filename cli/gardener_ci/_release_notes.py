@@ -6,7 +6,7 @@ import gitutil
 import ocm
 import ocm.util
 import release_notes.fetch
-import release_notes.markdown
+import release_notes.ocm
 import version
 
 
@@ -16,10 +16,9 @@ __cmd_name__ = 'release_notes'
 def print_release_notes(
     repo_path: str,
     component_name: str,
-    ocm_repo_base_url: str = None,
-    version_whither: str = None,
-    version_whence: str = None,
-    output_raw: bool = False,
+    ocm_repo_base_url: str | None=None,
+    version_whither: str | None=None,
+    version_whence: str | None=None,
 ):
     oci_client = ccc.oci.oci_client()
     if not ocm_repo_base_url:
@@ -88,9 +87,8 @@ def print_release_notes(
         ),
     )
 
-    blocks = release_notes.fetch.fetch_release_notes(
+    release_notes_doc = release_notes.fetch.fetch_release_notes(
         component=component,
-        component_descriptor_lookup=ocm_lookup,
         version_lookup=version_lookup,
         git_helper=git_helper,
         github_api_lookup=ccc.github.github_api_lookup,
@@ -98,9 +96,8 @@ def print_release_notes(
         version_whence=version_whence,
     )
 
-    if output_raw:
-        print('\n'.join(block.block_str for block in blocks))
+    if not release_notes_doc:
+        print('no release notes found')
         return
 
-    rendered_notes = release_notes.markdown.render(blocks)
-    print('\n'.join(str(n) for n in rendered_notes))
+    print(release_notes.ocm.release_notes_docs_as_markdown([release_notes_doc]))
