@@ -677,9 +677,14 @@ create_and_push_bump_commit(
 % if has_slack_trait:
   % for slack_channel_cfg in slack_channel_cfgs:
 try:
-  if release_notes_md:
+  if ${slack_channel_cfg.get('post_full_release_notes')}:
+    slack_release_notes_md = full_release_notes_md
+  else:
+    slack_release_notes_md = release_notes_md
+
+  if slack_release_notes_md:
     post_to_slack(
-      release_notes_markdown=release_notes_md,
+      release_notes_markdown=slack_release_notes_md,
       component=component,
       slack_cfg_name='${slack_channel_cfg["slack_cfg_name"]}',
       slack_channel='${slack_channel_cfg["channel_name"]}',

@@ -26,6 +26,16 @@ CHANNEL_CFG_ATTRS = (
         doc='slack_cfg name (see cc-config)',
         type=str,
     ),
+    AttributeSpec.optional(
+        name='post_full_release_notes',
+        default=False,
+        doc='''
+        if the slack trait is used in conjunction with the release trait, specifies whether full
+        release notes (containing sub-components' release notes and OCI resources as well) or only
+        local release notes should be posted
+        ''',
+        type=bool,
+    ),
 )
 
 
@@ -39,6 +49,9 @@ class ChannelConfig(ModelBase):
 
     def slack_cfg_name(self):
         return self.raw.get('slack_cfg_name')
+
+    def post_full_release_notes(self):
+        return self.raw.get('post_full_release_notes')
 
     def _required_attributes(self):
         return {
@@ -57,7 +70,7 @@ ATTRIBUTES = (
         name='default_channel',
         doc='**deprecated**',
         type=str,
-    )
+    ),
 )
 
 
@@ -77,7 +90,7 @@ class SlackTrait(Trait):
         if isinstance(channel_cfgs, list):
             return [ChannelConfig(raw_dict=v) for v in channel_cfgs]
         else:
-            return [ChannelConfig(raw_dict=v) for _, v in channel_cfgs.items()]
+            return [ChannelConfig(raw_dict=v) for v in channel_cfgs.values()]
 
     def transformer(self):
         return SlackTraitTransformer()

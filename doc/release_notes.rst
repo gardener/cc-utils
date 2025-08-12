@@ -141,3 +141,4 @@ Example:
                 channel_cfg: # channel config name
                   channel_name: 'my_slack_channel_name' # you can specify the channel name or channel id
                   slack_cfg_name: 'example_slack_workspace' # Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)
+                  post_full_release_notes: False
