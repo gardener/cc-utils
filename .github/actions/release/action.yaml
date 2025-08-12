@@ -243,6 +243,7 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: release-notes
+        path: /tmp
 
     - name: attach-release-notes-to-component-descriptor
       shell: python
@@ -298,7 +299,7 @@ runs:
             ),
           )
 
-        with open('release-notes.tar', 'rb') as f:
+        with open('/tmp/release-notes.tar', 'rb') as f:
           tar_bytes = f.read()
         tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
 
