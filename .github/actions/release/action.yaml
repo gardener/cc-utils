@@ -520,6 +520,7 @@ runs:
         prerelease: 'dev'
         commit-message: ${{ inputs.next-version-commit-message }}
         repository-operation: commit-to-head
+        commit-kind: bump
 
     - name: reset-release-notes-directory
       if: ${{ inputs.release-notes-path }}
