@@ -1,18 +1,18 @@
+import collections
+import collections.abc
 import dataclasses
 import enum
 import functools
 import logging
 import re
-import traceback
 import typing
 import uuid
 
-import ocm as ocm_model
-import ocm.util
 import git
 import github3.pulls
 
-import version
+import ocm as ocm_model
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,7 @@ class ReleaseNoteEntry:
     category: ReleaseNotesCategory | None = None
     audience: ReleaseNotesAudience | None = None
     author: ReleaseNotesAuthor | None = None
-    pullrequest: str | None = None
+    reference: str | None = None
 
 
 @dataclasses.dataclass
@@ -131,10 +131,44 @@ class ReleaseNotesDoc:
         if not self.release_notes:
             return None
 
-        header = f'[{self.ocm.component_name}:{self.ocm.component_version}]'
-        release_notes = '\n'.join(release_note.contents for release_note in self.release_notes)
+        header = f'# [{self.ocm.component_name}:{self.ocm.component_version}]'
+        categorised_release_notes = collections.defaultdict(list)
 
-        return f'{header}\n{release_notes}'
+        for release_note in self.release_notes:
+            if release_note.type is ReleaseNotesType.PRERENDERED:
+                if len(self.release_notes) != 1:
+                    raise RuntimeError(
+                        f'Only expected one prerendered release-note for {self.ocm=} '
+                        f'(found {len(self.release_notes)})'
+                    )
+                return f'{header}\n{release_note.contents.strip()}'
+            categorised_release_notes[release_note.category].append(release_note)
+
+        markdown_blocks = []
+
+        sorted_categories = sorted(
+            categorised_release_notes.keys(),
+            key=lambda cat: ReleaseNotesCategory.category_priority(cat)
+        )
+
+        for category in sorted_categories:
+            release_notes = categorised_release_notes[category]
+            title = ReleaseNotesCategory.category_title(category)
+
+            block_lines = [f'## {title}']
+
+            for release_note in release_notes:
+                release_note: ReleaseNoteEntry
+                author = f'@{release_note.author.username}'
+                audience = release_note.audience.name
+                reference = release_note.reference
+                block_lines.append(
+                    f'- `[{audience}]` {release_note.contents.strip()} by {author} [{reference}]'
+                )
+
+            markdown_blocks.append('\n'.join(block_lines))
+
+        return f'{header}\n\n' + '\n\n'.join(markdown_blocks)
 
 
 r'''
@@ -146,7 +180,7 @@ with the three groups in "[]" being optional by virtue of not being present for 
 release note blocks.
 
 Note: [^\S\n] is "all whitespaces except \n" (or "not [all non-whitespaces and newline]") to
-approxmiate the as-of-yet unsupported \h ([:blank:]) aka "horizontal whitespace"
+approximate the as-of-yet unsupported \h ([:blank:]) aka "horizontal whitespace"
 
 \x60 -> `
 '''
@@ -161,104 +195,9 @@ _source_block_pattern = re.compile(
 
 
 @dataclasses.dataclass(frozen=True)
-class Author:
-    # for pull requests
-    username: str  # the GitHub username
-
-    # for commits
-    display_name: str  # the name which authored the commit
-    email: str  # the email the commit was authored
-
-    def __str__(self) -> str:
-        if self.username and self.username.strip():
-            return f'@{self.username}'
-        if self.display_name and self.display_name.strip():
-            return f'`{self.display_name} <{self.email}>`'
-        return ''
-
-
-def author_from_commit(commit: git.Commit) -> Author:
-    return Author(
-        username='',
-        display_name=commit.author.name,
-        email=commit.author.email
-    )
-
-
-def author_from_pull_request(pull_request: github3.pulls.ShortPullRequest) -> Author:
-    return Author(
-        username=pull_request.user.login,
-        display_name='',
-        email=''
-    )
-
-
-def author_from_source(source: git.Commit | github3.pulls.ShortPullRequest) -> Author:
-    if isinstance(source, git.Commit):
-        return author_from_commit(source)
-    elif isinstance(source, github3.pulls.ShortPullRequest):
-        return author_from_pull_request(source)
-    else:
-        raise NotImplementedError(type(source))
-
-
-@dataclasses.dataclass(frozen=True)
-class _ReferenceType:
-    identifier: str  # identifier for release note block
-    prefix: str  # prefix for generated release notes
-
-
-_ref_type_pull = _ReferenceType(identifier='#', prefix='#')
-_ref_type_commit = _ReferenceType(identifier='$', prefix='@')
-
-_ref_types = (_ref_type_pull, _ref_type_commit)
-
-
-@dataclasses.dataclass(frozen=True)
-class _Reference:
-    ''' Represents where a release note comes from, for example through a
-    commit or a pull request.
-
-    _Reference is only a superclass for a commit- or pull request-reference,
-    which have their own classes to access the pull request or the commit
-    objects: `CommitReference` and `PullRequestReference`.  '''
-    type: _ReferenceType
-
-    @property
-    def identifier(self) -> str:
-        ''' The identifier for the reference - can be a commit hash, for
-        example, or the number of the pull request.  '''
-        raise NotImplementedError('get_content not implemented yet')
-
-
-@dataclasses.dataclass(frozen=True)
-class CommitReference(_Reference):
-    ''' Represents the commit where the release note came from
-    '''
-    commit: git.Commit
-
-    @property
-    def identifier(self) -> str:
-        return self.commit.hexsha
-
-
-@dataclasses.dataclass(frozen=True)
-class PullRequestReference(_Reference):
-    ''' Represents the pull requests where the release note came from
-    '''
-    pull_request: github3.pulls.ShortPullRequest
-    source_block: 'SourceBlock'
-
-    @property
-    def identifier(self) -> str:
-        if self.source_block.reference_identifier:
-            return self.source_block.reference_identifier.strip('#')
-        return str(self.pull_request.number)
-
-
-@dataclasses.dataclass(frozen=True)
 class SourceBlock:
-    '''Represents the parsed release note code block within a pull request body or a commit message.
+    '''
+    Represents the parsed release note code block within a pull request body or a commit message.
 
     ```{category} {note_message} [component name] [reference identifier] [author]
     {note_message}
@@ -289,34 +228,49 @@ class SourceBlock:
             return False
         return all(z and z.strip() for z in (self.category, self.target_group, self.note_message))
 
+    def as_release_note_entry(
+        self,
+        hostname: str,
+        org: str,
+        repo: str,
+    ) -> ReleaseNoteEntry:
+        repo_url = f'https://{hostname}/{org}/{repo}'
+
+        if isinstance(self.source, git.Commit):
+            commit_hexsha = self.source.hexsha
+            reference = f'[{org}/{repo}@{commit_hexsha}]({repo_url}/commit/{commit_hexsha})'
+            username = self.source.author.name
+        elif isinstance(self.source, github3.pulls.ShortPullRequest):
+            pr_number = self.source.number
+            reference = f'[{org}/{repo}#{pr_number}]({repo_url}/pull/{pr_number})'
+            username = self.source.user.login
+        else:
+            raise ValueError(f'unsupported release-notes source: {type(self.source)=}')
+
+        return ReleaseNoteEntry(
+            mimetype='text/markdown',
+            contents=self.note_message,
+            category=ReleaseNotesCategory(self.category.lower()),
+            audience=ReleaseNotesAudience(self.target_group.lower()),
+            author=ReleaseNotesAuthor(
+                hostname=hostname,
+                username=username,
+            ),
+            reference=reference,
+        )
+
     def __hash__(self):
         return hash(self.identifier)
 
     def __eq__(self, other):
-        if isinstance(other, ReleaseNote):
-            return self.__eq__(other.source_block)
         if isinstance(other, SourceBlock):
             return hash(other) == hash(self)
         return False
 
 
-def create_commit_ref(commit: git.Commit, source_block: SourceBlock) -> CommitReference:
-    return CommitReference(type=_ref_type_commit, commit=commit)
-
-
-def create_pull_request_ref(
-        pull_request: github3.pulls.ShortPullRequest,
-        source_block: SourceBlock,
-    ) -> PullRequestReference:
-    return PullRequestReference(
-        type=_ref_type_pull,
-        pull_request=pull_request,
-        source_block=source_block,
-    )
-
-
-def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, None, None]:
-    ''' Searches for code blocks in release note notation and returns all found.
+def iter_source_blocks(source, content: str) -> collections.abc.Iterable[SourceBlock]:
+    '''
+    Searches for code blocks in release note notation and returns all found.
     Only valid note blocks are returned, which means that the format has been followed.
     However, it does not check if the category / group exists.
 
@@ -358,121 +312,6 @@ def iter_source_blocks(source, content: str) -> typing.Generator[SourceBlock, No
 
 
 @dataclasses.dataclass(frozen=True)
-class ReleaseNote:
-    source_block: SourceBlock
-
-    author: typing.Optional[Author]  # the author of the commit / pull request
-    reference: _Reference
-
-    source_component: ocm_model.Component
-    is_current_repo: bool
-    from_same_github_instance: bool
-
-    def __hash__(self):
-        return hash(self.source_block.identifier)
-
-    def __eq__(self, other) -> bool:
-        return self.source_block.__eq__(other)
-
-    @property
-    def reference_str(self) -> str:
-        return f'{self.reference.type.identifier}{self.reference.identifier}'
-
-    @property
-    def block_str(self) -> str:
-        src_blk = self.source_block
-        author = (
-            src_blk.author or self.author.username or self.author.display_name.replace(' ', '-')
-        )
-        if not author.startswith('@'):
-            author = '@' + author
-        return (
-            f'```{src_blk.category} {src_blk.target_group} {self.source_component.name} '
-            f'{self.reference_str} {author}\n'
-            f'{src_blk.note_message}\n```'
-        )
-
-
-def _source_component(
-    component_descriptor_lookup,
-    version_lookup,
-    current_component: ocm_model.Component,
-    source_component_name: str,
-) -> ocm_model.Component | None:
-    try:
-        # try to fetch greatest component-descriptor for source component. The
-        # actual version (hopefully) does not matter, as we assume the GithubAccess
-        # (which we need to lookup release-notes) will rarely change.
-        source_component_descriptor = component_descriptor_lookup(
-            ocm_model.ComponentIdentity(
-                name=source_component_name,
-                version=version.greatest_version(
-                    versions=version_lookup(source_component_name),
-                    ignore_prerelease_versions=True,
-                ),
-            ),
-        )
-        return source_component_descriptor.component
-    except Exception:
-        logger.warning(
-            f'Unable to retrieve component descriptor for source component {source_component_name}'
-        )
-        traceback.print_exc()
-        return None
-
-
-def create_release_notes_obj(
-    component_descriptor_lookup,
-    version_lookup,
-    source_block: SourceBlock,
-    source_component: ocm_model.Component,
-    current_component: ocm_model.Component,
-) -> ReleaseNote:
-    target = source_block.source
-    if isinstance(target, git.Commit):
-        ref = create_commit_ref(target, source_block)
-    elif isinstance(target, github3.pulls.ShortPullRequest):
-        ref = create_pull_request_ref(target, source_block)
-    else:
-        raise NotImplementedError(
-            f"Release note creation not implemented for target-type {type(target)}"
-        )
-
-    author = author_from_source(target)
-
-    if source_block.component_name:
-        source_component = _source_component(
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            current_component=current_component,
-            source_component_name=source_block.component_name,
-        )
-
-    # access
-    source_component_access = ocm.util.main_source(
-        component=source_component,
-        no_source_ok=False,
-    ).access
-
-    current_src_access = ocm.util.main_source(
-        component=current_component,
-        no_source_ok=False,
-    ).access
-
-    from_same_github_instance = current_src_access.hostname() in source_component_access.hostname()
-    is_current_repo = current_component.name == source_component.name
-
-    return ReleaseNote(
-        source_block=source_block,
-        author=author,
-        reference=ref,
-        source_component=source_component,
-        is_current_repo=is_current_repo,
-        from_same_github_instance=from_same_github_instance
-    )
-
-
-@dataclasses.dataclass(frozen=True)
 class ReleaseNotesMetadata:
     checked_at: int
     prs: list[int]
@@ -485,8 +324,8 @@ class MetaPayload:
 
 
 def get_meta_obj(
-        typ: str,
-        data: object
+    typ: str,
+    data: object
 ) -> dict:
     return {
         'meta': dataclasses.asdict(MetaPayload(typ, data))

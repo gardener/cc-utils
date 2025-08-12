@@ -222,7 +222,10 @@ def create_upgrade_pullrequest(
     grouped_release_notes_docs = rno.group_release_notes_docs(release_notes_docs)
     logger.info(f'grouped into {len(grouped_release_notes_docs)} release-notes documents')
 
-    release_notes_markdown = rno.release_notes_docs_as_markdown(grouped_release_notes_docs)
+    release_notes_markdown = rno.release_notes_docs_as_markdown(
+        release_notes_docs=grouped_release_notes_docs,
+        prepend_title=True,
+    )
 
     bom_diff_markdown = github.pullrequest.bom_diff(
         delivery_dashboard_url=None, # XXX add URL once delivery-dashboard is available publicly

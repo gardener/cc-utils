@@ -3,34 +3,22 @@ import logging
 import os
 import subprocess
 import tempfile
-import typing
-import version
 
+import git
+import git.exc
+import github3.exceptions
 import yaml
 
-from github3.exceptions import (
-    ConnectionError,
-)
-from git.exc import (
-    GitCommandError
-)
-import git
-
-import ocm
-import ocm.gardener
-
-import ccc.github
-import concourse.steps.version
 import concourse.model.traits.version as version_trait
+import concourse.steps.version
 import dockerutil
 import github.util
-import oci.client
-import release_notes.fetch
-import release_notes.markdown
+import gitutil
+import ocm
 import release_notes.ocm as rno
 import slackclient.util
+import version
 
-from gitutil import GitHelper
 from concourse.model.traits.release import (
     ReleaseCommitPublishingPolicy,
 )
@@ -125,7 +113,7 @@ def _calculate_tags(
     version: str,
     github_release_tag: dict,
     git_tags: list,
-) -> typing.Sequence[str]:
+) -> list[str]:
     github_release_tag_candidate = github_release_tag['ref_template'].format(
         VERSION=version,
     )
@@ -135,72 +123,6 @@ def _calculate_tags(
     ]
 
     return [github_release_tag_candidate] + git_tag_candidates
-
-
-def collect_release_notes(
-    git_helper: GitHelper,
-    release_version: str,
-    component: ocm.Component,
-    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
-    version_lookup: ocm.VersionLookup,
-    oci_client: oci.client.Client,
-) -> tuple[str, str]:
-    release_note_blocks = release_notes.fetch.fetch_release_notes(
-        component=component,
-        component_descriptor_lookup=component_descriptor_lookup,
-        version_lookup=version_lookup,
-        git_helper=git_helper,
-        github_api_lookup=ccc.github.github_api_lookup,
-        version_whither=release_version,
-    )
-
-    release_notes_markdown = '\n'.join(
-        str(i) for i in release_notes.markdown.render(release_note_blocks)
-    ) or ''
-
-    version_vector = ocm.gardener.UpgradeVector(
-        whence=ocm.ComponentIdentity(
-            name=component.name,
-            version=version.find_predecessor(
-                version=component.version,
-                versions=[v for v in version_lookup(component) if version.is_final(v)],
-            ),
-        ),
-        whither=component,
-    )
-
-    # retrieve release-notes from sub-components
-    whence_component = component_descriptor_lookup(version_vector.whence).component
-
-    sub_component_release_notes_docs = list(rno.release_notes_for_subcomponents(
-        whence_component=whence_component,
-        whither_component=component,
-        component_descriptor_lookup=component_descriptor_lookup,
-        version_lookup=version_lookup,
-        oci_client=oci_client,
-        version_filter=version.is_final,
-    ))
-
-    grouped_sub_component_release_notes_docs = rno.group_release_notes_docs(
-        release_notes_docs=sub_component_release_notes_docs,
-    )
-
-    sub_component_release_notes = rno.release_notes_docs_as_markdown(
-        release_notes_docs=grouped_sub_component_release_notes_docs,
-        prepend_title=False,
-    )
-
-    if sub_component_release_notes:
-        full_release_notes_markdown = f'{release_notes_markdown}\n{sub_component_release_notes}'
-    else:
-        full_release_notes_markdown = release_notes_markdown
-
-    if (component_resources_markdown := release_notes.markdown.release_note_for_ocm_component(
-        component=component,
-    )):
-        full_release_notes_markdown += '\n\n' + component_resources_markdown
-
-    return release_notes_markdown, full_release_notes_markdown
 
 
 def have_tag_conflicts(
@@ -268,7 +190,7 @@ def create_release_commit(
 
 
 def create_and_push_bump_commit(
-    git_helper: GitHelper,
+    git_helper: gitutil.GitHelper,
     repo_dir: str,
     release_commit: git.Commit,
     merge_release_back_to_default_branch_commit: git.Commit,
@@ -376,7 +298,7 @@ def create_and_push_tags(
                 from_ref=release_commit.hexsha,
                 to_ref=tag,
             )
-        except GitCommandError:
+        except git.exc.GitCommandError:
             logger.error(f'failed to push {tag=}')
             raise
 
@@ -460,7 +382,7 @@ def upload_component_descriptor_as_release_asset(
             asset=descriptor_str.encode('utf-8'),
             label=asset_name,
         )
-    except ConnectionError:
+    except github3.exceptions.ConnectionError:
         logger.warning('Unable to attach component-descriptors to release as release-asset.')
 
 

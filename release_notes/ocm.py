@@ -4,10 +4,14 @@ OCM-Component-Descriptors
 '''
 
 import collections.abc
+import enum
 import logging
 import os
 import tarfile
 import zlib
+
+import dacite
+import yaml
 
 import cnudie.retrieve
 import oci.client
@@ -228,7 +232,7 @@ def group_release_notes_docs(
 
 def release_notes_docs_as_markdown(
     release_notes_docs: collections.abc.Sequence[rnm.ReleaseNotesDoc],
-    prepend_title: bool=True,
+    prepend_title: bool=False,
 ) -> str:
     if not release_notes_docs:
         return ''
@@ -243,6 +247,28 @@ def release_notes_docs_as_markdown(
         for release_notes_doc in release_notes_docs
         if (markdown := release_notes_doc.as_markdown())
     )
+
+
+def read_release_notes_from_dir(
+    release_notes_docs_dir: str,
+) -> collections.abc.Iterator[rnm.ReleaseNotesDoc]:
+    for cur_dir_path, _, fnames in os.walk(release_notes_docs_dir):
+        for fname in fnames:
+            file_path = os.path.join(cur_dir_path, fname)
+
+            if not file_path.endswith(rnm.RELEASE_NOTES_DOC_SUFFIX):
+                continue
+
+            with open(file_path) as file:
+                raw_release_notes_doc = yaml.safe_load(file)
+
+            yield dacite.from_dict(
+                data_class=rnm.ReleaseNotesDoc,
+                data=raw_release_notes_doc,
+                config=dacite.Config(
+                    cast=[enum.Enum],
+                ),
+            )
 
 
 def purge_release_notes_dir(
@@ -279,3 +305,55 @@ def purge_release_notes_dir(
                 continue
 
             os.remove(file_path)
+
+
+def release_notes_for_ocm_resource(resource: ocm.Resource) -> str | None:
+    if not resource.access:
+        return None
+
+    if resource.access.type is not ocm.AccessType.OCI_REGISTRY:
+        return None
+
+    return f'- {resource.name}: `{resource.access.imageReference}`'
+
+
+def release_note_for_ocm_component(component: ocm.Component) -> str:
+    '''
+    Create a markdown string containing information about the Resources included in the given
+    Component.
+    '''
+    local_resources = [
+        resource
+        for resource in component.resources
+        if resource.relation is ocm.ResourceRelation.LOCAL
+    ]
+
+    component_release_notes = ''
+
+    for resource_type in sorted({resource.type for resource in local_resources}):
+        matching_resources = [
+            resource
+            for resource in local_resources
+            if resource.type == resource_type
+        ]
+        resource_lines = {
+            resource_line for resource_line in (
+                release_notes_for_ocm_resource(resource)
+                for resource in matching_resources
+            ) if resource_line is not None
+        }
+
+        if not resource_lines:
+            continue
+
+        if resource_type is ocm.ArtefactType.OCI_IMAGE:
+            category_title = 'Container (OCI) Images'
+        elif resource_type is ocm.ArtefactType.HELM_CHART:
+            category_title = 'Helm Charts'
+        else:
+            category_title = str(resource_type)
+
+        category_markdown = '## ' + category_title + '\n' + '\n'.join(sorted(resource_lines)) + '\n'
+        component_release_notes += category_markdown
+
+    return component_release_notes

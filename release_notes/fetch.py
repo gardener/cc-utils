@@ -1,15 +1,17 @@
-import logging
 import datetime
 import enum
+import logging
+import os
 
-import ocm
-import ocm.util
 import git
 import github3.repos
 
 import cnudie.retrieve
 import gitutil
+import ocm
+import ocm.util
 import release_notes.model as rnm
+import release_notes.ocm as rno
 import release_notes.utils as rnu
 import version
 
@@ -22,12 +24,14 @@ class SpecialVersion(enum.Enum):
 
 
 def _list_commits_since_tag(
-        repo: git.Repo,
-        tag: git.TagReference,
+    repo: git.Repo,
+    tag: git.TagReference,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
-    '''Return a list of between the given tag and HEAD
+    '''
+    Return a list of between the given tag and HEAD
 
-    :return: a tuple of commits'''
+    :return: a tuple of commits
+    '''
     if repo.is_ancestor(tag.commit, 'HEAD'):
         logger.info(f"Commit tagged '{tag.name}' is a direct ancestor of HEAD")
         return tuple(repo.iter_commits(f'HEAD...{tag.commit.hexsha}')), tuple()
@@ -44,11 +48,11 @@ def _list_commits_since_tag(
 
 
 def _get_release_note_commits_tuple_for_release(
-        current_version: str,
-        current_version_ref_commit: git.Commit | None,
-        previous_version: str,
-        git_helper: gitutil.GitHelper,
-        github_repo: github3.repos.Repository,
+    current_version: str,
+    current_version_ref_commit: git.Commit | None,
+    previous_version: str,
+    git_helper: gitutil.GitHelper,
+    github_repo: github3.repos.Repository,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     current_version: version which defines upper boundary of versions to honour (needed if fetching
@@ -112,10 +116,10 @@ def _get_release_note_commits_tuple_for_release(
 
 
 def get_release_note_commits_tuple(
-        release_note_version_range: tuple[str | SpecialVersion, str | SpecialVersion],
-        git_helper:gitutil.GitHelper,
-        github_repo: github3.repos.Repository,
-        current_version_ref_commit: git.Commit | None=None,
+    release_note_version_range: tuple[str | SpecialVersion, str | SpecialVersion],
+    git_helper:gitutil.GitHelper,
+    github_repo: github3.repos.Repository,
+    current_version_ref_commit: git.Commit | None=None,
 ) -> tuple[tuple[git.Commit], tuple[git.Commit]]:
     '''
     :return: a tuple of commits which should be included in the release notes
@@ -249,83 +253,18 @@ def _determine_blocks_to_include(
     return source_blocks_to_be_included
 
 
-def fetch_draft_release_notes(
-    component: ocm.Component,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    version_lookup: cnudie.retrieve.VersionLookupByComponent,
-    git_helper: gitutil.GitHelper,
-    github_api_lookup: rnu.GithubApiLookup,
-    version_whither: str,
-) -> set[rnm.ReleaseNote]:
-    known_versions: list[str] = [
-        v for v in
-        version_lookup(component.identity())
-        if version.is_final(v)
-    ]
-
-    predecessor_version = version.find_predecessor(
-        version=version_whither,
-        versions=known_versions,
-    ) or SpecialVersion.INITIAL
-
-    release_note_version_range = (predecessor_version, SpecialVersion.HEAD)
-
-    logger.info(
-        f'Creating draft-release notes from {predecessor_version} to current HEAD'
-    )
-
-    # todo: need to check access-type / handle unsupported types (!= GitHub)
-    github_access = ocm.util.main_source(component).access
-    repo_url = github_access.repoUrl
-
-    # make sure _all_ tags are available locally
-    git_helper.fetch_tags()
-
-    github_api = github_api_lookup(repo_url)
-    github_repo: github3.repos.Repository = github_api.repository(
-        owner=github_access.org_name(),
-        repository=github_access.repository_name(),
-    )
-
-    # fetch commits for release
-    filter_in_commits, filter_out_commits = get_release_note_commits_tuple(
-        release_note_version_range=release_note_version_range,
-        git_helper=git_helper,
-        github_repo=github_repo
-    )
-
-    release_note_blocks = _determine_blocks_to_include(
-        filter_in_commits=filter_in_commits,
-        filter_out_commits=filter_out_commits,
-        github_access=github_access,
-        git_helper=git_helper,
-        github_api_lookup=github_api_lookup,
-    )
-
-    release_notes: set[rnm.ReleaseNote] = {
-        rnm.create_release_notes_obj(
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            source_block=source_block,
-            source_component=component,
-            current_component=component,
-        ) for source_block in release_note_blocks
-    }
-
-    return release_notes
-
-
 def fetch_release_notes(
     component: ocm.Component,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     version_lookup: cnudie.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
-    version_whither: str | None = None,
-    version_whence: str | None = None,
-    version_whither_ref_commit: git.Commit | None = None,
-) -> set[rnm.ReleaseNote]:
-    ''' Fetches and returns a set of release notes for the specified component.
+    version_whither: str | None=None,
+    version_whence: str | None=None,
+    version_whither_ref_commit: git.Commit | None=None,
+    is_draft: bool=False,
+) -> rnm.ReleaseNotesDoc | None:
+    '''
+    Fetches and returns a set of release notes for the specified component.
 
     :param component: the OCM Component for which to retrieve release-notes.
     :param version_wither: Optional argument to retrieve release notes up to specified version.
@@ -333,7 +272,7 @@ def fetch_release_notes(
     :param version_whence: Optional argument to retrieve release notes starting at a specific \
         version. If not given, the closest version to `version_whither` is used.
 
-    :return: A set of ReleaseNote objects for the specified component.
+    :return: A set of ReleaseNotesDoc objects for the specified component.
     '''
 
     # sanity-checks / validation
@@ -346,14 +285,14 @@ def fetch_release_notes(
                 f'{version_whither=} is a predecessor to {version_whence=}. '
                 'will not generate release-notes.'
             )
-            return set()
+            return None
 
         if current_semver == previous_semver:
             logger.info(
                 f'Current and previous versions given are equal ({version_whither!s}), '
                 'will not generate release-notes.'
             )
-            return set()
+            return None
 
     known_versions: list[str] = [
         v for v in
@@ -378,18 +317,19 @@ def fetch_release_notes(
             # if still no previous version could be determined this is probably the first release.
             version_whence = SpecialVersion.INITIAL
 
-    logger.info(
-        f'current: {version_whither=}, {version_whence=},'
-    )
+    if not version_whither or is_draft:
+        version_whither = SpecialVersion.HEAD
 
-    release_note_version_range = (
-        version_whence or SpecialVersion.INITIAL,
-        version_whither or SpecialVersion.HEAD
-    )
+    logger.info(f'current: {version_whither=}, {version_whence=}')
+
+    release_note_version_range = (version_whence, version_whither)
 
     source = ocm.util.main_source(component)
     # todo: check access-type / handle unsupported types (non-github)
     github_access: ocm.GithubAccess = source.access
+    hostname = github_access.hostname()
+    org_name = github_access.org_name()
+    repo_name = github_access.repository_name()
 
     github_api = github_api_lookup(github_access.repoUrl)
 
@@ -406,7 +346,7 @@ def fetch_release_notes(
         release_note_version_range=release_note_version_range,
         current_version_ref_commit=version_whither_ref_commit,
         git_helper=git_helper,
-        github_repo=github_repo
+        github_repo=github_repo,
     )
 
     release_note_blocks = _determine_blocks_to_include(
@@ -417,14 +357,82 @@ def fetch_release_notes(
         github_api_lookup=github_api_lookup,
     )
 
-    release_notes: set[rnm.ReleaseNote] = {
-        rnm.create_release_notes_obj(
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            source_block=source_block,
-            source_component=component,
-            current_component=component,
-        ) for source_block in release_note_blocks
-    }
+    release_notes = [
+        release_note_block.as_release_note_entry(
+            hostname=hostname,
+            org=org_name,
+            repo=repo_name,
+        ) for release_note_block in release_note_blocks
+    ]
 
-    return release_notes
+    if not release_notes:
+        return None
+
+    return rnm.ReleaseNotesDoc(
+        ocm=rnm.ReleaseNotesOcmRef(
+            component_name=component.name,
+            component_version=component.version,
+        ),
+        release_notes=release_notes,
+    )
+
+
+def collect_release_notes(
+    git_helper: gitutil.GitHelper,
+    release_version: str,
+    component: ocm.Component,
+    version_lookup: ocm.VersionLookup,
+    github_api_lookup: rnu.GithubApiLookup,
+    version_whither_ref_commit: git.Commit | None=None,
+    is_draft: bool=False,
+) -> tuple[rnm.ReleaseNotesDoc | None, list[rnm.ReleaseNotesDoc]]:
+    repo_path = git_helper.repo_path
+    local_release_notes_path = os.path.join(repo_path, '.ocm/release-notes')
+
+    release_notes_docs = list(rno.read_release_notes_from_dir(local_release_notes_path))
+    for release_notes_doc in release_notes_docs:
+        if (
+            not release_notes_doc.ocm
+            or not release_notes_doc.ocm.component_name
+            or not release_notes_doc.ocm.component_version
+        ):
+            release_notes_doc.ocm = rnm.ReleaseNotesOcmRef(
+                component_name=component.name,
+                component_version=component.version,
+            )
+
+    if fetched_release_notes_doc := fetch_release_notes(
+        component=component,
+        version_lookup=version_lookup,
+        git_helper=git_helper,
+        github_api_lookup=github_api_lookup,
+        version_whither=release_version,
+        version_whither_ref_commit=version_whither_ref_commit,
+        is_draft=is_draft,
+    ):
+        release_notes_docs.append(fetched_release_notes_doc)
+
+    grouped_release_notes_docs = rno.group_release_notes_docs(release_notes_docs)
+
+    component_id = component.identity()
+
+    matching_component_release_notes_docs = [
+        release_notes_doc
+        for release_notes_doc in grouped_release_notes_docs
+        if release_notes_doc.component_id == component_id
+    ]
+    if len(matching_component_release_notes_docs) > 1:
+        raise RuntimeError(f'Multiple ReleaseNotesDocs found for {component_id=} - this is a bug')
+
+    if matching_component_release_notes_docs:
+        component_release_notes_doc = matching_component_release_notes_docs[0]
+    else:
+        component_release_notes_doc = None
+
+    subcomponent_release_notes_docs = [
+        release_notes_doc
+        for release_notes_doc in grouped_release_notes_docs
+        if release_notes_doc.component_id != component_id
+    ]
+
+    return component_release_notes_doc, subcomponent_release_notes_docs

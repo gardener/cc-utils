@@ -95,7 +95,8 @@ runs:
           ${ocm_repositories_arg:-} \
           --full-release-notes full-release-notes.md \
           --local-release-notes release-notes.md \
-          --subcomponent-release-notes subcomponent-release-notes.md ${extra_args:-}
+          --subcomponent-release-notes subcomponent-release-notes.md \
+          --tar-output release-notes.tar ${extra_args:-}
 
         echo 'Full Release-notes written to `full-release-nodes.md`'
         echo 'Local Release-notes written to `release-notes.md`'
@@ -123,3 +124,7 @@ runs:
             cat subcomponent-release-notes.md >> ${GITHUB_STEP_SUMMARY}
           fi
         fi
+    - uses: actions/upload-artifact@v4
+      with:
+        name: release-notes
+        path: release-notes.tar

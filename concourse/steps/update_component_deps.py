@@ -377,7 +377,10 @@ def create_upgrade_pr(
     grouped_release_notes_docs = rno.group_release_notes_docs(release_notes_docs)
     logger.info(f'grouped into {len(grouped_release_notes_docs)} release-notes documents')
 
-    release_notes_markdown = rno.release_notes_docs_as_markdown(grouped_release_notes_docs)
+    release_notes_markdown = rno.release_notes_docs_as_markdown(
+        release_notes_docs=grouped_release_notes_docs,
+        prepend_title=True,
+    )
 
     pr_body, additional_notes = github.pullrequest.upgrade_pullrequest_body(
         release_notes=release_notes_markdown,
