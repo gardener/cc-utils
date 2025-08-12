@@ -181,6 +181,7 @@ jobs:
           callback-action-path: ${{ inputs.version-commit-callback-action-path }}
           versionfile: ${{ inputs.versionfile }}
           version-operation: ${{ inputs.version-operation }}
+          commit-kind: ${{ inputs.mode == 'release' && 'release' || 'build' }}
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
         id: component-descriptor
         with:

@@ -124,6 +124,23 @@ inputs:
       - capture-commit
       - commit-to-head
 
+  commit-kind:
+    required: false
+    type: choice
+    description: |
+      the semantical kind the created version-change-commit has. passed as `commit-kind` input to
+      action specified via `callback-action-path`, if any. If no such callback is passed, this
+      value is ignored.
+
+      bump: the commit increments the version
+      release: the commit sets a release-version (typically a final semver-version)
+      build: the commit sets a build-version (e.g. including a commit-digest)
+
+    options:
+      - bump
+      - release
+      - build
+
 outputs:
   version:
     description: |
@@ -183,6 +200,7 @@ runs:
       uses: ./../version-callback-action
       with:
         effective-version: ${{ steps.calc-version.outputs.effective-version }}
+        commit-kind: ${{ inputs.commit-kind }}
 
     - name: version
       id: version
