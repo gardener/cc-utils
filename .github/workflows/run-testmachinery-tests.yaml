@@ -74,6 +74,7 @@ jobs:
     runs-on: ubuntu-latest-static-ip
     permissions:
       id-token: write
+      contents: read
 
     steps:
       - uses: azure/setup-kubectl@v4
