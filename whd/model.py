@@ -134,12 +134,6 @@ class PullRequestEvent(EventBase):
         '''
         return self.raw['pull_request']['id']
 
-    def pr_state(self):
-        '''
-        the PR state (as returned from github's v3-REST-API
-        '''
-        return self.raw['state']
-
     def label_names(self):
         '''Return the labels attached to the pull request as per the event received.
         '''
