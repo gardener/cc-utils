@@ -313,15 +313,15 @@ def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
 
     _print_linting_findings(linting_result)
 
-    if linting_result.max_level() >= yamllint.linter.PROBLEM_LEVELS['error']:
-        raise LintingError('Found some Errors while linting. See above.')
+    if linting_result.max_level() >= yamllint.linter.PROBLEM_LEVELS['warning']:
+        raise LintingError('Found some Warnings/Errors while linting. See above.')
 
 
 def _print_linting_findings(linting_result: LintingResult):
     if not _have_yamllint:
         raise RuntimeError('need to install yamllint in order to use')
     for level, problems in linting_result.problems():
-        if level < yamllint.linter.PROBLEM_LEVELS['error']:
+        if level < yamllint.linter.PROBLEM_LEVELS['warning']:
             for p in problems:
                 warning(p)
         else:
