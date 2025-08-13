@@ -319,7 +319,6 @@ def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}, threshold: 
     # Check for problems at or above the threshold level
     if linting_result.max_level() >= threshold_level:
         raise LintingError(f'Found issues at or above the {threshold} level during linting. See above for details.')
-    
 
 
 def _print_linting_findings(linting_result: LintingResult):
