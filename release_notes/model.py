@@ -162,8 +162,11 @@ class ReleaseNotesDoc:
                 author = f'@{release_note.author.username}'
                 audience = release_note.audience.name
                 reference = release_note.reference
+                # Replace newlines with two spaces _followed by_ newlines, as this is the proper way
+                # to do a line-break in a list-item. Also indent the next line, of course.
+                content = release_note.contents.strip().replace('\n', '  \n  ')
                 block_lines.append(
-                    f'- `[{audience}]` {release_note.contents.strip()} by {author} [{reference}]'
+                    f'- `[{audience}]` {content} by {author} [{reference}]'
                 )
 
             markdown_blocks.append('\n'.join(block_lines))
