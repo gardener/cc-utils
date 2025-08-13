@@ -298,7 +298,7 @@ def _count_elements(value, count=0, max_elements_count=100000):
     return leng
 
 
-def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
+def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}, threshold: str = 'error'):
     if not _have_yamllint:
         raise RuntimeError('need to install yamllint in order to use')
 
@@ -313,8 +313,13 @@ def lint_yaml_file(path, linter_config: dict={'extends': 'relaxed'}):
 
     _print_linting_findings(linting_result)
 
-    if linting_result.max_level() >= yamllint.linter.PROBLEM_LEVELS['warning']:
-        raise LintingError('Found some Warnings/Errors while linting. See above.')
+    # Convert the threshold string to the corresponding problem level
+    threshold_level = yamllint.linter.PROBLEM_LEVELS.get(threshold, yamllint.linter.PROBLEM_LEVELS['warning'])
+
+    # Check for problems at or above the threshold level
+    if linting_result.max_level() >= threshold_level:
+        raise LintingError(f'Found issues at or above the {threshold} level during linting. See above for details.')
+    
 
 
 def _print_linting_findings(linting_result: LintingResult):
