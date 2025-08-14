@@ -481,8 +481,10 @@ subcomponent_md = release_notes.ocm.release_notes_docs_as_markdown(
   release_notes_docs=subcomponent_release_notes_docs,
 )
 
-if subcomponent_md:
+if release_notes_md and subcomponent_md:
   full_release_notes_md = f'{release_notes_md}\n{subcomponent_md}'
+elif subcomponent_md:
+  full_release_notes_md = subcomponent_md
 else:
   full_release_notes_md = release_notes_md
 

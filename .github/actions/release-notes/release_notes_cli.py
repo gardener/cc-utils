@@ -196,8 +196,10 @@ def main():
     else:
         sub_component_release_notes = None
 
-    if sub_component_release_notes:
+    if release_notes_md and sub_component_release_notes:
         full_release_notes_md = f'{release_notes_md}\n{sub_component_release_notes}'
+    elif sub_component_release_notes:
+        full_release_notes_md = sub_component_release_notes
     else:
         full_release_notes_md = release_notes_md
 
