@@ -7,6 +7,7 @@ import ocm
 import ocm.util
 import release_notes.fetch
 import release_notes.ocm
+import release_notes.tarutil
 import version
 
 
@@ -19,6 +20,7 @@ def print_release_notes(
     ocm_repo_base_url: str | None=None,
     version_whither: str | None=None,
     version_whence: str | None=None,
+    outdir: str | None=None,
 ):
     oci_client = ccc.oci.oci_client()
     if not ocm_repo_base_url:
@@ -98,6 +100,14 @@ def print_release_notes(
 
     if not release_notes_doc:
         print('no release notes found')
+        return
+
+    if outdir:
+        release_notes.tarutil.release_notes_docs_into_files(
+            release_notes_docs=[release_notes_doc],
+            repo_dir=outdir,
+            rel_path='',
+        )
         return
 
     print(release_notes.ocm.release_notes_docs_as_markdown([release_notes_doc]))
