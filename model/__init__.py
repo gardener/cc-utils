@@ -149,8 +149,13 @@ class ConfigFactory:
                 if not url == repo_url:
                     continue
                 fpath = os.path.join(repo_mapping.path, cfg_src.relpath)
-                with open(fpath) as f:
-                    return yaml.safe_load(f)
+                try:
+                    with open(fpath) as f:
+                        return yaml.safe_load(f)
+                except Exception as e:
+                    e.add_note(fpath)
+                    logger.error(f'{e=} while loading {fpath=}')
+                    raise
 
         if not lookup_cfg_factory:
             raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
