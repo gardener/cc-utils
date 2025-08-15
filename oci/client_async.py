@@ -144,24 +144,33 @@ class Client:
             if not oci_creds:
                 raise ValueError(f'no credentials for {image_reference=}')
 
-            _, password = oci.aws.basic_auth_credentials(
+            user, password = oci.aws.basic_auth_credentials(
                 image_reference=image_reference,
                 credentials=oci_creds,
             )
-            token = oci.client.OauthToken(
-                token=password,
-                scope=scope,
-                expires_in=datetime.timedelta(hours=12).seconds,
-            )
-            self.token_cache.set_token(
-                image_reference=image_reference,
-                token=token,
-            )
-            self.token_cache.set_auth_method(
-                image_reference=image_reference,
-                auth_method=oci.client.AuthMethod.AWS_BASIC,
-            )
-            return
+
+            if oci.aws.is_public_registry(image_reference):
+                # we have to use the just created authentication token as basic auth credential for
+                # the following bearer auth
+                oci_creds = oa.OciBasicAuthCredentials(
+                    username=user,
+                    password=password,
+                )
+            else:
+                token = oci.client.OauthToken(
+                    token=password,
+                    scope=scope,
+                    expires_in=datetime.timedelta(hours=12).seconds,
+                )
+                self.token_cache.set_token(
+                    image_reference=image_reference,
+                    token=token,
+                )
+                self.token_cache.set_auth_method(
+                    image_reference=image_reference,
+                    auth_method=oci.client.AuthMethod.AWS_BASIC,
+                )
+                return
 
         if not oci_creds:
             logger.debug(f'no credentials for {image_reference=} - attempting anonymous-auth')
