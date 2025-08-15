@@ -130,11 +130,17 @@ def release_notes_for_vector(
         versions=versions,
     ))
 
+    seen_component_ids = set()
+
     for idx, version in enumerate(versions_in_range):
         component_id = ocm.ComponentIdentity(
             name=upgrade_vector.component_name,
             version=version,
         )
+        if component_id in seen_component_ids:
+            continue
+
+        seen_component_ids.add(component_id)
 
         component = component_descriptor_lookup(component_id).component
 
