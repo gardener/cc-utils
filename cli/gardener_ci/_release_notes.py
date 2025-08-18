@@ -91,7 +91,7 @@ def print_release_notes(
     github_cfg = ccc.github.github_cfg_for_repo_url(repo_url)
 
     if repo_path:
-        git_cfg=github_cfg.git_cfg(
+        git_cfg = github_cfg.git_cfg(
             repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
         )
         if not os.path.exists(repo_path):
