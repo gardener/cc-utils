@@ -61,7 +61,7 @@ class GitCfg:
 
 def _ssh_auth_env(git_cfg: GitCfg):
     credentials = git_cfg.auth
-    logger.info(f'using github-credentials with {git_cfg.user_name=}')
+    logger.debug(f'using github-credentials with {git_cfg.user_name=}')
 
     tmp_id = tempfile.NamedTemporaryFile(mode='w', delete=False) # noqa; callers must unlink
     tmp_id.write(credentials)
