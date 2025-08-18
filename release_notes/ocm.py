@@ -106,6 +106,7 @@ def release_notes_for_vector(
     version_lookup: ocm.VersionLookup,
     oci_client: oci.client.Client,
     version_filter: collections.abc.Callable[[str], bool]=lambda _: True,
+    seen_component_ids: set[ocm.ComponentIdentity] | None=None,
 ) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
     '''
     Yields release-notes documents (pairs of OCM component-ids together with their release-notes)
@@ -135,7 +136,8 @@ def release_notes_for_vector(
         logger.warn(f'{ve=} while collecting release-notes for {upgrade_vector=}')
         raise
 
-    seen_component_ids = set()
+    if not seen_component_ids:
+        seen_component_ids = set()
 
     for idx, version in enumerate(versions_in_range):
         component_id = ocm.ComponentIdentity(
@@ -143,6 +145,7 @@ def release_notes_for_vector(
             version=version,
         )
         if component_id in seen_component_ids:
+            logger.info(f'skipping: {component_id=} (already seen before)')
             continue
 
         seen_component_ids.add(component_id)
@@ -190,6 +193,7 @@ def release_notes_for_vector(
             version_lookup=version_lookup,
             oci_client=oci_client,
             version_filter=version_filter,
+            seen_component_ids=seen_component_ids,
         )
 
 
@@ -200,6 +204,7 @@ def release_notes_for_subcomponents(
     version_lookup: ocm.VersionLookup,
     oci_client: oci.client.Client,
     version_filter: collections.abc.Callable[[str], bool]=lambda _: True,
+    seen_component_ids: set[ocm.ComponentIdentity] | None=None,
 ) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
     component_diff = cnudie.retrieve.component_diff(
         left_component=whence_component,
@@ -230,6 +235,7 @@ def release_notes_for_subcomponents(
             version_lookup=version_lookup,
             oci_client=oci_client,
             version_filter=version_filter,
+            seen_component_ids=seen_component_ids,
         )
 
 
