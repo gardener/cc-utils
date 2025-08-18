@@ -1,3 +1,4 @@
+import os
 import sys
 
 import ccc.github
@@ -85,12 +86,19 @@ def print_release_notes(
 
     github_cfg = ccc.github.github_cfg_for_repo_url(repo_url)
 
-    git_helper = gitutil.GitHelper.clone_into(
-        target_directory=repo_path,
-        git_cfg=github_cfg.git_cfg(
-            repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
-        ),
+    git_cfg=github_cfg.git_cfg(
+        repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
     )
+    if not os.path.exists(repo_path):
+        git_helper = gitutil.GitHelper.clone_into(
+            target_directory=repo_path,
+            git_cfg=git_cfg,
+        )
+    else:
+        git_helper = gitutil.GitHelper(
+            repo=repo_path,
+            git_cfg=git_cfg,
+        )
 
     release_notes_doc = release_notes.fetch.fetch_release_notes(
         component=component,
