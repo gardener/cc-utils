@@ -124,11 +124,16 @@ def release_notes_for_vector(
         if version_filter(version)
     ]
 
-    versions_in_range = list(version_mod.iter_upgrade_path(
-        whence=upgrade_vector.whence_version,
-        whither=upgrade_vector.whither_version,
-        versions=versions,
-    ))
+    try:
+        versions_in_range = list(version_mod.iter_upgrade_path(
+            whence=upgrade_vector.whence_version,
+            whither=upgrade_vector.whither_version,
+            versions=versions,
+        ))
+    except ValueError as ve:
+        ve.add_note(f'{upgrade_vector=}')
+        logger.warn(f'{ve=} while collecting release-notes for {upgrade_vector=}')
+        raise
 
     seen_component_ids = set()
 
