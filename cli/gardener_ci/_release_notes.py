@@ -1,3 +1,5 @@
+import sys
+
 import ccc.github
 import ccc.oci
 import cnudie.retrieve
@@ -21,6 +23,7 @@ def print_release_notes(
     version_whither: str | None=None,
     version_whence: str | None=None,
     outdir: str | None=None,
+    outfile: str='-',
 ):
     oci_client = ccc.oci.oci_client()
     if not ocm_repo_base_url:
@@ -110,4 +113,9 @@ def print_release_notes(
         )
         return
 
-    print(release_notes.ocm.release_notes_docs_as_markdown([release_notes_doc]))
+    if outfile == '-':
+        outfh = sys.stdout
+    else:
+        outfh = open(outfile, 'w')
+
+    outfh.write(release_notes.ocm.release_notes_docs_as_markdown([release_notes_doc]))
