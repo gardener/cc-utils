@@ -218,6 +218,12 @@ def release_notes_for_subcomponents(
             whither=whither.identity(),
         )
 
+        if upgrade_vector.is_downgrade:
+            logger.warn(f'skipping downgrade: {upgrade_vector=}')
+            continue # ignore downgrades
+            # XXX: we could still fetch release-notes in that case, but should display them
+            # differently (so users will know those release-notes refer to removed contents).
+
         yield from release_notes_for_vector(
             upgrade_vector=upgrade_vector,
             component_descriptor_lookup=component_descriptor_lookup,
