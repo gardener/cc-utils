@@ -7,6 +7,7 @@ import cnudie.retrieve
 import ctx
 import gitutil
 import ocm
+import ocm.gardener
 import ocm.util
 import release_notes.fetch
 import release_notes.ocm
@@ -18,8 +19,8 @@ __cmd_name__ = 'release_notes'
 
 
 def print_release_notes(
-    repo_path: str,
     component_name: str,
+    repo_path: str|None=None,
     ocm_repo_base_url: str | None=None,
     version_whither: str | None=None,
     version_whence: str | None=None,
@@ -47,6 +48,9 @@ def print_release_notes(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
     )
+
+    if not repo_path:
+        print('--repo-path was not passed - will only retrieve subcomponent-release-notes')
 
     # We need a component. Fetch one with given information (assuming the relevant information
     # is still correct if no version was given).
@@ -86,36 +90,66 @@ def print_release_notes(
 
     github_cfg = ccc.github.github_cfg_for_repo_url(repo_url)
 
-    git_cfg=github_cfg.git_cfg(
-        repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
-    )
-    if not os.path.exists(repo_path):
-        git_helper = gitutil.GitHelper.clone_into(
-            target_directory=repo_path,
-            git_cfg=git_cfg,
+    if repo_path:
+        git_cfg=github_cfg.git_cfg(
+            repo_path=f'{src_access.org_name()}/{src_access.repository_name()}',
         )
+        if not os.path.exists(repo_path):
+            git_helper = gitutil.GitHelper.clone_into(
+                target_directory=repo_path,
+                git_cfg=git_cfg,
+            )
+        else:
+            git_helper = gitutil.GitHelper(
+                repo=repo_path,
+                git_cfg=git_cfg,
+            )
     else:
-        git_helper = gitutil.GitHelper(
-            repo=repo_path,
-            git_cfg=git_cfg,
-        )
+        git_helper = None
 
-    release_notes_doc = release_notes.fetch.fetch_release_notes(
-        component=component,
-        version_lookup=version_lookup,
-        git_helper=git_helper,
-        github_api_lookup=ccc.github.github_api_lookup,
-        version_whither=version_whither,
-        version_whence=version_whence,
+    docs = list()
+    if git_helper:
+        release_notes_doc = release_notes.fetch.fetch_release_notes(
+            component=component,
+            version_lookup=version_lookup,
+            git_helper=git_helper,
+            github_api_lookup=ccc.github.github_api_lookup,
+            version_whither=version_whither,
+            version_whence=version_whence,
+        )
+        docs.append(release_notes_doc)
+
+    whence_component = ocm.ComponentIdentity(
+        name=component.name,
+        version=version_whence,
+    )
+    whither_component = ocm.ComponentIdentity(
+        name=component.name,
+        version=version_whither,
+    )
+    upgrade_vector = ocm.gardener.UpgradeVector(
+        whence=whence_component,
+        whither=whither_component,
     )
 
-    if not release_notes_doc:
+    sub_component_release_note_docs = release_notes.ocm.release_notes_for_vector(
+        upgrade_vector=upgrade_vector,
+        component_descriptor_lookup=ocm_lookup,
+        version_lookup=version_lookup,
+        oci_client=oci_client,
+        version_filter=version.is_final,
+    )
+
+    docs.extend(sub_component_release_note_docs)
+    print(f'found {len(docs)=}')
+
+    if not docs:
         print('no release notes found')
         return
 
     if outdir:
         release_notes.tarutil.release_notes_docs_into_files(
-            release_notes_docs=[release_notes_doc],
+            release_notes_docs=docs,
             repo_dir=outdir,
             rel_path='',
         )
