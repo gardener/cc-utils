@@ -149,6 +149,9 @@ runs:
               can_push_reason='label ${{ inputs.trusted-label }} present'
             fi
           fi
+        elif [ ${event_name} == 'workflow_dispatch' ]; then
+          can_push=true
+          can_push_reason='run was triggered manually'
         else
           is_pr_from_fork=false
           can_push=true
