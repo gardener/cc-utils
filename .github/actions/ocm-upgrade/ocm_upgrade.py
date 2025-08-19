@@ -79,6 +79,12 @@ def create_diff_in_base_component(
     with open(path) as f:
         base_component = yaml.safe_load(f)
 
+    if not 'componentReferences' in base_component:
+        logger.info(
+            f'{rel_path=} does not contain `componentReferences` - delegating to callback'
+        )
+        return False
+
     for cref in base_component['componentReferences']:
         cname = cref['componentName']
         cver = cref['version']
