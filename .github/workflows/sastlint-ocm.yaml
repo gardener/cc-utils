@@ -36,6 +36,13 @@ on:
           passed to `setup-go`'s equally-named input:
           https://github.com/actions/setup-go?tab=readme-ov-file#getting-go-version-from-the-gomod-file
 
+      setup-git-identity:
+        type: boolean
+        required: false
+        default: false
+        description: |
+          if set, run `setup-git-identity` action prior to running command.
+
 jobs:
   run-linter:
     runs-on: ubuntu-latest
@@ -50,6 +57,9 @@ jobs:
         with:
           go-version: ${{ inputs.go-version != 'greatest' && inputs.go-version || '' }}
           go-version-file: ${{ inputs.go-version-file }}
+      - name: setup-git-identity
+        if: ${{ inputs.setup-git-identity }}
+        uses: 'gardener/cc-utils/.github/action/setup-git-identity@master'
       - name: run-linter
         shell: bash
         run: |
