@@ -119,6 +119,12 @@ on:
         description: |
           The commit-digest of the version-change-commit.
         value: ${{ jobs.version-and-ocm.outputs.commit-digest }}
+      version-commit-artefact:
+        description: |
+          The artifact-name of the artifact into which release-commit was captured.
+          It is output using the `capture-commit` action, and can be imported using the
+          `import-commit` action.
+        value: release-commit-objects
 
       component-descriptor:
         description: |
