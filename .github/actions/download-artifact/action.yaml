@@ -33,7 +33,7 @@ runs:
         fi
 
         mkdir ../download-artifact
-        "${GITHUB_ACTION_PATH}/template.sh \
+        "${GITHUB_ACTION_PATH}/template.sh" \
           ../upload-artifact/action.yaml \
           "${version}"
     - uses: ./../download-artifact
