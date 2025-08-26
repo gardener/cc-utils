@@ -15,9 +15,11 @@ inputs:
   pattern:
     type: string
     required: false
+    default: ''
   merge-multiple:
     type: boolean
     required: false
+    default: false
 
 runs:
   using: composite
