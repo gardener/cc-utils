@@ -22,15 +22,21 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/upload-artifact@v4
-      if: ${{ github.server_url == 'https://github.com' }}
-      with:
-        name: ${{ inputs.name }}
-        path: ${{ inputs.path }}
-        pattern: ${{ inputs.pattern }}
-        merge-multiple: ${{ inputs.merge-multiple }}
-    - uses: actions/upload-artifact@v3
-      if: ${{ github.server_url != 'https://github.com' }}
+    - name: render
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ '${{ github.server_url }}' == 'https://github.com' ]; then
+          version='v4'
+        else
+          version='v3'
+        fi
+
+        mkdir ../upload-artifact
+        "${GITHUB_ACTION_PATH}/template.sh \
+          ../upload-artifact/action.yaml \
+          "${version}"
+    - uses: ./../upload-artifact
       with:
         name: ${{ inputs.name }}
         path: ${{ inputs.path }}
