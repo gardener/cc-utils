@@ -34,7 +34,7 @@ runs:
 
         mkdir ../download-artifact
         "${GITHUB_ACTION_PATH}/template.sh" \
-          ../upload-artifact/action.yaml \
+          ../download-artifact/action.yaml \
           "${version}"
     - uses: ./../download-artifact
       with:
