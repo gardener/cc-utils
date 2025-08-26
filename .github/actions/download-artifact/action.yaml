@@ -28,7 +28,7 @@ runs:
       shell: sh
       run: |
         set -eu
-        if [ '${{ github.server_url }}' == 'https://github.com' ]; then
+        if ${{ github.server_url == 'https://github.com' }}; then
           version='v5'
         else
           version='v3'
