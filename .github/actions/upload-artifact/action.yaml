@@ -25,9 +25,9 @@ runs:
   using: composite
   steps:
     - name: render
-      shell: bash
+      shell: sh
       run: |
-        set -euo pipefail
+        set -eu
         if [ '${{ github.server_url }}' == 'https://github.com' ]; then
           version='v4'
         else
