@@ -24,13 +24,15 @@ runs:
   steps:
     - uses: actions/upload-artifact@v4
       if: ${{ github.server_url == 'https://github.com' }}
-      name: ${{ inputs.name }}
-      path: ${{ inputs.path }}
-      pattern: ${{ inputs.pattern }}
-      merge-multiple: ${{ inputs.merge-multiple }}
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        pattern: ${{ inputs.pattern }}
+        merge-multiple: ${{ inputs.merge-multiple }}
     - uses: actions/upload-artifact@v3
       if: ${{ github.server_url != 'https://github.com' }}
-      name: ${{ inputs.name }}
-      path: ${{ inputs.path }}
-      pattern: ${{ inputs.pattern }}
-      merge-multiple: ${{ inputs.merge-multiple }}
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        pattern: ${{ inputs.pattern }}
+        merge-multiple: ${{ inputs.merge-multiple }}
