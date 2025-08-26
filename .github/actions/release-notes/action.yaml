@@ -124,7 +124,7 @@ runs:
             cat subcomponent-release-notes.md >> ${GITHUB_STEP_SUMMARY}
           fi
         fi
-    - uses: actions/upload-artifact@v4
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         name: release-notes
         path: release-notes.tar

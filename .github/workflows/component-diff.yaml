@@ -44,7 +44,7 @@ jobs:
           component-descriptor-artefact: base-component-descriptor
       - name: fetch-prepare-values
         if: ${{ inputs.ocm-repositories == '' }}
-        uses: actions/download-artifact@v4
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values

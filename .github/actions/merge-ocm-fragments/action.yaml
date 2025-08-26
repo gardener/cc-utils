@@ -110,7 +110,7 @@ runs:
         EOF
     - name: import-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
-      uses: actions/download-artifact@v4
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-component-descriptor-artefact
@@ -145,7 +145,7 @@ runs:
            --out "${component_descriptor}"
         fi
     - name: import-ocm-fragments
-      uses: actions/download-artifact@v4
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         pattern: ${{ steps.preprocess.outputs.artefact-name }}
         path: ${{ inputs.outdir }}

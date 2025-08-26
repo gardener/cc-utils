@@ -91,7 +91,7 @@ jobs:
             f.write(f'ocm-target-oci-ref={tgt_oci_ref}\n')
 
       - name: fetch-prepare-values
-        uses: actions/download-artifact@v4
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -117,7 +117,7 @@ jobs:
             --on-exist ${{ inputs.on-existing-component-descriptor }}
           tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
       - name: upload-component-descriptor-as-artefact
-        uses: actions/upload-artifact@v4
+        uses: gardener/cc-utils/.github/actions/upload-artifact@master
         with:
           path: component-descriptor.tar.gz
           name: component-descriptor
@@ -148,7 +148,7 @@ jobs:
     steps:
       - name: fetch-prepare-values
         if: ${{ inputs.ocm-repositories == '' }}
-        uses: actions/download-artifact@v4
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values

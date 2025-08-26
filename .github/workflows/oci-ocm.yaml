@@ -180,7 +180,7 @@ jobs:
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}
-        uses: actions/download-artifact@v4
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
       - name: check-params
@@ -313,7 +313,7 @@ jobs:
           after-import: rebase
       - name: retrieve build-ctx-artefact
         if: ${{ inputs.build-ctx-artefact }}
-        uses: actions/download-artifact@v4
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: ${{ inputs.build-ctx-artefact }}
           merge-multiple: true

@@ -240,7 +240,7 @@ runs:
         gh-token: ${{ inputs.github-token }}
 
     - name: fetch-release-notes
-      uses: actions/download-artifact@v4
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: release-notes
         path: /tmp
@@ -347,7 +347,7 @@ runs:
         echo EOF >> "${GITHUB_OUTPUT}"
 
     - name: upload OCM Component-Descriptor as artifact
-      uses: actions/upload-artifact@v4
+      uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         path: /tmp/component-descriptor.tar.gz
         name: component-descriptor

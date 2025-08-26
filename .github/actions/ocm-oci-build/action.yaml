@@ -11,7 +11,7 @@ description: |
   As outlined [here](https://github.com/orgs/community/discussions/17245), consuming outputs
   (such as ocm-fragments in case of this action) is not possible without clunky workarounds.
   Hence, this action will - in addition to writing to `ocm_resource` - also expose
-  ocm-source-fragments using `actions/upload-artifact@v4`, using the following target:
+  ocm-source-fragments using `gardener/cc-utils/.github/actions/upload-artifact@master`, using the following target:
   `ocm-oci-build_oci-image_{name}` (name being this action's `name` input value).
   The OCM-Resource-fragment will be named `ocm_resources.yaml`.
 
@@ -152,7 +152,7 @@ runs:
         \`\`\`
         EOF
     - name: Upload OCM Resource fragment
-      uses: actions/upload-artifact@v4
+      uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         name: ocm-oci-build_oci-image_${{ inputs.name }}
         path: ocm-resources.yaml

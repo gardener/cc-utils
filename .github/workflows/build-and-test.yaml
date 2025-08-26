@@ -136,7 +136,7 @@ jobs:
       with:
         ocm-resources-file: dist/ocm_resources.yaml
         blobs-directory: dist/blobs.d
-    - uses: actions/upload-artifact@v4
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         name: distribution-packages
         path: distribution-packages.tar.gz
@@ -151,7 +151,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Retrieve Distribution Packages
-      uses: actions/download-artifact@v4
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: distribution-packages
     - name: lint
@@ -224,7 +224,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Retrieve Distribution Packages
-      uses: actions/download-artifact@v4
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: distribution-packages
     - name: run-tests
@@ -332,7 +332,7 @@ jobs:
           ${image_ref} \
           /src/.ci/generate_documentation
         ls documentation-out.d
-    - uses: actions/upload-artifact@v4
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         name: documentation
         path: documentation-out.d
@@ -353,7 +353,7 @@ jobs:
         with:
           ref: refs/heads/gh-pages
       - name: Retrieve Documentation
-        uses: actions/download-artifact@v4
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: documentation
           path: /tmp/documentation-out.d

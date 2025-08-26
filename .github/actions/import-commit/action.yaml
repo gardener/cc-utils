@@ -70,7 +70,7 @@ runs:
         echo "${{ inputs.commit-objects }}" | base64 -d | tar x
     - name: import-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
-      uses: actions/download-artifact@v4
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: ${{ inputs.commit-objects-artefact }}
     - name: extract-commit-objects-from-artefact
