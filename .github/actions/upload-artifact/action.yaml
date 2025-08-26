@@ -27,7 +27,7 @@ runs:
         fi
         echo "using  upload-artifact@${version}"
 
-        mkdir ../upload-artifact
+        mkdir -p ../upload-artifact
         "${GITHUB_ACTION_PATH}/template.sh" \
           ../upload-artifact/action.yaml \
           "${version}"

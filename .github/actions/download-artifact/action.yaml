@@ -34,7 +34,7 @@ runs:
           version='v3'
         fi
 
-        mkdir ../download-artifact
+        mkdir -p ../download-artifact
         "${GITHUB_ACTION_PATH}/template.sh" \
           ../download-artifact/action.yaml \
           "${version}"
