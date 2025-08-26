@@ -11,7 +11,13 @@ inputs:
     required: true
   path:
     type: string
-    required: true
+    required: false
+  pattern:
+    type: string
+    required: false
+  merge-multiple:
+    type: boolean
+    required: false
 
 runs:
   using: composite
@@ -20,7 +26,11 @@ runs:
       if: ${{ github.server_url == 'https://github.com' }}
       name: ${{ inputs.name }}
       path: ${{ inputs.path }}
+      pattern: ${{ inputs.pattern }}
+      merge-multiple: ${{ inputs.merge-multiple }}
     - uses: actions/upload-artifact@v3
       if: ${{ github.server_url != 'https://github.com' }}
       name: ${{ inputs.name }}
       path: ${{ inputs.path }}
+      pattern: ${{ inputs.pattern }}
+      merge-multiple: ${{ inputs.merge-multiple }}
