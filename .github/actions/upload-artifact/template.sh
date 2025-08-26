@@ -20,12 +20,6 @@ inputs:
   path:
     type: string
     required: false
-  pattern:
-    type: string
-    required: false
-  merge-multiple:
-    type: boolean
-    required: false
 
 runs:
   using: composite
@@ -34,8 +28,6 @@ runs:
       with:
         name: \${{ inputs.name }}
         path: \${{ inputs.path }}
-        pattern: \${{ inputs.pattern }}
-        merge-multiple: \${{ inputs.merge-multiple }}
 EOF
 
 echo "wrote to $outfile"
