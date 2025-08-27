@@ -1,0 +1,9 @@
+- name: gardener-project
+  type: gcp
+  gcp-project-name: gardener-project
+  gcp-project-id: 694386720375
+  service-account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
+  identity-pool-name: github-actions-pool
+  identity-provider-name: github-actions
+  oci-repository-prefixes:
+    - europe-docker.pkg.dev/gardener-project

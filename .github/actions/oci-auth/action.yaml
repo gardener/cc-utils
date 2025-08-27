@@ -95,15 +95,33 @@ runs:
         echo "rtype=${rtype}" >> ${GITHUB_OUTPUT}
         echo "netloc=${netloc}" >> ${GITHUB_OUTPUT}
 
+    - name: preprocess-gcp-auth
+      if: ${{ steps.tgt.outputs.rtype == 'gcp' }}
+      id: gcp
+      shell: bash
+      run: |
+       set -euo pipefail
+       if ${GITHUB_ACTION_PATH}/find-cfg.py \
+        ${{ inputs.oci-image-reference }} \
+        --outfile ${GITHUB_OUTPUT}; then
+          exit 0
+        else
+        cat <<EOF >> ${GITHUB_OUTPUT}
+        project-id=${{ inputs.gcp-project }}
+        service-account=${{ inputs.gcp-service-account }}
+        workload-identity-provider=${{ inputs.gcp-workload-identity-provider }}
+        EOF
+        fi
+
     - name: gcp-auth
       if: ${{ steps.tgt.outputs.rtype == 'gcp' }}
       id: gcp-auth
       uses: google-github-actions/auth@v2
       with:
         token_format: access_token
-        project_id: ${{ inputs.gcp-project }}
-        service_account: ${{ inputs.gcp-service-account }}
-        workload_identity_provider: ${{ inputs.gcp-workload-identity-provider }}
+        project_id: ${{ steps.gcp.outputs.project-id }}
+        service_account: ${{ steps.gcp.outputs.service-account }}
+        workload_identity_provider: ${{ steps.gcp.outputs.workload-identity-provider }}
         create_credentials_file: false
 
     - name: Export Access-Token and docker-cfg
