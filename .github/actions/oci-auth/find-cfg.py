@@ -14,9 +14,24 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('oci_image_reference', nargs=1)
     parser.add_argument('--outfile', default='-')
+    parser.add_argument('--server-url', default=None)
+    parser.add_argument('--repository', default=None)
 
     parsed = parser.parse_args()
     oci_image_reference = parsed.oci_image_reference[0]
+
+    labels = set()
+
+    if parsed.server_url:
+        if parsed.server_url.startswith('https://github.tools'):
+            labels.add('gh-tools')
+        elif parsed.server_url.startswith('https://github.wdf'):
+            labels.add('gh-wdf')
+
+    if parsed.repository:
+        org, repo = parsed.repository.split('/')
+        if org == 'kubernetes':
+            labels.add('kubernetes-org')
 
     with open(cfgs_path) as f:
         cfgs = yaml.safe_load(f)
@@ -26,6 +41,12 @@ def main():
     for cfg in cfgs:
         for prefix in cfg['oci-repository-prefixes']:
             prefixes.add(prefix)
+
+        if (cfg_labels := cfg.get('labels', None)):
+            if set(cfg_labels) != labels:
+                continue
+
+        for prefix in cfg['oci-repository-prefixes']:
             if oci_image_reference.startswith(prefix):
                 found = True
         if found:

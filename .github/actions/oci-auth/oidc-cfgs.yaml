@@ -7,3 +7,27 @@
   identity-provider-name: github-actions
   oci-repository-prefixes:
     - europe-docker.pkg.dev/gardener-project
+- name: tools-delivery
+  type: gcp
+  gcp-project-name: sap-se-gcp-k8s-delivery
+  gcp-project-id: 370994582649
+  service-account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity-pool-name: github-actions
+  identity-provider-name: github-tools-actions-provider
+  oci-repository-prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  labels:
+    - gh-tools
+    - kubernetes-org
+- name: wdf-delivery
+  type: gcp
+  gcp-project-name: sap-se-gcp-k8s-delivery
+  gcp-project-id: 370994582649
+  service-account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity-pool-name: github-actions
+  identity-provider-name: github-wdf-actions-provider
+  oci-repository-prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  labels:
+    - gh-wdf
+    - kubernetes-org
