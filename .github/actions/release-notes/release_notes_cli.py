@@ -103,6 +103,18 @@ def main():
         help='if passed, no subcomponent-release-notes will be fetched',
     )
     parser.add_argument(
+        '--include-resources',
+        action='store_true',
+        dest='include_resources',
+        help='if passed, release-notes for resources (e.g. OCI Image) will be added',
+        default=True,
+    )
+    parser.add_argument(
+        '--no-include-resources',
+        action='store_false',
+        dest='include_resources',
+    )
+    parser.add_argument(
         '--tar-output',
         default=None,
         help='Path to write machine-readable release-notes archive (.tar)',
@@ -204,6 +216,12 @@ def main():
         full_release_notes_md = sub_component_release_notes
     else:
         full_release_notes_md = release_notes_md
+
+    if (
+        parsed.include_resources
+        and (component_resources_markdown := rno.release_note_for_ocm_component(component))
+    ):
+        full_release_notes_md = f'{full_release_notes_md}\n\n{component_resources_markdown}'
 
     if parsed.full_release_notes == '-':
         sys.stdout.write(full_release_notes_md)
