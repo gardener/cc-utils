@@ -146,8 +146,6 @@ jobs:
     needs:
       - package
       - prepare
-    container:
-      image: python:3.12-alpine
     steps:
     - uses: actions/checkout@v4
     - name: Retrieve Distribution Packages
@@ -156,12 +154,6 @@ jobs:
         name: distribution-packages
     - name: lint
       run: |
-        echo "install dependencies for python-packages"
-        if ! apk add --no-cache $(cat gardener-cicd-libs.apk-packages) >/tmp/apk.log; then
-          echo "error while trying to install apk-packages:"
-          cat /tmp/apk.log
-          exit 1
-        fi
         tar xf distribution-packages.tar.gz -C /tmp
         echo "installing linters"
         export CFLAGS='-Wno-int-conversion'
