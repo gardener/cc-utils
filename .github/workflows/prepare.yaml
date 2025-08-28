@@ -81,6 +81,11 @@ on:
         default: europe-docker.pkg.dev/gardener-project
         description: |
           passed to `prepare`-action as equally-named input
+      oci-registry-suffix:
+        type: string
+        default: ''
+        description: |
+          passed to `prepare`-action as equally-named input
 
     outputs:
       ocm-repository:
@@ -155,6 +160,7 @@ jobs:
           mode: ${{ inputs.mode }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
+          oci-registry-suffix: ${{ inputs.oci-registry-suffix }}
 
   version-and-ocm:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
