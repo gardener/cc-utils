@@ -52,7 +52,7 @@ def default_client_if_available(
         except ValueError:
             if not ci.util._running_on_ci():
                 logger.info('not running on concourse-pipeline and cfg-factory not setup')
-                logger.infor('-> no delivery-service-client will be available')
+                logger.info('-> no delivery-service-client will be available')
                 return None
             raise
 
