@@ -27,6 +27,17 @@ inputs:
     description: |
       a label that, in case of pullrequests, is considered a marker for a pullrequest to be
       trusted.
+  oci-registry-prefix:
+    type: string
+    default: europe-docker.pkg.dev/gardener-project
+    description: |
+      the OCI-registry to use as prefix to calculate target OCI- and OCM-Repositories.
+      depending on `mode`, `oci-registry` and `ocm-repository` outputs will be:
+
+      ${oci-registry-prefix}/snapshots
+      ${oci-registry-prefix}/releases
+
+      `ocm-release-repository` will always have `releases` as suffix.
 
 outputs:
   oci-registry:
@@ -88,18 +99,18 @@ runs:
         is_fork=${{ steps.repo-metadata.outputs.fork }}
         echo "repo is a fork: ${is_fork}"
 
-        repo_base=europe-docker.pkg.dev/gardener-project
+        repo_prefix='${{ inputs.oci-registry-prefix }}'
 
-        ocm_releases_repository=${repo_base}/releases
+        ocm_releases_repository=${repo_prefix}/releases
 
         case "${{ inputs.mode }}" in
           snapshot)
-            ocm_repository="${repo_base}/snapshots"
-            oci_registry="${repo_base}/snapshots"
+            ocm_repository="${repo_prefix}/snapshots"
+            oci_registry="${repo_prefix}/snapshots"
             ;;
           release)
             ocm_repository="${ocm_releases_repository}"
-            oci_registry="${repo_base}/releases"
+            oci_registry="${repo_prefix}/releases"
             ;;
           *)
             echo "Error: unknown mode: ${{ inputs.mode }}"
