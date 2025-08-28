@@ -38,11 +38,16 @@ inputs:
       ${oci-registry-prefix}/releases
 
       `ocm-release-repository` will always have `releases` as suffix.
-  oci-registry-suffix:
+  snapshots-suffix:
     type: string
-    default: ''
+    default: snapshots
     description: |
-      an optional suffix to append to returned OCI- and OCM-Repositories
+      the suffix to append to oci-registry-prefix for mode `snapshot`
+  releases-suffix:
+    type: string
+    default: releases
+    description: |
+      the suffix to append to oci-registry-prefix for mode `release`
 
 outputs:
   oci-registry:
@@ -106,24 +111,21 @@ runs:
 
         repo_prefix='${{ inputs.oci-registry-prefix }}'
 
-        ocm_releases_repository=${repo_prefix}/releases
+        ocm_releases_repository=${repo_prefix}/${{ inputs.releases-suffix }}
 
         case "${{ inputs.mode }}" in
           snapshot)
-            ocm_repository="${repo_prefix}/snapshots"
-            oci_registry="${repo_prefix}/snapshots"
+            ocm_repository="${repo_prefix}/${{ inputs.snapshots-suffix }}"
+            oci_registry="${repo_prefix}/${{ inputs.snapshots-suffix }}"
             ;;
           release)
             ocm_repository="${ocm_releases_repository}"
-            oci_registry="${repo_prefix}/releases"
+            oci_registry="${repo_prefix}/${{ inputs.releases-suffix }}"
             ;;
           *)
             echo "Error: unknown mode: ${{ inputs.mode }}"
             ;;
         esac
-
-        ocm_repository="${ocm_repository}${{ inputs.oci-registry-suffix }}"
-        oci_registry="${oci_registry}${{ inputs.oci-registry-suffix }}"
 
         can_push_reason='unknown'
         is_pr_from_fork=false
