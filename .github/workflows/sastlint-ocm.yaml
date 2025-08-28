@@ -1,7 +1,9 @@
 name: SAST-Lint-OCM
-description: |
-  A re-usable, and strongly opinionated workflow for running SAST-Linter, and export linting-results
-  as an OCM-Fragment using the `export-ocm-fragments`-action.
+
+# description: |
+#   A re-usable, and strongly opinionated workflow for running SAST-Linter, and export
+#   linting-results as an OCM-Fragment using the `export-ocm-fragments`-action.
+
 on:
   workflow_call:
     inputs:

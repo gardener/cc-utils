@@ -1,6 +1,7 @@
 name: Upgrade Dependencies
-description: |
-  A re-usable workflow for creating upgrade-pullrequests for referenced OCM-Components.
+
+# description: |
+#   A re-usable workflow for creating upgrade-pullrequests for referenced OCM-Components.
 
 on:
   workflow_call:

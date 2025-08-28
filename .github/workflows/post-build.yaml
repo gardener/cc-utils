@@ -1,11 +1,12 @@
 name: Post-Build
-description: |
-  A reusable workflow for performing common post-build steps, such as
-  retrieving and uploading the OCM Component-Descriptor as created by a
-  build using `prepare.yaml` and `export-ocm-fragment` action(s), or updating draft-releases.
 
-  Counterpart to `release.yaml` for non-release-jobs. Callers must ensure it is run only after
-  build-job(s) emitted OCM-Fragments are finished prior to running this workflow.
+# description: |
+#   A reusable workflow for performing common post-build steps, such as
+#   retrieving and uploading the OCM Component-Descriptor as created by a
+#   build using `prepare.yaml` and `export-ocm-fragment` action(s), or updating draft-releases.
+#
+#   Counterpart to `release.yaml` for non-release-jobs. Callers must ensure it is run only after
+#   build-job(s) emitted OCM-Fragments are finished prior to running this workflow.
 
 on:
   workflow_call:

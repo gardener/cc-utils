@@ -1,8 +1,9 @@
 name: Run Testmachinery-Tests
-description: |
-  Runs Integrationtests using TestMachinery
 
-  see: https://github.com/gardener/test-infra
+# description: |
+#   Runs Integrationtests using TestMachinery
+#
+#   see: https://github.com/gardener/test-infra
 
 on:
   workflow_call:

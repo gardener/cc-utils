@@ -1,11 +1,13 @@
 name: OCI-Build (multiarch)
-description: |
-  Reusable Workflow for building multi-platform OCI Images (grouped with an OCI Image Index),
-  accompanied by an OCM Component Descriptor Resource fragment.
 
-  The workflow will spawn a separate job for each specified platform, trying to use matching runners.
-  Currently, native runners for either `linux/arm64`. and `linux/amd64` are used. Other platforms
-  will be built on runners on `linux/amd64`, using emulation.
+# description: |
+#   Reusable Workflow for building multi-platform OCI Images (grouped with an OCI Image Index),
+#   accompanied by an OCM Component Descriptor Resource fragment.
+#
+#   The workflow will spawn a separate job for each specified platform, trying to use matching runners.
+#   Currently, native runners for either `linux/arm64`. and `linux/amd64` are used. Other platforms
+#   will be built on runners on `linux/amd64`, using emulation.
+
 on:
   workflow_call:
     inputs:

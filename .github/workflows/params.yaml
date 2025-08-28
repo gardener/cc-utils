@@ -1,6 +1,8 @@
 name: Params
-description: |
-  A re-usable, and strongly opinionated workflow wrapping equally-named action.
+
+# description: |
+#   A re-usable, and strongly opinionated workflow wrapping equally-named action.
+
 on:
   workflow_call:
     inputs:

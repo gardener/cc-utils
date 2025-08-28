@@ -1,9 +1,10 @@
 name: Component-Diff
-description: |
-  An opinionated workflow to determine the component-diff between the current version (read from
-  base-component-descriptor) and the greatest published release-version. Because the component-
-  descriptor and OCM releases repository is read from it, the `prepare.yaml` workflow must be
-  executed beforehand.
+
+# description: |
+#   An opinionated workflow to determine the component-diff between the current version (read from
+#   base-component-descriptor) and the greatest published release-version. Because the component-
+#   descriptor and OCM releases repository is read from it, the `prepare.yaml` workflow must be
+#   executed beforehand.
 
 on:
   workflow_call:

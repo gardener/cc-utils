@@ -1,14 +1,15 @@
 name: Helmchart-Build (with OCM)
-description: |
-  Reusable Workflow for building relocatable Helmcharts accompanied with OCM-Resource-Fragments.
 
-  It wraps the `helmchart` action from the same repository (and hence accepts the same inputs).
-
-  By default, base-component-descriptor and ocm-fragments as emitted from `prepare` and `oci-ocm`
-  will be consumed, thus avoiding boilerplate for collecting those.
-
-  Note, that this workflow must declare a dependency towards both `prepare`, and `oci-ocm` actions,
-  such that all needed artefacts are in place when this workflow is run.
+# description: |
+#   Reusable Workflow for building relocatable Helmcharts accompanied with OCM-Resource-Fragments.
+#
+#   It wraps the `helmchart` action from the same repository (and hence accepts the same inputs).
+#
+#   By default, base-component-descriptor and ocm-fragments as emitted from `prepare` and `oci-ocm`
+#   will be consumed, thus avoiding boilerplate for collecting those.
+#
+#   Note, that this workflow must declare a dependency towards both `prepare`, and `oci-ocm` actions,
+#   such that all needed artefacts are in place when this workflow is run.
 
 on:
   workflow_call:

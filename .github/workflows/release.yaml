@@ -1,19 +1,20 @@
 name: Release
-description: |
-  An opinionated re-usable workflow for Gardener-Release-Pipelines. Release-Pipelines based on
-  this workflow:
 
-    - publish OCM-Component-Descriptors
-    - push tags, GitHub-Releases, and "bump-commits"
-    - collect release-notes (based on `gardener/cc-utils/.github/actions/release-notes` action)
-
-  Note: This workflow assumes there is a GitHub-App granting the privileges to "write contents" (
-  for "git-push"), in addition to declared privileges for GitHub-Action-Token. Said application is
-  also required to be added to `bypassers` for any configured branch-protection-rules (or, to be more
-  precise: rulesets, as "classic" branch-protections do not allow this).
-
-  The GitHub-App's ID is read from `vars.GARDENER_GITHUB_ACTIONS_APP_ID` (org-variable), and its
-  private-key needs to be passed in as secret from `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`).
+# description: |
+#   An opinionated re-usable workflow for Gardener-Release-Pipelines. Release-Pipelines based on
+#   this workflow:
+#
+#     - publish OCM-Component-Descriptors
+#     - push tags, GitHub-Releases, and "bump-commits"
+#     - collect release-notes (based on `gardener/cc-utils/.github/actions/release-notes` action)
+#
+#   Note: This workflow assumes there is a GitHub-App granting the privileges to "write contents" (
+#   for "git-push"), in addition to declared privileges for GitHub-Action-Token. Said application is
+#   also required to be added to `bypassers` for any configured branch-protection-rules (or, to be
+#   more precise: rulesets, as "classic" branch-protections do not allow this).
+#
+#   The GitHub-App's ID is read from `vars.GARDENER_GITHUB_ACTIONS_APP_ID` (org-variable), and its
+#   private-key needs to be passed in as secret from `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`).
 
 on:
   workflow_call:

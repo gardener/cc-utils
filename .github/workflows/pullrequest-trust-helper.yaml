@@ -1,25 +1,26 @@
 name: Pull-Request-Trust Helper
-description: |
-  An opinionated re-usable workflow to help with trusting Pull-Requests. Depending on the
-  trustedness of a pullrequest's author, the workflow will either add an indication (via
-  a "needs-review"-label) that a label needs to be added, or automatically add a "trusted-label".
 
-  A user is considered trusted, if:
-    - he is member of the pullrequest-target-repository's organisation
-    - he is member of any of the `trusted-teams` (input to this workflow)
-    - his association w/ target-repository is any of:
-      - COLLABORATOR
-      - MEMBER
-      - OWNER
-
-  Note: This workflow is intended to only by triggered for the following actions for pull-requests:
-  - opened
-  - edited
-  - reopened
-  - synchronize
-
-  If triggered from other sources, the workflow will early-exit with a warning, and have no
-  effect.
+# description: |
+#   An opinionated re-usable workflow to help with trusting Pull-Requests. Depending on the
+#   trustedness of a pullrequest's author, the workflow will either add an indication (via
+#   a "needs-review"-label) that a label needs to be added, or automatically add a "trusted-label".
+#
+#   A user is considered trusted, if:
+#     - he is member of the pullrequest-target-repository's organisation
+#     - he is member of any of the `trusted-teams` (input to this workflow)
+#     - his association w/ target-repository is any of:
+#       - COLLABORATOR
+#       - MEMBER
+#       - OWNER
+#
+#   Note: This workflow is intended to only by triggered for the following actions for pull-requests:
+#   - opened
+#   - edited
+#   - reopened
+#   - synchronize
+#
+#   If triggered from other sources, the workflow will early-exit with a warning, and have no
+#   effect.
 
 on:
   workflow_call:

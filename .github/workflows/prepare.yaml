@@ -1,14 +1,15 @@
 name: Prepare
-description: |
-  An opinionated workflow that will
-  - output target OCI Registries / OCM Repositories
-  - calculate an effective version (and create a commit for switching to this version)
-  - create a base OCM Component-Descriptor
 
-  All outputs are also exposed as an artefact (name can be influenced via output-artefact input).
-  Said artefact contains a TARfile (name can be controlled via output-artefact-filename input),
-  which in turn contains regular files named like the respective output, containing the outputs'
-  values, prefixed with `prepare-values.d`
+# description: |
+#   An opinionated workflow that will
+#   - output target OCI Registries / OCM Repositories
+#   - calculate an effective version (and create a commit for switching to this version)
+#   - create a base OCM Component-Descriptor
+#
+#   All outputs are also exposed as an artefact (name can be influenced via output-artefact input).
+#   Said artefact contains a TARfile (name can be controlled via output-artefact-filename input),
+#   which in turn contains regular files named like the respective output, containing the outputs'
+#   values, prefixed with `prepare-values.d`
 
 on:
   workflow_call:
