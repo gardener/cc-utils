@@ -1,3 +1,4 @@
+# github.com / gardener-project
 - name: gardener-project
   type: gcp
   gcp-project-name: gardener-project
@@ -7,6 +8,22 @@
   identity-provider-name: github-actions
   oci-repository-prefixes:
     - europe-docker.pkg.dev/gardener-project
+
+# ghtools / gardener-project
+- name: tools-gardener-project
+  type: gcp
+  gcp-project-name: gardener-project
+  gcp-project-id: 694386720375
+  service-account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
+  identity-pool-name: github-actions
+  identity-provider-name: github-tools-actions-provider
+  oci-repository-prefixes:
+    - europe-docker.pkg.dev/gardener-project
+  labels:
+    - gh-tools
+    - kubernetes-org
+
+# ghtools / delivery
 - name: tools-delivery
   type: gcp
   gcp-project-name: sap-se-gcp-k8s-delivery
@@ -19,6 +36,22 @@
   labels:
     - gh-tools
     - kubernetes-org
+
+# ghtools / gardener-project
+- name: wdf-gardener-project
+  type: gcp
+  gcp-project-name: gardener-project
+  gcp-project-id: 694386720375
+  service-account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
+  identity-pool-name: github-actions
+  identity-provider-name: github-wdf-actions-provider
+  oci-repository-prefixes:
+    - europe-docker.pkg.dev/gardener-project
+  labels:
+    - gh-wdf
+    - kubernetes-org
+
+# ghwdf / delivery
 - name: wdf-delivery
   type: gcp
   gcp-project-name: sap-se-gcp-k8s-delivery
