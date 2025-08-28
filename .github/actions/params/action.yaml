@@ -38,6 +38,11 @@ inputs:
       ${oci-registry-prefix}/releases
 
       `ocm-release-repository` will always have `releases` as suffix.
+  oci-registry-suffix:
+    type: string
+    default: ''
+    description: |
+      an optional suffix to append to returned OCI- and OCM-Repositories
 
 outputs:
   oci-registry:
@@ -116,6 +121,9 @@ runs:
             echo "Error: unknown mode: ${{ inputs.mode }}"
             ;;
         esac
+
+        ocm_repository="${ocm_repository}${{ inputs.oci-registry-suffix }}"
+        oci_registry="${oci_registry}${{ inputs.oci-registry-suffix }}"
 
         can_push_reason='unknown'
         is_pr_from_fork=false
