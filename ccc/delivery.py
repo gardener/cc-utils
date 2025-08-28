@@ -47,7 +47,14 @@ def default_client_if_available(
     cfg_factory=None,
 ) -> delivery.client.DeliveryServiceClient:
     if not cfg_factory:
-        cfg_factory = ctx.cfg_factory()
+        try:
+            cfg_factory = ctx.cfg_factory()
+        except ValueError:
+            if not ci.util._running_on_ci():
+                logger.info('not running on concourse-pipeline and cfg-factory not setup')
+                logger.infor('-> no delivery-service-client will be available')
+                return None
+            raise
 
     delivery_endpoints = None
 
