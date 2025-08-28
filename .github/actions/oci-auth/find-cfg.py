@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('oci_image_reference', nargs=1)
     parser.add_argument('--outfile', default='-')
-    parser.add_argument('--server-url', default=None)
+    parser.add_argument('--server-url', default='https://github.com')
     parser.add_argument('--repository', default=None)
 
     parsed = parser.parse_args()
@@ -28,6 +28,8 @@ def main():
             labels.add('gh-tools')
         elif parsed.server_url.startswith('https://github.wdf'):
             labels.add('gh-wdf')
+        elif parsed.server_url == 'https://github.com':
+            labels.add('gh-com')
 
     if parsed.repository:
         org, repo = parsed.repository.split('/')
@@ -53,7 +55,7 @@ def main():
         if found:
             break
     else:
-        print(f'did not find matching cfg for {oci_image_reference=}')
+        print(f'did not find matching cfg for {oci_image_reference=}, {labels=}')
         print('known prefixes:')
         for p in prefixes:
             print(f'  {p}')

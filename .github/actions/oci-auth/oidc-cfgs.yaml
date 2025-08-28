@@ -8,6 +8,8 @@
   identity-provider-name: github-actions
   oci-repository-prefixes:
     - europe-docker.pkg.dev/gardener-project
+  labels:
+    - gh-com
 
 # ghtools / gardener-project
 - name: tools-gardener-project
