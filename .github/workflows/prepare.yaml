@@ -76,6 +76,11 @@ on:
           configures how generated base-component-descriptor should be post-processed. Options:
           - component-cli
           - none
+      oci-registry-prefix:
+        type: string
+        default: europe-docker.pkg.dev/gardener-project
+        description: |
+          passed to `prepare`-action as equally-named input
 
     outputs:
       ocm-repository:
@@ -149,6 +154,7 @@ jobs:
         with:
           mode: ${{ inputs.mode }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
+          oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
 
   version-and-ocm:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
