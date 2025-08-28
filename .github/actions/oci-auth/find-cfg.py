@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import pprint
 import sys
 
 import yaml
@@ -63,6 +64,9 @@ def main():
         f = sys.stdout
     else:
         f = open(parsed.outfile, 'a')
+
+    print('found cfg:')
+    pprint.pprint(cfg)
 
     project_name = cfg['gcp-project-name']
     project_id = cfg['gcp-project-id']
