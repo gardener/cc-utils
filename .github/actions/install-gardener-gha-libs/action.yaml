@@ -25,6 +25,13 @@ runs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
+        cache: pip
+    - name: install-prerequisites-on-ghe
+      if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
+      shell: bash
+      run: |
+        set -eu
+        pip install setuptools
     - name: checkout-fallback
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       shell: bash
