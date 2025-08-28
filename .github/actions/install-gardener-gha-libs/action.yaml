@@ -16,10 +16,17 @@ runs:
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
     - uses: actions/checkout@v4
-      if: ${{ ! steps.check.outputs.already-installed }}
+      if: ${{ ! steps.check.outputs.already-installed && github.server_url == 'https://github.com' }}
       with:
         repository: gardener/cc-utils
         path: cc-utils
+    - name: checkout-fallback
+      if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        # fallback if running on GHE
+        git clone https://github.com/gardener/cc-utils
     - name: install-gardener-gha-libs
       if: ${{ ! steps.check.outputs.already-installed }}
       shell: bash
