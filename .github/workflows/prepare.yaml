@@ -134,7 +134,7 @@ on:
 
 jobs:
   params:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     outputs:
        ocm-repository: ${{ steps.params.outputs.ocm-repository }}
        ocm-releases-repository: ${{ steps.params.outputs.ocm-releases-repository }}
@@ -151,7 +151,7 @@ jobs:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
 
   version-and-ocm:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     needs:
       - params
     outputs:
@@ -202,7 +202,7 @@ jobs:
     needs:
       - params
       - version-and-ocm
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: prepare-artefact
         run: |

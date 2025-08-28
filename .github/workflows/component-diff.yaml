@@ -31,7 +31,7 @@ on:
 
 jobs:
   component-diff:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions: {}
     outputs:
       has-diff: ${{ steps.component-diff.outputs.has-diff }}

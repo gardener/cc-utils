@@ -56,13 +56,13 @@ on:
 
           Example:
             ```
-            linux/amd64: ubuntu-latest
+            linux/amd64: 'ubuntu-latest'
             ```
 
           Unused platforms are ignored.
         default: |
-          linux/arm64: ubuntu-24.04-arm
-          linux/amd64: ubuntu-latest
+          linux/arm64: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+          linux/amd64: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
       push:
         description: |
           Whether or not to push the built image. Allowed values:
@@ -174,7 +174,7 @@ on:
 
 jobs:
   preprocess:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     outputs:
       args: ${{ steps.preprocess.outputs.args }}
       target-image-ref: ${{ steps.preprocess.outputs.target-image-ref }}
@@ -244,7 +244,7 @@ jobs:
             platform_tag = f'${{ inputs.tag }}-{platform_name.replace("/", "_")}'
             args.append({
               'platform-name': platform_name,
-              'runner': runners_by_platform.get(platform_name, 'ubuntu-latest'),
+              'runner': runners_by_platform.get(platform_name, '${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}'),
               'tag': platform_tag,
               'image-reference': f'{image_ref_base}:{platform_tag}',
             })
@@ -363,7 +363,7 @@ jobs:
     outputs:
       ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
       oci-reference: ${{ steps.collect-images.outputs.oci-reference }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write

@@ -101,7 +101,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}

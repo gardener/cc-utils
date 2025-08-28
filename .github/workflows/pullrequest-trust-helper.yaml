@@ -54,7 +54,7 @@ on:
 
 jobs:
   pullrequest-trust-helper:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       pull-requests: write
     steps:

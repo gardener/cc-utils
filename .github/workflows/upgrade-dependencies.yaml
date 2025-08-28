@@ -54,7 +54,7 @@ jobs:
       post-process: component-cli
 
   create-upgrade-pullrequests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     needs:
       - prepare
     permissions:
