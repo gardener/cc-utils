@@ -325,8 +325,8 @@ def download(parsed):
     name = parsed.name
     id_attrs = {}
     for attrspec in parsed.artefact_ids:
-        name, value = attrspec.split('=')
-        id_attrs[name] = value
+        key, value = attrspec.split('=')
+        id_attrs[key] = value
 
     have_id = bool(name or id_attrs)
 
@@ -340,7 +340,7 @@ def download(parsed):
             if name != a.name:
                 continue
 
-            for k,v in id_attrs.values():
+            for k,v in id_attrs.items():
                 if hasattr(a, k):
                     if getattr(a, k) != v:
                         break
