@@ -155,7 +155,20 @@ runs:
       run: |
         set -eu
         cd "${{ inputs.outdir }}"
-        for tf in $(ls *.tar.gz); do
+
+        # workaround: download-artifact@v3 does not allow merging. hence, flatten directories
+        for d in $(find -type d); do
+          if [ "$d" == "." ]; then
+            continue
+          fi
+          echo "debug: sub-directory $d contains:"
+          ls $d
+          mv $d/* .
+        done
+
+        echo "extracting files with pattern *.tar.gz"
+        for tf in $(find -name "*.tar.gz"); do
+          tf=$(basname $tf)
           echo "extracting ${tf} into $PWD"
           tar xf "${tf}"
           unlink "${tf}"
