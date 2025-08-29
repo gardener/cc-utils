@@ -30,7 +30,7 @@ runs:
       shell: bash
       run: |
         set -eu
-        pip install setuptools
+        pip install setuptools certifi
         # import runner's trust-bundle (might differ from python's default bundle)
         ln -sf /etc/ssl/certs/ca-certificates.crt "$(python -m certifi)"
     - name: checkout-fallback
