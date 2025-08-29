@@ -131,7 +131,9 @@ def main():
     )
 
     oci_client = oci.client.Client(
-        credentials_lookup=oci.auth.docker_credentials_lookup(),
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            absent_ok=True,
+        ),
     )
     ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
         *parsed.ocm_repositories,
