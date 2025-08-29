@@ -168,7 +168,7 @@ runs:
 
         echo "extracting files with pattern *.tar.gz"
         for tf in $(find -name "*.tar.gz"); do
-          tf=$(basname $tf)
+          tf=$(basename $tf)
           echo "extracting ${tf} into $PWD"
           tar xf "${tf}"
           unlink "${tf}"
