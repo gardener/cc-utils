@@ -31,6 +31,8 @@ runs:
       run: |
         set -eu
         pip install setuptools
+        # import runner's trust-bundle (might differ from python's default bundle)
+        ln -sf /etc/ssl/certs/ca-certificates.crt "$(python -m certifi)"
     - name: checkout-fallback
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       shell: bash
