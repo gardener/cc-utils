@@ -55,6 +55,8 @@ jobs:
 
   create-upgrade-pullrequests:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    # run even if `prepare` job is skipped
+    if: ${{ !cancelled() }}
     needs:
       - prepare
     permissions:
