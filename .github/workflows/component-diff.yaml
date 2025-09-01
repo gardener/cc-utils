@@ -32,7 +32,9 @@ on:
 jobs:
   component-diff:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
-    permissions: {}
+    permissions:
+      contents: read
+      id-token: write
     outputs:
       has-diff: ${{ steps.component-diff.outputs.has-diff }}
       component-diff: ${{ steps.component-diff.outputs.component-diff }}
