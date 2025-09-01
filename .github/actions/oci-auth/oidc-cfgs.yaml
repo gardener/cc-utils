@@ -8,8 +8,10 @@
   identity-provider-name: github-actions
   oci-repository-prefixes:
     - europe-docker.pkg.dev/gardener-project
-  labels:
-    - gh-com
+  github-host: gh-com
+  github-orgs:
+    - gardener
+    - open-component-model
 
 # ghtools / gardener-project
 - name: tools-gardener-project
@@ -21,9 +23,9 @@
   identity-provider-name: github-tools-actions-provider
   oci-repository-prefixes:
     - europe-docker.pkg.dev/gardener-project
-  labels:
-    - gh-tools
-    - kubernetes-org
+  github-host: gh-tools
+  github-orgs:
+    - kubernetes
 
 # ghtools / delivery
 - name: tools-delivery
@@ -35,9 +37,10 @@
   identity-provider-name: github-tools-actions-provider
   oci-repository-prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
-  labels:
-    - gh-tools
-    - kubernetes-org
+  github-host: gh-tools
+  github-orgs:
+    - kubernetes
+    - open-delivery-gear
 
 # ghtools / gardener-project
 - name: wdf-gardener-project
@@ -49,9 +52,9 @@
   identity-provider-name: github-wdf-actions-provider
   oci-repository-prefixes:
     - europe-docker.pkg.dev/gardener-project
-  labels:
-    - gh-wdf
-    - kubernetes-org
+  github-host: gh-wdf
+  github-orgs:
+    - kubernetes
 
 # ghwdf / delivery
 - name: wdf-delivery
@@ -63,6 +66,6 @@
   identity-provider-name: github-wdf-actions-provider
   oci-repository-prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
-  labels:
-    - gh-wdf
-    - kubernetes-org
+  github-host: gh-wdf
+  github-orgs:
+    - kubernetes

@@ -25,16 +25,16 @@ def main():
 
     if parsed.server_url:
         if parsed.server_url.startswith('https://github.tools'):
-            labels.add('gh-tools')
+            github_host = 'gh-tools'
         elif parsed.server_url.startswith('https://github.wdf'):
-            labels.add('gh-wdf')
+            github_host = 'gh-wdf'
         elif parsed.server_url == 'https://github.com':
-            labels.add('gh-com')
+            github_host = 'gh-com'
+        else:
+            raise ValueError(f'unsupported GitHub server {parsed.server_url}')
 
     if parsed.repository:
-        org, repo = parsed.repository.split('/')
-        if org == 'kubernetes':
-            labels.add('kubernetes-org')
+        org, _ = parsed.repository.split('/')
 
     with open(cfgs_path) as f:
         cfgs = yaml.safe_load(f)
@@ -42,11 +42,14 @@ def main():
     found = False
     prefixes = set()
     for cfg in cfgs:
+        if cfg['github-host'] != github_host:
+            continue
+
         for prefix in cfg['oci-repository-prefixes']:
             prefixes.add(prefix)
 
-        if (cfg_labels := cfg.get('labels', None)):
-            if set(cfg_labels) != labels:
+        if (github_orgs := cfg.get('github-orgs', None)):
+            if org not in github_orgs:
                 continue
 
         for prefix in cfg['oci-repository-prefixes']:
