@@ -54,8 +54,8 @@ jobs:
         id: prepare
         run: |
           if [ -f prepare-workflow-values.tar ]; then
-            tar xf prepare-workflow-values.tar prepare-values.d/ocm-releases-repository
-            ocm_repositories="$(cat prepare-values.d/ocm-releases-repository)"
+            tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+            ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
             rm -rf prepare-values.d prepare-workflow-values.tar
           else
             ocm_repositories="${{ inputs.ocm-repositories }}"
