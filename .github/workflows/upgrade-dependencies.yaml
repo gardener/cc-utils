@@ -71,7 +71,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
         with:
           component-descriptor: |
-            ${{ inputs.component-desriptor || needs.prepare.outputs.component-descriptor }}
+            ${{ inputs.component-descriptor || needs.prepare.outputs.component-descriptor }}
           ocm-repositories: |
             ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-releases-repository }}
           github-token: |
