@@ -91,6 +91,12 @@ on:
         default: releases
         description: |
           passed to `prepare`-action as equally-named input
+      ocm-repositories:
+        required: false
+        type: string
+        description: |
+          An optional, comma-separated list of OCM-Repositories that should be used for looking-up
+          OCM-Component-Versions.
 
     outputs:
       ocm-repository:
@@ -99,6 +105,9 @@ on:
       ocm-releases-repository:
         description: the ocm-releases-repository (independent of chosen mode)
         value: ${{ jobs.params.outputs.ocm-releases-repository }}
+      ocm-repositories:
+        description: the ocm-repositories which may be used to lookup component-versions
+        value: ${{ inputs.ocm-repositories }}
       oci-registry:
         description: the oci-registry to use for publishing to for the selected mode
         value: ${{ jobs.params.outputs.oci-registry }}
@@ -232,6 +241,7 @@ jobs:
           # params
           echo "${{ needs.params.outputs.ocm-repository }}" > $p/ocm-repository
           echo "${{ needs.params.outputs.ocm-releases-repository }}" > $p/ocm-releases-repository
+          echo "${{ inputs.ocm-repositories }}" > $p/ocm-repositories
           echo "${{ needs.params.outputs.oci-registry }}" > $p/oci-registry
           echo "${{ needs.params.outputs.is-fork }}" > $p/is-fork
           echo "${{ needs.params.outputs.is-pr-from-fork }}" > $p/is-pr-from-fork
