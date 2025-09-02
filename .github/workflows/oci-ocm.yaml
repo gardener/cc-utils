@@ -299,7 +299,7 @@ jobs:
           EOF
           echo EOF >> "${GITHUB_OUTPUT}"
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
-        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        continue-on-error: true # successful auth might not be required
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
