@@ -102,7 +102,7 @@ runs:
       run: |
        set -euo pipefail
        if ${GITHUB_ACTION_PATH}/find-cfg.py \
-        ${{ inputs.oci-image-reference }} \
+        "${{ inputs.oci-image-reference }}" \
           --server-url ${{ github.server_url }} \
           --repository ${{ github.repository }} \
           --outfile ${GITHUB_OUTPUT}; then
