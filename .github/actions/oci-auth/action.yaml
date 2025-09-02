@@ -144,7 +144,7 @@ runs:
         registry_type = '${{ steps.tgt.outputs.rtype }}'
 
         if registry_type == 'gcp':
-          orig_username = '${{ inputs.gcp-service-account }}'
+          orig_username = '${{ steps.gcp.outputs.service-account }}'
           username = 'oauth2accesstoken'
           password = '${{ steps.gcp-auth.outputs.access_token }}'
         elif registry_type == 'ghcr':
