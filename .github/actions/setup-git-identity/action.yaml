@@ -8,11 +8,11 @@ inputs:
   user_name:
     description: The Git user name
     required: false
-    default: Gardener-CICD Bot
+    default: github-actions[bot]
   user_email:
     description: The Git user email
     required: false
-    default: gardener.ci.user@gmail.com
+    default: ''
 runs:
   using: composite
   steps:
@@ -23,6 +23,32 @@ runs:
         if ! git config user.name >/dev/null; then
           git config user.name "${{ inputs.user_name }}"
         fi
+
         if ! git config user.email >/dev/null; then
-          git config user.email "${{ inputs.user_email }}"
+          user_email=${{ inputs.user_email }}
+
+          if [[ -z "$user_email" ]]; then
+            # determine user email address based on current GH-instance
+            github_host="${GITHUB_SERVER_URL#https://}"
+
+            case "$github_host" in
+              github.com*)
+              user_id="41898282"
+              ;;
+              github.tools*)
+              user_id="33697"
+              ;;
+              github.wdf*)
+              user_id="127534"
+              ;;
+              *)
+              echo "don't know how to handle GitHub host ${github_host}"
+              exit 1
+              ;;
+            esac
+
+            user_email="${user_id}+github-actions[bot]@users.noreply.${github_host}"
+          fi
+
+          git config user.email "$user_email"
         fi
