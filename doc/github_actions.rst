@@ -158,7 +158,7 @@ The following workflow can be added for convenience:
          permissions:
             pull-requests: write
          secrets: inherit # access to `GitHub-Actions`-App is needed to read teams
-         uses: gardener/cc-utils/.github/workflows/pullrequest-trust-helper@master
+         uses: gardener/cc-utils/.github/workflows/pullrequest-trust-helper.yaml@master
          with:
             # members will be trusted (-> get okay-to-test-label automatically)
             trusted-teams: 'first-team,second-team'
