@@ -131,6 +131,7 @@ class DeliveryServiceClient:
         self,
         routes: DeliveryServiceRoutes,
         auth_token_lookup: AuthTokenLookup | None=None,
+        auth_token: str | None=None,
     ):
         '''
         Initialises a client which can be used to interact with the delivery-service.
@@ -140,9 +141,16 @@ class DeliveryServiceClient:
             delivery-service as well as the available routes
         :param AuthTokenLookup auth_token_lookup (optional)
             the lookup to use for retrieving auth-tokens against oauth-endpoints
+        :param str auth_token (optional)
+            the auth-token to use for authentication
         '''
+
+        if auth_token_lookup and auth_token:
+            raise ValueError('at most one of `auth_token_lookup` or `auth_token` must be provided')
+
         self._routes = routes
         self.auth_token_lookup = auth_token_lookup
+        self.auth_token = auth_token
         self.auth_credentials: dm.GitHubAuthCredentials = None # filled lazily as needed
 
         self._bearer_token = None
@@ -181,8 +189,11 @@ class DeliveryServiceClient:
         ):
             return
 
-        if not self.auth_token_lookup:
-            logger.info('DeliverService-Client has no auth-token-lookup - attempting anonymous auth')
+        if not self.auth_token_lookup and not self.auth_token:
+            logger.info(
+                'DeliverService-Client has no auth-token-lookup or auth-token - '
+                'attempting anonymous auth'
+            )
             return
 
         if (
@@ -208,7 +219,10 @@ class DeliveryServiceClient:
             for auth_config in auth_configs:
                 api_url = auth_config.get('api_url')
 
-                if (auth_token := self.auth_token_lookup(api_url)):
+                if (auth_token := self.auth_token):
+                    break
+                elif (self.auth_token_lookup):
+                    auth_token = self.auth_token_lookup(api_url)
                     break
             else:
                 logger.info('no valid credentials found - attempting anonymous-auth')
