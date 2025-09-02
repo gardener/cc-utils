@@ -98,3 +98,5 @@ runs:
             cat /tmp/pip-install.log
             exit 1
         fi
+
+        cp bin/component-cli $HOME/.local/bin/component-cli
