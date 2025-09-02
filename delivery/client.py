@@ -142,6 +142,10 @@ class DeliveryServiceClient:
         :param AuthTokenLookup auth_token_lookup (optional)
             the lookup to use for retrieving auth-tokens against oauth-endpoints
         '''
+
+        if auth_token_lookup and auth_token:
+            raise ValueError('at most one of `auth_token_lookup` or `auth_token` must be provided')
+
         self._routes = routes
         self.auth_token_lookup = auth_token_lookup
         self.auth_token = auth_token
