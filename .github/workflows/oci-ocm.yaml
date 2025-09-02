@@ -273,7 +273,6 @@ jobs:
       - name: inject-authtoken-for-dockerhub
         id: extra-auth
         shell: bash
-        if: ${{ needs.preprocess.outputs.push == 'true' }}
         run: |
           set -eu
           # cannot check in if-clause above, as `secrets` ctx is not accesible there
