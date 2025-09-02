@@ -241,7 +241,7 @@ especially such changes that are done in buildscripts.</p>
 <span class="w">      </span><span class="nt">permissions</span><span class="p">:</span>
 <span class="w">         </span><span class="nt">pull-requests</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span>
 <span class="w">      </span><span class="nt">secrets</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">inherit</span><span class="w"> </span><span class="c1"># access to `GitHub-Actions`-App is needed to read teams</span>
-<span class="w">      </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardener/cc-utils/.github/workflows/pullrequest-trust-helper@master</span>
+<span class="w">      </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardener/cc-utils/.github/workflows/pullrequest-trust-helper.yaml@master</span>
 <span class="w">      </span><span class="nt">with</span><span class="p">:</span>
 <span class="w">         </span><span class="c1"># members will be trusted (-&gt; get okay-to-test-label automatically)</span>
 <span class="w">         </span><span class="nt">trusted-teams</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;first-team,second-team&#39;</span>
