@@ -20,6 +20,16 @@ on:
           An optional, comma-separated list of OCM-Repositories that should be used for looking-up
           OCM-Component-Versions. If not passed, the releases-repository from `prepare.yaml`
           workflow will be used.
+      oci-registry-prefix:
+        type: string
+        default: europe-docker.pkg.dev/gardener-project
+        description: |
+          Passed to `prepare.yaml` workflow as equally-named input.
+      releases-suffix:
+        type: string
+        default: releases
+        description: |
+          Passed to `prepare.yaml` workflow as equally-named input.
       merge-policy:
         required: false
         default: manual
@@ -52,6 +62,8 @@ jobs:
     with:
       mode: release
       post-process: component-cli
+      oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
+      releases-suffix: ${{ inputs.releases-suffix }}
 
   create-upgrade-pullrequests:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
