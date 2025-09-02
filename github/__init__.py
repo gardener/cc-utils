@@ -50,9 +50,9 @@ def github_api(
     if host == 'github.com':
         github_api = github3.GitHub(token=token)
     else:
-        api_url = os.environ.get('GITHUB_API_URL', f'https://{host}')
+        server_url = os.environ.get('GITHUB_SERVER_URL', f'https://{host}')
         github_api = github3.GitHubEnterprise(
-            url=api_url,
+            url=server_url,
             token=token,
         )
 
