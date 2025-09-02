@@ -218,7 +218,7 @@ especially such changes that are done in buildscripts.</p>
 <span class="w">      </span><span class="c1"># used.</span>
 <span class="w">      </span><span class="c1"># it is important to add the explicit check for label&#39;s name to prevent accidental</span>
 <span class="w">      </span><span class="c1"># triggering (e.g. from gardener-robot setting initial set of labels)</span>
-<span class="w">      </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.event.action != &#39;labeled&#39; || github.event.label.name == &#39;revieved/ok-to-test&#39; }}</span>
+<span class="w">      </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ github.event.action != &#39;labeled&#39; || github.event.label.name == &#39;reviewed/ok-to-test&#39; }}</span>
 <span class="w">      </span><span class="nt">permissions</span><span class="p">:</span>
 <span class="w">         </span><span class="nt">pull-requests</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">write</span><span class="w"> </span><span class="c1"># needed so trusted-checkout can remove trusted-label</span>
 <span class="w">                              </span><span class="c1"># caveat: also needs to be set for all called workflows</span>
