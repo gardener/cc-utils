@@ -131,7 +131,7 @@ class DeliveryServiceClient:
         self,
         routes: DeliveryServiceRoutes,
         auth_token_lookup: AuthTokenLookup | None=None,
-        auth_token_lookup_key: str | None=None,
+        auth_token: str | None=None,
     ):
         '''
         Initialises a client which can be used to interact with the delivery-service.
@@ -144,7 +144,7 @@ class DeliveryServiceClient:
         '''
         self._routes = routes
         self.auth_token_lookup = auth_token_lookup
-        self.auth_token_lookup_key = auth_token_lookup_key
+        self.auth_token = auth_token
         self.auth_credentials: dm.GitHubAuthCredentials = None # filled lazily as needed
 
         self._bearer_token = None
@@ -183,7 +183,7 @@ class DeliveryServiceClient:
         ):
             return
 
-        if not self.auth_token_lookup and not self.auth_token_lookup_key:
+        if not self.auth_token_lookup and not self.auth_token:
             logger.info('DeliverService-Client has no auth-token-lookup or auth-token - attempting anonymous auth')
             return
 
@@ -210,7 +210,7 @@ class DeliveryServiceClient:
             for auth_config in auth_configs:
                 api_url = auth_config.get('api_url')
 
-                if (auth_token := self.auth_token_lookup_key):
+                if (auth_token := self.auth_token):
                     break
                 if (auth_token := self.auth_token_lookup(api_url)):
                     break
