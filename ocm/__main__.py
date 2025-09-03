@@ -2,6 +2,7 @@ import argparse
 import collections.abc
 import dataclasses
 import datetime
+import enum
 import io
 import json
 import os
@@ -125,6 +126,7 @@ def append(parsed):
 
     component = raw['component']
 
+    attr = None
     if parsed.type in ('r', 'resource'):
         attr = component['resources']
         ocm_cls = ocm.Resource
@@ -136,32 +138,47 @@ def append(parsed):
     elif parsed.type in ('c', 'component-reference'):
         attr = component['componentReferences']
         ocm_cls = ocm.ComponentReference
-
-    if _have_yaml:
-        obj = yaml.safe_load(sys.stdin)
-    else:
-        obj = json.load(sys.stdin)
-
-    obj = obj if isinstance(obj, list) else [obj]
-
-    artefacts = [
-        dacite.from_dict(
-            data_class=ocm_cls,
-            data=o
-        )
-        for o in obj
-    ]
+    elif parsed.type in ('l', 'component-label'):
+        attr = component['labels']
+        ocm_cls = None
 
     labels = list(_iter_parsed_labels(labels=labels)) if (labels := parsed.labels) else []
-    for artefact in artefacts:
-        artefact.labels = list(artefact.labels) + labels
 
-    attr: list
-    attr.extend([dataclasses.asdict(a) for a in artefacts])
+    if ocm_cls is None:
+        # special-case: component-labels
+        attr.extend(labels)
+    else:
+        if _have_yaml:
+            obj = yaml.safe_load(sys.stdin)
+        else:
+            obj = json.load(sys.stdin)
+
+        obj = obj if isinstance(obj, list) else [obj]
+
+        artefacts = [
+            dacite.from_dict(
+                data_class=ocm_cls,
+                data=o,
+                config=dacite.Config(
+                    cast=(enum.Enum,),
+                ),
+            )
+            for o in obj
+        ]
+
+        for artefact in artefacts:
+            artefact.labels = list(artefact.labels) + labels
+
+        attr: list
+        attr.extend([dataclasses.asdict(a) for a in artefacts])
 
     with open(parsed.file, 'w') as f:
         if _have_yaml:
-            yaml.safe_dump(raw, f)
+            yaml.dump(
+                data=raw,
+                stream=f,
+                Dumper=ocm.EnumValueYamlDumper,
+            )
         else:
             json.dump(raw, f)
 
@@ -418,6 +435,7 @@ def main():
             'r', 'resource',
             's', 'source',
             'c', 'component-reference',
+            'l', 'component-label',
         )
     )
     add_parser.add_argument('--file', '-f', required=True)
