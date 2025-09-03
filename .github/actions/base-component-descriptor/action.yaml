@@ -205,7 +205,7 @@ runs:
           f.write(component_descriptor_str)
 
         if '${{ inputs.post-process }}' == 'callback':
-          env = os.environ.clone()
+          env = os.environ.copy()
           shutil.move('component-descriptor.yaml', 'component-descriptor.in')
           env['BASE_DEFINITION_PATH'] = 'component-descriptor.in'
           env['COMPONENT_DESCRIPTOR_PATH'] = 'component-descriptor.yaml'
