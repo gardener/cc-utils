@@ -48,6 +48,13 @@ inputs:
     default: releases
     description: |
       the suffix to append to oci-registry-prefix for mode `release`
+  ocm-repositories:
+    required: false
+    type: string
+    description: |
+      An optional, comma-separated list of OCM-Repositories that should be used for looking-up
+      OCM-Component-Versions. The OCM releases repository will always be appended to the list if
+      it is not part of it yet.
 
 outputs:
   oci-registry:
@@ -62,6 +69,9 @@ outputs:
     description: |
       the OCM-Repository hosting (final) release-versions (returned independent from chosen mode)
     value: ${{ steps.params.outputs.ocm-releases-repository }}
+  ocm-repositories:
+    description: the ocm-repositories which may be used to lookup component-versions
+    value: ${{ steps.params.outputs.ocm-repositories }}
   is-fork:
     description: |
       true if current repository is a fork, else false
@@ -112,6 +122,13 @@ runs:
         repo_prefix='${{ inputs.oci-registry-prefix }}'
 
         ocm_releases_repository=${repo_prefix}/${{ inputs.releases-suffix }}
+
+        ocm_repositories='${{ inputs.ocm-repositories }}'
+        if [[ ${ocm_repositories} == '' ]]; then
+          ocm_repositories="${ocm_releases_repository}"
+        elif [[ ${ocm_repositories} != *"${ocm_releases_repository}"* ]]; then
+          ocm_repositories="${ocm_repositories},${ocm_releases_repository}"
+        fi
 
         case "${{ inputs.mode }}" in
           snapshot)
@@ -188,6 +205,7 @@ runs:
         echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
         echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
         echo "ocm-releases-repository=${ocm_releases_repository}" >> ${GITHUB_OUTPUT}
+        echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
         echo "is-fork=${is_fork}" >> ${GITHUB_OUTPUT}
         echo "is-pr-from-fork=${is_pr_from_fork}" >> ${GITHUB_OUTPUT}
         echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
@@ -200,6 +218,7 @@ runs:
           <tr> <td>mode</td>            <td>${{ inputs.mode }}</td> </tr>
           <tr> <td>oci-registry</td>    <td>${oci_registry}</td> </tr>
           <tr> <td>ocm-repository</td>  <td>${ocm_repository}</td> </tr>
+          <tr> <td>ocm-repositories</td><td>${ocm_repositories}</td> </tr>
           <tr> <td>is-fork</td>         <td>${is_fork}</td> </tr>
           <tr> <td>is-pr-from-fork</td> <td>${is_pr_from_fork}</td> </tr>
           <tr> <td>can-push</td>        <td>${can_push}</td> </tr>

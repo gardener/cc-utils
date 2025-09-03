@@ -85,7 +85,7 @@ jobs:
           component-descriptor: |
             ${{ inputs.component-descriptor || needs.prepare.outputs.component-descriptor }}
           ocm-repositories: |
-            ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-releases-repository }}
+            ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-repositories }}
           github-token: ${{ steps.app-token.outputs.token }}
           merge-policy: ${{ inputs.merge-policy }}
           merge-method: ${{ inputs.merge-method }}
