@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import collections.abc
+import dataclasses
 import logging
 import os
 import subprocess
 import sys
+import tempfile
 
 try:
     import ocm
@@ -114,14 +116,25 @@ def create_diff_using_callback(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
     rel_path: str,
+    component_descriptor_lookup,
 ) -> bool:
     path = os.path.join(repo_dir, rel_path)
     if not os.path.isfile(path):
         return False
 
+    wither_component_descriptor = component_descriptor_lookup(upgrade_vector.whither)
+    tmp = tempfile.NamedTemporaryFile(delete_on_close=False)
+    with open(tmp.name, 'w') as f:
+        yaml.dump(
+            data=dataclasses.asdict(wither_component_descriptor),
+            stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
+        )
+
     cmd_env = github.pullrequest.set_dependency_cmd_env(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
+        whither_component_descriptor_path=tmp.name,
     )
 
     subprocess.run(
@@ -137,6 +150,7 @@ def create_upgrade_pullrequest_diff(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
     release_notes_docs: collections.abc.Iterable[rnm.ReleaseNotesDoc],
+    component_descriptor_lookup,
 ) -> bool:
     created_diff = False
 
@@ -152,6 +166,7 @@ def create_upgrade_pullrequest_diff(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
         rel_path='.ci/set_dependency_version',
+        component_descriptor_lookup=component_descriptor_lookup,
     ):
         logger.info('created upgrade-diff using callback')
         created_diff = True
@@ -249,6 +264,7 @@ def create_upgrade_pullrequest(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
         release_notes_docs=grouped_release_notes_docs,
+        component_descriptor_lookup=component_descriptor_lookup,
     )
 
     fv = upgrade_vector.whence.version

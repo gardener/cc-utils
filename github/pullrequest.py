@@ -303,6 +303,7 @@ def set_dependency_cmd_env(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
     github_cfg_name: str=None,
+    whither_component_descriptor_path: str=None,
 ) -> dict[str, str]:
     '''
     returns a cmd-env-block (in form of a dict) to pass to `set_depedency_version` callbacks.
@@ -315,6 +316,9 @@ def set_dependency_cmd_env(
     cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
     cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
     cmd_env['REPO_DIR'] = repo_dir
+
+    if whither_component_descriptor_path: # github-actions only
+        cmd_env['WHITHER_COMPONENT_DESCRIPTOR'] = whither_component_descriptor_path
 
     if github_cfg_name: # concourse-only
         cmd_env['GITHUB_CFG_NAME'] = github_cfg_name
