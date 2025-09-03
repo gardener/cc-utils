@@ -141,6 +141,8 @@ class DeliveryServiceClient:
             delivery-service as well as the available routes
         :param AuthTokenLookup auth_token_lookup (optional)
             the lookup to use for retrieving auth-tokens against oauth-endpoints
+        :param str auth_token (optional)
+            the auth-token to use for authentication
         '''
 
         if auth_token_lookup and auth_token:
@@ -219,7 +221,8 @@ class DeliveryServiceClient:
 
                 if (auth_token := self.auth_token):
                     break
-                if (auth_token := self.auth_token_lookup(api_url)):
+                elif (self.auth_token_lookup):
+                    auth_token = self.auth_token_lookup(api_url)
                     break
             else:
                 logger.info('no valid credentials found - attempting anonymous-auth')
