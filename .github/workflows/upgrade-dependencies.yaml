@@ -20,6 +20,12 @@ on:
           An optional, comma-separated list of OCM-Repositories that should be used for looking-up
           OCM-Component-Versions. If not passed, the releases-repository from `prepare.yaml`
           workflow will be used.
+      ocm-post-process:
+        required: false
+        type: string
+        description: |
+          Passed to `prepare.yaml` as `post-process` input
+        default: component-cli
       oci-registry-prefix:
         type: string
         default: europe-docker.pkg.dev/gardener-project
@@ -61,7 +67,7 @@ jobs:
     uses: ./.github/workflows/prepare.yaml
     with:
       mode: release
-      post-process: component-cli
+      post-process: ${{ inputs.ocm-post-process }}
       oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
       releases-suffix: ${{ inputs.releases-suffix }}
 

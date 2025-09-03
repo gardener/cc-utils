@@ -35,6 +35,7 @@ on:
         description: |
           passed as `post-process`-input to merge-ocm-fragments. Allowed values are:
           - component-cli
+          - callback
           - none
 
           Defines how component-descriptor should be post-processed.
