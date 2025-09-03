@@ -220,6 +220,9 @@ runs:
             logger.error('callback did not write component-descripor.yaml')
             exit(1)
 
+          with open('component-descriptor.yaml') as f:
+            component_descriptor_str = f.read()
+
         with open('base-component.yaml', 'w') as f:
           f.write(base_component_str)
         with tarfile.open(name='component-descriptor.tar.gz', mode='w:gz') as tf:
