@@ -156,14 +156,13 @@ jobs:
         id: prep
         run: |
           if [ -f prepare-workflow-values.tar ]; then
-            tar xf prepare-workflow-values.tar prepare-values.d/ocm-releases-repository
-            ocm_repos="$(cat prepare-values.d/ocm-releases-repository)"
+            tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+            ocm_repos="$(cat prepare-values.d/ocm-repositories)"
             rm -rf prepare-values.d prepare-workflow-values.tar
           else
             ocm_repos="${{ inputs.ocm-repositories }}"
           fi
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
-
       - uses: actions/checkout@v4
       - name: draft-release-notes
         id: drn
