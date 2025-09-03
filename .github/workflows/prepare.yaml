@@ -75,6 +75,7 @@ on:
         description: |
           configures how generated base-component-descriptor should be post-processed. Options:
           - component-cli
+          - callback
           - none
       oci-registry-prefix:
         type: string
