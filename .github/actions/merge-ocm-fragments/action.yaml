@@ -53,12 +53,18 @@ inputs:
     options:
       - component-cli
       - none
+      - callback
     description: |
       configures how the merged component-descriptor should be post-processed.
 
       `component-cli` option is needed for properly honouring imagevectors (this will both
       add component-references, and referenced oci-image-resources, as well as adding
       labels for calculating image-vector-overwrites).
+
+      `callback` is a compatibility option to mimick the behaviour of Concourse-Pipeline
+      Template. Expects hardcoded path at `.ci/component_descriptor`. No additional documentation
+      provided at this point, as this option is present for backwards-compatibility reasons, and
+      should not be used in general.
 
   ocm-component-prefixes:
     type: string
@@ -306,6 +312,37 @@ runs:
             stream=f,
             Dumper=ocm.EnumValueYamlDumper,
           )
+
+    - name: post-process
+      if: ${{ inputs.post-process == 'callback' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        export BASE_DEFINITION_PATH="${{ inputs.outdir }}/base-component-descriptor.yaml"
+        export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-descriptor.yaml"
+
+        callback=.ci/component_descriptor
+
+        if [ ! -f ${callback} ]; then
+          echo "Error: no such file: ${callback}"
+          exit 1
+        fi
+
+        if [ ! -x ${callback} ]; then
+          echo "Error: not an executable file: ${callback}"
+          exit 1
+        fi
+
+        if ! ${callback}; then
+          echo "Error: callback returned an error (see above)"
+          exit 1
+        fi
+
+        if [ ! -f ${COMPONENT_DESCRIPTOR_PATH} ]; then
+          echo "Error: callback did not create ${COMPONENT_DESCRIPTOR_PATH}"
+          exit 1
+        fi
 
     - name: output-component-descriptor
       id: output

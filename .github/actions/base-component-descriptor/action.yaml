@@ -73,6 +73,7 @@ inputs:
     options:
       - component-cli
       - none
+      - callback
     description: |
       configures how generated base-component-descriptor should be post-processed
 
@@ -98,6 +99,8 @@ runs:
         import dataclasses
         import datetime
         import logging
+        import shutil
+        import subprocess
         import tarfile
         import textwrap
         import urllib.parse
@@ -200,6 +203,23 @@ runs:
 
         with open('component-descriptor.yaml', 'w') as f:
           f.write(component_descriptor_str)
+
+        if '${{ inputs.post-process }}' == 'callback':
+          env = os.environ.clone()
+          shutil.move('component-descriptor.yaml', 'component-descriptor.in')
+          env['BASE_DEFINITION_PATH'] = 'component-descriptor.in'
+          env['COMPONENT_DESCRIPTOR_PATH'] = 'component-descriptor.yaml'
+
+          subprocess.run(
+            ('.ci/component_descriptor',),
+            check=True,
+            env=env,
+          )
+
+          if not os.path.isfile('component-descriptor.yaml'):
+            logger.error('callback did not write component-descripor.yaml')
+            exit(1)
+
         with open('base-component.yaml', 'w') as f:
           f.write(base_component_str)
         with tarfile.open(name='component-descriptor.tar.gz', mode='w:gz') as tf:
