@@ -70,6 +70,7 @@ jobs:
       post-process: ${{ inputs.ocm-post-process }}
       oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
       releases-suffix: ${{ inputs.releases-suffix }}
+      ocm-repositories: ${{ inputs.ocm-repositories }}
 
   create-upgrade-pullrequests:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
@@ -91,7 +92,7 @@ jobs:
           component-descriptor: |
             ${{ inputs.component-descriptor || needs.prepare.outputs.component-descriptor }}
           ocm-repositories: |
-            ${{ inputs.ocm-repositories || needs.prepare.outputs.ocm-repositories }}
+            ${{ needs.prepare.outputs.ocm-repositories || inputs.ocm-repositories }}
           github-token: ${{ steps.app-token.outputs.token }}
           merge-policy: ${{ inputs.merge-policy }}
           merge-method: ${{ inputs.merge-method }}
