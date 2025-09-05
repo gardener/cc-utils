@@ -11,6 +11,7 @@ import github3
 import github3.exceptions as gh3e
 import github3.pulls as gh3p
 import github3.structs as gh3s
+import reutil
 import yaml
 import yaml.scanner
 
@@ -245,3 +246,38 @@ def request_pull_requests_from_api(
                            f'{pending.keys()} is/are either not closed or cannot be found')
 
     return result
+
+
+def filter_release_notes(
+    release_notes_docs: collections.abc.Iterable[rnm.ReleaseNotesDoc],
+    audiences: collections.abc.Container[rnm.ReleaseNotesAudience] = [],
+    categories: collections.abc.Container[rnm.ReleaseNotesCategory] = [],
+) -> collections.abc.Generator[rnm.ReleaseNotesDoc, None, None]:
+    '''
+    Filter out single release-notes, or entire release-notes documents.
+
+    Follows include and exclude semantics, whereas absence of filter values disables filtering.
+    It is sufficient if any matches, however exclude has precedence.
+    Filter list values allow regex and use `fullmatch` semantics.
+    '''
+    for release_notes_doc in release_notes_docs:
+        filtered_release_notes = []
+
+        for release_note in release_notes_doc.release_notes:
+            category_filter = reutil.re_filter(
+                include_regexes=categories,
+            )
+            matches = category_filter(release_note.category)
+
+            audience_filter = reutil.re_filter(
+                include_regexes=audiences,
+            )
+            audience_matches = audience_filter(release_note.audience)
+
+            if matches and audience_matches:
+                filtered_release_notes.append(release_note)
+
+        yield dataclasses.replace(
+            release_notes_doc,
+            release_notes=filtered_release_notes,
+        )

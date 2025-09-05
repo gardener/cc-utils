@@ -143,6 +143,43 @@ on:
           passed as same-named input to release-notes action. Controls whether copies of
           release-notes of sub-components are included.
 
+      categories:
+        type: string
+        default: ''
+        description: |
+          comma separated list of release-note categories to include in slack posting.
+          defaults to include *all* categories.
+
+          for all known categories, see:
+          https://github.com/gardener/cc-utils/blob/master/release_notes/model.py
+
+          example:
+          value: "breaking,feature"
+
+      audiences:
+        type: string
+        default: ''
+        description: |
+          comma separated list of release-note audiences to include in slack posting.
+          defaults to include *all* audiences.
+
+          for all known audiences, see:
+          https://github.com/gardener/cc-utils/blob/master/release_notes/model.py
+
+          example:
+          value: "developer,operator"
+
+      subcomponent-recursion-depth:
+        type: number
+        default: 0
+        description: |
+          used to control how deep subcomponents should be considered for release-notes posting.
+          possible values:
+          -1: no limit, include *all* subcomponents
+           0: no sub components
+           1: directly referenced subcomponents
+           2: ...
+
     outputs:
       release-notes:
         description: |
@@ -217,12 +254,56 @@ jobs:
           github-tag-template: ${{ inputs.github-tag-template }}
           assets: ${{ inputs.assets }}
 
-      - name: write-release-notes-to-file
+      - name: write-filtered-release-notes-to-file
         if: ${{ inputs.slack-channel-id != '' }}
+        shell: python
         run: |
-          cat <<"EOF" > release-notes.md
-          ${{ steps.release-notes.outputs.full-release-notes }}
-          EOF
+          import yaml
+
+          import cnudie.retrieve
+          import ocm
+          import oci.client
+          import release_notes.ocm as rno
+          import release_notes.utils as rnu
+
+
+          audiences = '${{ inputs.audiences }}'.split(',')
+          categories = '${{ inputs.categories }}'.split(',')
+          recursion_depth = '${{ inputs.subcomponent-recursion-depth }}'.split(',')
+
+          oci_client = oci.client.client_with_dockerauth()
+          ocm_repositories = '${{ steps.prep.outputs.ocm-repositories }}'.split(',')
+          ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(*ocm_repositories)
+          component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+              ocm_repository_lookup=ocm_repository_lookup,
+              oci_client=oci_client,
+          )
+
+          current_component_descriptor = ocm.ComponentDescriptor.from_dict(
+              component_descriptor_dict=yaml.safe_load('''${{ steps.component-descriptor.outputs.component-descriptor }}'''),
+          )
+
+          release_note_docs = rno.iter_release_notes_docs(
+              component=current_component_descriptor.component,
+              component_descriptor_lookup=component_descriptor_lookup,
+              recursion_depth=recursion_depth,
+              oci_client=oci_client,
+          )
+
+          release_note_docs = rnu.filter_release_notes(
+              release_notes_docs=release_notes_docs,
+              audiences=audiences,
+              categories=categories,
+          )
+
+          with open('./release-notes.md', 'w') as f:
+              f.write(
+                  rno.release_notes_docs_as_markdown(
+                      release_notes_docs=release_note_docs,
+                      prepend_title=True,
+                  )
+              )
+
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
         uses: slackapi/slack-github-action@v2
