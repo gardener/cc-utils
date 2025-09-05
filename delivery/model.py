@@ -9,7 +9,7 @@ import dateutil.parser
 def _parse_datetime_if_present(date: str):
     if not date:
         return None
-    return dateutil.parser.isoparse(date)
+    return dateutil.parser.isoparse(date).replace(tzinfo=datetime.UTC)
 
 
 @dataclasses.dataclass(frozen=True)
