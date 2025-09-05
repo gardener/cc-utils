@@ -13,6 +13,7 @@ import zlib
 import dacite
 import yaml
 
+import cnudie.iter
 import cnudie.retrieve
 import oci.client
 import ocm
@@ -380,3 +381,54 @@ def release_note_for_ocm_component(component: ocm.Component) -> str:
         component_release_notes += category_markdown
 
     return component_release_notes
+
+
+def iter_release_notes_docs(
+    component: ocm.Component,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    recursion_depth: int,
+    oci_client: oci.client.Client,
+) -> collections.abc.Generator[rnm.ReleaseNotesDoc]:
+    '''
+    Recursively visit release-notes-archive artefacts and yield parsed release-notes.
+    '''
+
+    def release_note_node_filter(node: cnudie.iter.Node) -> bool:
+        if not isinstance(node, cnudie.iter.ResourceNode):
+            return False
+
+        if not node.resource.type == 'application/tar.release-notes':
+            return False
+
+        return True
+
+    for rnode in cnudie.iter.iter(
+        component=component,
+        lookup=component_descriptor_lookup,
+        recursion_depth=recursion_depth,
+        node_filter=release_note_node_filter,
+    ):
+        rnode: cnudie.iter.ResourceNode
+        access = rnode.resource.access
+
+        if not isinstance(access, ocm.LocalBlobAccess):
+            logger.warning(f'ignoring release-node artefact {rnode.resource.name=} with {access=}')
+            continue
+
+        for release_notes_docs in iter_parsed_release_notes(
+            component=rnode.component,
+            resource=rnode.resource,
+            oci_client=oci_client,
+        ):
+            ocm_ref = release_notes_docs.ocm
+            component_id = ocm.ComponentIdentity(
+                name=ocm_ref.component_name,
+                version=ocm_ref.component_version,
+            )
+
+            if not component_id == rnode.component_id:
+                # release-notes can contain contents for subcomponents, ignore them we will visit
+                # them anyways
+                continue
+
+            yield release_notes_docs
