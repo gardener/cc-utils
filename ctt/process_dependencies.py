@@ -919,11 +919,11 @@ def process_replication_plan_step(
     # retrieve component descriptor from the target registry as local descriptor might not contain
     # patched image references (if it was already existing the the target registry and thus patching
     # has been skipped)
-    if not skip_component_upload or not skip_component_upload(root_component_descriptor.component):
-        root_component_descriptor = tgt_component_descriptor_lookup(ocm.ComponentIdentity(
-            name=root_component_descriptor.component.name,
-            version=root_component_descriptor.component.version,
-        ))
+    if patched_root_component_descriptor := tgt_component_descriptor_lookup(
+        root_component_descriptor.component.identity(),
+        absent_ok=True,
+    ):
+        root_component_descriptor = patched_root_component_descriptor
 
     for node in cnudie.iter.iter(
         component=root_component_descriptor,
