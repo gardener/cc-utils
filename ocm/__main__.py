@@ -269,48 +269,54 @@ def download(parsed):
         baseUrl=parsed.ocm_repository,
     )
 
-    target_ref = ocm_repo.component_version_oci_ref(
+    def _fetch_component_descriptor(
+        name: str,
+        version: str,
+        ocm_repo: ocm.OciOcmRepository | str | None=None,
+    ) -> ocm.ComponentDescriptor:
+        target_ref = ocm_repo.component_version_oci_ref(
+            name=name,
+            version=version
+        )
+        manifest = oci_client.manifest(
+            image_reference=target_ref
+        )
+        try:
+            cfg_blob = oci_client.blob(
+                image_reference=target_ref,
+                digest=manifest.config.digest
+            )
+            cfg_raw = json.loads(cfg_blob.text)
+            cfg = dacite.from_dict(
+                data_class=ocm.oci.ComponentDescriptorOciCfg,
+                data=cfg_raw
+            )
+            layer_digest = cfg.componentDescriptorLayer.digest
+            layer_mimetype = cfg.componentDescriptorLayer.mediaType
+        except Exception as e:
+            print(f'Failed to retrieve component-descriptor-cfg: {e=}, falling back to first layer')
+
+            # by contract, the first layer must always be a tar w/ component-descriptor
+            layer_digest = manifest.layers[0].digest
+            layer_mimetype = manifest.layers[0].mediaType
+
+        if not layer_mimetype in ocm.oci.component_descriptor_mimetypes:
+            print(f'Error: {target_ref=} {layer_mimetype=} was unexpected')
+            exit(1)
+
+        raw = oci_client.blob(
+            image_reference=target_ref,
+            digest=layer_digest,
+            stream=False, # manifests are typically small - do not bother w/ streaming
+        ).content
+        return ocm.oci.component_descriptor_from_tarfileobj(fileobj=io.BytesIO(raw))
+
+    root_component_descriptor = _fetch_component_descriptor(
         name=cname,
         version=cversion,
+        ocm_repo=ocm_repo
     )
-
-    manifest = oci_client.manifest(
-        image_reference=target_ref,
-    )
-
-    try:
-        cfg_blob = oci_client.blob(
-            image_reference=target_ref,
-            digest=manifest.config.digest,
-        )
-        cfg_raw = json.loads(cfg_blob.text)
-        cfg = dacite.from_dict(
-            data_class=ocm.oci.ComponentDescriptorOciCfg,
-            data=cfg_raw,
-        )
-        layer_digest = cfg.componentDescriptorLayer.digest
-        layer_mimetype = cfg.componentDescriptorLayer.mediaType
-    except Exception as e:
-        print(f'Failed to retrieve component-descriptor-cfg: {e=}, falling back to first layer')
-
-        # by contract, the first layer must always be a tar w/ component-descriptor
-        layer_digest = manifest.layers[0].digest
-        layer_mimetype = manifest.layers[0].mediaType
-
-    if not layer_mimetype in ocm.oci.component_descriptor_mimetypes:
-        print(f'Error: {target_ref=} {layer_mimetype=} was unexpected')
-        exit(1)
-
-    raw = oci_client.blob(
-        image_reference=target_ref,
-        digest=layer_digest,
-        stream=False, # manifests are typically small - do not bother w/ streaming
-    ).content
-
-    component_descriptor = ocm.oci.component_descriptor_from_tarfileobj(
-        fileobj=io.BytesIO(raw),
-    )
-    component = component_descriptor.component
+    component = root_component_descriptor.component
 
     if parsed.outfile == '-':
         outfh = sys.stdout.buffer
@@ -319,12 +325,48 @@ def download(parsed):
 
     if (t := parsed.type) in ('component-descriptor', 'c'):
         yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
+            data=dataclasses.asdict(root_component_descriptor),
             stream=outfh,
             encoding='utf-8',
             Dumper=ocm.EnumValueYamlDumper,
         )
+        if parsed.recursive:
+            import cnudie.iter
+
+            for node in cnudie.iter.iter(
+                component=component,
+                lookup=lambda cid, repo=None: _fetch_component_descriptor(
+                    name=cid.name,
+                    version=cid.version,
+                    ocm_repo=(repo or ocm_repo)
+                ),
+                recursion_depth=-1,
+                prune_unique=True,
+                node_filter=cnudie.iter.Filter.components,
+                ocm_repo=ocm_repo,
+            ):
+                comp = node.component
+                if comp.name == component.name and comp.version == component.version:
+                    continue
+
+                component_descriptor = _fetch_component_descriptor(
+                    name=comp.name,
+                    version=comp.version,
+                    ocm_repo=ocm_repo
+                )
+                outfh.write(b'---\n')
+                yaml.dump(
+                    data=dataclasses.asdict(component_descriptor),
+                    stream=outfh,
+                    encoding='utf-8',
+                    Dumper=ocm.EnumValueYamlDumper,
+                )
+
+        outfh.flush()
+        if outfh is not sys.stdout.buffer:
+            outfh.close()
         exit(0)
+
     elif t in ('resource', 'r'):
         artefacts = component.resources
     elif t in ('source', 's'):
@@ -501,6 +543,10 @@ def main():
     download_parser.add_argument(
         '--outfile', '-o',
         default='-',
+    )
+    download_parser.add_argument(
+        '--recursive',
+        action='store_true',
     )
     download_parser.set_defaults(callable=download)
 
