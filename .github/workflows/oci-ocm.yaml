@@ -405,13 +405,13 @@ jobs:
 
           tgt_image_ref = '${{ needs.preprocess.outputs.target-image-ref }}'
 
-          oci_client = oci.client.Client(
-            credentials_lookup=oci.auth.docker_credentials_lookup(),
-          )
-
           print(f'merging {src_image_refs=} into {tgt_image_ref=}')
 
           if push:
+            oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+            )
+
             extra_tags='${{ inputs.extra-tags }}'.strip()
             if extra_tags:
               extra_tags = extra_tags.split(',')
