@@ -183,6 +183,7 @@ def add_resources_from_imagevector(
         extra_identity = image_dict.get('extraIdentity', {})
         labels = copy.copy(image_dict.get('labels', []))
         tag = image_dict.get('tag', None)
+        version = resource_id.get('version', tag) if resource_id else tag
         target_version = image_dict.get('targetVersion', None)
 
         for prefix in (component_prefixes or ()):
@@ -279,7 +280,7 @@ def add_resources_from_imagevector(
 
         img_resource = ocm.Resource(
             name=resource_name or name,
-            version=tag,
+            version=version,
             extraIdentity=extra_identity,
             labels=labels,
             relation=relation,
