@@ -280,7 +280,7 @@ def add_resources_from_imagevector(
 
         img_resource = ocm.Resource(
             name=resource_name or name,
-            version=version,
+            version=version or tag,
             extraIdentity=extra_identity,
             labels=labels,
             relation=relation,
