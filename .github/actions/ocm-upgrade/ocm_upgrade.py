@@ -320,18 +320,10 @@ def create_upgrade_pullrequests(
     branch: str,
     oci_client: oci.client.Client,
 ) -> collections.abc.Iterable[github.pullrequest.UpgradePullRequest]:
-    seen_component_ids = set()
-    for cref in ocm.gardener.iter_component_references(
-        component=component,
+    for cref in ocm.gardener.iter_greatest_component_references(
+        references=ocm.gardener.iter_component_references(component=component),
     ):
         logger.info(f'processing {cref=}')
-        if cref.component_id in seen_component_ids:
-            logger.warn(f'skipping {cref=} - already seen')
-            logger.warn('hint: there are multiple crefs, likely with different name or version')
-            logger.warn('-> handling for this case is not implemented, hence skipping')
-            continue
-
-        seen_component_ids.add(cref.component_id)
 
         upgrade_vector = ocm.gardener.find_upgrade_vector(
             component_id=cref.component_id,
