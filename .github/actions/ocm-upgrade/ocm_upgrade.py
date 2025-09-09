@@ -355,6 +355,10 @@ def create_upgrade_pullrequests(
             branch=branch,
             oci_client=oci_client,
         )
+        # early-exit after first created upgrade PR as a workaround (for now) to prevent unintended
+        # sideeffects (e.g. dirty worktree, git conflicts)
+        # -> possible upgrade PRs for other components will be created upon the next execution
+        return
 
 
 def main():
