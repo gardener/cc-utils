@@ -203,10 +203,8 @@ def retrieve_release_notes(
 
 def create_upgrade_pullrequest(
     upgrade_vector: ocm.gardener.UpgradeVector,
-    component: ocm.Component,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
     version_lookup: ocm.VersionLookup,
-    github_api_lookup,
     repo_dir: str,
     repo_url: str,
     repository: github3.repos.Repository,
@@ -313,7 +311,6 @@ def create_upgrade_pullrequests(
     component: ocm.Component,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
     version_lookup: ocm.VersionLookup,
-    github_api_lookup,
     upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
     repo_dir: str,
     repo_url: str,
@@ -356,10 +353,8 @@ def create_upgrade_pullrequests(
 
         yield create_upgrade_pullrequest(
             upgrade_vector=upgrade_vector,
-            component=component,
             component_descriptor_lookup=component_descriptor_lookup,
             version_lookup=version_lookup,
-            github_api_lookup=github_api_lookup,
             repo_dir=repo_dir,
             repo_url=repo_url,
             repository=repository,

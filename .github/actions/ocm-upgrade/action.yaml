@@ -156,10 +156,6 @@ runs:
         github_api = github.github_api(token=github_token)
         repository = github_api.repository(org, repo)
 
-        def github_api_lookup(repo_url):
-          # XXX needs to be extended for cross-github-support
-          return github_api
-
         repo_dir = os.getcwd()
 
         logger.info('retrieving existing upgrade-pull-requests')
@@ -179,7 +175,6 @@ runs:
             component_descriptor_lookup=component_descriptor_lookup,
             version_lookup=version_lookup,
             upgrade_pullrequests=upgrade_pullrequests,
-            github_api_lookup=github_api_lookup,
             repo_dir=repo_dir,
             repo_url=f'https://{host}/{org}/{repo}',
             repository=repository,
