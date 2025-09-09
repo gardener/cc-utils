@@ -219,10 +219,9 @@ class DeliveryServiceClient:
             for auth_config in auth_configs:
                 api_url = auth_config.get('api_url')
 
-                if (auth_token := self.auth_token):
+                if auth_token := self.auth_token:
                     break
-                elif (self.auth_token_lookup):
-                    auth_token = self.auth_token_lookup(api_url)
+                elif self.auth_token_lookup and (auth_token := self.auth_token_lookup(api_url)):
                     break
             else:
                 logger.info('no valid credentials found - attempting anonymous-auth')
