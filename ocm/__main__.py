@@ -423,26 +423,46 @@ def download(parsed):
 
     # at this point, we have one single, and unambiguously specified artefact
     access = artefact.access
+    image_ref = None
+    digest = None
 
-    if not access.type is ocm.AccessType.LOCAL_BLOB:
+    if access.type is ocm.AccessType.LOCAL_BLOB:
+        image_ref = component.current_ocm_repo.component_version_oci_ref(
+            name=cname,
+            version=cversion,
+        )
+        digest = access.localReference
+
+    elif access.type is ocm.AccessType.OCI_REGISTRY:
+        if not artefact.type is ocm.ArtefactType.HELM_CHART:
+            print(f'Error: {artefact.type=} not implemented for ociRegistry access')
+            exit(1)
+
+        image_ref = access.imageReference
+        manifest = oci_client.manifest(image_reference=access.imageReference)
+
+        target_mime = 'application/vnd.cncf.helm.chart.content.v1.tar+gzip'
+        helm_chart_layer = None
+        for layer in manifest.layers:
+            if layer.mediaType == target_mime:
+                helm_chart_layer = layer
+                break
+        if not helm_chart_layer:
+            print(f'Error: expected Helm chart layer ({target_mime})')
+            exit(1)
+
+        digest = helm_chart_layer.digest
+
+    else:
         print(f'Error: {access.type=} not implemented')
         exit(1)
-
-    access: ocm.LocalBlobAccess
-
-    oci_reference = component.current_ocm_repo.component_version_oci_ref(
-        name=cname,
-        version=cversion,
-    )
-
     blob_rq = oci_client.blob(
-        image_reference=oci_reference,
-        digest=access.localReference,
+        image_reference=image_ref,
+        digest=digest,
     )
 
     for chunk in blob_rq.iter_content(chunk_size=4096):
         outfh.write(chunk)
-
     outfh.flush()
 
 
