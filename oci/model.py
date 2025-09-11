@@ -42,6 +42,7 @@ class OciTagType(enum.Enum):
 
 class OciRegistryType(enum.Enum):
     AWS = 'aws'
+    AZURE = 'azure'
     GAR = 'gar'
     GCR = 'gcr'
     DOCKERHUB = 'dockerhub'
@@ -70,6 +71,8 @@ class OciRegistryType(enum.Enum):
             return OciRegistryType.AWS
         if 'public.ecr.aws' in netloc: # AWS ECR public
             return OciRegistryType.AWS
+        if 'azurecr.io' in netloc:
+            return OciRegistryType.AZURE
 
         return OciRegistryType.UNKNOWN
 
