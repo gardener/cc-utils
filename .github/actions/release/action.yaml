@@ -81,15 +81,6 @@ inputs:
     type: string
     description: |
       passed to `version` action as `versionfile`. see this action for documentation
-  release-notes:
-    description: |
-      the release-notes to publish as (legacy) inline-resource in OCM-Component-Descriptor.
-      Consider full-release-notes input, as well.
-    required: false
-  full-release-notes:
-    description: |
-      the release-notes to publish as body for GitHub-Release. Those should contain release-notes
-      from sub-components (if any).
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub and OCI-Registry.
@@ -245,12 +236,19 @@ runs:
         name: release-notes
         path: /tmp
 
+    - name: extract-release-notes
+      shell: bash
+      run: |
+        mkdir /tmp/release-notes
+        tar -xf /tmp/release-notes.tar -C /tmp/release-notes
+
     - name: attach-release-notes-to-component-descriptor
       shell: python
       run: |
         import dataclasses
         import hashlib
         import json
+        import tarfile
 
         import yaml
 
@@ -274,7 +272,9 @@ runs:
           credentials_lookup=oci.auth.docker_credentials_lookup(),
         )
 
-        release_notes_markdown = '''${{ inputs.release-notes }}'''
+        with open('/tmp/release-notes/legacy-release-notes.md') as f:
+          release_notes_markdown = f.read()
+
         if release_notes_markdown:
           release_notes_octets = release_notes_markdown.encode('utf-8')
           release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
@@ -299,7 +299,7 @@ runs:
             ),
           )
 
-        with open('/tmp/release-notes.tar', 'rb') as f:
+        with open('/tmp/release-notes/release-notes-archive.tar', 'rb') as f:
           tar_bytes = f.read()
         tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
 
@@ -440,10 +440,8 @@ runs:
 
         repository = github_api.repository(org, repo)
 
-
-        release_notes_markdown = '''\
-        ${{ inputs.full-release-notes }}
-        '''
+        with open('/tmp/release-notes/github-release-notes.md') as f:
+          release_notes_markdown = f.read()
 
         release_tag_name = '${{ steps.preprocess.outputs.tag-name }}'
         draft_tag_name = f'{release_tag_name}-draft'
