@@ -142,7 +142,7 @@ def find_newer_versions(current_tags: List[str], available_tags: List[str]) -> D
         available_tags (List[str]): A list of all available tag strings from the registry.
 
     Returns:
-        Dict[str, List[str]]: A dictionary with 'patch' and 'minor' keys 
+        Dict[str, List[str]]: A dictionary with 'patch' and 'minor' keys
         containing lists of new tags.
     """
     available_tags = filter_valid_tags(available_tags)
@@ -187,7 +187,7 @@ def update_images_data(images_data: Dict, new_versions_by_name: Dict[str, Dict])
 
     Args:
         images_data (Dict): The full data from images.yaml, loaded as a dictionary.
-        new_versions_by_name (Dict[str, Dict]): Maps image name to its new 
+        new_versions_by_name (Dict[str, Dict]): Maps image name to its new
         'patch' and 'minor' versions.
 
     Returns:
