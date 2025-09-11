@@ -244,6 +244,10 @@ class Client:
         token_dict = await res.json()
         token_dict['scope'] = scope
 
+        if not 'token' in token_dict and 'access_token' in token_dict:
+            # this is the case for Azure
+            token_dict['token'] = token_dict['access_token']
+
         token = dacite.from_dict(
             data=token_dict,
             data_class=oci.client.OauthToken,
