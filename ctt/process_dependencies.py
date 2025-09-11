@@ -438,50 +438,6 @@ def process_upload_request(
     return f'sha256:{manifest_digest}'
 
 
-def create_backwards_compatible_cfg(
-    processing_cfg: dict,
-    tgt_oci_registry: str,
-    target_name: str='default',
-) -> dict:
-    # create missing `targets` configuration from explicitly passed function argument
-    processing_cfg['targets'] = {
-        target_name: {
-            'type': 'RegistriesTarget',
-            'kwargs': {
-                'registries': [tgt_oci_registry],
-            },
-        },
-    }
-
-    # migrate `PrefixUploader` to `RepositoryUploader`
-    migrated_uploaders = {}
-    for uploader_name, uploader_cfg in processing_cfg['uploaders'].items():
-        if uploader_cfg['type'] != 'PrefixUploader':
-            # nothing to do
-            migrated_uploaders[uploader_name] = uploader_cfg
-            continue
-
-        uploader_cfg['type'] = 'RepositoryUploader'
-
-        _, tgt_repository = uploader_cfg['kwargs']['prefix'].rsplit('/', 1)
-        uploader_cfg['kwargs']['repository'] = tgt_repository
-        del uploader_cfg['kwargs']['prefix']
-
-        migrated_uploaders[uploader_name] = uploader_cfg
-
-    processing_cfg['uploaders'] = migrated_uploaders
-
-    # patch-in target to image-processing-cfgs
-    migrated_image_processing_cfg = []
-    for image_processing_cfg in processing_cfg['image_processing_cfg']:
-        image_processing_cfg['target'] = target_name
-        migrated_image_processing_cfg.append(image_processing_cfg)
-
-    processing_cfg['image_processing_cfg'] = migrated_image_processing_cfg
-
-    return processing_cfg
-
-
 def iter_replication_plan_components(
     component_descriptors: collections.abc.Iterable[ocm.ComponentDescriptor],
     tgt_ocm_repo: ocm.OciOcmRepository,
@@ -619,6 +575,7 @@ def process_images(
     root_component_descriptor: ocm.ComponentDescriptor,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     oci_client: oci.client.Client,
+    tgt_ocm_repo_path: str,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
@@ -628,8 +585,6 @@ def process_images(
     delivery_service_client: typing.Union['delivery.client.DeliveryServiceClient', None]=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
-    tgt_ocm_repo_path: str=None,
-    tgt_ocm_base_url: str | None=None, # deprecated -> replaced by `tgt_ocm_repo_path`
 ) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -640,16 +595,6 @@ def process_images(
     _excluded_.
     '''
     processing_cfg = parse_processing_cfg(processing_cfg_path)
-
-    if tgt_ocm_base_url:
-        tgt_oci_registry, tgt_ocm_repo_path = tgt_ocm_base_url.rsplit('/', 1)
-        processing_cfg = create_backwards_compatible_cfg(
-            processing_cfg=processing_cfg,
-            tgt_oci_registry=tgt_oci_registry,
-        )
-
-    if not tgt_ocm_repo_path:
-        raise ValueError(tgt_ocm_repo_path)
 
     reftype_filter = None
     if remove_label and remove_label(ocm.gardener.ExtraComponentReferencesLabel.name):
