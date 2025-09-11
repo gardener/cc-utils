@@ -27,7 +27,7 @@ jobs:
       BRANCH: update-dockerfile
     permissions:
       contents: write
-      pull-requests: write
+      id-token: write
     outputs:
       docker_version: ${{ steps.get_docker_version.outputs.docker_version }}
       buildx_version: ${{ steps.get_buildx_version.outputs.buildx_version }}
@@ -68,7 +68,7 @@ jobs:
           sed -i "s/DOCKER_BUILDX_VERSION=.*/DOCKER_BUILDX_VERSION=\
           ${{ steps.get_buildx_version.outputs.buildx_version }}/" \
           Dockerfile.job-image-base
-    
+
       - name: Check for Changes
         id: check_changes
         run: |
@@ -79,6 +79,13 @@ jobs:
             echo "Changes detected, proceeding with commit."
             echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
+
+      - uses: actions/create-github-app-token@v2
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        id: app-token
+        with:
+          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
 
       - name: Commit and Push Changes
         if: steps.check_changes.outputs.changes_detected == 'true'
@@ -113,4 +120,4 @@ jobs:
                 - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
