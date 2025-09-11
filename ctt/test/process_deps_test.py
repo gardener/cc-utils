@@ -29,10 +29,7 @@ def test_processor_instantiation(tmpdir):
             },
         },
         'upload': {
-            'type': 'RepositoryUploader',
-            'kwargs': {
-                'repository': 'a/repository',
-            },
+            'type': 'PrependTargetUploader',
         },
     }
 

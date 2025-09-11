@@ -39,6 +39,76 @@ class UploaderBase:
         raise NotImplementedError('must be implemented by its subclasses')
 
 
+class PrependTargetUploader(UploaderBase):
+    def __init__(
+        self,
+        mangle: bool=True,
+        mangle_replacement_char: str='_',
+        convert_to_relative_refs: bool=False,
+        remove_prefixes: list[str]=[],
+    ):
+        self._mangle = mangle
+        self._mangle_replacement_char = mangle_replacement_char
+        self._convert_to_relative_refs = convert_to_relative_refs
+        self._remove_prefixes = remove_prefixes
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        tgt_oci_registry: str,
+        target_as_source: bool=False,
+    ) -> ctt.model.ReplicationResourceElement:
+        if replication_resource_element.source.access.type is not ocm.AccessType.OCI_REGISTRY:
+            raise RuntimeError(f'PrependTargetUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
+
+        if not target_as_source:
+            src_ref = replication_resource_element.src_ref
+        else:
+            src_ref = replication_resource_element.tgt_ref
+
+        src_base_ref = src_ref.ref_without_tag
+
+        for remove_prefix in self._remove_prefixes:
+            src_base_ref = src_base_ref.removeprefix(remove_prefix)
+
+        if self._mangle:
+            src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
+
+        # if a prefix is to be removed from existing src base ref, it is likely that it should be
+        # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
+        # Instead, leave it up to the configuration to decide on the joining character.
+        if not self._remove_prefixes:
+            tgt_ref = ci.util.urljoin(tgt_oci_registry, src_base_ref)
+        else:
+            tgt_ref = tgt_oci_registry + src_base_ref
+
+        if src_ref.has_mixed_tag:
+            symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
+            tgt_ref = f'{tgt_ref}:{symbolical_tag}@{digest_tag}'
+        elif src_ref.has_digest_tag:
+            tgt_ref = f'{tgt_ref}@{src_ref.tag}'
+        elif src_ref.has_symbolical_tag:
+            tgt_ref = f'{tgt_ref}:{src_ref.tag}'
+
+        if src_ref.has_digest_tag:
+            replication_resource_element.reference_by_digest = True
+
+        if self._convert_to_relative_refs:
+            replication_resource_element.convert_to_relative_ref = True
+
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
+        )
+
+        replication_resource_element.target.labels = labels_with_migration_hint(
+            resource=replication_resource_element.target,
+            src_img_ref=str(replication_resource_element.src_ref),
+        )
+
+        return replication_resource_element
+
+
 class RepositoryUploader(UploaderBase):
     def __init__(
         self,
