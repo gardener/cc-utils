@@ -1,0 +1,44 @@
+#
+# SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: 'Update Extension Provider Images'
+description: 'Checks for new image versions, updates images.yaml, and generates release notes.'
+
+inputs:
+  python-version:
+    description: 'The version of Python to use.'
+    required: false
+    default: '3.13'
+  images-yaml-path:
+    description: 'Path to the images.yaml file.'
+    required: false
+    default: 'imagevector/images.yaml'
+  release-notes-path:
+    description: 'Path where the release-notes.md file will be generated.'
+    required: false
+    default: 'release-notes.md'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install regctl
+      shell: bash
+      run: |
+        curl -L "https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64" -o /usr/local/bin/regctl
+        chmod +x /usr/local/bin/regctl
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install Python dependencies
+      shell: bash
+      run: pip install -r ${{ github.action_path }}/requirements.txt
+
+    - name: Run image update script
+      shell: bash
+      run: python3 ${{ github.action_path }}/update-images.py --images-yaml-path "${{ inputs.images-yaml-path }}" --release-notes-path "${{ inputs.release-notes-path }}"
+
