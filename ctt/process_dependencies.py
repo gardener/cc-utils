@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import collections
 import collections.abc
 import concurrent.futures
 import copy
@@ -88,28 +89,37 @@ class ProcessingPipeline:
             for filter in self._filters
         )
 
-    def matches_target(
+    def matching_registries(
         self,
-        tgt_oci_registry: str,
-    ) -> bool:
-        return any(
-            target.filter(tgt_oci_registry)
-            for target in self._targets
-        )
+        tgt_oci_registries: collections.abc.Iterable[str],
+    ) -> collections.abc.Iterable[str]:
+        for tgt_oci_registry in tgt_oci_registries:
+            for target in self._targets:
+                if target.filter(tgt_oci_registry):
+                    yield tgt_oci_registry
 
     def process(
         self,
         component: ocm.Component,
         resource: ocm.Resource,
-        tgt_oci_registry: str,
+        tgt_oci_registries: collections.abc.Iterable[str],
         oci_client: oci.client.Client,
         replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     ) -> ctt.model.ReplicationResourceElement | None:
-        if (
-            not self.matches_filter(component, resource)
-            or not self.matches_target(tgt_oci_registry)
-        ):
+        if not self.matches_filter(component, resource):
             return None
+
+        matching_tgt_oci_registries = list(self.matching_registries(tgt_oci_registries))
+        if len(matching_tgt_oci_registries) == 0:
+            return None
+        elif len(matching_tgt_oci_registries) > 1:
+            raise RuntimeError(
+                f'image processing pipeline {self._name} contains multiple targets with the same '
+                'OCM repository, this likely indicates a wrong replication-cfg '
+                f'({matching_tgt_oci_registries=})'
+            )
+        else:
+            tgt_oci_registry = matching_tgt_oci_registries[0]
 
         logger.debug(
             f'{self._name} will process: {component.name}:{resource.type}:{resource.access} '
@@ -467,7 +477,7 @@ def iter_replication_plan_components(
 def iter_replication_resource_elements(
     component_descriptors: collections.abc.Iterable[ocm.ComponentDescriptor],
     processing_cfg: dict,
-    tgt_oci_registry: str,
+    tgt_oci_registries: collections.abc.Sequence[str],
     oci_client: oci.client.Client,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
 ) -> collections.abc.Iterable[ctt.model.ReplicationResourceElement]:
@@ -494,7 +504,7 @@ def iter_replication_resource_elements(
             replication_resource_element = pipeline.process(
                 component=component,
                 resource=resource,
-                tgt_oci_registry=tgt_oci_registry,
+                tgt_oci_registries=tgt_oci_registries,
                 oci_client=oci_client,
                 replication_mode=replication_mode,
             )
@@ -503,7 +513,7 @@ def iter_replication_resource_elements(
                 return replication_resource_element
 
         logger.debug(
-            f'skipped processing: {component.name}:{resource.access} ({tgt_oci_registry=})'
+            f'skipped processing: {component.name}:{resource.access} ({tgt_oci_registries=})'
         )
 
     components_with_resource = [
@@ -528,8 +538,8 @@ def create_replication_plan_step(
     root_component_descriptor: ocm.ComponentDescriptor,
     src_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    tgt_oci_registry: str,
-    tgt_ocm_repo_path: str,
+    ocm_repository: str,
+    tgt_oci_registries: collections.abc.Sequence[str],
     oci_client: oci.client.Client,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     component_filter: collections.abc.Callable[[ocm.Component], bool] | None=None,
@@ -537,12 +547,12 @@ def create_replication_plan_step(
     remove_label: collections.abc.Callable[[str], bool]=None,
 ) -> ctt.model.ReplicationPlanStep:
     tgt_ocm_repo = ocm.OciOcmRepository(
-        baseUrl=ci.util.urljoin(tgt_oci_registry, tgt_ocm_repo_path),
+        baseUrl=ocm_repository,
     )
 
     component_descriptors = tuple(determine_changed_components(
         component_descriptor=root_component_descriptor,
-        tgt_ocm_repo_url=tgt_ocm_repo.oci_ref,
+        tgt_ocm_repo_url=ocm_repository,
         component_descriptor_lookup=src_component_descriptor_lookup,
         tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
         component_filter=component_filter,
@@ -558,13 +568,13 @@ def create_replication_plan_step(
     resources = tuple(iter_replication_resource_elements(
         component_descriptors=component_descriptors,
         processing_cfg=processing_cfg,
-        tgt_oci_registry=tgt_oci_registry,
+        tgt_oci_registries=tgt_oci_registries,
         oci_client=oci_client,
         replication_mode=replication_mode,
     ))
 
     return ctt.model.ReplicationPlanStep(
-        target_ocm_repository=tgt_ocm_repo.oci_ref,
+        target_ocm_repository=ocm_repository,
         resources=resources,
         components=components,
     )
@@ -575,7 +585,6 @@ def process_images(
     root_component_descriptor: ocm.ComponentDescriptor,
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     oci_client: oci.client.Client,
-    tgt_ocm_repo_path: str,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,
@@ -585,6 +594,7 @@ def process_images(
     delivery_service_client: typing.Union['delivery.client.DeliveryServiceClient', None]=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
+    tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
 ) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -606,20 +616,35 @@ def process_images(
     if processing_mode is ProcessingMode.DRY_RUN:
         logger.warning('dry-run: not downloading or uploading any images')
 
-    # all component descriptors are replicated to all target registries, but OCI artefacts are
-    # only replicated to the respectively configured targets
-    tgt_oci_registries = set()
+    registries_by_ocm_repository: dict[str, set[str]] = collections.defaultdict(set)
     for target_cfg in processing_cfg['targets'].values():
-        if 'registry' in target_cfg['kwargs']:
-            tgt_oci_registries.add(target_cfg['kwargs']['registry'])
-        elif 'registries' in target_cfg['kwargs']:
-            tgt_oci_registries.update(target_cfg['kwargs']['registries'])
+        target_cfg = target_cfg['kwargs']
+
+        if registry := target_cfg.get('registry'):
+            registries = [registry]
+        else:
+            registries = target_cfg.get('registries', [])
+
+        if not (ocm_repository := target_cfg.get('ocm_repository')):
+            if not tgt_ocm_repo_path:
+                raise ValueError(
+                    'in case `ocm_repository` is not specified in the target configuration, '
+                    '`tgt_ocm_repo_path` must be passed explicitly'
+                )
+            if len(registries) != 1:
+                raise ValueError(
+                    'in case `ocm_repository` is not specified in the target configuration, only a '
+                    'single registry is allowed'
+                )
+            ocm_repository = ci.util.urljoin(registries[0], tgt_ocm_repo_path)
+
+        registries_by_ocm_repository[ocm_repository].update(registries)
 
     replication_plan = ctt.model.ReplicationPlan()
 
-    for tgt_oci_registry in tgt_oci_registries:
+    for ocm_repository, tgt_oci_registries in registries_by_ocm_repository.items():
         tgt_component_descriptor_lookup = create_component_descriptor_lookup_for_ocm_repo(
-            ocm_repo_url=ci.util.urljoin(tgt_oci_registry, tgt_ocm_repo_path),
+            ocm_repo_url=ocm_repository,
             oci_client=oci_client,
             delivery_service_client=delivery_service_client,
         )
@@ -629,8 +654,8 @@ def process_images(
             root_component_descriptor=root_component_descriptor,
             src_component_descriptor_lookup=component_descriptor_lookup,
             tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
-            tgt_oci_registry=tgt_oci_registry,
-            tgt_ocm_repo_path=tgt_ocm_repo_path,
+            ocm_repository=ocm_repository,
+            tgt_oci_registries=list(tgt_oci_registries),
             oci_client=oci_client,
             replication_mode=replication_mode,
             component_filter=component_filter,

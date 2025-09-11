@@ -19,8 +19,10 @@ class RegistriesTarget(TargetBase):
     def __init__(
         self,
         registries: list[str],
+        ocm_repository: str | None=None,
     ):
         self._registries = registries
+        self._ocm_repository = ocm_repository
 
     def filter(
         self,
@@ -35,10 +37,12 @@ class RegionsTarget(TargetBase):
         registry: str,
         provider: str,
         regions: list[str],
+        ocm_repository: str | None=None,
     ):
         self.registry = registry
         self.provider = provider
         self.regions = regions
+        self.ocm_repository = ocm_repository
 
     def filter(
         self,
