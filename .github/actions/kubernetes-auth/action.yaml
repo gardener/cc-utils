@@ -44,6 +44,23 @@ inputs:
     description: |
       the path resulting kubeconfig should be generated to. If the empty string is passed,
       no kubeconfig will be written.
+  service-account-name:
+    type: string
+    default: testrunner
+    description: |
+      the service account in the target-cluster to authenticate request a token for.
+      It should be used by the testrunner invocation at a later stage.
+  service-account-namespace:
+    type: string
+    default: default
+    description: |
+      the namespace in which the service account resides.
+  service-account-token-expiration:
+    type: number
+    default: 10800
+    description: |
+      the requested expiration (in seconds) of the service account token.
+      Note that the actual expiration might differ, depending on the cluster's configuration.
 
 outputs:
   kubeconfig:
@@ -95,13 +112,35 @@ runs:
           server_ca=$(cat $cluster_cfg_file | yq .ca)
         fi
 
-        token_url="${token_url}&audience=${{ inputs.audience }}"
+        gh_token_url="${token_url}&audience=${{ inputs.audience }}"
 
-        auth_token=$(
+        gh_auth_token=$(
           curl -sLS \
             -H "Authorization: Bearer ${gh_token}" \
-            "${token_url}" \
+            "${gha_token_url}" \
           | jq .value
+        )
+
+        if [ -z "${gh_auth_token}" ]; then
+          echo 'failed to retrieve an gh-auth-token'
+          exit 1
+        else
+          echo 'successfully retrieved an gh-auth-token'
+        fi
+
+        testmachinery_token_request_url="${server}/api/v1/namespaces/${{ inputs.service-account-namespace}}/serviceaccounts/${{ inputs.service-account-name}}/token"
+        echo $server_ca | base64 -d > ca.pem
+        token_request_body='{"apiVersion":"authentication.k8s.io/v1","kind":"TokenRequest","spec":{"audiences":["kubernetes","gardener"],"expirationSeconds":${{ inputs.service-account-token-expiration}}}}'
+
+        auth_token=$(
+          curl -sLS -XPOST \
+            --cacert ca.pem \
+            -H "Authorization: Bearer ${gh_auth_token}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d '${token_request_body}' \
+            "${testmachinery_token_request_url}" \
+          | jq -r .status.token
         )
 
         if [ -z "${auth_token}" ]; then
