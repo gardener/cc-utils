@@ -133,9 +133,7 @@ def filter_valid_tags(tags: List[str]) -> List[str]:
 
 
 # --- Core Logic Functions ---
-def find_newer_versions(
-    current_tags: List[str], available_tags: List[str]
-) -> Dict[str, List[str]]:
+def find_newer_versions(current_tags: List[str], available_tags: List[str]) -> Dict[str, List[str]]:
     """
     Compare current tags with available tags to find newer patch and minor/major versions.
 
@@ -144,7 +142,8 @@ def find_newer_versions(
         available_tags (List[str]): A list of all available tag strings from the registry.
 
     Returns:
-        Dict[str, List[str]]: A dictionary with 'patch' and 'minor' keys containing lists of new tags.
+        Dict[str, List[str]]: A dictionary with 'patch' and 'minor' keys 
+        containing lists of new tags.
     """
     available_tags = filter_valid_tags(available_tags)
 
@@ -173,9 +172,7 @@ def find_newer_versions(
 
     for (major, minor, patch), tag in available_versions:
         if (major, minor) in current_minor_versions:
-            max_current_patch = max(
-                p for p, _ in current_minor_versions[(major, minor)]
-            )
+            max_current_patch = max(p for p, _ in current_minor_versions[(major, minor)])
             if patch > max_current_patch:
                 newer_patch.append(tag)
         elif (major, minor, patch) > highest_current:
@@ -184,15 +181,14 @@ def find_newer_versions(
     return {"patch": newer_patch, "minor": newer_major_or_minor}
 
 
-def update_images_data(
-    images_data: Dict, new_versions_by_name: Dict[str, Dict]
-) -> List[Update]:
+def update_images_data(images_data: Dict, new_versions_by_name: Dict[str, Dict]) -> List[Update]:
     """
     Update the in-memory images data structure with new versions and return structured update info.
 
     Args:
         images_data (Dict): The full data from images.yaml, loaded as a dictionary.
-        new_versions_by_name (Dict[str, Dict]): Maps image name to its new 'patch' and 'minor' versions.
+        new_versions_by_name (Dict[str, Dict]): Maps image name to its new 
+        'patch' and 'minor' versions.
 
     Returns:
         List[Update]: A list of structured objects detailing each update.
@@ -276,12 +272,8 @@ def update_images_data(
                 all_tags = [img["tag"] for _, img in image_list] + [
                     t["tag"] for t in new_image_entries
                 ]
-                previous_tags = [
-                    t for t in all_tags if parse_version(t) < parse_version(minor_tag)
-                ]
-                old_tag = (
-                    max(previous_tags, key=parse_version) if previous_tags else None
-                )
+                previous_tags = [t for t in all_tags if parse_version(t) < parse_version(minor_tag)]
+                old_tag = max(previous_tags, key=parse_version) if previous_tags else None
                 updates.append(
                     {
                         "image_name": name,
@@ -292,9 +284,7 @@ def update_images_data(
                 )
 
             # Consolidate all images for this name (original, updated, and new)
-            all_image_entries_for_name = [
-                img for _, img in image_list
-            ] + new_image_entries
+            all_image_entries_for_name = [img for _, img in image_list] + new_image_entries
 
             if all_image_entries_for_name:
                 # Find the highest version and set its targetVersion to ">= X.Y"
@@ -310,16 +300,12 @@ def update_images_data(
                     entry["targetVersion"] = f"{ver[0]}.{ver[1]}.x"
 
                 # Set the highest one to ">= X.Y"
-                highest_entry["targetVersion"] = (
-                    f">= {highest_version[0]}.{highest_version[1]}"
-                )
+                highest_entry["targetVersion"] = f">= {highest_version[0]}.{highest_version[1]}"
 
     # Apply changes to the main data structure
     if indices_to_remove:
         images_data["images"] = [
-            img
-            for i, img in enumerate(images_data["images"])
-            if i not in indices_to_remove
+            img for i, img in enumerate(images_data["images"]) if i not in indices_to_remove
         ]
 
     images_data["images"].extend(new_image_entries)
@@ -392,9 +378,7 @@ def write_yaml_with_formatting(data: Dict, filename: str):
                     f.write("    value:\n")
                     for key, value in label["value"].items():
                         formatted_value = (
-                            str(value).lower()
-                            if isinstance(value, bool)
-                            else f"'{value}'"
+                            str(value).lower() if isinstance(value, bool) else f"'{value}'"
                         )
                         f.write(f"      {key}: {formatted_value}\n")
 
@@ -444,19 +428,19 @@ def create_release_notes(
     with open(filename, "w") as f:
         f.write("# Release Notes\n\n")
         f.write(
-            "The following images have been updated. Please review the release notes for each component to check if changes need to be made to our Helm charts:\n\n"
+            "The following images have been updated. Please review the release notes for each "
+            "component to check if changes need to be made to our Helm charts:\n\n"
         )
         f.write(
-            "**Note**: All intermediate versions between the current and new version are listed to ensure no breaking changes are missed.\n\n"
+            "**Note**: All intermediate versions between the current and new version are listed "
+            "to ensure no breaking changes are missed.\n\n"
         )
 
         for image_name in sorted(updates_by_image.keys()):
             f.write(f"## {image_name}\n\n")
             repo_url = repos_by_name.get(image_name)
 
-            unique_tags = sorted(
-                list(set(updates_by_image[image_name])), key=parse_version
-            )
+            unique_tags = sorted(list(set(updates_by_image[image_name])), key=parse_version)
 
             for tag in unique_tags:
                 if repo_url:
@@ -534,15 +518,14 @@ def main():
         write_yaml_with_formatting(images_data, images_yaml_path)
         print(f"\nUpdated {images_yaml_path} with {len(updates)} changes.")
 
-        create_release_notes(
-            updates, images_data, all_available_tags, release_notes_path
-        )
+        create_release_notes(updates, images_data, all_available_tags, release_notes_path)
         print(f"Created {release_notes_path}")
 
         print("\nSummary of changes:")
         for update in updates:
             print(
-                f"  - {update['image_name']}: {update['old_tag'] or 'N/A'} -> {update['new_tag']} ({update['update_type']})"
+                f"  - {update['image_name']}: {update['old_tag'] or 'N/A'} -> "
+                f"{update['new_tag']} ({update['update_type']})"
             )
     else:
         print("\nNo newer versions found for any images.")
