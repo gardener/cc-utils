@@ -81,15 +81,6 @@ inputs:
     type: string
     description: |
       passed to `version` action as `versionfile`. see this action for documentation
-  release-notes:
-    description: |
-      the release-notes to publish as (legacy) inline-resource in OCM-Component-Descriptor.
-      Consider full-release-notes input, as well.
-    required: false
-  full-release-notes:
-    description: |
-      the release-notes to publish as body for GitHub-Release. Those should contain release-notes
-      from sub-components (if any).
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub and OCI-Registry.
@@ -274,7 +265,9 @@ runs:
           credentials_lookup=oci.auth.docker_credentials_lookup(),
         )
 
-        release_notes_markdown = '''${{ inputs.release-notes }}'''
+        with open('/tmp/release-notes.md') as f:
+          release_notes_markdown = f.read()
+
         if release_notes_markdown:
           release_notes_octets = release_notes_markdown.encode('utf-8')
           release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
@@ -410,6 +403,12 @@ runs:
           #   - we still might succeed in publishing bump-commit
         fi
 
+    - name: fetch-github-release-notes
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: github-release-notes.md
+        path: /tmp/github-release-notes.md
+
     - name: create github-release
       if: ${{ inputs.release-on-github }}
       shell: python
@@ -440,10 +439,8 @@ runs:
 
         repository = github_api.repository(org, repo)
 
-
-        release_notes_markdown = '''\
-        ${{ inputs.full-release-notes }}
-        '''
+        with open('/tmp/github-release-notes.md') as f:
+          release_notes_markdown = f.read()
 
         release_tag_name = '${{ steps.preprocess.outputs.tag-name }}'
         draft_tag_name = f'{release_tag_name}-draft'

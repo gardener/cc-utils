@@ -34,16 +34,27 @@ inputs:
     default: false
     description: |
       if true, will collect draft-release-notes
-outputs:
-  release-notes:
+  release-notes-variants:
+    required: true
+    type: string
     description: |
-      the collected release-notes in markdown format (only for current component)
-    value: ${{ steps.release-notes.outputs.release-notes }}
-  full-release-notes:
-    description: |
-      In addition to `release-notes`, also contains release-notes of sub-components. If there
-      are no such components, has the same value as `release-notes`.
-    value: ${{ steps.release-notes.outputs.full-release-notes }}
+      Used to create different subsets of release-notes.
+      A variant configuration is provided as flat yaml object, whereas the toplevel attribute is
+      considered the variant-name.
+      For each variant, the filtered and rendered markdown is written to
+      `/tmp/<variant-name>-release-notes.md`.
+
+      Expected structure (see release workflow inputs for allowed values):
+      ```
+      my-variant:
+        audiences: 'developer,operator'
+        categories: 'bugfix,feature'
+        recursion-depth: 0
+      your-variant:
+        audiences: 'operator'
+        categories: 'feature'
+        recursion-depth: -1
+      ```
 
 runs:
   using: composite
@@ -98,38 +109,108 @@ runs:
           --github-auth-token "${auth_token}" \
           ${draft_arg:-} \
           ${ocm_repositories_arg:-} \
-          --full-release-notes full-release-notes.md \
           --local-release-notes release-notes.md \
-          --subcomponent-release-notes subcomponent-release-notes.md \
-          --tar-output release-notes.tar ${extra_args:-}
+          --tar-output /tmp/release-notes.tar ${extra_args:-}
 
-        echo 'Full Release-notes written to `full-release-nodes.md`'
         echo 'Local Release-notes written to `release-notes.md`'
-
-        echo 'release-notes<<EOF' >> ${GITHUB_OUTPUT}
-        cat release-notes.md >> ${GITHUB_OUTPUT}
-        echo EOF >> ${GITHUB_OUTPUT}
-
-        echo 'full-release-notes<<EOF' >> ${GITHUB_OUTPUT}
-        cat full-release-notes.md >> ${GITHUB_OUTPUT}
-        echo EOF >> ${GITHUB_OUTPUT}
 
         echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
         cat release-notes.md >> ${GITHUB_STEP_SUMMARY}
 
-        if ${{ inputs.include-subcomponent-release-notes }}; then
-          echo 'Subcomponent Release-notes written to `subcomponent-release-notes.md`'
-
-          echo 'subcomponent-release-notes<<EOF' >> ${GITHUB_OUTPUT}
-          cat subcomponent-release-notes.md >> ${GITHUB_OUTPUT}
-          echo EOF >> ${GITHUB_OUTPUT}
-
-          if [ $( stat -c%s subcomponent-release-notes.md) -gt 0 ]; then
-            echo '## Release-Notes (subcomponents)' >> ${GITHUB_STEP_SUMMARY}
-            cat subcomponent-release-notes.md >> ${GITHUB_STEP_SUMMARY}
-          fi
-        fi
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         name: release-notes
-        path: release-notes.tar
+        path: /tmp/release-notes.tar
+
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      with:
+        name: legacy-release-notes
+        path: release-notes.md
+
+    - name: prepare release-note variants
+      shell: python
+      run: |
+        import tarfile
+
+        import yaml
+
+        import cnudie.iter
+        import cnudie.retrieve
+        import ocm
+        import oci.auth
+        import oci.client
+        import release_notes.ocm as rno
+        import release_notes.utils as rnu
+
+        component_descriptor_content = '${{ inputs.component-descriptor }}\n'
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
+          f.write(component_descriptor_content)
+
+        component_descriptor = ocm.ComponentDescriptor.from_dict(
+          yaml.safe_load(component_descriptor_content)
+        )
+
+        oci_client = oci.client.Client(
+          credentials_lookup=oci.auth.docker_credentials_lookup(),
+        )
+        ocm_repositories = '${{ inputs.ocm-repositories }}'.split(',')
+        ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(*ocm_repositories)
+        component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=ocm_repository_lookup,
+            oci_client=oci_client,
+        )
+
+        release_notes_variant_cfg = '''\
+        ${{ .inputs.release-notes-variants }}
+        '''
+        release_notes_variant_cfg = yaml.safe_load(release_notes_variant_cfg)
+
+        release_notes_docs_dir = '/tmp/release-notes-dir'
+
+        with tarfile.open('/tmp/release-notes.tar', 'r') as tar:
+          tar.extractall(path=release_notes_docs_dir)
+
+        all_release_notes_docs = rno.read_release_notes_from_dir(
+          release_notes_docs_dir=release_notes_docs_dir,
+        )
+
+        for variant in ('github', 'slack'):
+          filtered_release_notes_docs = []
+
+          for cnode in cnudie.iter.iter(
+            component=component_descriptor.component,
+            lookup=component_descriptor_lookup,
+            recursion_depth=release_notes_variant_cfg[variant]['recursion-depth'],
+            node_filter=cnudie.iter.Filter.components,
+          ):
+            for rn in all_release_notes_docs:
+              if rn.component_id == cnode.component_id:
+                filtered_release_notes_docs.append(rn)
+
+          release_notes_docs = [
+            rnu.filter_release_notes(
+              release_notes_doc=release_notes_doc,
+              audiences=release_notes_variant_cfg[variant]['audiences'].split(','),
+              categories=release_notes_variant_cfg[variant]['categories'].split(','),
+            )
+            for release_notes_doc in filtered_release_notes_docs
+          ]
+
+          release_notes_markdown = rno.release_notes_docs_as_markdown(
+              release_notes_docs=release_notes_docs,
+          )
+          if not release_notes_markdown.endswith('\n')
+            release_notes_markdown = f'{release_notes_markdown}\n'
+
+          with open(f'/tmp/{variant}-release-notes.md', 'w') as f:
+            f.write(release_notes_markdown)
+
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      with:
+        name: github-release-notes
+        path: /tmp/github-release-notes.md
+
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      with:
+        name: slack-release-notes
+        path: /tmp/slack-release-notes.md
