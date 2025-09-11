@@ -128,7 +128,7 @@ runs:
 
         auth_token="${gh_auth_token}"
 
-        if [ -n "${{ inputs.service-account-name }}" && -n "${{ inputs.service-account-namespace }}" ]; then
+        if [ -n "${{ inputs.service-account-name }}" -a -n "${{ inputs.service-account-namespace }}" ]; then
           echo 'service-account details specified, requesting a service-account-token'
 
           echo $server_ca | base64 -d > ca.pem
