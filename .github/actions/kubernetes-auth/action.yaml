@@ -141,7 +141,7 @@ runs:
               -H "Authorization: Bearer ${gh_auth_token}" \
               -H "Content-Type: application/json" \
               -H "Accept: application/json" \
-              -d '${token_request_body}' \
+              -d "${token_request_body}" \
               "${kubernetes_token_request_url}" \
             | jq -r '.status.token'
           )
