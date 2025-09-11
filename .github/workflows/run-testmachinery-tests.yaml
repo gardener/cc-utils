@@ -49,6 +49,26 @@ on:
         description: |
           The path to which the generated kubeconfig will be generated (this needs to be passed
           to `testrunner`).
+      service-account-name:
+        required: false
+        type: string
+        default: testrunner
+        description: |
+          the service account in the target-cluster to authenticate request a token for.
+          It should be used by the testrunner invocation at a later stage.
+      service-account-namespace:
+        required: false
+        type: string
+        default: default
+        description: |
+          the namespace in which the service account resides.
+      service-account-token-expiration:
+        required: false
+        type: number
+        default: 10800
+        description: |
+          the requested expiration (in seconds) of the service account token.
+          Note that the actual expiration might differ, depending on the cluster's configuration.
       test-command:
         required: true
         type: string
@@ -89,6 +109,9 @@ jobs:
           server-ca: ${{ inputs.k8s-api-ca }}
           cluster-cfg: ${{ inputs.cluster-cfg }}
           kubeconfig-path: ${{ inputs.kubeconfig-path }}
+          service-account-name: ${{ inputs.service-account-name }}
+          service-account-namespace: ${{ inputs.service-account-namespace }}
+          service-account-token-expiration: ${{ inputs.service-account-token-expiration }}
       - name: trigger-testmachinery-tests
         shell: bash
         run: |
