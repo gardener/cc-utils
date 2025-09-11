@@ -116,7 +116,7 @@ runs:
           curl -sLS \
             -H "Authorization: Bearer ${gh_token}" \
             "${gha_token_url}" \
-          | jq .value
+          | jq -r .value
         )
 
         if [ -z "${gh_auth_token}" ]; then
