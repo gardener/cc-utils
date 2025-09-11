@@ -110,7 +110,7 @@ runs:
           server_ca=$(cat $cluster_cfg_file | yq .ca)
         fi
 
-        gh_token_url="${token_url}&audience=${{ inputs.audience }}"
+        gha_token_url="${token_url}&audience=${{ inputs.audience }}"
 
         gh_auth_token=$(
           curl -sLS \
