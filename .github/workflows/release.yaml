@@ -90,6 +90,61 @@ on:
           The auth-token to use to authenticate against slack. Only needed if `slack-channel-id` is
           passed. For convenience, defaults to `secrets.SLACK_APP_TOKEN_GARDENER_CICD` (calling
           workflows must set `secrets: inherit` for this to work.
+      github-release-notes-audiences:
+        required: false
+        type: string
+        default: dependency,developer,operator,user
+        description: |
+          Specify a subset of release-notes, which is published to the github release.
+          By default, all audiences are included.
+          Audiences are expected as a comma-separated list of values.
+      github-release-notes-categories:
+        required: false
+        type: string
+        default: action,breaking,bugfix,doc,feature,fix,improvement,noteworthy,other
+        description: |
+          Specify a subset of release-notes, which is published to the github release.
+          By default, all categories are included.
+          Categories are expected as a comma-separated list of values.
+      github-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: |
+          Sspecify a subset of release-notes, which is published to the github release.
+          By default, no release-notes from subcomponents are included.
+
+          Possible values:
+          -1: no limit, include *all* subcomponents
+           0: no sub components
+           1: directly referenced subcomponents
+           2: ...
+      github-release-notes-resource-details:
+        required: false
+        type: boolean
+        default: true
+        description: |
+          Whether to include resource details (e.g. OCI Image references, Helm Charts, ...).
+      social-release-notes-audiences:
+        required: false
+        type: string
+        default: dependency,developer,operator,user
+        description: see partner input for details
+      social-release-notes-categories:
+        required: false
+        type: string
+        default: action,breaking,bugfix,doc,feature,fix,improvement,noteworthy,other
+        description: see partner input for details
+      social-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: see partner input for details
+      social-release-notes-resource-details:
+        required: false
+        type: boolean
+        default: true
+        description: see partner input for details
       release-on-github:
         default: true
         type: boolean
@@ -198,7 +253,23 @@ jobs:
           github-token: ${{ steps.app-token.outputs.token }}
           draft: false
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
-      - uses: gardener/cc-utils/.github/actions/release@master
+          release-notes-variants: |
+            - name: github
+              audiences: ${{ inputs.github-release-notes-audiences }}
+              categories: ${{ inputs.github-release-notes-categories }}
+              recursion_depth: ${{ inputs.github-release-notes-recursion-depth }}
+              include_resources: ${{ inputs.github-release-notes-resource-details }}
+            - name: slack
+              audiences: ${{ inputs.social-release-notes-audiences }}
+              categories: ${{ inputs.social-release-notes-categories }}
+              recursion_depth: ${{ inputs.social-release-notes-recursion-depth }}
+              include_resources: ${{ inputs.social-release-notes-resource-details }}
+            - name: legacy
+              audiences: ''
+              categories: ''
+              recursion_depth: 0
+              include_resources: true
+      - uses: gardener/cc-utils/.github/actions/release@gha-preview
         id: release
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
@@ -209,20 +280,12 @@ jobs:
           next-version: ${{ inputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
-          release-notes: ${{ steps.release-notes.outputs.release-notes }}
-          full-release-notes: ${{ steps.release-notes.outputs.full-release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
           assets: ${{ inputs.assets }}
 
-      - name: write-release-notes-to-file
-        if: ${{ inputs.slack-channel-id != '' }}
-        run: |
-          cat <<"EOF" > release-notes.md
-          ${{ steps.release-notes.outputs.full-release-notes }}
-          EOF
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
         uses: slackapi/slack-github-action@v2
@@ -232,4 +295,4 @@ jobs:
           payload: |
             channel_id: ${{ inputs.slack-channel-id }}
             title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
-            file: ./release-notes.md
+            file: /tmp/release-notes/slack-release-notes.md

@@ -3,10 +3,15 @@
 # note: do not name this file `release_notes.py` to avoid conflicts w/ package of this name
 
 import argparse
+import dacite
+import dataclasses
+import enum
 import logging
 import os
 import pprint
 import sys
+import tarfile
+import tempfile
 
 import yaml
 
@@ -19,14 +24,17 @@ except ImportError:
     print(f'note: added {repo_root} to python-path (sys.path)', file=sys.stderr)
     import ocm
 
+import cnudie.iter
 import cnudie.retrieve
 import github
 import gitutil
 import oci.auth
 import oci.client
 import release_notes.fetch as rnf
+import release_notes.model as rnm
 import release_notes.ocm as rno
 import release_notes.tarutil as rnt
+import release_notes.utils as rnu
 import version
 
 logging.basicConfig(
@@ -40,6 +48,15 @@ def ensure_trailing_newline(text: str) -> str:
     if not text or text.endswith('\n'):
         return text
     return f'{text}\n'
+
+
+@dataclasses.dataclass
+class ReleaseNotesVariantCfg:
+    name: str
+    audiences: tuple[rnm.ReleaseNotesAudience, ...] = dataclasses.field(default_factory=tuple)
+    categories: tuple[rnm.ReleaseNotesCategory, ...] = dataclasses.field(default_factory=tuple)
+    recursion_depth: int = 0
+    include_resources: bool = True
 
 
 def main():
@@ -119,8 +136,39 @@ def main():
         default=None,
         help='Path to write machine-readable release-notes archive (.tar)',
     )
+    parser.add_argument(
+        '--release-notes-variants-cfg-path',
+        default=None,
+        help='''configuration from this file is used to create independent markdown variants of
+        release-notes. useful to publish towards different audiences.
+        each variant is added as single file to output archive, thus `tar-output` param is required.
+        configuration file contents are expected in the following format:
+          - name: my-variant
+            audiences:
+            - developer
+            - user
+            categories:
+            - bugfix
+            recursion_depth: 0
+        '''
+    )
 
     parsed = parser.parse_args()
+
+    release_notes_variants_cfg = []
+    if parsed.release_notes_variants_cfg_path:
+        with open(parsed.release_notes_variants_cfg_path, 'r') as f:
+            release_notes_variants_cfg = [
+                dacite.from_dict(
+                    data_class=ReleaseNotesVariantCfg,
+                    data=raw,
+                    config=dacite.Config(
+                        cast=[enum.Enum, tuple],
+                    )
+                )
+                for raw in yaml.safe_load(f)
+            ]
+
     if parsed.no_subcomponent_release_notes:
         # patch passed outfile for convenience (so caller may always specify it, and does not need
         # to calculate ARGV dynamically
@@ -153,6 +201,11 @@ def main():
     )
 
     ocm_version_lookup = cnudie.retrieve.version_lookup(
+        ocm_repository_lookup=ocm_repository_lookup,
+        oci_client=oci_client,
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
     )
@@ -237,14 +290,72 @@ def main():
         with open(parsed.subcomponent_release_notes, 'w') as f:
             f.write(sub_component_release_notes)
 
-    if parsed.tar_output:
-        all_release_note_docs = subcomponent_release_notes_docs
-        if component_release_notes_doc:
-            all_release_note_docs.append(component_release_notes_doc)
+    all_release_note_docs = subcomponent_release_notes_docs
+    if component_release_notes_doc:
+        all_release_note_docs.append(component_release_notes_doc)
 
-        with open(parsed.tar_output, 'wb') as f:
-            for chunk in rnt.release_notes_docs_into_tarstream(all_release_note_docs):
-                f.write(chunk)
+    if not parsed.tar_output:
+        return
+
+    tmp_dir = tempfile.TemporaryDirectory()
+    release_notes_archive_path = os.path.join(tmp_dir.name, 'release-notes-archive.tar')
+
+    with open(release_notes_archive_path, 'wb') as f:
+        for chunk in rnt.release_notes_docs_into_tarstream(all_release_note_docs):
+            f.write(chunk)
+
+    component_resources_markdown = rno.release_note_for_ocm_component(component)
+
+    for variant_cfg in release_notes_variants_cfg:
+        filtered_release_notes_docs = []
+        variant_markdown_path = os.path.join(tmp_dir.name, f'{variant_cfg.name}-release-notes.md')
+
+        for cnode in cnudie.iter.iter(
+            component=component_descriptor.component,
+            lookup=component_descriptor_lookup,
+            recursion_depth=variant_cfg.recursion_depth,
+            node_filter=cnudie.iter.Filter.components,
+        ):
+            for rn in all_release_note_docs:
+                if rn.component_id == cnode.component_id:
+                    filtered_release_notes_docs.append(
+                        rnu.filter_release_notes(
+                            release_notes_doc=rn,
+                            audiences=variant_cfg.audiences,
+                            categories=variant_cfg.categories,
+                        )
+                    )
+
+        release_notes_markdown = rno.release_notes_docs_as_markdown(
+            release_notes_docs=filtered_release_notes_docs,
+        )
+
+        if (
+            variant_cfg.include_resources
+            and component_resources_markdown
+        ):
+            release_notes_markdown = f'{release_notes_markdown}\n\n{component_resources_markdown}'
+
+        if release_notes_markdown and not release_notes_markdown.endswith('\n'):
+            release_notes_markdown = f'{release_notes_markdown}\n'
+
+        with open(variant_markdown_path, 'w') as f:
+            f.write(release_notes_markdown)
+
+    with tarfile.open(parsed.tar_output, 'w') as tar:
+        tar.add(
+            name=release_notes_archive_path,
+            arcname='release-notes-archive.tar',
+        )
+
+        for variant_cfg in release_notes_variants_cfg:
+            variant_md_path = os.path.join(tmp_dir.name, f'{variant_cfg.name}-release-notes.md')
+            tar.add(
+                name=variant_md_path,
+                arcname=f'{variant_cfg.name}-release-notes.md',
+            )
+
+    tmp_dir.cleanup()
 
 
 if __name__ == '__main__':
