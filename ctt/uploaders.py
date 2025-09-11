@@ -42,7 +42,7 @@ class UploaderBase:
 class RepositoryUploader(UploaderBase):
     def __init__(
         self,
-        repository: str,
+        repository: str | None=None,
         mangle: bool=True,
         mangle_replacement_char: str='_',
         convert_to_relative_refs: bool=False,
@@ -77,17 +77,18 @@ class RepositoryUploader(UploaderBase):
         if self._mangle:
             src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
 
+        if self._repository:
+            tgt_ref = ci.util.urljoin(tgt_oci_registry, self._repository)
+        else:
+            tgt_ref = tgt_oci_registry
+
         # if a prefix is to be removed from existing src base ref, it is likely that it should be
         # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
         # Instead, leave it up to the configuration to decide on the joining character.
         if not self._remove_prefixes:
-            tgt_ref = ci.util.urljoin(
-                tgt_oci_registry,
-                self._repository,
-                src_base_ref,
-            )
+            tgt_ref = ci.util.urljoin(tgt_ref, src_base_ref)
         else:
-            tgt_ref = ci.util.urljoin(tgt_oci_registry, self._repository) + src_base_ref
+            tgt_ref = tgt_ref + src_base_ref
 
         if src_ref.has_mixed_tag:
             symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
