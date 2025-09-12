@@ -527,13 +527,33 @@ runs:
       shell: python
       run: |
         import os
+        import subprocess
 
         import release_notes.ocm
 
+        release_notes_path='${{ inputs.release-notes-path }}'.rstrip('/') + '/'
+
+        output = subprocess.run(
+          (
+            'git',
+            'ls-tree',
+            '${{ github.sha }}',
+            release_notes_path,
+            '--name-only',
+          ),
+          check=True,
+          capture_output=True,
+          encoding='utf-8',
+        ).stdout.strip()
+
+        if output:
+          release_notes_files_rel_path = output.split('\n')
+        else:
+          release_notes_files_rel_path = []
 
         release_notes.ocm.purge_release_notes_dir(
           repo_dir=os.getcwd(),
-          rel_path='${{ inputs.release-notes-path }}',
+          files_rel_path=release_notes_files_rel_path,
         )
 
     - name: push-bump-commit

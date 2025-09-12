@@ -296,14 +296,31 @@ def read_release_notes_from_dir(
 
 def purge_release_notes_dir(
     repo_dir: str,
-    rel_path: str='.ocm/release-notes',
+    dir_rel_path: str='.ocm/release-notes',
+    files_rel_path: list[str] | None=None,
     absent_ok: bool=True,
 ):
     repo_dir = os.path.abspath(repo_dir)
-    dir_path = os.path.abspath(os.path.join(repo_dir, rel_path))
+
+    if files_rel_path is not None:
+        for file_rel_path in files_rel_path:
+            file_path = os.path.join(repo_dir, file_rel_path)
+
+            if not os.path.isfile(file_path):
+                logger.info(f'skipping deletion of {file_path=} (not a file)')
+                continue
+
+            if not file_path.endswith(rnm.RELEASE_NOTES_DOC_SUFFIX):
+                logger.info(f'skipping deletion of {file_path=} (suffix does not match)')
+                continue
+
+            os.remove(file_path)
+        return
+
+    dir_path = os.path.abspath(os.path.join(repo_dir, dir_rel_path))
 
     if not os.path.commonpath([repo_dir, dir_path]) == repo_dir:
-        raise ValueError(f'{rel_path=} points outside of {repo_dir=}')
+        raise ValueError(f'{dir_rel_path=} points outside of {repo_dir=}')
 
     if not os.path.isdir(dir_path):
         if not absent_ok:
