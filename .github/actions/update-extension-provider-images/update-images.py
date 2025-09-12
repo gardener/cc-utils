@@ -35,7 +35,7 @@ Image Updater Script.
 """
 
 import argparse
-import subprocess # nosec: B404
+import subprocess  # nosec: B404
 import yaml
 import re
 import sys
@@ -57,7 +57,7 @@ class Update(TypedDict):
 def check_regctl_available() -> bool:
     """Check if regctl command is available."""
     try:
-        subprocess.run(["regctl", "--help"], capture_output=True, check=True) # nosec: B603, B607
+        subprocess.run(["regctl", "--help"], capture_output=True, check=True)  # nosec: B603, B607
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
@@ -75,7 +75,7 @@ def run_regctl_command(repository: str) -> List[str]:
                    Returns an empty list on error.
     """
     try:
-        result = subprocess.run( # nosec: B603, B607
+        result = subprocess.run(  # nosec: B603, B607
             ["regctl", "tag", "ls", repository],
             capture_output=True,
             text=True,
@@ -492,11 +492,11 @@ def main():
     all_available_tags = {}
 
     for (name, repository), image_list in image_groups.items():
-        print(f"Checking {name} at {repository}...")
+        print(f"Checking {name} at {repository}...", file=sys.stderr)
 
         available_tags = run_regctl_command(repository)
         if not available_tags:
-            print(f"No tags found for {repository}")
+            print(f"No tags found for {repository}", file=sys.stderr)
             continue
 
         all_available_tags[name] = available_tags
@@ -504,11 +504,13 @@ def main():
         newer_versions = find_newer_versions(current_tags, available_tags)
 
         if newer_versions["patch"] or newer_versions["minor"]:
-            print(f"New tags found for {name}:")
+            print(f"New tags found for {name}:", file=sys.stderr)
             if newer_versions["patch"]:
-                print(f"  Patch updates: {', '.join(newer_versions['patch'])}")
+                print(f"  Patch updates: {', '.join(newer_versions['patch'])}", file=sys.stderr)
             if newer_versions["minor"]:
-                print(f"  Minor/Major updates: {', '.join(newer_versions['minor'])}")
+                print(
+                    f"  Minor/Major updates: {', '.join(newer_versions['minor'])}", file=sys.stderr
+                )
             all_new_versions[name] = newer_versions
 
     if all_new_versions:
@@ -516,19 +518,19 @@ def main():
         sort_images_by_name(images_data)
 
         write_yaml_with_formatting(images_data, images_yaml_path)
-        print(f"\nUpdated {images_yaml_path} with {len(updates)} changes.")
+        print(f"\nUpdated {images_yaml_path} with {len(updates)} changes.", file=sys.stderr)
 
         create_release_notes(updates, images_data, all_available_tags, release_notes_path)
-        print(f"Created {release_notes_path}")
+        print(f"Created {release_notes_path}", file=sys.stderr)
 
-        print("\nSummary of changes:")
+        print("The following container images have been updated:")
         for update in updates:
             print(
                 f"  - {update['image_name']}: {update['old_tag'] or 'N/A'} -> "
                 f"{update['new_tag']} ({update['update_type']})"
             )
     else:
-        print("\nNo newer versions found for any images.")
+        print("\nNo newer versions found for any images.", file=sys.stderr)
 
 
 if __name__ == "__main__":
