@@ -90,6 +90,84 @@ on:
           The auth-token to use to authenticate against slack. Only needed if `slack-channel-id` is
           passed. For convenience, defaults to `secrets.SLACK_APP_TOKEN_GARDENER_CICD` (calling
           workflows must set `secrets: inherit` for this to work.
+      github-release-notes-audiences:
+        required: false
+        type: string
+        default: ''
+        description: |
+          Allows to specify a subset of release-notes, which is published to the github release.
+          By default, all audiences are included.
+
+          Known audiences:
+          dependency, developer, operator, user
+
+          Audiences are expected as a comma-separated list of values:
+          developer,operator
+      github-release-notes-categories:
+        required: false
+        type: string
+        default: ''
+        description: |
+          Allows to specify a subset of release-notes, which is published to the github release.
+          By default, all categories are included.
+
+          Known categories:
+          action, breaking, bugfix, doc, feature, fix, improvement, noteworthy, other
+
+          Categories are expected as a comma-separated list of values:
+          breaking,doc,improvement
+      github-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: |
+          Allows to specify a subset of release-notes, which is published to the github release.
+          By default, no release-notes from subcomponents are included.
+
+          Possible values:
+          -1: no limit, include *all* subcomponents
+           0: no sub components
+           1: directly referenced subcomponents
+           2: ...
+      slack-release-notes-audiences:
+        required: false
+        type: string
+        default: ''
+        description: |
+          Allows to specify a subset of release-notes, which is posted to slack.
+          By default, all audiences are included.
+
+          Known audiences:
+          dependency, developer, operator, user
+
+          Audiences are expected as a comma-separated list of values:
+          developer,operator
+      slack-release-notes-categories:
+        required: false
+        type: string
+        default: ''
+        description: |
+          Allows to specify a subset of release-notes, which is posted to slack.
+          By default, all categories are included.
+
+          Known categories:
+          action, breaking, bugfix, doc, feature, fix, improvement, noteworthy, other
+
+          Categories are expected as a comma-separated list of values:
+          breaking,doc,improvement
+      slack-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: |
+          Allows to specify a subset of release-notes, which is posted to slack.
+          By default, no release-notes from subcomponents are included.
+
+          Possible values:
+          -1: no limit, include *all* subcomponents
+           0: no sub components
+           1: directly referenced subcomponents
+           2: ...
       release-on-github:
         default: true
         type: boolean
@@ -193,6 +271,16 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
+          release-notes-variants: |
+            github:
+              audiences: ${{ inputs.github-release-notes-audiences }}
+              categories: ${{ inputs.github-release-notes-categories }}
+              recursion-depth: ${{ inputs.github-release-notes-recursion-depth }}
+            slack:
+              audiences: ${{ inputs.slack-release-notes-audiences }}
+              categories: ${{ inputs.slack-release-notes-categories }}
+              recursion-depth: ${{ inputs.slack-release-notes-recursion-depth }}
+
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
@@ -209,20 +297,19 @@ jobs:
           next-version: ${{ inputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
-          release-notes: ${{ steps.release-notes.outputs.release-notes }}
-          full-release-notes: ${{ steps.release-notes.outputs.full-release-notes }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
           assets: ${{ inputs.assets }}
 
-      - name: write-release-notes-to-file
+      - name: fetch-slack-release-notes
         if: ${{ inputs.slack-channel-id != '' }}
-        run: |
-          cat <<"EOF" > release-notes.md
-          ${{ steps.release-notes.outputs.full-release-notes }}
-          EOF
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        with:
+          name: slack-release-notes.md
+          path: /tmp/slack-release-notes.md
+
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
         uses: slackapi/slack-github-action@v2
@@ -232,4 +319,4 @@ jobs:
           payload: |
             channel_id: ${{ inputs.slack-channel-id }}
             title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
-            file: ./release-notes.md
+            file: /tmp/slack-release-notes.md
