@@ -35,7 +35,7 @@ Image Updater Script.
 """
 
 import argparse
-import subprocess
+import subprocess # nosec: B404
 import yaml
 import re
 import sys
@@ -57,7 +57,7 @@ class Update(TypedDict):
 def check_regctl_available() -> bool:
     """Check if regctl command is available."""
     try:
-        subprocess.run(["regctl", "--help"], capture_output=True, check=True)
+        subprocess.run(["regctl", "--help"], capture_output=True, check=True) # nosec: B603, B607
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
@@ -75,7 +75,7 @@ def run_regctl_command(repository: str) -> List[str]:
                    Returns an empty list on error.
     """
     try:
-        result = subprocess.run(
+        result = subprocess.run( # nosec: B603, B607
             ["regctl", "tag", "ls", repository],
             capture_output=True,
             text=True,
