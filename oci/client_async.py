@@ -140,10 +140,10 @@ class Client:
             absent_ok=True,
         )
 
-        if om.OciImageReference(image_reference).registry_type is om.OciRegistryType.AWS:
-            if not oci_creds:
-                raise ValueError(f'no credentials for {image_reference=}')
-
+        if (
+            om.OciImageReference(image_reference).registry_type is om.OciRegistryType.AWS
+            and oci_creds
+        ):
             user, password = oci.aws.basic_auth_credentials(
                 image_reference=image_reference,
                 credentials=oci_creds,
