@@ -125,20 +125,16 @@ above:
 Posting Release Notes To Slack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When naming a ``default_channel`` and adding channel\_cfgs as shown in the example below to the ``slack`` trait of your pipeline definition, the release notes will be posted to specified channel (channel name or channel id). The ``slack_cfg_name`` has to correspond to the config element name of a known slack config on our Concourse.
+Specify a target slack-channel for input `slack-channel-id` for `release.yaml` workflow to
+enable release-notes to be conveyed to configured slack-channel.
 
 Example:
 
 .. code:: yaml
 
-        release:
-          traits:
-            release:
-              nextversion: 'bump_minor'
-            slack:
-              default_channel: 'channel_cfg' # This channel config will be used for posting the release notes to
-              channel_cfgs:
-                channel_cfg: # channel config name
-                  channel_name: 'my_slack_channel_name' # you can specify the channel name or channel id
-                  slack_cfg_name: 'example_slack_workspace' # Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)
-                  post_full_release_notes: False
+   # release workflow local to repository to be released
+   jobs:
+    release-to-github-and-bump:
+      uses: gardener/cc-utils/.github/workflows/release.yaml@master
+      with:
+        slack-channel-id: C0123ABCDEFG # replace this
