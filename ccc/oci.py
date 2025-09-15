@@ -37,10 +37,9 @@ def oci_cfg_lookup(
         creds = registry_cfg.credentials()
 
         if registry_cfg.registry_type() is oci.model.OciRegistryType.AWS:
-            # XXX enhance `container_registry` model to be more flexible
             return oa.OciAccessKeyCredentials(
-                access_key_id=creds.username(),
-                secret_access_key=creds.passwd(),
+                access_key_id=creds.access_key_id(),
+                secret_access_key=creds.secret_access_key(),
             )
 
         return oa.OciBasicAuthCredentials(
