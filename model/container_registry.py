@@ -54,6 +54,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'rotation_cfg',
             'access_key_id',
             'region',
+            'object_id',
+            'tenant_id',
         }
 
     def _required_attributes(self):
@@ -107,6 +109,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     def credentials(self):
         if self.registry_type() is om.OciRegistryType.AWS:
             return AwsCredentials(self.raw)
+        elif self.registry_type() is om.OciRegistryType.AZURE:
+            return AzureCredentials(self.raw)
 
         # XXX use GcrCredentials as a fallback as it was always the default
         return GcrCredentials(self.raw)
@@ -204,6 +208,26 @@ class AwsCredentials(BasicCredentials):
 
     def region(self) -> str:
         return self.raw['region']
+
+
+class AzureCredentials(BasicCredentials):
+    def _required_attributes(self):
+        return {
+            'object_id',
+            'tenant_id',
+        }
+
+    def client_id(self) -> str:
+        return self.username()
+
+    def client_secret(self) -> str:
+        return self.passwd()
+
+    def object_id(self) -> str:
+        return self.raw['object_id']
+
+    def tenant_id(self) -> str:
+        return self.raw['tenant_id']
 
 
 class GcrCredentials(BasicCredentials):
