@@ -281,7 +281,7 @@ def upgrade_pullrequest_body(
         total_length = len(bom_diff_markdown)
         if release_notes:
             total_length += len(release_notes)
-        include_bom_diff = total_length <= github.limits.pullrequest_body
+        include_bom_diff = total_length <= github.limits.issue_body
     else:
         include_bom_diff = False
 
