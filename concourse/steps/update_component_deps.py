@@ -385,15 +385,13 @@ def create_upgrade_pr(
     pr_body, additional_notes = github.pullrequest.upgrade_pullrequest_body(
         release_notes=release_notes_markdown,
         bom_diff_markdown=bom_diff_markdown,
+        pullrequest_body_suffix=pullrequest_body_suffix,
     )
 
     rnt.release_notes_docs_into_files(
         release_notes_docs=grouped_release_notes_docs,
         repo_dir=repo_dir,
     )
-
-    if pullrequest_body_suffix:
-        pr_body += f'\n{pullrequest_body_suffix}'
 
     if merge_policy is ucd.MergePolicy.MANUAL:
         delete_on_exit = False
