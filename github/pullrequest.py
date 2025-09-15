@@ -274,6 +274,7 @@ def split_into_chunks_if_too_long(
 def upgrade_pullrequest_body(
     release_notes: str | None,
     bom_diff_markdown: str | None,
+    pullrequest_body_suffix: str | None=None,
 ) -> tuple[str, list[str]]:
     pr_body = ''
 
@@ -281,6 +282,8 @@ def upgrade_pullrequest_body(
         total_length = len(bom_diff_markdown)
         if release_notes:
             total_length += len(release_notes)
+        if pullrequest_body_suffix:
+            total_length += len(pullrequest_body_suffix)
         include_bom_diff = total_length <= github.limits.issue_body
     else:
         include_bom_diff = False
@@ -290,6 +293,9 @@ def upgrade_pullrequest_body(
 
     if include_bom_diff:
         pr_body = f'{pr_body}\n\n{bom_diff_markdown}'
+
+    if pullrequest_body_suffix:
+        pr_body = f'{pr_body}\n\n{pullrequest_body_suffix}'
 
     return split_into_chunks_if_too_long(
         string=pr_body,
