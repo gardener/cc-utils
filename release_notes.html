@@ -201,19 +201,15 @@ above:</p>
 </section>
 <section id="posting-release-notes-to-slack">
 <h3>Posting Release Notes To Slack<a class="headerlink" href="#posting-release-notes-to-slack" title="Link to this heading"></a></h3>
-<p>When naming a <code class="docutils literal notranslate"><span class="pre">default_channel</span></code> and adding channel_cfgs as shown in the example below to the <code class="docutils literal notranslate"><span class="pre">slack</span></code> trait of your pipeline definition, the release notes will be posted to specified channel (channel name or channel id). The <code class="docutils literal notranslate"><span class="pre">slack_cfg_name</span></code> has to correspond to the config element name of a known slack config on our Concourse.</p>
+<p>Specify a target slack-channel for input <code class="code docutils literal notranslate"><span class="pre">slack-channel-id</span></code> for <code class="code docutils literal notranslate"><span class="pre">release.yaml</span></code> workflow to
+enable release-notes to be conveyed to configured slack-channel.</p>
 <p>Example:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">release</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">traits</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">release</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">nextversion</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;bump_minor&#39;</span>
-<span class="w">    </span><span class="nt">slack</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">default_channel</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;channel_cfg&#39;</span><span class="w"> </span><span class="c1"># This channel config will be used for posting the release notes to</span>
-<span class="w">      </span><span class="nt">channel_cfgs</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">channel_cfg</span><span class="p">:</span><span class="w"> </span><span class="c1"># channel config name</span>
-<span class="w">          </span><span class="nt">channel_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;my_slack_channel_name&#39;</span><span class="w"> </span><span class="c1"># you can specify the channel name or channel id</span>
-<span class="w">          </span><span class="nt">slack_cfg_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;example_slack_workspace&#39;</span><span class="w"> </span><span class="c1"># Specifies the slack configuration that holds the slack api key (which is bound to a slack workspace)</span>
-<span class="w">          </span><span class="nt">post_full_release_notes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># release workflow local to repository to be released</span>
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w"> </span><span class="nt">release-to-github-and-bump</span><span class="p">:</span>
+<span class="w">   </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardener/cc-utils/.github/workflows/release.yaml@master</span>
+<span class="w">   </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">     </span><span class="nt">slack-channel-id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C0123ABCDEFG</span><span class="w"> </span><span class="c1"># replace this</span>
 </pre></div>
 </div>
 </section>
