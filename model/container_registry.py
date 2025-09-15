@@ -52,6 +52,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             'api_base_url',
             'registry_type',
             'rotation_cfg',
+            'access_key_id',
+            'region',
         }
 
     def _required_attributes(self):
@@ -65,6 +67,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         if (
             self.rotation_cfg()
             and self.registry_type() not in (
+                om.OciRegistryType.AWS,
                 om.OciRegistryType.GAR,
                 om.OciRegistryType.GCR,
             )
@@ -102,7 +105,10 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         return None
 
     def credentials(self):
-        # XXX handle different container registry types
+        if self.registry_type() is om.OciRegistryType.AWS:
+            return AwsCredentials(self.raw)
+
+        # XXX use GcrCredentials as a fallback as it was always the default
         return GcrCredentials(self.raw)
 
     def has_service_account_credentials(self):
@@ -181,6 +187,23 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
             if image_reference.startswith(prefix):
                 return True
         return False
+
+
+class AwsCredentials(BasicCredentials):
+    def _required_attributes(self):
+        return {
+            'access_key_id',
+            'region',
+        }
+
+    def secret_access_key(self) -> str:
+        return self.passwd()
+
+    def access_key_id(self) -> str:
+        return self.raw['access_key_id']
+
+    def region(self) -> str:
+        return self.raw['region']
 
 
 class GcrCredentials(BasicCredentials):
