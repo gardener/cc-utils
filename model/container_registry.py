@@ -7,31 +7,23 @@ import base64
 import json
 import logging
 import urllib.parse
-import typing
 
 import dacite
 
 import ci.log
 import ci.util
-import oci.util
 import oci.auth as oa
 import oci.model as om
+import oci.util
 
 import model.base
-from model.base import (
-    BasicCredentials,
-    NamedModelElement,
-    ModelDefaultsMixin,
-)
-
-from ci.util import check_type
 
 
 ci.log.configure_default_logging()
 logger = logging.getLogger(__name__)
 
 
-class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
+class ContainerRegistryConfig(model.base.NamedModelElement, model.base.ModelDefaultsMixin):
     '''
     Not intended to be instantiated by users of this module
     '''
@@ -84,16 +76,16 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     def private_key_id(self) -> str:
         return json.loads(self.password())['private_key_id']
 
-    def registry_type(self):
+    def registry_type(self) -> om.OciRegistryType:
         try:
             return om.OciRegistryType(self.raw.get('registry_type'))
         except ValueError:
             return om.OciRegistryType.UNKNOWN
 
-    def api_base_url(self):
+    def api_base_url(self) -> str | None:
         return self.raw.get('api_base_url')
 
-    def rotation_cfg(self) -> model.base.CfgElementReference:
+    def rotation_cfg(self) -> model.base.CfgElementReference | None:
         '''
         used to specify cfg-element to use for cross-rotation
         '''
@@ -115,10 +107,10 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         # XXX use GcrCredentials as a fallback as it was always the default
         return GcrCredentials(self.raw)
 
-    def has_service_account_credentials(self):
+    def has_service_account_credentials(self) -> bool:
         return GcrCredentials(self.raw).has_service_account_credentials()
 
-    def as_docker_auths(self):
+    def as_docker_auths(self) -> dict:
         '''
         returns a representation of the credentials from this registry-cfg as "docker-auths",
         which can be used to populate a docker-cfg file ($HOME/.docker/config.json) below the
@@ -159,8 +151,8 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
     def privileges(self) -> oa.Privileges:
         return oa.Privileges(self.raw['privileges'])
 
-    def image_reference_prefixes(self):
-        prefixes = self.raw.get('image_reference_prefixes', ())
+    def image_reference_prefixes(self) -> list[str]:
+        prefixes = self.raw.get('image_reference_prefixes', [])
         if isinstance(prefixes, str):
             return [prefixes]
         return prefixes
@@ -169,7 +161,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         self,
         image_reference: str,
         privileges: oa.Privileges=None,
-    ):
+    ) -> bool:
         '''
         returns a boolean indicating whether a given container image reference matches any
         configured image reference prefixes (thus indicating this cfg might be adequate for
@@ -177,8 +169,6 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
 
         If no image reference prefixes are configured, `False` is returned.
         '''
-        check_type(image_reference, str)
-
         prefixes = self.image_reference_prefixes()
         if not prefixes:
             return False
@@ -193,7 +183,7 @@ class ContainerRegistryConfig(NamedModelElement, ModelDefaultsMixin):
         return False
 
 
-class AwsCredentials(BasicCredentials):
+class AwsCredentials(model.base.BasicCredentials):
     def _required_attributes(self):
         return {
             'access_key_id',
@@ -210,7 +200,7 @@ class AwsCredentials(BasicCredentials):
         return self.raw['region']
 
 
-class AzureCredentials(BasicCredentials):
+class AzureCredentials(model.base.BasicCredentials):
     def _required_attributes(self):
         return {
             'object_id',
@@ -230,7 +220,7 @@ class AzureCredentials(BasicCredentials):
         return self.raw['tenant_id']
 
 
-class GcrCredentials(BasicCredentials):
+class GcrCredentials(model.base.BasicCredentials):
     '''
     Not intended to be instantiated by users of this module
     '''
@@ -262,11 +252,11 @@ class GcrCredentials(BasicCredentials):
 
 
 def find_config(
-    image_reference: typing.Union[str, om.OciImageReference],
+    image_reference: str | om.OciImageReference,
     privileges:oa.Privileges=None,
     _normalised_image_reference=False,
     cfg_factory=None,
-) -> typing.Optional[ContainerRegistryConfig]:
+) -> ContainerRegistryConfig | None:
     image_reference = str(image_reference)
     if not cfg_factory:
         cfg_factory = ci.util.ctx().cfg_factory()
