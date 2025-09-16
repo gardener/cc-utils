@@ -33,7 +33,6 @@ inputs:
   token:
     type: string
     default: ''
-    required: false
     description: |
       passed to `actions/checkout` as `token` input.
   trusted-label:

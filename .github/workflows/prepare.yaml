@@ -76,7 +76,6 @@ on:
       checkout-token:
         default: ''
         type: string
-        required: false
         description: |
           passed to checkout (as `token` input)
       post-process:
