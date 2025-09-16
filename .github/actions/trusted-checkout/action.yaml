@@ -69,7 +69,7 @@ runs:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
         submodules: ${{ inputs.submodules }}
-        token: ${{ inputs.token || secrets.GITHUB_TOKEN }}
+        token: ${{ inputs.token }}
     - name: checkout-pullrequest
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc
