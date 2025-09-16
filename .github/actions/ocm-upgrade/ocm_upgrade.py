@@ -2,6 +2,7 @@
 
 import collections.abc
 import dataclasses
+import enum
 import logging
 import os
 import subprocess
@@ -32,6 +33,11 @@ import release_notes.tarutil as rnt
 import version
 
 logger = logging.getLogger(__name__)
+
+
+class UpstreamUpdatePolicy(enum.StrEnum):
+    STRICTLY_FOLLOW = 'strictly-follow'
+    ACCEPT_HOTFIXES = 'accept-hotfixes'
 
 
 def create_ocm_lookups(
@@ -319,46 +325,121 @@ def create_upgrade_pullrequests(
     merge_method: str,
     branch: str,
     oci_client: oci.client.Client,
+    upstream_component_name: str | None=None,
+    upstream_update_policy: UpstreamUpdatePolicy = UpstreamUpdatePolicy.STRICTLY_FOLLOW,
+    ignore_prerelease_versions: bool=True,
 ) -> collections.abc.Iterable[github.pullrequest.UpgradePullRequest]:
     for cref in ocm.gardener.iter_greatest_component_references(
         references=ocm.gardener.iter_component_references(component=component),
     ):
         logger.info(f'processing {cref=}')
+        upgrade_vectors: list[ocm.gardener.UpgradeVector] = []
 
-        upgrade_vector = ocm.gardener.find_upgrade_vector(
-            component_id=cref.component_id,
-            version_lookup=version_lookup,
-            ignore_prerelease_versions=True,
-            ignore_invalid_semver_versions=True,
-        )
+        if upstream_component_name:
+            upstream_version = version.greatest_version(
+                versions=version_lookup(upstream_component_name),
+                ignore_prerelease_versions=ignore_prerelease_versions
+            )
 
-        if not upgrade_vector:
-            logger.info(f'did not find an upgrade-proposal for {cref=}')
-            continue
+            if not upstream_version:
+                logger.warning(f'no versions for upstream {upstream_component_name=}')
+                continue
 
-        if upgrade_pullrequest_exists(
-            upgrade_vector=upgrade_vector,
-            upgrade_pullrequests=upgrade_pullrequests,
-        ):
-            logger.info(f'upgrade-pullrequest for {upgrade_vector=} already exists (skipping)')
-            continue
+            upstream_cd: ocm.ComponentDescriptor = component_descriptor_lookup(
+                ocm.ComponentIdentity(
+                    name=upstream_component_name,
+                    version=upstream_version,
+                )
+            )
+            upstream_target_version = None
+            for uref in upstream_cd.component.componentReferences or ():
+                if uref.componentName == cref.componentName:
+                    upstream_target_version = uref.version
+                    break
+            else:
+                logger.info(f'upstream has no reference for {cref.componentName}')
+                continue
 
-        yield create_upgrade_pullrequest(
-            upgrade_vector=upgrade_vector,
-            component_descriptor_lookup=component_descriptor_lookup,
-            version_lookup=version_lookup,
-            repo_dir=repo_dir,
-            repo_url=repo_url,
-            repository=repository,
-            auto_merge=auto_merge,
-            merge_method=merge_method,
-            branch=branch,
-            oci_client=oci_client,
-        )
-        # early-exit after first created upgrade PR as a workaround (for now) to prevent unintended
-        # sideeffects (e.g. dirty worktree, git conflicts)
-        # -> possible upgrade PRs for other components will be created upon the next execution
-        return
+            if upstream_update_policy  is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+                candidates = (upstream_target_version,)
+            elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
+                cref_versions = version_lookup(cref.componentName)
+                hotfix = version.greatest_version_with_matching_minor(
+                    reference_version=cref.version,
+                    versions=cref_versions,
+                    ignore_prerelease_versions=ignore_prerelease_versions,
+                )
+                if hotfix and hotfix != upstream_target_version:
+                    candidates = (hotfix, upstream_target_version)
+                else:
+                    candidates = (upstream_target_version,)
+            else:
+                raise ValueError(f'unknown {upstream_update_policy=}')
+
+            for target in candidates:
+                tv = version.parse_to_semver(target)
+                cv = version.parse_to_semver(cref.version)
+
+                if tv == cv:
+                    logger.info(f'already at target {cref.componentName} {target=} (skip)')
+                    continue
+
+                if tv < cv and upstream_update_policy is not UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+                    logger.info(
+                        f'skip (no downgrade for ACCEPT_HOTFIXES): {cref.componentName} '
+                        f'{cref.version=} -> {target=}'
+                    )
+                    continue
+                upgrade_vectors.append(
+                    ocm.gardener.UpgradeVector(
+                        whence=ocm.ComponentIdentity(
+                            name=cref.componentName,
+                            version=cref.version
+                        ),
+                        whither=ocm.ComponentIdentity(
+                            name=cref.componentName,
+                            version=target
+                        ),
+                    )
+                )
+        else:
+            upgrade_vector = ocm.gardener.find_upgrade_vector(
+                component_id=cref.component_id,
+                version_lookup=version_lookup,
+                ignore_prerelease_versions=ignore_prerelease_versions,
+                ignore_invalid_semver_versions=True,
+            )
+
+            if not upgrade_vector:
+                logger.info(f'did not find an upgrade-proposal for {cref=}')
+                continue
+
+            upgrade_vectors.append(upgrade_vector)
+
+        for uv in upgrade_vectors:
+            if upgrade_pullrequest_exists(
+                upgrade_vector=uv,
+                upgrade_pullrequests=upgrade_pullrequests,
+            ):
+                logger.info(f'upgrade-pullrequest for {upgrade_vector=} already exists (skipping)')
+                continue
+
+            yield create_upgrade_pullrequest(
+                upgrade_vector=uv,
+                component_descriptor_lookup=component_descriptor_lookup,
+                version_lookup=version_lookup,
+                repo_dir=repo_dir,
+                repo_url=repo_url,
+                repository=repository,
+                auto_merge=auto_merge,
+                merge_method=merge_method,
+                branch=branch,
+                oci_client=oci_client,
+            )
+            # early-exit after first created upgrade PR as a workaround (for now) to prevent
+            # unintended sideeffects (e.g. dirty worktree, git conflicts)
+            # -> possible upgrade PRs for other components will be created upon the next execution
+            return
 
 
 def main():
