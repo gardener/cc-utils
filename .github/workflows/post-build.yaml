@@ -10,6 +10,13 @@ name: Post-Build
 
 on:
   workflow_call:
+    secrets:
+      github-app-secret-key:
+        required: false
+        description: |
+          The secret-key for the `Gardener-GitHub-App` (`vars.GARDENER_GITHUB_ACTIONS_APP_ID`)
+          If not passed (in which case calling workflows need to set `secrets: inherit`), defaults
+          to `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
     inputs:
       ocm-repositories:
         type: string
@@ -167,13 +174,18 @@ jobs:
           fi
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
       - uses: actions/checkout@v4
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - name: draft-release-notes
         id: drn
         uses: gardener/cc-utils/.github/actions/release-notes@master
         with:
           component-descriptor: ${{ needs.component-descriptor.outputs.component-descriptor }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.app-token.outputs.token }}
           draft: true
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
       - name: update-draft-release

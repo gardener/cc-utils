@@ -21,9 +21,8 @@ inputs:
       passed ocm-component-descriptor (see caveat above).
   github-token:
     description: |
-      the github-auth-token to use for authenticating against GitHub.
-      Use `secrets.GITHUB_TOKEN`. If not passed-on via input, env-var GITHUB_TOKEN will be
-      honoured
+      the github-auth-token to use for authenticating against GitHub, use `secrets.GITHUB_TOKEN`.
+      If not passed-on via input, env-var GITHUB_TOKEN will be honoured
   include-subcomponent-release-notes:
     description: |
       if set to `true`, release-notes of subcomponents will be included in full-release-notes
@@ -60,7 +59,6 @@ runs:
       uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
-        gh-token: ${{ inputs.github-token }}
     - name: Retrieve Release-Notes
       id: release-notes
       shell: bash
