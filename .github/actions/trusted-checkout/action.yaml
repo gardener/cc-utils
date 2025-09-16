@@ -30,6 +30,11 @@ inputs:
     default: false
     description: |
       passed to `actions/checkout` as `submodules` input.
+  token:
+    type: string
+    default: ''
+    description: |
+      passed to `actions/checkout` as `token` input.
   trusted-label:
     type: string
     default: 'reviewed/ok-to-test'
@@ -59,10 +64,18 @@ runs:
   using: composite
   steps:
     - uses: actions/checkout@v4
+      if: ${{ inputs.token == '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
         submodules: ${{ inputs.submodules }}
+    - uses: actions/checkout@v4
+      if: ${{ inputs.token != '' }}
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        path: ${{ inputs.path }}
+        submodules: ${{ inputs.submodules }}
+        token: ${{ inputs.token }}
     - name: checkout-pullrequest
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc
