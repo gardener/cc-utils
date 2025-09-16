@@ -22,9 +22,14 @@ inputs:
     default: 1
     required: false
     description: |
-      passed to `actions/checkout`'s as `fetch-depth` input.
+      passed to `actions/checkout` as `fetch-depth` input.
 
       useful for cases where longer history is required.
+  submodules:
+    type: string
+    default: false
+    description: |
+      passed to `actions/checkout` as `submodules` input.
   trusted-label:
     type: string
     default: 'reviewed/ok-to-test'
@@ -57,6 +62,7 @@ runs:
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
+        submodules: ${{ inputs.submodules }}
     - name: checkout-pullrequest
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc

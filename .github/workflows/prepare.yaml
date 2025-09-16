@@ -68,6 +68,11 @@ on:
         type: number
         description: |
           passed to checkout. Useful longer history is required.
+      checkout-submodules:
+        default: false
+        type: string
+        description: |
+          passed to checkout (as `submodules` input)
       post-process:
         type: string
         required: false
@@ -193,6 +198,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           fetch-depth: ${{ inputs.checkout-fetch-depth }}
+          submodules: ${{ inputs.checkout-submodules }}
       - name: preprocess-params
         id: pre
         run: |
