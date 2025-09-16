@@ -61,6 +61,18 @@ inputs:
       required by said callback-script.
     type: string
     required: false
+  upstream-component-name:
+    description: Upstream component name to gate against
+    type: string
+    required: false
+    default: ""
+  upstream-update-policy:
+    description: Upstream policy
+    type: choice
+    options:
+      - strictly-follow
+      - accept-hotfixes
+    default: strictly-follow
 
 runs:
   using: composite
@@ -68,7 +80,7 @@ runs:
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - uses: actions/checkout@v4
       with:
-        token: ${{  inputs.github-token }}
+        token: ${{ inputs.github-token }}
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - name: write-component-descriptor
       shell: bash
@@ -118,7 +130,7 @@ runs:
         import ocm_upgrade
 
         logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-        logger = logging.getLogger('ugrade-ocm')
+        logger = logging.getLogger('upgrade-ocm')
 
         # silence annoying loggers
         logging.getLogger('github3').setLevel(logging.WARN)
@@ -146,7 +158,7 @@ runs:
         elif merge_policy == 'manual':
           auto_merge = False
         else:
-          raise ValueError(f'unspected {merge_policy=}')
+          raise ValueError(f'unexpected {merge_policy=}')
 
         with open('/tmp/github-token') as f:
           github_token = f.read().strip()
@@ -167,6 +179,10 @@ runs:
         )
 
         logger.info(f'found {len(upgrade_pullrequests)=}')
+        upstream_component = '${{ inputs.upstream-component-name }}'.strip() or None
+        upstream_update_policy = ocm_upgrade.UpstreamUpdatePolicy(
+          '${{ inputs.upstream-update-policy }}'.strip()
+        )
 
         created_upgrade_pullrequests = tuple(
           ocm_upgrade.create_upgrade_pullrequests(
@@ -181,6 +197,9 @@ runs:
             merge_method=merge_method,
             branch='${{ github.ref_name }}',
             oci_client=oci_client,
+            upstream_component_name=upstream_component,
+            upstream_update_policy=upstream_update_policy,
+            ignore_prerelease_versions=True,
           )
         )
 
