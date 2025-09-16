@@ -73,11 +73,6 @@ on:
         type: string
         description: |
           passed to checkout (as `submodules` input)
-      checkout-token:
-        default: ''
-        type: string
-        description: |
-          passed to checkout (as `token` input)
       post-process:
         type: string
         required: false
@@ -204,7 +199,6 @@ jobs:
         with:
           fetch-depth: ${{ inputs.checkout-fetch-depth }}
           submodules: ${{ inputs.checkout-submodules }}
-          token: ${{ inputs.checkout-token }}
       - name: preprocess-params
         id: pre
         run: |
