@@ -7,10 +7,6 @@ name: 'Update Extension Provider Images'
 description: 'Checks for new image versions, updates images.yaml, and generates release notes.'
 
 inputs:
-  python-version:
-    description: 'The version of Python to use.'
-    required: false
-    default: '3.13'
   images-yaml-path:
     description: 'Path to the images.yaml file.'
     required: false
@@ -28,18 +24,10 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Install regctl
-      shell: bash
-      run: |
-        curl -L "https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64" -o /usr/local/bin/regctl
-        chmod +x /usr/local/bin/regctl
+    - name: Install Gardener GHA Libs
+      uses: ./.github/actions/install-gardener-gha-libs
 
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ inputs.python-version }}
-
-    - name: Install Python dependencies
+    - name: Install additional Python dependencies
       shell: bash
       run: pip install -r ${{ github.action_path }}/requirements.txt
 
