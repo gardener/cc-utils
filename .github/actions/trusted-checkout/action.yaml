@@ -30,6 +30,30 @@ inputs:
     default: false
     description: |
       passed to `actions/checkout` as `submodules` input.
+  auth-app-client-id:
+    type: string
+    default: ''
+    description: |
+      if used in conjuction to setting `submodules` to `recursive`, pass the client-id of a
+      GitHub-App that should be used to retrieve access-token(s) for checking out submodules.
+
+      if passed, must also pass `auth-app-private-key`. The app must be authorised to
+      (read-)access all git-repositories referenced as submodules.
+
+      If there are no submodules, or `submodules` is not set to `recursive`, this input will be
+      ignored.
+  auth-app-private-key:
+    type: string
+    default: ''
+    description: |
+      if used in conjuction to setting `submodules` to `recursive`, pass the private-key of a
+      GitHub-App that should be used to retrieve access-token(s) for checking out submodules.
+
+      if passed, must also pass `auth-app-client-id`. The app must be authorised to
+      (read-)access all git-repositories referenced as submodules.
+
+      If there are no submodules, or `submodules` is not set to `recursive`, this input will be
+      ignored.
   token:
     type: string
     default: ''
@@ -68,14 +92,27 @@ runs:
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
-        submodules: ${{ inputs.submodules }}
     - uses: actions/checkout@v4
       if: ${{ inputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
-        submodules: ${{ inputs.submodules }}
         token: ${{ inputs.token }}
+
+    - name: checkout-submodules
+      if: ${{ inputs.submodules == 'recursive' }}
+      shell: bash
+      run: |
+        set -euo
+
+        echo "checking out submodules.."
+        set +x
+        APP_ID="${{ inputs.auth-app-client-id }}" \
+        APP_KEY="${{ inputs.auth-app-private-key }}" \
+        GIT_DIR=$PWD/.git \
+        GIT_WORK_TREE=$PWD \
+          "${{ github.action_path }}/checkout-submodules.sh"
+
     - name: checkout-pullrequest
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc
