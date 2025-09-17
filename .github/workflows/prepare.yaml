@@ -204,7 +204,8 @@ jobs:
         with:
           fetch-depth: ${{ inputs.checkout-fetch-depth }}
           submodules: ${{ inputs.checkout-submodules }}
-          token: ${{ inputs.checkout-token || secrets.GITHUB_TOKEN }}
+          auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - name: preprocess-params
         id: pre
         run: |
