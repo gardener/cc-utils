@@ -60,6 +60,16 @@ on:
           An optional path (relative to repository-root) to a local action. If given, this action
           will be called prior to calling `set_dependency_version` callback. Useful to install
           preliminaries, such as golang toolchain.
+      upstream-component-name:
+        required: false
+        type: string
+        description: Upstream component name to gate against
+        default: ""
+      upstream-update-policy:
+        required: false
+        type: string
+        description: strictly-follow | accept-hotfixes
+        default: strictly-follow
 
 jobs:
   prepare:
@@ -98,3 +108,5 @@ jobs:
           merge-policy: ${{ inputs.merge-policy }}
           merge-method: ${{ inputs.merge-method }}
           prepare-action-path: ${{ inputs.prepare-action-path }}
+          upstream-component-name: ${{ inputs.upstream-component-name }}
+          upstream-update-policy: ${{ inputs.upstream-update-policy }}
