@@ -84,17 +84,34 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: create-token
+      if: ${{ inputs.auth-app-private-key != '' }}
+      id: token
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ${{ inputs.token != '' }}; then
+          echo 'Error: must not pass `token` if passing `auth-app-*`'
+          exit 1
+        fi
+        token=$(
+          ${{ github.actions_path }}/create_app_token.py \
+            --client-id '${{ inputs.auth-app-client-id }}' \
+            --private-key '${{ inputs.auth-app-private-key }}' \
+            --github-org '${{ github.repository_owner }}' \
+        )
+        echo "token=${token}" >> ${GITHUB_OUTPUT}
     - uses: actions/checkout@v4
-      if: ${{ inputs.token == '' }}
+      if: ${{ inputs.token == '' && steps.token.outputs.token == '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
     - uses: actions/checkout@v4
-      if: ${{ inputs.token != '' }}
+      if: ${{ inputs.token != '' || steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
-        token: ${{ inputs.token }}
+        token: ${{ steps.token.outputs.token || inputs.token }}
 
     - name: checkout-submodules
       if: ${{ inputs.submodules == 'recursive' }}
