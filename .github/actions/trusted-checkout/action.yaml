@@ -100,8 +100,10 @@ runs:
         fi
         if ${{ inputs.repository != '' }}; then
           org=$(echo '${{ inputs.repository }}' | cut -d/ -f1)
+          repo=$(echo '${{ inputs.repository }}' | cut -d/ -f2)
         else
           org=${{ github.repository_owner }}
+          repo=$(echo ${{ github.repository }} | cut -d/ -f2)
         fi
         echo "creating an auth-token for org $org"
         cat <<EOF > /tmp/key
@@ -112,6 +114,7 @@ runs:
             --client-id '${{ inputs.auth-app-client-id }}' \
             --private-key "$(cat /tmp/key)" \
             --github-org "$org" \
+            --repository "$repo" \
         )
         unlink /tmp/key
         echo "token=${token}" >> ${GITHUB_OUTPUT}
