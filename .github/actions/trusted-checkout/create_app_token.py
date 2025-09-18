@@ -29,6 +29,13 @@ def main():
         '--github-org',
         required=True,
     )
+    parser.add_argument(
+        '--repository',
+        dest='repositories',
+        required=False,
+        default=[],
+        action='append',
+    )
 
     p = parser.parse_args()
 
@@ -51,8 +58,16 @@ def main():
     installation = sess.get(api_url(f'orgs/{p.github_org}/installation')).json()
     installation_id = installation.get('id')
 
+    if p.repositories:
+        body = {
+            'repositories': p.repositories,
+        }
+    else:
+        body = None
+
     access_token = sess.post(
-        api_url(f'app/installations/{installation_id}/access_tokens')
+        api_url(f'app/installations/{installation_id}/access_tokens'),
+        json=body,
     )
     access_token.raise_for_status()
 
