@@ -14,6 +14,7 @@ import logging
 import urllib.parse
 
 import requests
+import requests.exceptions
 
 import oci.auth
 import oci.model
@@ -294,11 +295,21 @@ def create_repository(
 
     body = json.dumps(payload).encode()
 
-    request(
-        action=AwsAction.CREATE_REPOSITORY,
-        body=body,
-        image_reference=image_reference,
-        method='POST',
-        credentials=credentials,
-        session=session,
-    )
+    try:
+        request(
+            action=AwsAction.CREATE_REPOSITORY,
+            body=body,
+            image_reference=image_reference,
+            method='POST',
+            credentials=credentials,
+            session=session,
+        )
+    except requests.exceptions.HTTPError as e:
+        res = e.response
+        if (
+            res.headers.get('Content-Type') == 'application/x-amz-json-1.1'
+            and res.json().get('__type') == 'RepositoryAlreadyExistsException'
+        ):
+            # ignore it if the repository has been created in the meantime anyways
+            return
+        raise
