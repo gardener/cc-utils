@@ -34,31 +34,28 @@ inputs:
     type: string
     default: ''
     description: |
-      if used in conjuction to setting `submodules` to `recursive`, pass the client-id of a
-      GitHub-App that should be used to retrieve access-token(s) for checking out submodules.
-
       if passed, must also pass `auth-app-private-key`. The app must be authorised to
-      (read-)access all git-repositories referenced as submodules.
+      (read-)access all git-repositories (including submodules, if any).
 
-      If there are no submodules, or `submodules` is not set to `recursive`, this input will be
-      ignored.
+      If auth-app-private-key is _not_ passed, this will be silently ignored, which might
+      result in authorisation-errors. This is done such as to be friendly towards callers
+      from reusable workflows, which may not inherit secrets to called workflows.
+
+      if set, `token` input must not be passed.
   auth-app-private-key:
     type: string
     default: ''
     description: |
-      if used in conjuction to setting `submodules` to `recursive`, pass the private-key of a
-      GitHub-App that should be used to retrieve access-token(s) for checking out submodules.
-
       if passed, must also pass `auth-app-client-id`. The app must be authorised to
-      (read-)access all git-repositories referenced as submodules.
+      (read-)access all git-repositories (including submodules, if any).
 
-      If there are no submodules, or `submodules` is not set to `recursive`, this input will be
-      ignored.
+      if set, `token` input must not be passed.
   token:
     type: string
     default: ''
     description: |
-      passed to `actions/checkout` as `token` input.
+      passed to `actions/checkout` as `token` input. Must not be passed if `auth-app-*`-inputs
+      are set.
   trusted-label:
     type: string
     default: 'reviewed/ok-to-test'

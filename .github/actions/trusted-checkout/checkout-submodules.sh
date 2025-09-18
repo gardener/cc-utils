@@ -24,8 +24,8 @@ if [ -z "${APP_ID:-}" -a -n "${APP_KEY:-}" ]; then
   echo "Error: APP_ID and APP_KEY must both be set or not set"
   exit 1
 elif [ -n "${APP_ID:-}" -a -z "${APP_KEY:-}" ]; then
-  echo "Error: APP_ID and APP_KEY must both be set or not set"
-  exit 1
+  echo "Warning: APP_KEY not set - will not create github-app-authtokens"
+  have_app=false
 elif [ -n "${APP_ID:-}" ]; then
   # we checked both are (un)set above
   have_app=true
