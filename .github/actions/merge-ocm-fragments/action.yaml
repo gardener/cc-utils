@@ -321,6 +321,11 @@ runs:
 
         export BASE_DEFINITION_PATH="${{ inputs.outdir }}/base-component-descriptor.yaml"
         export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-descriptor.yaml"
+        cname=$(
+          cat ${{ inputs.outdir }}/component-descriptor.yaml \
+          yq -r .component.name \
+        )
+        export COMPONENT_NAME=$cname
 
         callback=.ci/component_descriptor
 
