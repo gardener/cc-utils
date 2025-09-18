@@ -86,7 +86,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
         },
     )
 
-    target_manifest_dict = dataclasses.asdict(target_manifest)
+    target_manifest_dict = target_manifest.as_dict()
     target_manifest_bytes = json.dumps(target_manifest_dict).encode('utf-8')
 
     oci_client.put_manifest(
