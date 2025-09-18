@@ -98,12 +98,22 @@ runs:
           echo 'Error: must not pass `token` if passing `auth-app-*`'
           exit 1
         fi
+        if ${{ inputs.repository != '' }}; then
+          org=$(echo '${{ inputs.repository }}' | cut -d/ -f1)
+        else
+          org=${{ github.repository_owner }}
+        fi
+        echo "creating an auth-token for org $org"
+        cat <<EOF > /tmp/key
+        ${{ inputs.auth-app-private-key }}
+        EOF
         token=$(
-          ${{ github.actions_path }}/create_app_token.py \
+          ${{ github.action_path }}/create_app_token.py \
             --client-id '${{ inputs.auth-app-client-id }}' \
-            --private-key '${{ inputs.auth-app-private-key }}' \
-            --github-org '${{ github.repository_owner }}' \
+            --private-key "$(cat /tmp/key)" \
+            --github-org "$org" \
         )
+        unlink /tmp/key
         echo "token=${token}" >> ${GITHUB_OUTPUT}
     - uses: actions/checkout@v4
       if: ${{ inputs.token == '' && steps.token.outputs.token == '' }}
