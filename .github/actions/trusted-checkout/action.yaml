@@ -80,6 +80,10 @@ inputs:
     type: string
     description: |
       passed as `path` input to checkout-action (relative path to checkout into)
+  repository:
+    type: string
+    description: |
+      passed as `repository` input to checkout-action
 
 runs:
   using: composite
@@ -106,11 +110,13 @@ runs:
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
+        repository: ${{ inputs.repository }}
     - uses: actions/checkout@v4
       if: ${{ inputs.token != '' || steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
+        repository: ${{ inputs.repository }}
         token: ${{ steps.token.outputs.token || inputs.token }}
 
     - name: checkout-submodules
