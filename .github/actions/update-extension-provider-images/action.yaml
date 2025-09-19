@@ -24,6 +24,14 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [[ ! -f "${{ inputs.images-yaml-path }}" ]]; then
+          echo "Error: images.yaml file not found at ${{ inputs.images-yaml-path }}"
+          exit 1
+        fi
+
     - name: Install Gardener GHA Libs
       uses: ./.github/actions/install-gardener-gha-libs
 
@@ -35,10 +43,20 @@ runs:
       id: run_script_step
       shell: bash
       run: |
+        set -euo pipefail
+
         summary=$(python3 ${{ github.action_path }}/update-images.py \
           --images-yaml-path ${{ inputs.images-yaml-path }} \
           --release-notes-path ${{ inputs.release-notes-path }})
         
+        exit_code=$?
+        
+        if [[ $exit_code -ne 0 ]]; then
+          echo "Script failed with exit code $exit_code"
+          echo "$output"
+          exit $exit_code
+        fi
+
         summary="${summary//'%'/'%25'}"
         summary="${summary//$'\n'/'%0A'}"
         summary="${summary//$'\r'/'%0D'}"

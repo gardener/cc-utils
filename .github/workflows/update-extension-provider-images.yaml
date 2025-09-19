@@ -48,8 +48,9 @@ jobs:
       - name: Check for Changes
         id: check_changes
         run: |
-          if git diff --quiet ${{ inputs.images-yaml-path }}; then
-            echo "No changes detected in ${{ inputs.images-yaml-path }}. Exiting."
+          images_path="${{ inputs.images-yaml-path || 'imagevector/images.yaml' }}"
+          if git diff --quiet "$images_path"; then
+            echo "No changes detected in $images_path. Exiting."
             echo "changes_detected=false" >> $GITHUB_OUTPUT
           else
             echo "Changes detected, proceeding with PR."
@@ -59,7 +60,8 @@ jobs:
       - name: Commit and Push Changes
         if: steps.check_changes.outputs.changes_detected == 'true'
         run: |
-          git add ${{ inputs.images-yaml-path }}
+          images_path="${{ inputs.images-yaml-path || 'imagevector/images.yaml' }}"
+          git add "$images_path"
           git commit -m "Chore: Auto-update image versions"
           git checkout -B ${{ inputs.branch-name }}
           git push origin ${{ inputs.branch-name }} --force
