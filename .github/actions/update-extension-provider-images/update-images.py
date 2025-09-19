@@ -32,6 +32,7 @@ This script handles version *updates*. Manually editing `images.yaml` is still
 required to remove entire image groups for deprecated Kubernetes versions that
 are no longer supported.
 """
+
 import argparse
 import sys
 import traceback
@@ -49,39 +50,43 @@ from version import parse_to_semver, is_final, iter_upgrade_path
 DEFAULT_IMAGES_PATH = "imagevector/images.yaml"
 DEFAULT_RELEASE_NOTES_PATH = "release-notes.md"
 
+
 @dataclass
 class Update:
     """A structured representation of a single image update."""
+
     image_name: str
     new_tag: str
     update_type: str  # 'patch', 'minor', or 'singleton'
     old_tag: Optional[str] = None
 
+
 # --- Helper Functions ---
 def validate_images_data(images_data: Dict[str, Any]) -> None:
     """
     Validate the structure of images.yaml data.
-    
+
     Args:
         images_data: The loaded YAML data to validate
-        
+
     Raises:
         ValueError: If the data structure is invalid or missing required fields
     """
     if not isinstance(images_data, dict):
         raise ValueError("Images data must be a dictionary")
-    
+
     if "images" not in images_data:
         raise ValueError("Images data must contain 'images' key")
-    
+
     if not isinstance(images_data["images"], list):
         raise ValueError("'images' must be a list")
-    
+
     required_fields = ["name", "repository", "tag"]
     for i, image in enumerate(images_data["images"]):
         for field in required_fields:
             if field not in image:
                 raise ValueError(f"Image at index {i} missing required field: {field}")
+
 
 # --- Core Logic Functions ---
 def find_greater_versions(
@@ -90,7 +95,7 @@ def find_greater_versions(
 ) -> Dict[str, List[str]]:
     """
     Compare current tags with available tags to find greater patch and minor/major versions.
-    
+
     This function analyzes semantic versions to categorize available updates:
     - Patch updates: Same major.minor, higher patch version
     - Minor/Major updates: Higher major or minor version
@@ -157,37 +162,36 @@ def find_greater_versions(
         "minor": sorted(greater_minor_tags, key=parse_to_semver),
     }
 
+
 def update_singleton_image(
-    image_list: List[Dict[str, Any]], 
-    all_greater_tags: List[str], 
-    name: str
+    image_list: List[Dict[str, Any]], all_greater_tags: List[str], name: str
 ) -> List[Update]:
     """
     Handle updates for images without targetVersion (singleton components).
-    
+
     Singleton images are components that don't track multiple versions simultaneously.
     They should have exactly one entry and are updated to the latest available version.
-    
+
     Args:
         image_list: List of image entries for this component (should contain exactly 1 item)
         all_greater_tags: All available newer tags (combination of patch and minor updates)
         name: Image name for logging and update tracking
-        
+
     Returns:
         List containing zero or one Update object
-        
+
     Raises:
         SystemExit: If multiple entries found for singleton image (configuration error)
     """
     updates = []
-    
+
     if not all_greater_tags:
         return updates
-    
+
     if len(image_list) == 1:
         latest_tag = max(all_greater_tags, key=parse_to_semver)
         old_tag = image_list[0]["tag"]
-        
+
         if old_tag != latest_tag:
             image_list[0]["tag"] = latest_tag
             updates.append(
@@ -205,37 +209,35 @@ def update_singleton_image(
             file=sys.stderr,
         )
         sys.exit(1)
-    
+
     return updates
 
 
 def apply_patch_updates(
-    image_list: List[Dict[str, Any]], 
-    patch_tags: List[str], 
-    name: str
+    image_list: List[Dict[str, Any]], patch_tags: List[str], name: str
 ) -> List[Update]:
     """
     Apply patch version updates to existing image entries.
-    
+
     Finds entries with the same major.minor version and updates them to the latest patch.
     Only updates existing entries, does not create new ones.
-    
+
     Args:
         image_list: List of image entries for this component
         patch_tags: List of patch version tags to apply
         name: Image name for logging and update tracking
-        
+
     Returns:
         List of Update objects representing the applied patch updates
     """
     updates = []
-    
+
     for patch_tag in patch_tags:
         try:
             patch_version = parse_to_semver(patch_tag)
         except ValueError:
             continue
-        
+
         for img_data in image_list:
             try:
                 img_version = parse_to_semver(img_data["tag"])
@@ -256,26 +258,24 @@ def apply_patch_updates(
                     break
             except ValueError:
                 continue
-    
+
     return updates
 
 
 def create_minor_version_entries(
-    image_list: List[Dict[str, Any]], 
-    minor_tags: List[str], 
-    name: str
+    image_list: List[Dict[str, Any]], minor_tags: List[str], name: str
 ) -> Tuple[List[Update], List[Dict[str, Any]]]:
     """
     Create new image entries for minor/major version updates.
-    
+
     Creates new entries using the first existing entry as a template,
     updating the tag and targetVersion fields appropriately.
-    
+
     Args:
         image_list: List of existing image entries for this component
         minor_tags: List of minor/major version tags to add
         name: Image name for logging and update tracking
-        
+
     Returns:
         Tuple containing:
         - List of Update objects for minor version additions
@@ -283,24 +283,22 @@ def create_minor_version_entries(
     """
     updates = []
     new_entries = []
-    
+
     for minor_tag in minor_tags:
         try:
             minor_version = parse_to_semver(minor_tag)
         except ValueError:
             continue
-        
+
         # Create new entry based on template
         template_image = image_list[0].copy()
         template_image["tag"] = minor_tag
         template_image["targetVersion"] = f"{minor_version.major}.{minor_version.minor}.x"
         new_entries.append(template_image)
-        
+
         # Find the previous highest version for the update record
-        all_tags = [img["tag"] for img in image_list] + [
-            entry["tag"] for entry in new_entries
-        ]
-        
+        all_tags = [img["tag"] for img in image_list] + [entry["tag"] for entry in new_entries]
+
         previous_tags = []
         for tag in all_tags:
             try:
@@ -309,7 +307,7 @@ def create_minor_version_entries(
                     previous_tags.append(tag)
             except ValueError:
                 continue
-        
+
         old_tag = max(previous_tags, key=parse_to_semver) if previous_tags else None
         updates.append(
             Update(
@@ -319,19 +317,17 @@ def create_minor_version_entries(
                 update_type="minor",
             )
         )
-    
+
     return updates, new_entries
 
 
-def update_target_versions(
-    all_image_entries: List[Dict[str, Any]]
-) -> None:
+def update_target_versions(all_image_entries: List[Dict[str, Any]]) -> None:
     """
     Update targetVersion fields for all image entries of a component.
-    
+
     The highest version gets ">= X.Y" format and all others get "X.Y.x" format.
     Only processes entries with valid semantic versions.
-    
+
     Args:
         all_image_entries: All image entries for a component (existing + new)
     """
@@ -343,77 +339,70 @@ def update_target_versions(
             parseable_entries.append(entry)
         except ValueError:
             continue
-    
+
     if not parseable_entries:
         return
-    
+
     # Find the highest version entry
     highest_entry = max(
         parseable_entries,
         key=lambda img: parse_to_semver(img["tag"]),
     )
     highest_version = parse_to_semver(highest_entry["tag"])
-    
+
     # Set all entries to "X.Y.x" format first
     for entry in parseable_entries:
         version = parse_to_semver(entry["tag"])
         entry["targetVersion"] = f"{version.major}.{version.minor}.x"
-    
+
     # Set the highest one to ">= X.Y" format
-    highest_entry["targetVersion"] = (
-        f">= {highest_version.major}.{highest_version.minor}"
-    )
+    highest_entry["targetVersion"] = f">= {highest_version.major}.{highest_version.minor}"
 
 
 def update_versioned_images(
-    image_list: List[Dict[str, Any]], 
-    greater: Dict[str, List[str]], 
-    name: str
+    image_list: List[Dict[str, Any]], greater: Dict[str, List[str]], name: str
 ) -> Tuple[List[Update], List[Dict[str, Any]]]:
     """
     Handle updates for images with targetVersion (versioned components).
-    
+
     1. Applies patch updates to existing entries
     2. Creates new entries for minor/major versions
     3. Updates all targetVersion fields
-    
+
     Args:
         image_list: List of image entries for this component
         greater: Dictionary with 'patch' and 'minor' version lists
         name: Image name for logging and update tracking
-        
+
     Returns:
         Tuple containing:
         - List of Update objects for all updates (patch + minor)
         - List of new image entry dictionaries to be added
     """
     all_updates = []
-    
+
     # Apply patch updates to existing entries
     patch_updates = apply_patch_updates(image_list, greater["patch"], name)
     all_updates.extend(patch_updates)
-    
+
     # Create new entries for minor/major versions
-    minor_updates, new_entries = create_minor_version_entries(
-        image_list, greater["minor"], name
-    )
+    minor_updates, new_entries = create_minor_version_entries(image_list, greater["minor"], name)
     all_updates.extend(minor_updates)
-    
+
     # Update targetVersion fields for all entries (existing + new)
     all_image_entries = image_list + new_entries
     update_target_versions(all_image_entries)
-    
+
     return all_updates, new_entries
 
 
 def update_images_data(
-    images_data: Dict[str, Any], 
-    new_versions_by_name: Dict[str, Dict[str, List[str]]]
+    images_data: Dict[str, Any], new_versions_by_name: Dict[str, Dict[str, List[str]]]
 ) -> List[Update]:
     """
     Update the in-memory images data structure with new versions and return structured update info.
-    
-    Main function that processes all images and applies updates according to their 
+
+    Main function that processes all images and applies updates according to their
     type (singleton vs versioned). It modifies the images_data in-place
     and returns a comprehensive list of all changes made.
 
@@ -426,7 +415,7 @@ def update_images_data(
     """
     all_updates: List[Update] = []
     all_new_entries_global = []
-    
+
     # Group images by name for processing
     images_by_name = defaultdict(list)
     for image in images_data["images"]:
@@ -460,10 +449,10 @@ def update_images_data(
 def sort_images_by_name(images_data: Dict[str, Any]) -> None:
     """
     Sort the list of images in place by name and then by version.
-    
+
     Provides consistent ordering in the output YAML file. Images with the same name
     are sorted by semantic version, with unparseable versions sorted to the beginning.
-    
+
     Args:
         images_data: The images data dictionary containing the 'images' list to sort
     """
@@ -530,7 +519,7 @@ def create_release_notes(
 ) -> None:
     """
     Create a markdown file with links to release notes of all added or changed releases.
-    
+
     Generates comprehensive release notes including intermediate versions to ensure
     no breaking changes are missed during updates. Links directly to GitHub release pages.
 
@@ -566,11 +555,13 @@ def create_release_notes(
                     except ValueError:
                         continue
 
-                intermediate = list(iter_upgrade_path(
-                    whence=old_tag,
-                    whither=new_tag,
-                    versions=valid_tags,
-                ))
+                intermediate = list(
+                    iter_upgrade_path(
+                        whence=old_tag,
+                        whither=new_tag,
+                        versions=valid_tags,
+                    )
+                )
                 updates_by_image[image_name].extend(intermediate)
             except ValueError as e:
                 print(f"Error: Could not determine upgrade path for {image_name} ")
@@ -607,7 +598,7 @@ def create_release_notes(
 
 # --- Main Execution ---
 def main() -> None:
-    """ Main execution function. """
+    """Main execution function."""
 
     print("Starting image update process...", file=sys.stderr)
 
@@ -666,7 +657,7 @@ def main() -> None:
             print(
                 f"Error: Repository '{repository}' returned an empty list of tags. "
                 "This indicates a configuration error or a major upstream issue. Aborting.",
-                file=sys.stderr
+                file=sys.stderr,
             )
             sys.exit(1)
 
@@ -693,9 +684,7 @@ def main() -> None:
             write_yaml_with_formatting(images_data, images_yaml_path)
             print(f"\nUpdated {images_yaml_path} with {len(updates)} changes.", file=sys.stderr)
 
-        create_release_notes(
-            updates, images_data, all_available_tags, release_notes_path
-        )
+        create_release_notes(updates, images_data, all_available_tags, release_notes_path)
         print(f"Created {release_notes_path}", file=sys.stderr)
 
         print("The following container images have been updated:")
@@ -707,6 +696,6 @@ def main() -> None:
     else:
         print("\nNo greater versions found for any images.", file=sys.stderr)
 
+
 if __name__ == "__main__":
     main()
-
