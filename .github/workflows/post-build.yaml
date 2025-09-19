@@ -67,7 +67,7 @@ jobs:
     steps:
       - name: collect-component-descriptor
         id: collect
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@gha-preview
         with:
           component-descriptor-artefact: base-component-descriptor
           outdir: /tmp/ocm
@@ -94,7 +94,7 @@ jobs:
             f.write(f'ocm-target-oci-ref={tgt_oci_ref}\n')
 
       - name: fetch-prepare-values
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@gha-preview
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -107,7 +107,7 @@ jobs:
 
       - name: authenticate-against-oci-registry
         if: ${{ steps.prep.outputs.can-push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/oci-auth@master
+        uses: gardener/cc-utils/.github/actions/oci-auth@gha-preview
         with:
           oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
@@ -120,7 +120,7 @@ jobs:
             --on-exist ${{ inputs.on-existing-component-descriptor }}
           tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
       - name: upload-component-descriptor-as-artefact
-        uses: gardener/cc-utils/.github/actions/upload-artifact@master
+        uses: gardener/cc-utils/.github/actions/upload-artifact@gha-preview
         with:
           path: component-descriptor.tar.gz
           name: component-descriptor
@@ -131,7 +131,7 @@ jobs:
       fork: ${{ steps.repo-metadata.outputs.fork }}
     steps:
       - id: repo-metadata
-        uses: gardener/cc-utils/.github/actions/repo-metadata@master
+        uses: gardener/cc-utils/.github/actions/repo-metadata@gha-preview
         with:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -152,7 +152,7 @@ jobs:
     steps:
       - name: fetch-prepare-values
         if: ${{ inputs.ocm-repositories == '' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@gha-preview
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -169,7 +169,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: draft-release-notes
         id: drn
-        uses: gardener/cc-utils/.github/actions/release-notes@master
+        uses: gardener/cc-utils/.github/actions/release-notes@gha-preview
         with:
           component-descriptor: ${{ needs.component-descriptor.outputs.component-descriptor }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
@@ -177,7 +177,7 @@ jobs:
           draft: true
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
       - name: update-draft-release
-        uses: gardener/cc-utils/.github/actions/draft-release@master
+        uses: gardener/cc-utils/.github/actions/draft-release@gha-preview
         with:
           version: ${{ needs.component-descriptor.outputs.version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

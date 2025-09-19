@@ -59,15 +59,15 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@gha-preview
     - name: checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0 # release-notes code needs full commit-history and tags
         fetch-tags: 0
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@gha-preview
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@gha-preview
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
 
@@ -129,7 +129,7 @@ runs:
           --release-notes-variants-cfg-path release-notes-variants-cfg.yaml \
           --tar-output release-notes.tar ${extra_args:-}
 
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@gha-preview
       with:
         name: release-notes
         path: release-notes.tar
