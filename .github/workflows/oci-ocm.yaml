@@ -182,7 +182,7 @@ jobs:
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@gha-preview
         with:
           name: prepare-workflow-values
       - name: check-params
@@ -297,24 +297,24 @@ jobs:
           }
           EOF
           echo EOF >> "${GITHUB_OUTPUT}"
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@gha-preview
         continue-on-error: true # successful auth might not be required
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@gha-preview
         with:
           remove-trusted-label: false
       - name: import-release-commit
         if: ${{ inputs.commit-objects-artefact != '' }}
-        uses: gardener/cc-utils/.github/actions/import-commit@master
+        uses: gardener/cc-utils/.github/actions/import-commit@gha-preview
         with:
           commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
           after-import: rebase
       - name: retrieve build-ctx-artefact
         if: ${{ inputs.build-ctx-artefact }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@gha-preview
         with:
           name: ${{ inputs.build-ctx-artefact }}
           merge-multiple: true
@@ -340,7 +340,7 @@ jobs:
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
 
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@gha-preview
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
@@ -368,8 +368,8 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@gha-preview
+      - uses: gardener/cc-utils/.github/actions/oci-auth@gha-preview
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
@@ -479,7 +479,7 @@ jobs:
             ```
             '''))
       - name: export-ocm-fragments
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@gha-preview
         with:
           ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
           ctx: ${{ inputs.ctx }}

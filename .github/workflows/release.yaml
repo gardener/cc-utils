@@ -224,13 +224,13 @@ jobs:
     steps:
       - name: collect-component-descriptor
         id: component-descriptor
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@gha-preview
         with:
           component-descriptor-artefact: base-component-descriptor
           component-descriptor: ${{ inputs.component-descriptor }}
           outdir: /tmp/ocm
       - name: fetch-prepare-values
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@gha-preview
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -245,7 +245,7 @@ jobs:
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
           private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
-      - uses: gardener/cc-utils/.github/actions/release-notes@master
+      - uses: gardener/cc-utils/.github/actions/release-notes@gha-preview
         id: release-notes
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
