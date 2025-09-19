@@ -196,18 +196,18 @@ def eval_version_template(
         print(f'Error: type must equal `jq` - saw: {version_template=}')
         raise ValueError(version_template)
 
-    prg = jq.compile(expr) # noqa: I1101
+    prg = jq.compile(version_template.expr) # noqa: I1101
     prg = prg.input_value(image_dict)
     res = prg.all()
     if len(res) < 1:
-        print(f'Error: {expr=} yielded no output')
+        print(f'Error: {version_template.expr=} yielded no output')
         raise ValueError(version_template)
     if len(res) > 1:
-        print(f'Error: {expr=} yielded more than just a single output: {res=}')
+        print(f'Error: {version_template.expr=} yielded more than just a single output: {res=}')
         raise ValueError(version_template)
     res, = res # we checked we have exactly one entry
     if not isinstance(res, str):
-        print(f'Error: {expr=} did not yield a string: {res=}')
+        print(f'Error: {version_template.expr=} did not yield a string: {res=}')
         raise ValueError(res)
 
     return res
