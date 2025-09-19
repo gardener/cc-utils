@@ -96,12 +96,14 @@ on:
         description: |
           If set to `true`, the workflow will create a new GitHub release (or convert an existing
           draft release to an actual release).
-      github-tag-template:
+      github-tag-templates:
         default: '${version}'
         type: string
         description: |
-          GitHub tag template to use for the created release tag. Currently only supported
-          template-var: ${version} (bash-syntax).
+          Comma-separated list of GitHub tag templates to use for the created release tags. Each template can use
+          ${version} (bash-syntax): Version read from local component descriptor (i.e. previous version
+          operations are honoured).
+          The first tag in the list will be used to create the GitHub release.
       assets:
         type: string
         required: false
@@ -214,7 +216,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
-          github-tag-template: ${{ inputs.github-tag-template }}
+          github-tag-templates: ${{ inputs.github-tag-templates }}
           assets: ${{ inputs.assets }}
 
       - name: write-release-notes-to-file
