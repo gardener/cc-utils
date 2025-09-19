@@ -111,7 +111,7 @@ jobs:
           access_type='localBlob'
           outf="${pkg_dir}/${package}.tar.gz"
           tar cJf ${outf} -C ${pkg_dir} $(cd ${pkg_dir}; ls ${path})
-          mimetype=$(file -i ${outf} | cut -d: -f2 | cut -d' ' -f2-)
+          mimetype=$(file -i ${outf} | cut -d: -f2 | cut -d' ' -f2- | cut -d';' -f1)
           leng=$(stat -c"%s" ${outf})
           digest="$(sha256sum ${outf} | cut -d' ' -f1)"
           echo "\
