@@ -209,6 +209,7 @@ runs:
           shutil.move('component-descriptor.yaml', 'component-descriptor.in')
           env['BASE_DEFINITION_PATH'] = 'component-descriptor.in'
           env['COMPONENT_DESCRIPTOR_PATH'] = 'component-descriptor.yaml'
+          env['COMPONENT_NAME'] = base_component.name
 
           subprocess.run(
             ('.ci/component_descriptor',),
