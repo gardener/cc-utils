@@ -8,6 +8,7 @@ Code in this module is not intended for re-use.
 import collections.abc
 import copy
 import dataclasses
+import enum
 import os
 
 import dacite
@@ -51,6 +52,26 @@ class UpgradeVector:
     @property
     def is_downgrade(self) -> bool:
         return self.whence_version > self.whither_version
+
+
+class TemplateType(enum.StrEnum):
+    JQ = 'jq'
+
+
+@dataclasses.dataclass(kw_only=True)
+class VersionTemplate:
+    type: TemplateType = TemplateType.JQ
+    expr: str
+
+    @staticmethod
+    def from_dict(raw: dict, /):
+        return dacite.from_dict(
+            data_class=VersionTemplate,
+            data=raw,
+            config=dacite.Config(
+                cast=(enum.Enum,),
+            ),
+        )
 
 
 def find_upgrade_vector(
@@ -154,6 +175,44 @@ def iter_images_from_imagevector(
         yield from part['images']
 
 
+def eval_version_template(
+    version_template: VersionTemplate,
+    image_dict: dict,
+) -> str:
+    '''
+    evaluates given version-template and returns the yielded result (which is expected to be a
+    single str)
+
+    version_template is expected to have the following attributes:
+        type: str # must be set to 'jq'
+        expr: str # will be evaluated as jq-expression
+    image_dict is the imagevector-entry that will be passed to jq
+    '''
+    # do late-import; jq is only used very rarely, so there is no need to unnecessarily break users
+    # that do not have it installed
+    import jq
+
+    if not version_template.type is TemplateType.JQ:
+        print(f'Error: type must equal `jq` - saw: {version_template=}')
+        raise ValueError(version_template)
+
+    prg = jq.compile(expr)
+    prg = prg.input_value(image_dict)
+    res = prg.all()
+    if len(res) < 1:
+        print(f'Error: {expr=} yielded no output')
+        raise ValueError(version_template)
+    if len(res) > 1:
+        print(f'Error: {expr=} yielded more than just a single output: {res=}')
+        raise ValueError(version_template)
+    res, = res # we checked we have exactly one entry
+    if not isinstance(res, str):
+        print(f'Error: {expr=} did not yield a string: {res=}')
+        raise ValueError(res)
+
+    return res
+
+
 def add_resources_from_imagevector(
     component: ocm.Component,
     images: collections.abc.Iterable[dict],
@@ -184,6 +243,11 @@ def add_resources_from_imagevector(
         labels = copy.copy(image_dict.get('labels', []))
         tag = image_dict.get('tag', None)
         version = resource_id.get('version', tag) if resource_id else tag
+        if (version_template := resource_id.get('version-template', None)):
+            version = eval_version_template(
+                version_template=VersionTemplate.from_dict(version_template),
+                image_dict=image_dict,
+            )
         target_version = image_dict.get('targetVersion', None)
 
         for prefix in (component_prefixes or ()):
