@@ -16,8 +16,9 @@ flake8
 gardener-oci
 github3.py<5.0.0
 html2text
-jsonschema
+jq
 jsonpath-ng
+jsonschema
 pycryptodome
 pyjwt
 pylama
