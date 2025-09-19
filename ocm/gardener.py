@@ -196,7 +196,7 @@ def eval_version_template(
         print(f'Error: type must equal `jq` - saw: {version_template=}')
         raise ValueError(version_template)
 
-    prg = jq.compile(expr)
+    prg = jq.compile(expr) # noqa: I1101
     prg = prg.input_value(image_dict)
     res = prg.all()
     if len(res) < 1:
