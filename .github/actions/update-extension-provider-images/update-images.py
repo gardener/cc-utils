@@ -31,113 +31,76 @@ Manual Intervention:
 This script handles version *updates*. Manually editing `images.yaml` is still
 required to remove entire image groups for deprecated Kubernetes versions that
 are no longer supported.
-Image Updater Script.
 """
-
 import argparse
-import yaml
-import re
 import sys
-import semver
-import time
-from typing import Dict, List, Tuple, Optional, TypedDict
+import traceback
 from collections import defaultdict
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Any
+
+import semver
+import yaml
+
 from oci import client as oci_client
-from oci.model import OciImageNotFoundException
-from version import parse_to_semver, is_final
+from version import parse_to_semver, is_final, iter_upgrade_path
 
+# --- Constants and Data Class ---
+DEFAULT_IMAGES_PATH = "imagevector/images.yaml"
+DEFAULT_RELEASE_NOTES_PATH = "release-notes.md"
 
-# --- Type Definitions ---
-class Update(TypedDict):
+@dataclass
+class Update:
     """A structured representation of a single image update."""
-
     image_name: str
-    old_tag: Optional[str]
     new_tag: str
     update_type: str  # 'patch', 'minor', or 'singleton'
-
+    old_tag: Optional[str] = None
 
 # --- Helper Functions ---
-def get_tags_from_registry(oci_client: oci_client.Client, repository: str) -> List[str]:
+def validate_images_data(images_data: Dict[str, Any]) -> None:
     """
-    Use the oci.client to retrieve a list of tags for a repository.
-
+    Validate the structure of images.yaml data.
+    
     Args:
-        oci_client (oci_client.Client): An initialized OCI client.
-        repository (str): The image repository to query.
-
-    Returns:
-        List[str]: A list of tag strings, e.g., ['v1.2.3', 'v1.2.4'].
-                   Returns an empty list on error.
+        images_data: The loaded YAML data to validate
+        
+    Raises:
+        ValueError: If the data structure is invalid or missing required fields
     """
-    try:
-        return oci_client.tags(image_reference=repository)
-    except Exception as e:
-        print(f"Error retrieving tags for {repository}: {e}", file=sys.stderr)
-        return []
-
-
-def image_exists(oci_client: oci_client.Client, repository: str, tag: str) -> bool:
-    """
-    Check if a specific image tag exists in the registry by trying to fetch its manifest.
-
-    Args:
-        oci_client (oci_client.Client): An initialized OCI client.
-        repository (str): The image repository.
-        tag (str): The image tag.
-
-    Returns:
-        bool: True if the image exists, False otherwise.
-    """
-    image_ref = f"{repository}:{tag}"
-    retries = 3
-    delay = 2  # seconds
-
-    for i in range(retries):
-        try:
-            oci_client.manifest(image_reference=image_ref, accept="*/*")
-            return True
-        except OciImageNotFoundException:
-            print(f"  ✗ Manifest for {image_ref} not found.", file=sys.stderr)
-            return False
-        except Exception as e:
-            # Check if the error is a rate-limiting error
-            if "429" in str(e) and "Too Many Requests" in str(e):
-                if i < retries - 1:
-                    print(
-                        f"  ! Rate limited on {image_ref}. Retrying in {delay}s...", file=sys.stderr
-                    )
-                    time.sleep(delay)
-                    delay *= 2  # Exponential backoff
-                    continue
-
-            # For all other errors, or if retries are exhausted
-            print(f"  ✗ Could not find manifest for {image_ref}", file=sys.stderr)
-            print(f"    Error: {e}", file=sys.stderr)
-            return False
-
-    return False
-
+    if not isinstance(images_data, dict):
+        raise ValueError("Images data must be a dictionary")
+    
+    if "images" not in images_data:
+        raise ValueError("Images data must contain 'images' key")
+    
+    if not isinstance(images_data["images"], list):
+        raise ValueError("'images' must be a list")
+    
+    required_fields = ["name", "repository", "tag"]
+    for i, image in enumerate(images_data["images"]):
+        for field in required_fields:
+            if field not in image:
+                raise ValueError(f"Image at index {i} missing required field: {field}")
 
 # --- Core Logic Functions ---
-def find_newer_versions(
-    oci_client: oci_client.Client,
-    repository: str,
+def find_greater_versions(
     current_tags: List[str],
     available_tags: List[str],
 ) -> Dict[str, List[str]]:
     """
-    Compare current tags with available tags to find newer patch and minor/major versions.
+    Compare current tags with available tags to find greater patch and minor/major versions.
+    
+    This function analyzes semantic versions to categorize available updates:
+    - Patch updates: Same major.minor, higher patch version
+    - Minor/Major updates: Higher major or minor version
 
     Args:
-        oci_client (oci_client.Client): An initialized OCI client.
-        repository (str): The image repository.
-        current_tags (List[str]): A list of current tag strings from images.yaml.
-        available_tags (List[str]): A list of all available tag strings from the registry.
+        current_tags: A list of current tag strings from images.yaml
+        available_tags: A list of all available tag strings from the repository
 
     Returns:
-        Dict[str, List[str]]: A dictionary with 'patch', 'minor', and 'missing' keys
-        containing lists of new tags as strings.
+        A dictionary with 'patch' and 'minor' keys containing lists of new tags as strings
     """
     available_versions_map = {}
     for tag in available_tags:
@@ -160,17 +123,12 @@ def find_newer_versions(
 
     if not current_versions:
         existing_minor_tags = []
-        missing_minor_tags = []
         for ver in available_versions:
             tag = available_versions_map[ver]
-            if image_exists(oci_client, repository, tag):
-                existing_minor_tags.append(tag)
-            else:
-                missing_minor_tags.append(tag)
+            existing_minor_tags.append(tag)
         return {
             "patch": [],
             "minor": existing_minor_tags,
-            "missing": missing_minor_tags,
         }
 
     highest_current_ver = current_versions[-1]
@@ -181,9 +139,8 @@ def find_newer_versions(
         if ver > highest_patch_for_minor[key]:
             highest_patch_for_minor[key] = ver
 
-    newer_patch_tags = []
-    newer_minor_tags = []
-    missing_tags = []
+    greater_patch_tags = []
+    greater_minor_tags = []
 
     for ver in available_versions:
         original_tag = available_versions_map[ver]
@@ -191,217 +148,329 @@ def find_newer_versions(
 
         if key in highest_patch_for_minor:
             if ver > highest_patch_for_minor[key]:
-                if image_exists(oci_client, repository, original_tag):
-                    newer_patch_tags.append(original_tag)
-                else:
-                    missing_tags.append(original_tag)
+                greater_patch_tags.append(original_tag)
         elif ver > highest_current_ver:
-            if image_exists(oci_client, repository, original_tag):
-                newer_minor_tags.append(original_tag)
-            else:
-                missing_tags.append(original_tag)
+            greater_minor_tags.append(original_tag)
 
     return {
-        "patch": sorted(newer_patch_tags, key=parse_to_semver),
-        "minor": sorted(newer_minor_tags, key=parse_to_semver),
-        "missing": sorted(missing_tags, key=parse_to_semver),
+        "patch": sorted(greater_patch_tags, key=parse_to_semver),
+        "minor": sorted(greater_minor_tags, key=parse_to_semver),
     }
 
+def update_singleton_image(
+    image_list: List[Dict[str, Any]], 
+    all_greater_tags: List[str], 
+    name: str
+) -> List[Update]:
+    """
+    Handle updates for images without targetVersion (singleton components).
+    
+    Singleton images are components that don't track multiple versions simultaneously.
+    They should have exactly one entry and are updated to the latest available version.
+    
+    Args:
+        image_list: List of image entries for this component (should contain exactly 1 item)
+        all_greater_tags: All available newer tags (combination of patch and minor updates)
+        name: Image name for logging and update tracking
+        
+    Returns:
+        List containing zero or one Update object
+        
+    Raises:
+        SystemExit: If multiple entries found for singleton image (configuration error)
+    """
+    updates = []
+    
+    if not all_greater_tags:
+        return updates
+    
+    if len(image_list) == 1:
+        latest_tag = max(all_greater_tags, key=parse_to_semver)
+        old_tag = image_list[0]["tag"]
+        
+        if old_tag != latest_tag:
+            image_list[0]["tag"] = latest_tag
+            updates.append(
+                Update(
+                    image_name=name,
+                    old_tag=old_tag,
+                    new_tag=latest_tag,
+                    update_type="singleton",
+                )
+            )
+    else:
+        print(
+            f"Error: Found {len(image_list)} entries for singleton image '{name}' "
+            f"but expected 1. Aborting.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    
+    return updates
 
-def update_images_data(images_data: Dict, new_versions_by_name: Dict[str, Dict]) -> List[Update]:
+
+def apply_patch_updates(
+    image_list: List[Dict[str, Any]], 
+    patch_tags: List[str], 
+    name: str
+) -> List[Update]:
+    """
+    Apply patch version updates to existing image entries.
+    
+    Finds entries with the same major.minor version and updates them to the latest patch.
+    Only updates existing entries, does not create new ones.
+    
+    Args:
+        image_list: List of image entries for this component
+        patch_tags: List of patch version tags to apply
+        name: Image name for logging and update tracking
+        
+    Returns:
+        List of Update objects representing the applied patch updates
+    """
+    updates = []
+    
+    for patch_tag in patch_tags:
+        try:
+            patch_version = parse_to_semver(patch_tag)
+        except ValueError:
+            continue
+        
+        for img_data in image_list:
+            try:
+                img_version = parse_to_semver(img_data["tag"])
+                if (img_version.major, img_version.minor) == (
+                    patch_version.major,
+                    patch_version.minor,
+                ):
+                    old_tag = img_data["tag"]
+                    img_data["tag"] = patch_tag
+                    updates.append(
+                        Update(
+                            image_name=name,
+                            old_tag=old_tag,
+                            new_tag=patch_tag,
+                            update_type="patch",
+                        )
+                    )
+                    break
+            except ValueError:
+                continue
+    
+    return updates
+
+
+def create_minor_version_entries(
+    image_list: List[Dict[str, Any]], 
+    minor_tags: List[str], 
+    name: str
+) -> Tuple[List[Update], List[Dict[str, Any]]]:
+    """
+    Create new image entries for minor/major version updates.
+    
+    Creates new entries using the first existing entry as a template,
+    updating the tag and targetVersion fields appropriately.
+    
+    Args:
+        image_list: List of existing image entries for this component
+        minor_tags: List of minor/major version tags to add
+        name: Image name for logging and update tracking
+        
+    Returns:
+        Tuple containing:
+        - List of Update objects for minor version additions
+        - List of new image entry dictionaries to be added to the main data structure
+    """
+    updates = []
+    new_entries = []
+    
+    for minor_tag in minor_tags:
+        try:
+            minor_version = parse_to_semver(minor_tag)
+        except ValueError:
+            continue
+        
+        # Create new entry based on template
+        template_image = image_list[0].copy()
+        template_image["tag"] = minor_tag
+        template_image["targetVersion"] = f"{minor_version.major}.{minor_version.minor}.x"
+        new_entries.append(template_image)
+        
+        # Find the previous highest version for the update record
+        all_tags = [img["tag"] for img in image_list] + [
+            entry["tag"] for entry in new_entries
+        ]
+        
+        previous_tags = []
+        for tag in all_tags:
+            try:
+                version = parse_to_semver(tag)
+                if version < minor_version:
+                    previous_tags.append(tag)
+            except ValueError:
+                continue
+        
+        old_tag = max(previous_tags, key=parse_to_semver) if previous_tags else None
+        updates.append(
+            Update(
+                image_name=name,
+                old_tag=old_tag,
+                new_tag=minor_tag,
+                update_type="minor",
+            )
+        )
+    
+    return updates, new_entries
+
+
+def update_target_versions(
+    all_image_entries: List[Dict[str, Any]]
+) -> None:
+    """
+    Update targetVersion fields for all image entries of a component.
+    
+    The highest version gets ">= X.Y" format and all others get "X.Y.x" format.
+    Only processes entries with valid semantic versions.
+    
+    Args:
+        all_image_entries: All image entries for a component (existing + new)
+    """
+    # Filter to entries with parseable semantic versions
+    parseable_entries = []
+    for entry in all_image_entries:
+        try:
+            parse_to_semver(entry["tag"])
+            parseable_entries.append(entry)
+        except ValueError:
+            continue
+    
+    if not parseable_entries:
+        return
+    
+    # Find the highest version entry
+    highest_entry = max(
+        parseable_entries,
+        key=lambda img: parse_to_semver(img["tag"]),
+    )
+    highest_version = parse_to_semver(highest_entry["tag"])
+    
+    # Set all entries to "X.Y.x" format first
+    for entry in parseable_entries:
+        version = parse_to_semver(entry["tag"])
+        entry["targetVersion"] = f"{version.major}.{version.minor}.x"
+    
+    # Set the highest one to ">= X.Y" format
+    highest_entry["targetVersion"] = (
+        f">= {highest_version.major}.{highest_version.minor}"
+    )
+
+
+def update_versioned_images(
+    image_list: List[Dict[str, Any]], 
+    greater: Dict[str, List[str]], 
+    name: str
+) -> Tuple[List[Update], List[Dict[str, Any]]]:
+    """
+    Handle updates for images with targetVersion (versioned components).
+    
+    1. Applies patch updates to existing entries
+    2. Creates new entries for minor/major versions
+    3. Updates all targetVersion fields
+    
+    Args:
+        image_list: List of image entries for this component
+        greater: Dictionary with 'patch' and 'minor' version lists
+        name: Image name for logging and update tracking
+        
+    Returns:
+        Tuple containing:
+        - List of Update objects for all updates (patch + minor)
+        - List of new image entry dictionaries to be added
+    """
+    all_updates = []
+    
+    # Apply patch updates to existing entries
+    patch_updates = apply_patch_updates(image_list, greater["patch"], name)
+    all_updates.extend(patch_updates)
+    
+    # Create new entries for minor/major versions
+    minor_updates, new_entries = create_minor_version_entries(
+        image_list, greater["minor"], name
+    )
+    all_updates.extend(minor_updates)
+    
+    # Update targetVersion fields for all entries (existing + new)
+    all_image_entries = image_list + new_entries
+    update_target_versions(all_image_entries)
+    
+    return all_updates, new_entries
+
+
+def update_images_data(
+    images_data: Dict[str, Any], 
+    new_versions_by_name: Dict[str, Dict[str, List[str]]]
+) -> List[Update]:
     """
     Update the in-memory images data structure with new versions and return structured update info.
+    
+    Main function that processes all images and applies updates according to their 
+    type (singleton vs versioned). It modifies the images_data in-place
+    and returns a comprehensive list of all changes made.
 
     Args:
-        images_data (Dict): The full data from images.yaml, loaded as a dictionary.
-        new_versions_by_name (Dict[str, Dict]): Maps image name to its new
-        'patch' and 'minor' versions.
+        images_data: The full data from images.yaml, loaded as a dictionary
+        new_versions_by_name: Maps image name to its new 'patch' and 'minor' versions
 
     Returns:
-        List[Update]: A list of structured objects detailing each update.
+        List of structured Update objects detailing each update performed
     """
-    updates: List[Update] = []
+    all_updates: List[Update] = []
+    all_new_entries_global = []
+    
+    # Group images by name for processing
     images_by_name = defaultdict(list)
     for image in images_data["images"]:
         images_by_name[image["name"]].append(image)
 
-    all_new_entries_global = []
-
+    # Process each image group that has new versions available
     for name, image_list in images_by_name.items():
         if name not in new_versions_by_name:
             continue
 
-        new_entries_for_this_name = []
-        newer = new_versions_by_name[name]
+        greater = new_versions_by_name[name]
         has_target_version = any("targetVersion" in img for img in image_list)
 
         if not has_target_version:
-            # Handle images without 'targetVersion' (singleton components)
-            all_newer_tags = newer["patch"] + newer["minor"]
-            if not all_newer_tags:
-                continue
-
-            if len(image_list) == 1:
-                latest_tag = max(all_newer_tags, key=parse_to_semver)
-                old_tag = image_list[0]["tag"]
-
-                if old_tag != latest_tag:
-                    image_list[0]["tag"] = latest_tag
-                    updates.append(
-                        {
-                            "image_name": name,
-                            "old_tag": old_tag,
-                            "new_tag": latest_tag,
-                            "update_type": "singleton",
-                        }
-                    )
-            else:
-                print(
-                    f"Warning: Found {len(image_list)} entries for singleton image '{name}' "
-                    f"but expected 1. Skipping update for this image.",
-                    file=sys.stderr,
-                )
+            # Handle singleton images (no targetVersion)
+            all_greater_tags = greater["patch"] + greater["minor"]
+            updates = update_singleton_image(image_list, all_greater_tags, name)
+            all_updates.extend(updates)
         else:
-            # Handle images with 'targetVersion'
+            # Handle versioned images (with targetVersion)
+            updates, new_entries = update_versioned_images(image_list, greater, name)
+            all_updates.extend(updates)
+            all_new_entries_global.extend(new_entries)
 
-            # Update patch versions
-            for patch_tag in newer["patch"]:
-                try:
-                    patch_version = parse_to_semver(patch_tag)
-                except ValueError:
-                    continue
-
-                for img_data in image_list:
-                    try:
-                        img_version = parse_to_semver(img_data["tag"])
-                        if (img_version.major, img_version.minor) == (
-                            patch_version.major,
-                            patch_version.minor,
-                        ):
-                            old_tag = img_data["tag"]
-                            img_data["tag"] = patch_tag
-                            updates.append(
-                                {
-                                    "image_name": name,
-                                    "old_tag": old_tag,
-                                    "new_tag": patch_tag,
-                                    "update_type": "patch",
-                                }
-                            )
-                            break
-                    except ValueError:
-                        continue
-
-            # Add new minor versions
-            for minor_tag in newer["minor"]:
-                try:
-                    minor_version = parse_to_semver(minor_tag)
-                except ValueError:
-                    continue
-
-                template_image = image_list[0].copy()
-                template_image["tag"] = minor_tag
-                template_image["targetVersion"] = f"{minor_version.major}.{minor_version.minor}.x"
-                new_entries_for_this_name.append(template_image)
-
-                all_tags = [img["tag"] for img in image_list] + [
-                    t["tag"] for t in new_entries_for_this_name
-                ]
-
-                previous_tags = []
-                for t in all_tags:
-                    try:
-                        v = parse_to_semver(t)
-                        if v < minor_version:
-                            previous_tags.append(t)
-                    except ValueError:
-                        continue
-
-                old_tag = max(previous_tags, key=parse_to_semver) if previous_tags else None
-                updates.append(
-                    {
-                        "image_name": name,
-                        "old_tag": old_tag,
-                        "new_tag": minor_tag,
-                        "update_type": "minor",
-                    }
-                )
-
-            # Consolidate all images for this name (original, updated, and new)
-            all_image_entries_for_name = image_list + new_entries_for_this_name
-
-            parseable_entries = []
-            for entry in all_image_entries_for_name:
-                try:
-                    parse_to_semver(entry["tag"])
-                    parseable_entries.append(entry)
-                except ValueError:
-                    continue
-
-            if parseable_entries:
-                highest_entry = max(
-                    parseable_entries,
-                    key=lambda img: parse_to_semver(img["tag"]),
-                )
-                highest_version = parse_to_semver(highest_entry["tag"])
-
-                # Reset all but the highest entry to "X.Y.x" format
-                for entry in parseable_entries:
-                    ver = parse_to_semver(entry["tag"])
-                    entry["targetVersion"] = f"{ver.major}.{ver.minor}.x"
-
-                # Set the highest one to ">= X.Y"
-                highest_entry["targetVersion"] = (
-                    f">= {highest_version.major}.{highest_version.minor}"
-                )
-
-        all_new_entries_global.extend(new_entries_for_this_name)
-
-    # Apply changes to the main data structure
+    # Add all new entries to the main data structure
     images_data["images"].extend(all_new_entries_global)
-    return updates
-
-
-def find_intermediate_versions(
-    current_tag: str, new_tag: str, available_tags: List[str]
-) -> List[str]:
-    """
-    Find all semantic versions between a current and a new tag.
-
-    Args:
-        current_tag (str): The starting tag (exclusive).
-        new_tag (str): The ending tag (inclusive).
-        available_tags (List[str]): All available tags from the registry.
-
-    Returns:
-        List[str]: A sorted list of original final version tag strings
-        between current_tag and new_tag.
-    """
-    try:
-        current_version = parse_to_semver(current_tag)
-        new_version = parse_to_semver(new_tag)
-    except (ValueError, TypeError):
-        return [new_tag]
-
-    intermediate_tags = []
-    for tag in available_tags:
-        try:
-            ver = parse_to_semver(tag)
-            if is_final(ver) and current_version < ver <= new_version:
-                intermediate_tags.append(tag)
-        except ValueError:
-            continue
-
-    return sorted(intermediate_tags, key=parse_to_semver)
+    return all_updates
 
 
 # --- I/O and Formatting Functions ---
-def sort_images_by_name(images_data: Dict):
-    """Sorts the list of images in place by name and then by version."""
+def sort_images_by_name(images_data: Dict[str, Any]) -> None:
+    """
+    Sort the list of images in place by name and then by version.
+    
+    Provides consistent ordering in the output YAML file. Images with the same name
+    are sorted by semantic version, with unparseable versions sorted to the beginning.
+    
+    Args:
+        images_data: The images data dictionary containing the 'images' list to sort
+    """
 
     def sort_key(image: Dict) -> Tuple[str, semver.Version]:
         """
-        Generates a key for sorting images. The primary key is the image name.
+        Generate a key for sorting images. The primary key is the image name.
         The secondary key is a semver.Version object. If a tag cannot be parsed
         as a semantic version, it is given a "zero" version to sort it consistently
         at the beginning of its group.
@@ -414,13 +483,13 @@ def sort_images_by_name(images_data: Dict):
     images_data["images"].sort(key=sort_key)
 
 
-def write_yaml_with_formatting(data: Dict, filename: str):
+def write_yaml_with_formatting(data: Dict[str, Any], filename: str) -> None:
     """
     Write the dictionary to a YAML file using the project's style.
 
     Args:
-        data (Dict): The final images.yaml data to be written.
-        filename (str): The path to the output YAML file.
+        data: The final images.yaml data to be written
+        filename: The path to the output YAML file
     """
     with open(filename, "w") as f:
         f.write("images:\n")
@@ -455,24 +524,23 @@ def write_yaml_with_formatting(data: Dict, filename: str):
 
 def create_release_notes(
     updates: List[Update],
-    images_data: Dict,
+    images_data: Dict[str, Any],
     all_available_tags: Dict[str, List[str]],
     filename: str,
-    missing_images: Dict[str, List[str]],
-):
+) -> None:
     """
-    Create a markdown file with links to release notes of all added or changed
-    releases, including intermediate releases.
+    Create a markdown file with links to release notes of all added or changed releases.
+    
+    Generates comprehensive release notes including intermediate versions to ensure
+    no breaking changes are missed during updates. Links directly to GitHub release pages.
 
     Args:
-        updates (List[Update]): A list of structured update objects.
-        images_data (Dict): The updated images.yaml data (used to find source repositories).
-        all_available_tags (Dict[str, List[str]]): A map of image names to all their available tags.
-        filename (str): The path to the output release notes markdown file.
-        missing_images (Dict[str, List[str]]): A map of image names to tags that were found
-                                               but did not exist in the registry.
+        updates: A list of structured update objects
+        images_data: The updated images.yaml data (used to find source repositories)
+        all_available_tags: A map of image names to all their available tags
+        filename: The path to the output release notes markdown file
     """
-    if not updates and not missing_images:
+    if not updates:
         return
 
     repos_by_name = {
@@ -483,15 +551,31 @@ def create_release_notes(
 
     updates_by_image = defaultdict(list)
     for update in updates:
-        image_name = update["image_name"]
-        old_tag = update["old_tag"]
-        new_tag = update["new_tag"]
+        image_name = update.image_name
+        old_tag = update.old_tag
+        new_tag = update.new_tag
 
         if old_tag:
-            intermediate = find_intermediate_versions(
-                old_tag, new_tag, all_available_tags[image_name]
-            )
-            updates_by_image[image_name].extend(intermediate)
+            try:
+                valid_tags = []
+                for t in all_available_tags[image_name]:
+                    try:
+                        v = parse_to_semver(t)
+                        if is_final(v):
+                            valid_tags.append(t)
+                    except ValueError:
+                        continue
+
+                intermediate = list(iter_upgrade_path(
+                    whence=old_tag,
+                    whither=new_tag,
+                    versions=valid_tags,
+                ))
+                updates_by_image[image_name].extend(intermediate)
+            except ValueError as e:
+                print(f"Error: Could not determine upgrade path for {image_name} ")
+                print(f" with update {update}: {e}", file=sys.stderr)
+                sys.exit(1)
         else:
             updates_by_image[image_name].append(new_tag)
 
@@ -520,35 +604,23 @@ def create_release_notes(
                     f.write(f"- {tag}\n")
             f.write("\n")
 
-    if missing_images:
-        with open(filename, "a") as f:
-            f.write("\n---\n\n")
-            f.write("## ⚠️ Missing Images\n\n")
-            f.write(
-                "The following image versions were found as release tags but could not be "
-                "found in their respective container registries. They have **not** been updated "
-                "in `images.yaml`. This may be due to a temporary lag in the upstream build pipeline.\n\n"
-            )
-            for image_name in sorted(missing_images.keys()):
-                f.write(f"### {image_name}\n\n")
-                for tag in sorted(missing_images[image_name], key=parse_to_semver):
-                    f.write(f"- `{tag}`\n")
-                f.write("\n")
-
 
 # --- Main Execution ---
-def main():
-    """Main execution function."""
+def main() -> None:
+    """ Main execution function. """
+
+    print("Starting image update process...", file=sys.stderr)
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--images-yaml-path",
-        default="imagevector/images.yaml",
+        default=DEFAULT_IMAGES_PATH,
         help="Path to the images.yaml file.",
     )
     parser.add_argument(
         "--release-notes-path",
-        default="release-notes.md",
-        help="Path where the release-notes.md file will be generated.",
+        default=DEFAULT_RELEASE_NOTES_PATH,
+        help="Path where the release notes markdown file will be generated.",
     )
     args = parser.parse_args()
     images_yaml_path = args.images_yaml_path
@@ -561,7 +633,17 @@ def main():
         print(f"Error reading or parsing {images_yaml_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    oci_api = oci_client.client_with_dockerauth()
+    try:
+        validate_images_data(images_data)
+    except ValueError as e:
+        print(f"Validation error in {images_yaml_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        oci_api = oci_client.client_with_dockerauth()
+    except Exception as e:
+        print(f"Error: Failed to initialize OCI client: {e}", file=sys.stderr)
+        sys.exit(1)
 
     image_groups = defaultdict(list)
     for image in images_data["images"]:
@@ -569,58 +651,62 @@ def main():
 
     all_new_versions = {}
     all_available_tags = {}
-    all_missing_images = {}
 
     for (name, repository), image_list in image_groups.items():
         print(f"Checking {name} at {repository}...", file=sys.stderr)
 
-        available_tags = get_tags_from_registry(oci_api, repository)
+        try:
+            available_tags = oci_api.tags(image_reference=repository)
+        except Exception:
+            print(f"Critical: Failed to retrieve tags for {repository}. Aborting.", file=sys.stderr)
+            traceback.print_exc()
+            sys.exit(1)
+
         if not available_tags:
-            print(f"No tags found for {repository}", file=sys.stderr)
-            continue
+            print(
+                f"Error: Repository '{repository}' returned an empty list of tags. "
+                "This indicates a configuration error or a major upstream issue. Aborting.",
+                file=sys.stderr
+            )
+            sys.exit(1)
 
         all_available_tags[name] = available_tags
         current_tags = [img["tag"] for img in image_list]
 
-        newer_versions = find_newer_versions(oci_api, repository, current_tags, available_tags)
+        greater_versions = find_greater_versions(current_tags, available_tags)
 
-        if newer_versions.get("missing"):
-            all_missing_images[name] = newer_versions["missing"]
-
-        if newer_versions["patch"] or newer_versions["minor"]:
+        if greater_versions["patch"] or greater_versions["minor"]:
             print(f"New tags found for {name}:", file=sys.stderr)
-            if newer_versions["patch"]:
-                print(f"  Patch updates: {', '.join(newer_versions['patch'])}", file=sys.stderr)
-            if newer_versions["minor"]:
+            if greater_versions["patch"]:
+                print(f"  Patch updates: {', '.join(greater_versions['patch'])}", file=sys.stderr)
+            if greater_versions["minor"]:
                 print(
-                    f"  Minor/Major updates: {', '.join(newer_versions['minor'])}", file=sys.stderr
+                    f"  Minor/Major updates: {', '.join(greater_versions['minor'])}", file=sys.stderr
                 )
-            all_new_versions[name] = newer_versions
+            all_new_versions[name] = greater_versions
 
-    if all_new_versions or all_missing_images:
+    if all_new_versions:
         updates = update_images_data(images_data, all_new_versions)
 
         if updates:
             sort_images_by_name(images_data)
             write_yaml_with_formatting(images_data, images_yaml_path)
             print(f"\nUpdated {images_yaml_path} with {len(updates)} changes.", file=sys.stderr)
-        else:
-            print(f"\nNo images could be updated. See missing images below.", file=sys.stderr)
 
         create_release_notes(
-            updates, images_data, all_available_tags, release_notes_path, all_missing_images
+            updates, images_data, all_available_tags, release_notes_path
         )
         print(f"Created {release_notes_path}", file=sys.stderr)
 
         print("The following container images have been updated:")
         for update in updates:
             print(
-                f"  - {update['image_name']}: {update['old_tag'] or 'N/A'} -> "
-                f"{update['new_tag']} ({update['update_type']})"
+                f"  - {update.image_name}: {update.old_tag or 'N/A'} -> "
+                f"{update.new_tag} ({update.update_type})"
             )
     else:
-        print("\nNo newer versions found for any images.", file=sys.stderr)
-
+        print("\nNo greater versions found for any images.", file=sys.stderr)
 
 if __name__ == "__main__":
     main()
+
