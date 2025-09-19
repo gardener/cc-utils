@@ -220,7 +220,7 @@ jobs:
         name: distribution-packages
     - name: run-tests
       run: |
-        set -eu
+        set -euo pipefail
         echo "install dependencies for python-packages"
         echo "install packages"
         tar xf distribution-packages.tar.gz -C /tmp
