@@ -245,3 +245,32 @@ def request_pull_requests_from_api(
                            f'{pending.keys()} is/are either not closed or cannot be found')
 
     return result
+
+
+def filter_release_notes(
+    release_notes_doc: rnm.ReleaseNotesDoc,
+    audiences: collections.abc.Container[rnm.ReleaseNotesAudience] = (),
+    categories: collections.abc.Container[rnm.ReleaseNotesCategory] = (),
+) -> rnm.ReleaseNotesDoc:
+    '''
+    Filter out single release-notes.
+    Follows positive-list semantics, whereas an empty list will include all release-notes.
+    '''
+    filtered_release_notes = []
+
+    for release_note in release_notes_doc.release_notes:
+        audience_matches = True
+        if audiences:
+            audience_matches = release_note.audience in audiences
+
+        category_matches = True
+        if categories:
+            category_matches = release_note.category in categories
+
+        if category_matches and audience_matches:
+            filtered_release_notes.append(release_note)
+
+    return dataclasses.replace(
+        release_notes_doc,
+        release_notes=filtered_release_notes,
+    )
