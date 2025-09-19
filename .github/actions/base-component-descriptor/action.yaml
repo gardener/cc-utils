@@ -210,6 +210,7 @@ runs:
           env['BASE_DEFINITION_PATH'] = 'component-descriptor.in'
           env['COMPONENT_DESCRIPTOR_PATH'] = 'component-descriptor.yaml'
           env['COMPONENT_NAME'] = base_component.name
+          env['COMPONENT_VERSION'] = base_component.version
 
           subprocess.run(
             ('.ci/component_descriptor',),
