@@ -165,6 +165,7 @@ jobs:
           gardener-ocm \
           bandit \
           flake8 \
+          jq \
           setuptools \
           pylama \
           pylint \
