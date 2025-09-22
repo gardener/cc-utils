@@ -81,6 +81,7 @@ jobs:
   prepare:
     if: ${{ inputs.component-descriptor == '' }}
     uses: ./.github/workflows/prepare.yaml
+    secrets: inherit
     with:
       mode: release
       post-process: ${{ inputs.ocm-post-process }}
