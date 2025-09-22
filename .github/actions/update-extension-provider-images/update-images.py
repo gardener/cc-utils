@@ -46,10 +46,6 @@ import yaml
 from oci import client as oci_client
 from version import parse_to_semver, is_final, iter_upgrade_path
 
-# --- Constants and Data Class ---
-DEFAULT_IMAGES_PATH = "imagevector/images.yaml"
-DEFAULT_RELEASE_NOTES_PATH = "release-notes.md"
-
 
 @dataclass
 class Update:
@@ -605,12 +601,10 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--images-yaml-path",
-        default=DEFAULT_IMAGES_PATH,
         help="Path to the images.yaml file.",
     )
     parser.add_argument(
         "--release-notes-path",
-        default=DEFAULT_RELEASE_NOTES_PATH,
         help="Path where the release notes markdown file will be generated.",
     )
     args = parser.parse_args()
@@ -630,11 +624,7 @@ def main() -> None:
         print(f"Validation error in {images_yaml_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    try:
-        oci_api = oci_client.client_with_dockerauth()
-    except Exception as e:
-        print(f"Error: Failed to initialize OCI client: {e}", file=sys.stderr)
-        sys.exit(1)
+    oci_api = oci_client.client_with_dockerauth()
 
     image_groups = defaultdict(list)
     for image in images_data["images"]:
