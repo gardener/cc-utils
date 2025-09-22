@@ -87,6 +87,7 @@ jobs:
       oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
       releases-suffix: ${{ inputs.releases-suffix }}
       ocm-repositories: ${{ inputs.ocm-repositories }}
+      checkout-submodules: ${{ inputs.checkout-submodules }}
 
   create-upgrade-pullrequests:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
