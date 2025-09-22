@@ -84,6 +84,13 @@ inputs:
     type: string
     description: |
       passed as `repository` input to checkout-action
+outputs:
+  token:
+    type: string
+    description: |
+      the auth-token created for "toplevel" repository, if such a token was created using inputs
+      passed via `auth-app-client-id`, `aut-app-private-key` inputs.
+    value: ${{ steps.token.outputs.token }}
 
 runs:
   using: composite
