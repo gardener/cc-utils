@@ -421,7 +421,7 @@ def create_upgrade_pullrequests(
                 upgrade_vector=uv,
                 upgrade_pullrequests=upgrade_pullrequests,
             ):
-                logger.info(f'upgrade-pullrequest for {upgrade_vector=} already exists (skipping)')
+                logger.info(f'upgrade-pullrequest for {uv=} already exists (skipping)')
                 continue
 
             yield create_upgrade_pullrequest(
