@@ -36,6 +36,12 @@ on:
         default: releases
         description: |
           Passed to `prepare.yaml` workflow as equally-named input.
+      checkout-submodules:
+        type: string
+        required: false
+        default: false
+        description: |
+          passed to checkout (as `submodules` input). either `false`, or `recursive`.
       merge-policy:
         required: false
         default: manual
@@ -92,19 +98,19 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/create-github-app-token@v2
-        id: app-token
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        id: checkout
         with:
-          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+          submodules: ${{ inputs.checkout-submodules }}
+          auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
         with:
           component-descriptor: |
             ${{ inputs.component-descriptor || needs.prepare.outputs.component-descriptor }}
           ocm-repositories: |
             ${{ needs.prepare.outputs.ocm-repositories || inputs.ocm-repositories }}
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ steps.checkout.outputs.token }}
           merge-policy: ${{ inputs.merge-policy }}
           merge-method: ${{ inputs.merge-method }}
           prepare-action-path: ${{ inputs.prepare-action-path }}
