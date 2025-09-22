@@ -3,10 +3,6 @@ description: |
   Creates/Updates GitHub-Release-draft for upcoming release.
 
 inputs:
-  release-notes:
-    description: |
-      the release-notes to publish to draft-release
-    required: true
   version:
     description: |
       the version to use as prefix for the release-name
@@ -22,23 +18,26 @@ runs:
   steps:
     - name: install-gardener-gha-libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+
+    - name: fetch-release-notes
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: release-notes
+        path: /tmp
+
+    - name: extract-release-notes
+      shell: bash
+      run: |
+        mkdir /tmp/release-notes
+        tar -xf /tmp/release-notes.tar -C /tmp/release-notes
+
     - name: Update draft-release
       shell: sh
       run: |
         set -eu
 
-        if ${{ inputs.release-notes != '' }}; then
-
-        # do not indent to avoid prepending whitespace
-        cat <<'EOF' > release-notes.md
-        ${{ inputs.release-notes }}
-        EOF
-
-        fi
-        # if not passed via input, expect file `release-notes.md`
-
         echo "release-notes:"
-        cat release-notes.md
+        cat /tmp/release-notes/github-release-notes.md
         echo "-------------------"
 
         auth_token="${{ inputs.github-token }}"
@@ -49,6 +48,6 @@ runs:
 
         echo 'Updating / creating draft-release'
         "${GITHUB_ACTION_PATH}/update_draft_release.py" \
-          --release-notes release-notes.md \
+          --release-notes /tmp/release-notes/github-release-notes.md \
           --version "${{ inputs.version }}" \
           --github-auth-token "${auth_token}"
