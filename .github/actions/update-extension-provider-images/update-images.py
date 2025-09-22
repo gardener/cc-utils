@@ -38,7 +38,7 @@ import sys
 import traceback
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Optional, Any
 
 import semver
 import yaml
@@ -58,7 +58,7 @@ class Update:
 
 
 # --- Helper Functions ---
-def validate_images_data(images_data: Dict[str, Any]) -> None:
+def validate_images_data(images_data: dict[str, Any]) -> None:
     """
     Validate the structure of images.yaml data.
 
@@ -69,26 +69,29 @@ def validate_images_data(images_data: Dict[str, Any]) -> None:
         ValueError: If the data structure is invalid or missing required fields
     """
     if not isinstance(images_data, dict):
-        raise ValueError("Images data must be a dictionary")
-
+        raise ValueError(f"Images data must be a dictionary, got: {type(images_data)}")
     if "images" not in images_data:
-        raise ValueError("Images data must contain 'images' key")
+        raise ValueError(
+            f"Images data must contain 'images' key. Got keys: {list(images_data.keys())}"
+        )
 
     if not isinstance(images_data["images"], list):
-        raise ValueError("'images' must be a list")
+        raise ValueError(f"'images' must be a list. Got: {type(images_data['images'])}")
 
     required_fields = ["name", "repository", "tag"]
     for i, image in enumerate(images_data["images"]):
         for field in required_fields:
             if field not in image:
-                raise ValueError(f"Image at index {i} missing required field: {field}")
+                raise ValueError(
+                    f"Image at index {i} missing required field '{field}'. Got image: {image}"
+                )
 
 
 # --- Core Logic Functions ---
 def find_greater_versions(
-    current_tags: List[str],
-    available_tags: List[str],
-) -> Dict[str, List[str]]:
+    current_tags: list[str],
+    available_tags: list[str],
+) -> dict[str, list[str]]:
     """
     Compare current tags with available tags to find greater patch and minor/major versions.
 
@@ -160,8 +163,8 @@ def find_greater_versions(
 
 
 def update_singleton_image(
-    image_list: List[Dict[str, Any]], all_greater_tags: List[str], name: str
-) -> List[Update]:
+    image_list: list[dict[str, Any]], all_greater_tags: list[str], name: str
+) -> list[Update]:
     """
     Handle updates for images without targetVersion (singleton components).
 
@@ -184,21 +187,7 @@ def update_singleton_image(
     if not all_greater_tags:
         return updates
 
-    if len(image_list) == 1:
-        latest_tag = max(all_greater_tags, key=parse_to_semver)
-        old_tag = image_list[0]["tag"]
-
-        if old_tag != latest_tag:
-            image_list[0]["tag"] = latest_tag
-            updates.append(
-                Update(
-                    image_name=name,
-                    old_tag=old_tag,
-                    new_tag=latest_tag,
-                    update_type="singleton",
-                )
-            )
-    else:
+    if len(image_list) != 1:
         print(
             f"Error: Found {len(image_list)} entries for singleton image '{name}' "
             f"but expected 1. Aborting.",
@@ -206,12 +195,26 @@ def update_singleton_image(
         )
         sys.exit(1)
 
+    latest_tag = max(all_greater_tags, key=parse_to_semver)
+    old_tag = image_list[0]["tag"]
+
+    if old_tag != latest_tag:
+        image_list[0]["tag"] = latest_tag
+        updates.append(
+            Update(
+                image_name=name,
+                old_tag=old_tag,
+                new_tag=latest_tag,
+                update_type="singleton",
+            )
+        )
+
     return updates
 
 
 def apply_patch_updates(
-    image_list: List[Dict[str, Any]], patch_tags: List[str], name: str
-) -> List[Update]:
+    image_list: list[dict[str, Any]], patch_tags: list[str], name: str
+) -> list[Update]:
     """
     Apply patch version updates to existing image entries.
 
@@ -259,8 +262,8 @@ def apply_patch_updates(
 
 
 def create_minor_version_entries(
-    image_list: List[Dict[str, Any]], minor_tags: List[str], name: str
-) -> Tuple[List[Update], List[Dict[str, Any]]]:
+    image_list: list[dict[str, Any]], minor_tags: list[str], name: str
+) -> tuple[list[Update], list[dict[str, Any]]]:
     """
     Create new image entries for minor/major version updates.
 
@@ -317,7 +320,7 @@ def create_minor_version_entries(
     return updates, new_entries
 
 
-def update_target_versions(all_image_entries: List[Dict[str, Any]]) -> None:
+def update_target_versions(all_image_entries: list[dict[str, Any]]) -> None:
     """
     Update targetVersion fields for all image entries of a component.
 
@@ -356,8 +359,8 @@ def update_target_versions(all_image_entries: List[Dict[str, Any]]) -> None:
 
 
 def update_versioned_images(
-    image_list: List[Dict[str, Any]], greater: Dict[str, List[str]], name: str
-) -> Tuple[List[Update], List[Dict[str, Any]]]:
+    image_list: list[dict[str, Any]], greater: dict[str, list[str]], name: str
+) -> tuple[list[Update], list[dict[str, Any]]]:
     """
     Handle updates for images with targetVersion (versioned components).
 
@@ -393,8 +396,8 @@ def update_versioned_images(
 
 
 def update_images_data(
-    images_data: Dict[str, Any], new_versions_by_name: Dict[str, Dict[str, List[str]]]
-) -> List[Update]:
+    images_data: dict[str, Any], new_versions_by_name: dict[str, dict[str, list[str]]]
+) -> list[Update]:
     """
     Update the in-memory images data structure with new versions and return structured update info.
 
@@ -409,7 +412,7 @@ def update_images_data(
     Returns:
         List of structured Update objects detailing each update performed
     """
-    all_updates: List[Update] = []
+    all_updates: list[Update] = []
     all_new_entries_global = []
 
     # Group images by name for processing
@@ -442,7 +445,7 @@ def update_images_data(
 
 
 # --- I/O and Formatting Functions ---
-def sort_images_by_name(images_data: Dict[str, Any]) -> None:
+def sort_images_by_name(images_data: dict[str, Any]) -> None:
     """
     Sort the list of images in place by name and then by version.
 
@@ -453,7 +456,7 @@ def sort_images_by_name(images_data: Dict[str, Any]) -> None:
         images_data: The images data dictionary containing the 'images' list to sort
     """
 
-    def sort_key(image: Dict) -> Tuple[str, semver.Version]:
+    def sort_key(image: dict) -> tuple[str, semver.Version]:
         """
         Generate a key for sorting images. The primary key is the image name.
         The secondary key is a semver.Version object. If a tag cannot be parsed
@@ -468,7 +471,7 @@ def sort_images_by_name(images_data: Dict[str, Any]) -> None:
     images_data["images"].sort(key=sort_key)
 
 
-def write_yaml_with_formatting(data: Dict[str, Any], filename: str) -> None:
+def write_yaml_with_formatting(data: dict[str, Any], filename: str) -> None:
     """
     Write the dictionary to a YAML file using the project's style.
 
@@ -508,9 +511,9 @@ def write_yaml_with_formatting(data: Dict[str, Any], filename: str) -> None:
 
 
 def create_release_notes(
-    updates: List[Update],
-    images_data: Dict[str, Any],
-    all_available_tags: Dict[str, List[str]],
+    updates: list[Update],
+    images_data: dict[str, Any],
+    all_available_tags: dict[str, list[str]],
     filename: str,
 ) -> None:
     """

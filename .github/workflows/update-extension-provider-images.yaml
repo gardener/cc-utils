@@ -9,7 +9,7 @@ on:
   workflow_call:
     inputs:
       branch-name:
-        description: 'The name of the branch for the pull request.'
+        description: 'The name of the branch for the pull request. The branch must not be protected and should allow force pushes.'
         required: false
         type: string
         default: 'chore/auto-update-images'
@@ -29,7 +29,7 @@ jobs:
         id: release_notes
         continue-on-error: true
         run: |
-          notes=$(cat release-notes.md)
+          notes=$(cat /tmp/release-notes.md)
           notes="${notes//'%'/'%25'}"
           notes="${notes//$'\n'/'%0A'}"
           notes="${notes//$'\r'/'%0D'}"
@@ -121,4 +121,4 @@ jobs:
 
       - name: Clean up release notes file
         if: always()
-        run: rm -f release-notes.md
+        run: rm -f /tmp/release-notes.md

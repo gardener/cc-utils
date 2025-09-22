@@ -14,7 +14,7 @@ inputs:
   release-notes-path:
     description: 'Path where the release-notes.md file will be generated.'
     required: false
-    default: 'release-notes.md'
+    default: '/tmp/release-notes.md'
 
 outputs:
   summary:
