@@ -46,6 +46,61 @@ on:
         description: |
           passed as same-named input to release-notes action. Controls whether copies of
           release-notes of subcomponents should be included.
+      github-release-notes-audiences:
+        required: false
+        type: string
+        default: dependency,developer,operator,user
+        description: |
+          Specify a subset of release-notes, which is published to the github release.
+          By default, all audiences are included.
+          Audiences are expected as a comma-separated list of values.
+      github-release-notes-categories:
+        required: false
+        type: string
+        default: action,breaking,bugfix,doc,feature,fix,improvement,noteworthy,other
+        description: |
+          Specify a subset of release-notes, which is published to the github release.
+          By default, all categories are included.
+          Categories are expected as a comma-separated list of values.
+      github-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: |
+          Sspecify a subset of release-notes, which is published to the github release.
+          By default, no release-notes from subcomponents are included.
+
+          Possible values:
+          -1: no limit, include *all* subcomponents
+           0: no sub components
+           1: directly referenced subcomponents
+           2: ...
+      github-release-notes-resource-details:
+        required: false
+        type: boolean
+        default: true
+        description: |
+          Whether to include resource details (e.g. OCI Image references, Helm Charts, ...).
+      social-release-notes-audiences:
+        required: false
+        type: string
+        default: dependency,developer,operator,user
+        description: see partner input for details
+      social-release-notes-categories:
+        required: false
+        type: string
+        default: action,breaking,bugfix,doc,feature,fix,improvement,noteworthy,other
+        description: see partner input for details
+      social-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: see partner input for details
+      social-release-notes-resource-details:
+        required: false
+        type: boolean
+        default: true
+        description: see partner input for details
     outputs:
       component-descriptor:
         description: |
@@ -176,9 +231,24 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
+          release-notes-variants: |
+            - name: github
+              audiences: ${{ inputs.github-release-notes-audiences }}
+              categories: ${{ inputs.github-release-notes-categories }}
+              recursion_depth: ${{ inputs.github-release-notes-recursion-depth }}
+              include_resources: ${{ inputs.github-release-notes-resource-details }}
+            - name: slack
+              audiences: ${{ inputs.social-release-notes-audiences }}
+              categories: ${{ inputs.social-release-notes-categories }}
+              recursion_depth: ${{ inputs.social-release-notes-recursion-depth }}
+              include_resources: ${{ inputs.social-release-notes-resource-details }}
+            - name: legacy
+              audiences: ''
+              categories: ''
+              recursion_depth: 0
+              include_resources: true
       - name: update-draft-release
         uses: gardener/cc-utils/.github/actions/draft-release@master
         with:
           version: ${{ needs.component-descriptor.outputs.version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          release-notes: ${{ steps.drn.outputs.full-release-notes }}
