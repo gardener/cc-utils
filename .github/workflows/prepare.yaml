@@ -113,24 +113,24 @@ on:
     outputs:
       ocm-repository:
         description: the ocm-repository to use for publishing to for the selected mode.
-        value: ${{ jobs.params.outputs.ocm-repository }}
+        value: ${{ jobs.version-and-ocm.outputs.ocm-repository }}
       ocm-releases-repository:
         description: the ocm-releases-repository (independent of chosen mode)
-        value: ${{ jobs.params.outputs.ocm-releases-repository }}
+        value: ${{ jobs.version-and-ocm.outputs.ocm-releases-repository }}
       ocm-repositories:
         description: the ocm-repositories which may be used to lookup component-versions
-        value: ${{ jobs.params.outputs.ocm-repositories }}
+        value: ${{ jobs.version-and-ocm.outputs.ocm-repositories }}
       oci-registry:
         description: the oci-registry to use for publishing to for the selected mode
-        value: ${{ jobs.params.outputs.oci-registry }}
+        value: ${{ jobs.version-and-ocm.outputs.oci-registry }}
       is-fork:
         description: boolean indicating whether or not current repository is a fork
-        value: ${{ jobs.params.outputs.is-fork }}
+        value: ${{ jobs.version-and-ocm.outputs.is-fork }}
       is-pr-from-fork:
         description: |
           boolean indicating whether or not this workflow was triggered from a `pull_request` event
           of a repository where the owner differs from the origin.
-        value: ${{ jobs.params.outputs.is-pr-from-fork }}
+        value: ${{ jobs.version-and-ocm.outputs.is-pr-from-fork }}
       can-push:
         description: |
           boolean indicating whether or not current workflow is able to push (to OCI-Registries).
@@ -147,7 +147,7 @@ on:
           However special checkout-handling is needed (which is not yet
           implemented), hence for now, is also deemed to not be possible.
           TODO update this documentation once this is implemented.
-        value: ${{ jobs.params.outputs.can-push }}
+        value: ${{ jobs.version-and-ocm.outputs.can-push }}
 
       version:
         description: the effective version
@@ -169,16 +169,19 @@ on:
         value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
 
 jobs:
-  params:
+  version-and-ocm:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     outputs:
-      ocm-repository: ${{ steps.params.outputs.ocm-repository }}
-      ocm-releases-repository: ${{ steps.params.outputs.ocm-releases-repository }}
-      ocm-repositories: ${{ steps.params.outputs.ocm-repositories }}
-      oci-registry: ${{ steps.params.outputs.oci-registry }}
-      is-fork: ${{ steps.params.outputs.is-fork }}
-      is-pr-from-fork: ${{ steps.params.outputs.is-pr-from-fork }}
-      can-push: ${{ steps.params.outputs.can-push }}
+      ocm-repository:  ${{ steps.params.outputs.ocm-repository }}
+      ocm-releases-repository:  ${{ steps.params.outputs.ocm-releases-repository }}
+      ocm-repositories:  ${{ steps.params.outputs.ocm-repositories }}
+      oci-registry:  ${{ steps.params.outputs.oci-registry }}
+      is-fork:  ${{ steps.params.outputs.is-fork }}
+      is-pr-from-fork:  ${{ steps.params.outputs.is-pr-from-fork }}
+      can-push:  ${{ steps.params.outputs.can-push }}
+      version: ${{ steps.version.outputs.version }}
+      commit-digest: ${{ steps.version.outputs.commit-digest }}
+      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
     steps:
       - name: params
         id: params
@@ -190,16 +193,6 @@ jobs:
           snapshots-suffix: ${{ inputs.snapshots-suffix }}
           releases-suffix: ${{ inputs.releases-suffix }}
           ocm-repositories: ${{ inputs.ocm-repositories }}
-
-  version-and-ocm:
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
-    needs:
-      - params
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      commit-digest: ${{ steps.version.outputs.commit-digest }}
-      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
-    steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           fetch-depth: ${{ inputs.checkout-fetch-depth }}
@@ -238,16 +231,9 @@ jobs:
         with:
           base-component: ${{ inputs.base-component-file }}
           version: ${{ steps.version.outputs.version }}
-          ocm-repository: ${{ needs.params.outputs.ocm-repository }}
+          ocm-repository: ${{ steps.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
           post-process: ${{ inputs.post-process }}
-
-  upload-artefact:
-    needs:
-      - params
-      - version-and-ocm
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
-    steps:
       - name: prepare-artefact
         run: |
           set -eu
@@ -256,19 +242,19 @@ jobs:
           mkdir $p
 
           # params
-          echo "${{ needs.params.outputs.ocm-repository }}" > $p/ocm-repository
-          echo "${{ needs.params.outputs.ocm-releases-repository }}" > $p/ocm-releases-repository
-          echo "${{ needs.params.outputs.ocm-repositories }}" > $p/ocm-repositories
-          echo "${{ needs.params.outputs.oci-registry }}" > $p/oci-registry
-          echo "${{ needs.params.outputs.is-fork }}" > $p/is-fork
-          echo "${{ needs.params.outputs.is-pr-from-fork }}" > $p/is-pr-from-fork
-          echo "${{ needs.params.outputs.can-push }}" > $p/can-push
+          echo "${{ steps.params.outputs.ocm-repository }}" > $p/ocm-repository
+          echo "${{ steps.params.outputs.ocm-releases-repository }}" > $p/ocm-releases-repository
+          echo "${{ steps.params.outputs.ocm-repositories }}" > $p/ocm-repositories
+          echo "${{ steps.params.outputs.oci-registry }}" > $p/oci-registry
+          echo "${{ steps.params.outputs.is-fork }}" > $p/is-fork
+          echo "${{ steps.params.outputs.is-pr-from-fork }}" > $p/is-pr-from-fork
+          echo "${{ steps.params.outputs.can-push }}" > $p/can-push
 
           # version-and-ocm
-          echo "${{ needs.version-and-ocm.outputs.version }}" > $p/version
-          echo "${{ needs.version-and-ocm.outputs.commit-digest }}" > $p/commit-digest
+          echo "${{ steps.version.outputs.version }}" > $p/version
+          echo "${{ steps.version.outputs.commit-digest }}" > $p/commit-digest
           cat <<EOF > $p/component-descriptor
-          ${{ needs.version-and-ocm.outputs.component-descriptor }}
+          ${{ steps.version.outputs.component-descriptor }}
           EOF
 
           tar cf "${{ inputs.output-artefact-filename }}" $p
