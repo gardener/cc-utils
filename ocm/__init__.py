@@ -11,6 +11,7 @@ import urllib.parse
 
 try:
     import dacite
+
     _have_dacite = True
 except ImportError:
     _have_dacite = False
@@ -19,6 +20,7 @@ except ImportError:
 
 try:
     import jsonschema
+
     _have_jsonschema = True
 except ImportError:
     _have_jsonschema = False
@@ -26,6 +28,7 @@ except ImportError:
 
 try:
     import yaml
+
     _have_yaml = True
 except ImportError:
     _have_yaml = False
@@ -36,30 +39,30 @@ dc = dataclasses.dataclass
 own_dir = os.path.dirname(__file__)
 default_json_schema_path = os.path.join(
     own_dir,
-    'ocm-component-descriptor-schema.yaml',
+    "ocm-component-descriptor-schema.yaml",
 )
 
 logger = logging.getLogger(__name__)
 
 
 class ValidationMode(enum.StrEnum):
-    FAIL = 'fail'
-    WARN = 'warn'
+    FAIL = "fail"
+    WARN = "warn"
 
 
 class SchemaVersion(enum.StrEnum):
-    V1 = 'v1'
-    V2 = 'v2'
+    V1 = "v1"
+    V2 = "v2"
 
 
 class AccessType(enum.StrEnum):
-    GITHUB = 'github' # XXX: new: gitHub/v1
-    LOCAL_BLOB = 'localBlob/v1'
-    NONE = 'None'  # the resource is only declared informally (e.g. generic)
-    OCI_BLOB = 'ociBlob/v1'
-    OCI_REGISTRY = 'ociRegistry' # XXX: new: ociArtifact/v1
-    RELATIVE_OCI_REFERENCE = 'relativeOciReference'
-    S3 = 's3' # XXX: new: s3/v1
+    GITHUB = "github"  # XXX: new: gitHub/v1
+    LOCAL_BLOB = "localBlob/v1"
+    NONE = "None"  # the resource is only declared informally (e.g. generic)
+    OCI_BLOB = "ociBlob/v1"
+    OCI_REGISTRY = "ociRegistry"  # XXX: new: ociArtifact/v1
+    RELATIVE_OCI_REFERENCE = "relativeOciReference"
+    S3 = "s3"  # XXX: new: s3/v1
 
 
 # hack: patch enum to accept "aliases"
@@ -67,16 +70,16 @@ class AccessType(enum.StrEnum):
 # accepted for deserialisation
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 AccessType._value2member_map_ |= {
-    'github/v1': AccessType.GITHUB,
-    'localBlob': AccessType.LOCAL_BLOB,
-    'localFilesystemBlob': AccessType.LOCAL_BLOB,
-    'none': AccessType.NONE,
-    'OCIRegistry': AccessType.OCI_REGISTRY,
-    'OCIRegistry/v1': AccessType.OCI_REGISTRY,
-    'ociArtefact': AccessType.OCI_REGISTRY,
-    'ociArtifact': AccessType.OCI_REGISTRY,
-    'ociArtifact/v1': AccessType.OCI_REGISTRY,
-    's3/v1': AccessType.S3,
+    "github/v1": AccessType.GITHUB,
+    "localBlob": AccessType.LOCAL_BLOB,
+    "localFilesystemBlob": AccessType.LOCAL_BLOB,
+    "none": AccessType.NONE,
+    "OCIRegistry": AccessType.OCI_REGISTRY,
+    "OCIRegistry/v1": AccessType.OCI_REGISTRY,
+    "ociArtefact": AccessType.OCI_REGISTRY,
+    "ociArtifact": AccessType.OCI_REGISTRY,
+    "ociArtifact/v1": AccessType.OCI_REGISTRY,
+    "s3/v1": AccessType.S3,
 }
 
 AccessTypeOrStr = AccessType | str
@@ -88,18 +91,19 @@ class Access:
 
 
 class AccessDict(dict):
-    '''
+    """
     fallback for unknown access-types; it is api-compatible to `Access` in that it exposes its type
     via the `type` attribute mimicking behaviour of `dataclasses` from this module, but otherwise
     behaves as a `dict` (thus allowing de/reserialisation using dacite/dataclasses.asdict w/o losing
     attributes).
-    '''
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not 'type' in self:
-            raise ValueError('attribute `type` must be present')
+        if not "type" in self:
+            raise ValueError("attribute `type` must be present")
 
-        self.type = self.get('type')
+        self.type = self.get("type")
 
 
 @dc(kw_only=True)
@@ -113,15 +117,16 @@ class LocalBlobGlobalAccess:
 
 @dc(kw_only=True)
 class LocalBlobAccess(Access):
-    '''
+    """
     a blob that is accessible locally to the component-descriptor
 
     see: https://github.com/open-component-model/ocm-spec/blob/d74b6a210ff8c8c3486aa9b21e22c169d014806e/doc/04-extensions/01-extensions.md#localblob # noqa
-    '''
+    """
+
     type: AccessTypeOrStr = AccessType.LOCAL_BLOB
     localReference: str
     size: int | None = None
-    mediaType: str = 'application/data'
+    mediaType: str = "application/data"
     referenceName: str | None = None
     globalAccess: LocalBlobGlobalAccess | dict | None = None
 
@@ -155,22 +160,22 @@ class GithubAccess(Access):
 
     def __post_init__(self):
         parsed = self._normalise_and_parse_url()
-        if not len(parsed.path[1:].split('/')):
-            raise ValueError(f'{self.repoUrl=} must have exactly two path components')
+        if not len(parsed.path[1:].split("/")):
+            raise ValueError(f"{self.repoUrl=} must have exactly two path components")
 
     def _normalise_and_parse_url(self):
         parsed = urllib.parse.urlparse(self.repoUrl)
         if not parsed.scheme:
             # prepend dummy-schema to properly parse hostname and path (and rm it again later)
-            parsed = urllib.parse.urlparse('dummy://' + self.repoUrl)
+            parsed = urllib.parse.urlparse("dummy://" + self.repoUrl)
 
         return parsed
 
     def repository_name(self):
-        return self._normalise_and_parse_url().path[1:].split('/')[1]
+        return self._normalise_and_parse_url().path[1:].split("/")[1]
 
     def org_name(self):
-        return self._normalise_and_parse_url().path[1:].split('/')[0]
+        return self._normalise_and_parse_url().path[1:].split("/")[0]
 
     def hostname(self):
         return self._normalise_and_parse_url().hostname
@@ -184,13 +189,13 @@ class S3Access(Access):
 
 
 class ArtefactType(enum.StrEnum):
-    COSIGN_SIGNATURE = 'cosignSignature'
-    GIT = 'git'
-    OCI_IMAGE = 'ociImage'
-    OCI_ARTEFACT = 'ociArtifact/v1'
-    HELM_CHART = 'helmChart/v1'
-    BLOB = 'blob/v1'
-    DIRECTORY_TREE = 'directoryTree'
+    COSIGN_SIGNATURE = "cosignSignature"
+    GIT = "git"
+    OCI_IMAGE = "ociImage"
+    OCI_ARTEFACT = "ociArtifact/v1"
+    HELM_CHART = "helmChart/v1"
+    BLOB = "blob/v1"
+    DIRECTORY_TREE = "directoryTree"
 
 
 # hack: patch enum to accept "aliases"
@@ -198,22 +203,22 @@ class ArtefactType(enum.StrEnum):
 # accepted for deserialisation
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 ArtefactType._value2member_map_ |= {
-    'blob': ArtefactType.BLOB,
-    'git/v1': ArtefactType.GIT,
-    'ociImage/v1': ArtefactType.OCI_IMAGE,
-    'ociImage': ArtefactType.OCI_IMAGE,
-    'helmChart': ArtefactType.HELM_CHART,
+    "blob": ArtefactType.BLOB,
+    "git/v1": ArtefactType.GIT,
+    "ociImage/v1": ArtefactType.OCI_IMAGE,
+    "ociImage": ArtefactType.OCI_IMAGE,
+    "helmChart": ArtefactType.HELM_CHART,
 }
 
 
 class ResourceRelation(enum.StrEnum):
-    LOCAL = 'local'
-    EXTERNAL = 'external'
+    LOCAL = "local"
+    EXTERNAL = "external"
 
 
 @dc
 class MergeSpec:
-    algorithm: str | None = None # OCM schema requires /^[a-z][a-z0-9/_-]+$/
+    algorithm: str | None = None  # OCM schema requires /^[a-z][a-z0-9/_-]+$/
     config: str | int | float | bool | dict | list | None = None
 
 
@@ -221,7 +226,7 @@ class MergeSpec:
 class Label:
     name: str
     value: str | int | float | bool | dict | list
-    version: str | None = None # OCM schema requires /^v[0-9]+$/
+    version: str | None = None  # OCM schema requires /^v[0-9]+$/
     signing: bool = False
     # merge: MergeSpec | None = None # `null` aka. `None` is not allowed by JSON-schema
     # TODO when re-enabling: remove from normalisation again
@@ -242,7 +247,7 @@ class LabelMethodsMixin:
                 return label
         else:
             if default is _no_default and raise_if_absent:
-                raise ValueError(f'no such label: {name=}')
+                raise ValueError(f"no such label: {name=}")
             if default is _no_default:
                 return None
             return default
@@ -253,7 +258,7 @@ class LabelMethodsMixin:
         raise_if_present: bool = False,
     ) -> list[Label]:
         if self.find_label(name=label.name) and raise_if_present:
-            raise ValueError(f'label {label.name} is already present')
+            raise ValueError(f"label {label.name} is already present")
 
         patched_labels = [l for l in self.labels if l.name != label.name]
         patched_labels.append(label)
@@ -265,9 +270,9 @@ class LabelMethodsMixin:
 
 
 class NormalisationAlgorithm(enum.StrEnum):
-    JSON_NORMALISATION = 'jsonNormalisation/v1'
-    OCI_ARTIFACT_DIGEST = 'ociArtifactDigest/v1'
-    GENERIC_BLOB_DIGEST = 'genericBlobDigest/v1'
+    JSON_NORMALISATION = "jsonNormalisation/v1"
+    OCI_ARTIFACT_DIGEST = "ociArtifactDigest/v1"
+    GENERIC_BLOB_DIGEST = "genericBlobDigest/v1"
 
 
 @dc
@@ -278,7 +283,7 @@ class DigestSpec:
 
     @property
     def oci_tag(self) -> str:
-        return f'sha256:{self.value}'
+        return f"sha256:{self.value}"
 
 
 # EXCLUDE_FROM_SIGNATURE used in digest field for normalisationAlgorithm
@@ -294,10 +299,11 @@ NO_DIGEST = "NO-DIGEST"
 
 @dc
 class ExcludeFromSignatureDigest(DigestSpec):
-    '''
+    """
     ExcludeFromSignatureDigest is a special digest notation to indicate the resource
     content should not be part of the signature
-    '''
+    """
+
     hashAlgorithm: str = NO_DIGEST
     normalisationAlgorithm: str = EXCLUDE_FROM_SIGNATURE
     value: str = NO_DIGEST
@@ -313,7 +319,7 @@ class SignatureSpec:
 @dc
 class TimestampSpec:
     value: str | None = None
-    time: str | None = None # date-time according to RFC3339 (rounded to seconds): %Y-%m-%dT%H:%M:%SZ
+    time: str | None = None  # date-time according to RFC3339 (rounded to seconds): %Y-%m-%dT%H:%M:%SZ
 
 
 @dc
@@ -332,12 +338,12 @@ class Metadata:
 class ArtifactIdentity:
     def __init__(self, name, **kwargs):
         self.name = name
-        kwargs['name'] = name
+        kwargs["name"] = name
         # ensure stable order to ensure stable sort order
         self._id_attrs = tuple(sorted(kwargs.items(), key=lambda i: i[0]))
 
     def __str__(self):
-        return '-'.join((a[1] for a in self._id_attrs))
+        return "-".join((a[1] for a in self._id_attrs))
 
     def __len__(self):
         return len(self._id_attrs)
@@ -395,11 +401,12 @@ class ComponentIdentity:
 
 
 class Artifact(LabelMethodsMixin):
-    '''
+    """
     base class for ComponentReference, Resource, Source
-    '''
-    def identity(self, peers: collections.abc.Sequence['Artifact']):
-        '''
+    """
+
+    def identity(self, peers: collections.abc.Sequence["Artifact"]):
+        """
         returns the identity-object for this artifact (component-ref, resource, or source).
 
         Note that, the `version` attribute is implicitly added iff
@@ -409,11 +416,11 @@ class Artifact(LabelMethodsMixin):
         In future versions of component-descriptor, this behaviour will be discontinued. It will
         instead be regarded as an error if the IDs of a given sequence of artifacts (declared by
         one component-descriptor) are not all pairwise different.
-        '''
+        """
         own_type = type(self)
         for p in peers:
             if not type(p) == own_type:
-                raise ValueError(f'all peers must be of same type {type(self)=} {type(p)=}')
+                raise ValueError(f"all peers must be of same type {type(self)=} {type(p)=}")
 
         if own_type is ComponentReference:
             IdCtor = ComponentReferenceIdentity
@@ -425,10 +432,7 @@ class Artifact(LabelMethodsMixin):
             raise NotImplementedError(own_type)
 
         # pylint: disable=E1101
-        identity = IdCtor(
-            name=self.name,
-            **(self.extraIdentity or {})
-        )
+        identity = IdCtor(name=self.name, **(self.extraIdentity or {}))
 
         if not peers:
             return identity
@@ -502,8 +506,8 @@ class Resource(Artifact, LabelMethodsMixin):
             return
 
         if isinstance(access, dict):
-            if not 'type' in access:
-                raise ValueError('attribute `type` must be present')
+            if not "type" in access:
+                raise ValueError("attribute `type` must be present")
             self.access = AccessDict(access)
 
 
@@ -528,16 +532,18 @@ class OciOcmRepository(OcmRepository):
         if isinstance(name, (Component, ComponentIdentity)):
             name = name.name
 
-        return '/'.join((
-            self.oci_ref,
-            'component-descriptors',
-            name.lstrip('/').lower(), # oci-spec only allows lowercase
-        ))
+        return "/".join(
+            (
+                self.oci_ref,
+                "component-descriptors",
+                name.lstrip("/").lower(),  # oci-spec only allows lowercase
+            )
+        )
 
     def component_version_oci_ref(
         self,
         name,
-        version: str=None,
+        version: str = None,
     ):
         if isinstance(name, (Component, ComponentIdentity)):
             if not version:
@@ -545,9 +551,9 @@ class OciOcmRepository(OcmRepository):
             name = name.name
 
         if not version:
-            name, version = name.rsplit(':', 1)
+            name, version = name.rsplit(":", 1)
 
-        return f'{self.component_oci_ref(name)}:{version}'
+        return f"{self.component_oci_ref(name)}:{version}"
 
 
 @dc
@@ -564,14 +570,14 @@ class Source(Artifact, LabelMethodsMixin):
             return
 
         if isinstance(access, dict):
-            if not 'type' in access:
-                raise ValueError('attribute `type` must be present')
+            if not "type" in access:
+                raise ValueError("attribute `type` must be present")
             self.access = AccessDict(access)
 
 
 @dc
 class Component(LabelMethodsMixin):
-    name: str     # must be valid URL w/o schema
+    name: str  # must be valid URL w/o schema
     version: str  # relaxed semver
 
     repositoryContexts: list[OciOcmRepository]
@@ -611,7 +617,7 @@ class NestedDigestSpec:
 
 @dc
 class NestedComponentDigests:
-    name: str     # must be valid URL w/o schema
+    name: str  # must be valid URL w/o schema
     version: str  # relaxed semver
     digest: DigestSpec | None = None
     resourceDigests: list[NestedDigestSpec] = dataclasses.field(default_factory=list)
@@ -621,7 +627,7 @@ class NestedComponentDigests:
 def _read_schema_file(schema_file_path: str):
     with open(schema_file_path) as f:
         if not _have_yaml:
-            raise RuntimeError('yaml package not available')
+            raise RuntimeError("yaml package not available")
         return yaml.safe_load(f)
 
 
@@ -642,11 +648,11 @@ class ComponentDescriptor:
     @staticmethod
     def validate(
         component_descriptor_dict: dict,
-        validation_mode: ValidationMode=ValidationMode.FAIL,
+        validation_mode: ValidationMode = ValidationMode.FAIL,
         json_schema_file_path: str = None,
     ):
         if not _have_jsonschema:
-            raise RuntimeError('jsonschema package not available - validation cannot be done')
+            raise RuntimeError("jsonschema package not available - validation cannot be done")
 
         validation_mode = ValidationMode(validation_mode)
         json_schema_file_path = json_schema_file_path or default_json_schema_path
@@ -659,7 +665,7 @@ class ComponentDescriptor:
             )
         except jsonschema.ValidationError as e:
             if validation_mode is ValidationMode.WARN:
-                logger.warn(f'Error when validating Component Descriptor: {e}')
+                logger.warn(f"Error when validating Component Descriptor: {e}")
             elif validation_mode is ValidationMode.FAIL:
                 raise
             else:
@@ -668,7 +674,7 @@ class ComponentDescriptor:
     @staticmethod
     def from_dict(
         component_descriptor_dict: dict,
-        validation_mode: ValidationMode | None=None,
+        validation_mode: ValidationMode | None = None,
     ):
         def dateparse(v):
             if not v:
@@ -678,7 +684,7 @@ class ComponentDescriptor:
             return datetime.datetime.fromisoformat(v)
 
         if not _have_dacite:
-            raise RuntimeError('not available without dacite')
+            raise RuntimeError("not available without dacite")
 
         component_descriptor = dacite.from_dict(
             data_class=ComponentDescriptor,
@@ -689,21 +695,13 @@ class ComponentDescriptor:
                     ResourceRelation,
                 ],
                 type_hooks={
-                    AccessType | str: functools.partial(
-                        enum_or_string, enum_type=AccessType
-                    ),
-                    ArtefactType | str: functools.partial(
-                        enum_or_string, enum_type=ArtefactType
-                    ),
-                    ArtifactIdentity | str: functools.partial(
-                        enum_or_string, enum_type=ArtefactType
-                    ),
-                    AccessType: functools.partial(
-                        enum_or_string, enum_type=AccessType
-                    ),
+                    AccessType | str: functools.partial(enum_or_string, enum_type=AccessType),
+                    ArtefactType | str: functools.partial(enum_or_string, enum_type=ArtefactType),
+                    ArtifactIdentity | str: functools.partial(enum_or_string, enum_type=ArtefactType),
+                    AccessType: functools.partial(enum_or_string, enum_type=AccessType),
                     datetime.datetime: dateparse,
                 },
-            )
+            ),
         )
         if validation_mode is not None:
             ComponentDescriptor.validate(
@@ -730,10 +728,12 @@ class ComponentDescriptor:
 
 
 if _have_yaml:
+
     class EnumValueYamlDumper(yaml.SafeDumper):
-        '''
+        """
         a yaml.SafeDumper that will dump enum objects using their values
-        '''
+        """
+
         def represent_data(self, data):
             if isinstance(data, AccessDict):
                 # yaml dumper won't know how to parse objects of type `AccessDict`
@@ -772,10 +772,7 @@ OcmRepositoryLookup = Callable[
     [ComponentName],
     Iterable[OciOcmRepository],
 ]
-ComponentDescriptorLookup = Callable[
-    [ComponentIdentity, OcmRepositoryLookup],
-    ComponentDescriptor
-]
+ComponentDescriptorLookup = Callable[[ComponentIdentity, OcmRepositoryLookup], ComponentDescriptor]
 VersionLookup = Callable[
     [ComponentName, OcmRepository],
     Iterable[str],
