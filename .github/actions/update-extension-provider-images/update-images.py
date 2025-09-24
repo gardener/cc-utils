@@ -37,7 +37,7 @@ import argparse
 import sys
 import traceback
 from collections import defaultdict
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, replace
 from typing import Optional, Any
 
 import dacite
@@ -94,14 +94,10 @@ class ImageEntry:
             new_tag: str,
             new_target_version: str
     ) -> 'ImageEntry':
-        return ImageEntry(
-            name=self.name,
-            sourceRepository=self.sourceRepository,
-            repository=self.repository,
-            tag=new_tag,
-            targetVersion=new_target_version,
-            labels=self.labels,
-            resourceId=self.resourceId
+        return replace(
+                self,
+                tag=new_tag,
+                targetVersion=new_target_version
         )
 
 
