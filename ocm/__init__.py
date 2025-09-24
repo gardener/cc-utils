@@ -398,6 +398,7 @@ class SourceIdentity(ArtifactIdentity):
 class ComponentIdentity:
     name: str
     version: str
+    alias: str | None = None
 
 
 class Artifact(LabelMethodsMixin):
