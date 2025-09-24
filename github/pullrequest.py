@@ -93,7 +93,7 @@ def parse_pullrequest_title(
     if kind != "component":
         raise ValueError(f"upgrade-target-type {kind=} not implemented")
 
-    version_whence, version_whiter = version_vector.split("->")
+    version_whence, version_whither = version_vector.split("->")
 
     return ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
@@ -102,7 +102,7 @@ def parse_pullrequest_title(
         ),
         whither=ocm.ComponentIdentity(
             name=component_name,
-            version=version_whiter,
+            version=version_whither,
         ),
     )
 
