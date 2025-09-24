@@ -231,7 +231,9 @@ def find_greater_versions(
 
     highest_current_ver = current_versions[-1]
 
-    highest_patch_for_minor: dict[tuple[int, int], semver.Version] = defaultdict(lambda: semver.Version(0))
+    highest_patch_for_minor: dict[tuple[int, int], semver.Version] = defaultdict(
+            lambda: semver.Version(0)
+    )
     for ver in current_versions:
         key = (ver.major, ver.minor)
         if ver > highest_patch_for_minor[key]:
