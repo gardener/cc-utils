@@ -35,10 +35,6 @@ runs:
     - name: Install Gardener GHA Libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
 
-    - name: Install additional Python dependencies
-      shell: bash
-      run: pip install -r "${{ github.action_path }}/requirements.txt"
-
     - name: Run image update script
       id: run_script_step
       shell: bash
