@@ -10,6 +10,7 @@ CC-Utils - Build Pipeline Reference Manual
     :titlesonly:
     :maxdepth: 2
 
+    github_actions
     pipeline
     pipeline_job
     pipeline_step
