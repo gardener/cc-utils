@@ -45,26 +45,11 @@ import semver
 import yaml
 
 from oci import client as oci_client
+from ocm import Label as OcmLabel
 from version import parse_to_semver, is_final, iter_upgrade_path
 
 
 # --- Data Classes ---
-@dataclass
-class LabelValue:
-    network_exposure: str
-    authentication_enforced: bool
-    user_interaction: str
-    confidentiality_requirement: str
-    integrity_requirement: str
-    availability_requirement: str
-
-
-@dataclass
-class Label:
-    name: str
-    value: LabelValue
-
-
 @dataclass
 class ResourceId:
     name: str
@@ -76,7 +61,7 @@ class ImageEntry:
     sourceRepository: str
     repository: str
     tag: str
-    labels: list[Label]
+    labels: list[OcmLabel]
     targetVersion: Optional[str] = None
     resourceId: Optional[ResourceId] = None
 
