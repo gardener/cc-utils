@@ -89,11 +89,10 @@ def parse_pullrequest_title(
     title = title.removeprefix("[ci:").removesuffix("]")
 
     kind, component_name, version_vector = title.split(":")
+    version_whence, version_whither = version_vector.split("->")
 
     if kind != "component":
         raise ValueError(f"upgrade-target-type {kind=} not implemented")
-
-    version_whence, version_whither = version_vector.split("->")
 
     return ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
