@@ -8,11 +8,18 @@ description: |
 
   see: https://github.com/gardener/test-infra
 
+outputs:
+  testrunner-path:
+    description: |
+      the path testrunner executable was written to
+    value: ${{ steps.install.outputs.testrunner-path }}
+
 runs:
   using: composite
   steps:
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - name: install-testrunner
+      id: install
       shell: bash
       run: |
         set -euo pipefail
@@ -32,3 +39,5 @@ runs:
           --ocm-resource "${ocm_resource_name}" \
           --target-path "${tgt_dir}/testrunner" \
           --executable-path "${executable_path}"
+
+        echo "testrunner-path=${tgt_dir}/testrunner" >> ${GITHUB_OUTPUT}

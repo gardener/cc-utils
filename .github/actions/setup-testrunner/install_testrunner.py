@@ -115,6 +115,7 @@ def main():
         exit(1)
 
     os.chmod(outfile, mode=0o744) # set executable bit
+    logger.info(f'wrote testrunner to {outfile}')
 
 
 if __name__ == '__main__':
