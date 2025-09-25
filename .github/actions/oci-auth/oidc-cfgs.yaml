@@ -83,3 +83,17 @@
   github-host: gh-wdf
   github-orgs:
     - kubernetes-dev
+
+# ghtools / delivery-dev
+- name: tools-delivery-dev
+  type: gcp
+  gcp-project-name: sap-se-gcp-k8s-delivery
+  gcp-project-id: 370994582649
+  service-account: gardener-dev-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity-pool-name: github-actions
+  identity-provider-name: github-tools-actions-provider
+  oci-repository-prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github-host: gh-tools
+  github-orgs:
+    - kubernetes-dev
