@@ -251,7 +251,7 @@ def initialise_repository_if_required(func):
 
             if image_reference.registry_type is om.OciRegistryType.AWS:
                 credentials = oci_client.credentials_lookup(
-                    image_reference=image_reference,
+                    image_reference=str(image_reference),
                     privileges=oa.Privileges.ADMIN,
                     absent_ok=False,
                 )

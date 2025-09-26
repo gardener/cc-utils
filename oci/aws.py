@@ -136,6 +136,9 @@ def prepare_headers(
     else:
         headers['X-Amz-Target'] = f'AmazonEC2ContainerRegistry_V20150921.{action}'
 
+    if credentials.session_token and not 'X-Amz-Security-Token' in headers:
+        headers['X-Amz-Security-Token'] = credentials.session_token
+
     signed_headers = 'content-type;host;x-amz-date;x-amz-target'
 
     canonical_request = '\n'.join([
