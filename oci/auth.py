@@ -102,6 +102,7 @@ class OciBasicAuthCredentials(OciCredentials):
 class OciAccessKeyCredentials(OciCredentials):
     access_key_id: str
     secret_access_key: str
+    session_token: str | None = None
 
 
 # typehint-alias
@@ -215,6 +216,16 @@ def docker_credentials_lookup(
                     f'no matching auth-cfg found in {docker_cfg=} for {image_reference=}'
                 )
             return None # no matching cfg was found
+
+        if (
+            (access_key_id := auth_dict.get('access_key_id'))
+            and (secret_access_key := auth_dict.get('secret_access_key'))
+        ):
+            return OciAccessKeyCredentials(
+                access_key_id=access_key_id,
+                secret_access_key=secret_access_key,
+                session_token=auth_dict.get('session_token'),
+            )
 
         # we found a cfg
         # docker's auth-cfgs only have a single value `auth` (or so we hope / assume)

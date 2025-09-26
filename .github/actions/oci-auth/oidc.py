@@ -9,6 +9,8 @@ import dacite
 import requests
 import yaml
 
+import oci.auth
+import oci.aws
 import oci.model
 
 own_dir = os.path.dirname(__file__)
@@ -28,6 +30,7 @@ class OidcConfiguration:
         registry_type = oci.model.OciRegistryType(raw['type'])
 
         data_class = {
+            oci.model.OciRegistryType.AWS: AwsOidcConfiguration,
             oci.model.OciRegistryType.GAR: GarOidcConfiguration,
         }.get(registry_type)
 
@@ -42,6 +45,13 @@ class OidcConfiguration:
                 cast=[enum.Enum],
             ),
         )
+
+
+@dataclasses.dataclass
+class AwsOidcConfiguration(OidcConfiguration):
+    role_to_assume: str
+    audience: str = 'sts.amazonaws.com'
+    session_name: str = 'GitHubActions'
 
 
 @dataclasses.dataclass
@@ -66,7 +76,7 @@ class GarOidcConfiguration(OidcConfiguration):
 
 def find_oidc_cfg(
     image_reference: oci.model.OciImageReference,
-) -> GarOidcConfiguration:
+) -> AwsOidcConfiguration | GarOidcConfiguration:
     github_server_url = os.environ['GITHUB_SERVER_URL']
     github_org = os.environ['GITHUB_REPOSITORY_OWNER']
 
@@ -144,6 +154,54 @@ def _fetch_with_retries(
     res.raise_for_status()
 
     return res
+
+
+def authenticate_against_aws(
+    oidc_cfg: AwsOidcConfiguration,
+    gh_token: str,
+    gh_token_url: str,
+    lifetime_seconds: int=3600,
+) -> dict[str, str]:
+    '''
+    See https://github.com/aws-actions/configure-aws-credentials for reference.
+    '''
+    session = requests.Session()
+
+    res = _fetch_with_retries(
+        url=f'{gh_token_url}&audience={oidc_cfg.audience}',
+        session=session,
+        headers={
+            'Authorization': f'Bearer {gh_token}',
+        },
+    )
+    gh_oidc_token = res.json()['value']
+
+    res = _fetch_with_retries(
+        url=(
+            f'https://sts.amazonaws.com/'
+            '?Action=AssumeRoleWithWebIdentity'
+            f'&DurationSeconds={lifetime_seconds}'
+            f'&RoleArn={oidc_cfg.role_to_assume}'
+            f'&RoleSessionName={oidc_cfg.session_name}'
+            f'&WebIdentityToken={gh_oidc_token}'
+            '&Version=2011-06-15'
+        ),
+        session=session,
+        method='POST',
+        headers={
+            'Accept': 'application/json',
+        },
+    )
+    creds = res.json()['AssumeRoleWithWebIdentityResponse']['AssumeRoleWithWebIdentityResult']['Credentials'] # noqa: E501
+    access_key_id = creds['AccessKeyId']
+    secret_access_key = creds['SecretAccessKey']
+    session_token = creds['SessionToken']
+
+    return {
+        'access_key_id': access_key_id,
+        'secret_access_key': secret_access_key,
+        'session_token': session_token,
+    }
 
 
 def authenticate_against_gar(
@@ -233,6 +291,10 @@ def write_docker_config(
     for image_reference in image_references:
         image_reference = oci.model.OciImageReference(image_reference)
 
+        if image_reference.netloc in auths:
+            # first defined image-reference should win
+            continue
+
         registry_type = image_reference.registry_type
 
         if registry_type is not oci.model.OciRegistryType.GHCR:
@@ -240,7 +302,14 @@ def write_docker_config(
                 image_reference=image_reference,
             )
 
-        if registry_type is oci.model.OciRegistryType.GAR:
+        if registry_type is oci.model.OciRegistryType.AWS:
+            auth = authenticate_against_aws(
+                oidc_cfg=oidc_cfg,
+                gh_token=gh_token,
+                gh_token_url=gh_token_url,
+            )
+
+        elif registry_type is oci.model.OciRegistryType.GAR:
             auth = authenticate_against_gar(
                 oidc_cfg=oidc_cfg,
                 gh_token=gh_token,
