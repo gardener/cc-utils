@@ -227,6 +227,7 @@ def basic_auth_credentials(
     image_reference: oci.model.OciImageReference | str,
     credentials: oci.auth.OciAccessKeyCredentials,
     session: requests.Session | None=None,
+    headers: dict | None=None,
 ) -> tuple[str, str]:
     '''
     AWS requires a short-lived password to be created from the access token together with the static
@@ -248,6 +249,7 @@ def basic_auth_credentials(
         method='POST',
         credentials=credentials,
         session=session,
+        headers=headers,
     )
 
     if is_public:
