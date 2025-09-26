@@ -41,9 +41,8 @@ inputs:
   oci-image-reference:
     required: true
     description: |
-      The OCI-Image-Reference specifying the OCI-Registry to authenticate against. Must encompass
-      at least a hostname.
-    default: europe-docker.pkg.dev
+      The OCI-Image-Reference specifying the OCI-Registry to authenticate against.
+    default: europe-docker.pkg.dev/gardener-project
   extra-auths:
     required: false
     description: |
@@ -101,22 +100,12 @@ runs:
       shell: bash
       run: |
        set -euo pipefail
-       if ${GITHUB_ACTION_PATH}/find-cfg.py \
+       ${GITHUB_ACTION_PATH}/find-cfg.py \
         "${{ inputs.oci-image-reference }}" \
           --server-url ${{ github.server_url }} \
           --repository ${{ github.repository }} \
-          --outfile ${GITHUB_OUTPUT}; then
-          echo 'wrote oidc-cfg from lookup'
-          exit 0
-       fi
-
-       # fallback
-       echo 'warning: could not find oidc-cfg - falling back to defaults'
-       cat <<EOF >> ${GITHUB_OUTPUT}
-       project-id=${{ inputs.gcp-project }}
-       service-account=${{ inputs.gcp-service-account }}
-       workload-identity-provider=${{ inputs.gcp-workload-identity-provider }}
-       EOF
+          --outfile ${GITHUB_OUTPUT}
+       echo 'wrote oidc-cfg from lookup'
 
     - name: gcp-auth
       if: ${{ steps.tgt.outputs.rtype == 'gcp' }}
