@@ -207,8 +207,7 @@ runs:
         tag_names=()
         tag_refs=()
         for template in "${tag_templates[@]}"; do
-          template=$(echo "$template" | xargs) # trim whitespace
-          tag_name=$(echo "$template" | sed "s/\\${version}/$version/g")
+          tag_name=$(echo "$template" | xargs) # trim whitespace
           tag_names+=("$tag_name")
           tag_refs+=("refs/tags/$tag_name")
         done
@@ -390,7 +389,7 @@ runs:
       run: |
         set -eu
         for tag_ref in ${{ steps.preprocess.outputs.tag-refs }}; do
-          push_spec="@:$$tag_ref"
+          push_spec="@:$tag_ref"
           echo "pushing release-commit using ${push_spec}"
           git push origin "${push_spec}"
         done
