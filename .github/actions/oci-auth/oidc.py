@@ -9,6 +9,8 @@ import dacite
 import requests
 import yaml
 
+import oci.auth
+import oci.aws
 import oci.model
 
 own_dir = os.path.dirname(__file__)
@@ -27,7 +29,10 @@ class OidcConfiguration:
     def from_dict(raw: dict):
         registry_type = oci.model.OciRegistryType(raw['type'])
 
-        if registry_type is oci.model.OciRegistryType.GAR:
+        if registry_type is oci.model.OciRegistryType.AWS:
+            data_class = AwsOidcConfiguration
+
+        elif registry_type is oci.model.OciRegistryType.GAR:
             data_class = GarOidcConfiguration
 
         else:
@@ -41,6 +46,13 @@ class OidcConfiguration:
                 cast=[enum.Enum],
             ),
         )
+
+
+@dataclasses.dataclass
+class AwsOidcConfiguration(OidcConfiguration):
+    role_to_assume: str
+    audience: str = 'sts.amazonaws.com'
+    session_name: str = 'GitHubActions'
 
 
 @dataclasses.dataclass
@@ -145,6 +157,64 @@ def _fetch_with_retries(
     return res
 
 
+def authenticate_against_aws(
+    oidc_cfg: AwsOidcConfiguration,
+    gh_token: str,
+    gh_token_url: str,
+    image_reference: oci.model.OciImageReference,
+    lifetime_seconds: int=3600,
+) -> dict[str, str]:
+    session = requests.Session()
+
+    res = _fetch_with_retries(
+        url=f'{gh_token_url}&audience={oidc_cfg.audience}',
+        session=session,
+        headers={
+            'Authorization': f'Bearer {gh_token}',
+        },
+    )
+    gh_oidc_token = res.json()['value']
+
+    res = _fetch_with_retries(
+        url=(
+            f'https://sts.amazonaws.com/'
+            '?Action=AssumeRoleWithWebIdentity'
+            f'&DurationSeconds={lifetime_seconds}'
+            f'&RoleArn={oidc_cfg.role_to_assume}'
+            f'&RoleSessionName={oidc_cfg.session_name}'
+            f'&WebIdentityToken={gh_oidc_token}'
+            '&Version=2011-06-15'
+        ),
+        session=session,
+        method='POST',
+        headers={
+            'Accept': 'application/json',
+        },
+    )
+    creds = res.json()['AssumeRoleWithWebIdentityResponse']['AssumeRoleWithWebIdentityResult']['Credentials'] # noqa: E501
+    access_key_id = creds['AccessKeyId']
+    secret_access_key = creds['SecretAccessKey']
+    session_token = creds['SessionToken']
+
+    username, password = oci.aws.basic_auth_credentials(
+        image_reference=image_reference,
+        credentials=oci.auth.OciAccessKeyCredentials(
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+        ),
+        session=session,
+        headers={
+            'X-Amz-Security-Token': session_token,
+        },
+    )
+
+    token = base64.b64encode(f'{username}:{password}'.encode()).decode()
+
+    return {
+        'auth': token,
+    }
+
+
 def authenticate_against_gar(
     oidc_cfg: GarOidcConfiguration,
     gh_token: str,
@@ -229,6 +299,10 @@ def write_docker_config(
     for image_reference in image_references:
         image_reference = oci.model.OciImageReference(image_reference)
 
+        if image_reference.netloc in auths:
+            # first defined image-reference should win
+            continue
+
         registry_type = image_reference.registry_type
 
         if registry_type is not oci.model.OciRegistryType.GHCR:
@@ -236,7 +310,15 @@ def write_docker_config(
                 image_reference=image_reference,
             )
 
-        if registry_type is oci.model.OciRegistryType.GAR:
+        if registry_type is oci.model.OciRegistryType.AWS:
+            auth = authenticate_against_aws(
+                oidc_cfg=oidc_cfg,
+                gh_token=gh_token,
+                gh_token_url=gh_token_url,
+                image_reference=image_reference,
+            )
+
+        elif registry_type is oci.model.OciRegistryType.GAR:
             auth = authenticate_against_gar(
                 oidc_cfg=oidc_cfg,
                 gh_token=gh_token,
