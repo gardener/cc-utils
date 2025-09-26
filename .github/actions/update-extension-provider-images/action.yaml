@@ -1,0 +1,52 @@
+#
+# SPDX-FileCopyrightText: 2025 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: 'Update Extension Provider Images'
+description: 'Checks for new image versions, updates images.yaml, and generates release notes.'
+
+inputs:
+  images-yaml-path:
+    description: 'Path to the images.yaml file.'
+    required: false
+    default: 'imagevector/images.yaml'
+  release-notes-path:
+    description: 'Path where the release-notes.md file will be generated.'
+    required: false
+    default: '/tmp/release-notes.md'
+
+outputs:
+  summary:
+    description: "A summary of the image updates performed by the script."
+    value: ${{ steps.run_script_step.outputs.summary }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [[ ! -f "${{ inputs.images-yaml-path }}" ]]; then
+          echo "Error: images.yaml file not found at ${{ inputs.images-yaml-path }}"
+          exit 1
+        fi
+
+    - name: Install Gardener GHA Libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+
+    - name: Run image update script
+      id: run_script_step
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        summary=$(python3 "${{ github.action_path }}/update-images.py" \
+          --images-yaml-path "${{ inputs.images-yaml-path }}" \
+          --release-notes-path "${{ inputs.release-notes-path }}")
+        
+        summary="${summary//'%'/'%25'}"
+        summary="${summary//$'\n'/'%0A'}"
+        summary="${summary//$'\r'/'%0D'}"
+        echo "summary=${summary}" >> $GITHUB_OUTPUT
+
