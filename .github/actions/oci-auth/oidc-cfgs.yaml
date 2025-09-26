@@ -1,99 +1,99 @@
 # github.com / gardener-project
 - name: gardener-project
-  type: gcp
-  gcp-project-name: gardener-project
-  gcp-project-id: 694386720375
-  service-account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
-  identity-pool-name: github-actions-pool
-  identity-provider-name: github-actions
-  oci-repository-prefixes:
+  type: gar
+  project_name: gardener-project
+  project_id: 694386720375
+  service_account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
+  identity_pool_name: github-actions-pool
+  identity_provider_name: github-actions
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/gardener-project
-  github-host: gh-com
-  github-orgs:
+  github_host: gh-com
+  github_orgs:
     - gardener
     - open-component-model
 
 # ghtools / gardener-project
 - name: tools-gardener-project
-  type: gcp
-  gcp-project-name: gardener-project
-  gcp-project-id: 694386720375
-  service-account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
-  identity-pool-name: github-actions-pool
-  identity-provider-name: github-tools-actions-provider
-  oci-repository-prefixes:
+  type: gar
+  project_name: gardener-project
+  project_id: 694386720375
+  service_account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
+  identity_pool_name: github-actions-pool
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/gardener-project
-  github-host: gh-tools
-  github-orgs:
+  github_host: gh-tools
+  github_orgs:
     - kubernetes
 
 # ghtools / delivery
 - name: tools-delivery
-  type: gcp
-  gcp-project-name: sap-se-gcp-k8s-delivery
-  gcp-project-id: 370994582649
-  service-account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
-  identity-pool-name: github-actions
-  identity-provider-name: github-tools-actions-provider
-  oci-repository-prefixes:
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
-  github-host: gh-tools
-  github-orgs:
+  github_host: gh-tools
+  github_orgs:
     - kubernetes
     - open-delivery-gear
 
 # ghtools / gardener-project
 - name: wdf-gardener-project
-  type: gcp
-  gcp-project-name: gardener-project
-  gcp-project-id: 694386720375
-  service-account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
-  identity-pool-name: github-actions-pool
-  identity-provider-name: github-wdf-actions-provider
-  oci-repository-prefixes:
+  type: gar
+  project_name: gardener-project
+  project_id: 694386720375
+  service_account: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
+  identity_pool_name: github-actions-pool
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/gardener-project
-  github-host: gh-wdf
-  github-orgs:
+  github_host: gh-wdf
+  github_orgs:
     - kubernetes
 
 # ghwdf / delivery
 - name: wdf-delivery
-  type: gcp
-  gcp-project-name: sap-se-gcp-k8s-delivery
-  gcp-project-id: 370994582649
-  service-account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
-  identity-pool-name: github-actions
-  identity-provider-name: github-wdf-actions-provider
-  oci-repository-prefixes:
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
-  github-host: gh-wdf
-  github-orgs:
+  github_host: gh-wdf
+  github_orgs:
     - kubernetes
 
 # ghwdf / delivery-dev
 - name: wdf-delivery-dev
-  type: gcp
-  gcp-project-name: sap-se-gcp-k8s-delivery
-  gcp-project-id: 370994582649
-  service-account: gardener-dev-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
-  identity-pool-name: github-actions
-  identity-provider-name: github-wdf-actions-provider
-  oci-repository-prefixes:
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-dev-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
-  github-host: gh-wdf
-  github-orgs:
+  github_host: gh-wdf
+  github_orgs:
     - kubernetes-dev
 
 # ghtools / delivery-dev
 - name: tools-delivery-dev
-  type: gcp
-  gcp-project-name: sap-se-gcp-k8s-delivery
-  gcp-project-id: 370994582649
-  service-account: gardener-dev-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
-  identity-pool-name: github-actions
-  identity-provider-name: github-tools-actions-provider
-  oci-repository-prefixes:
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-dev-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
-  github-host: gh-tools
-  github-orgs:
+  github_host: gh-tools
+  github_orgs:
     - kubernetes-dev

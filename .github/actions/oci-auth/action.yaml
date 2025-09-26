@@ -62,103 +62,34 @@ inputs:
       additional output, such as written files.
 
 outputs:
-  access-token:
-    description: |
-      The obtained access-token (if authenticating against GHCR, this is identical to passed-in
-      token)
-    value: ${{ steps.export.outputs.access-token }}
   docker-cfg:
     description: |
       A $HOME/.docker/config.json containing the token (for convenience)
-    value: ${{ steps.export.outputs.docker-cfg }}
+    value: ${{ steps.oci-auth.outputs.docker-cfg }}
 
 runs:
   using: composite
   steps:
-    - name: determine-target
-      id: tgt
-      shell: bash
-      run: |
-        set -eu
-        netloc=$(echo "${{ inputs.oci-image-reference }}" | cut -d/ -f1)
-
-        if [[ "${netloc}" == *.pkg.dev ]]; then
-          rtype=gcp
-        elif [[ "${netloc}" == ghcr.io ]]; then
-          rtype=ghcr
-        else
-          echo "error: failed to determine registry-type for ${netloc}"
-          exit 1
-        fi
-
-        echo "rtype=${rtype}" >> ${GITHUB_OUTPUT}
-        echo "netloc=${netloc}" >> ${GITHUB_OUTPUT}
-
-    - name: preprocess-gcp-auth
-      if: ${{ steps.tgt.outputs.rtype == 'gcp' }}
-      id: gcp
-      shell: bash
-      run: |
-       set -euo pipefail
-       ${GITHUB_ACTION_PATH}/find-cfg.py \
-        "${{ inputs.oci-image-reference }}" \
-          --server-url ${{ github.server_url }} \
-          --repository ${{ github.repository }} \
-          --outfile ${GITHUB_OUTPUT}
-       echo 'wrote oidc-cfg from lookup'
-
-    - name: gcp-auth
-      if: ${{ steps.tgt.outputs.rtype == 'gcp' }}
-      id: gcp-auth
-      uses: google-github-actions/auth@v2
-      with:
-        token_format: access_token
-        project_id: ${{ steps.gcp.outputs.project-id }}
-        service_account: ${{ steps.gcp.outputs.service-account }}
-        workload_identity_provider: ${{ steps.gcp.outputs.workload-identity-provider }}
-        create_credentials_file: false
-
-    - name: Export Access-Token and docker-cfg
-      id: export
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: OCI Auth
+      id: oci-auth
       shell: python
       run: |
+        import json
         import os
         import sys
-        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
-
-        import base64
-        import json
         import textwrap
 
-        registry_type = '${{ steps.tgt.outputs.rtype }}'
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+        import oidc
 
-        if registry_type == 'gcp':
-          orig_username = '${{ steps.gcp.outputs.service-account }}'
-          username = 'oauth2accesstoken'
-          password = '${{ steps.gcp-auth.outputs.access_token }}'
-        elif registry_type == 'ghcr':
-          username = '${{ github.actor }}'
-          orig_username = username
-          password = '${{ inputs.gh-token }}'
-          if not password:
-            print('Error: no github-token was passed-in')
-            exit(1)
-        else:
-          print(f'Error: unknown {registry_type=}')
-          exit(1)
 
-        token = base64.b64encode(f'{username}:{password}'.encode('utf-8')).decode('utf-8')
-        netloc = '${{ steps.tgt.outputs.netloc }}'
+        os.environ['GITHUB_TOKEN'] = '${{ inputs.gh-token }}' # may be required for auth against GHCR
 
-        auths = {
-          netloc: {
-            'auth': token,
-          },
-        }
-
-        docker_cfg = {
-          'auths': auths,
-        }
+        image_references = [
+          image_reference.strip()
+          for image_reference in '${{ inputs.oci-image-reference }}'.split(',')
+        ]
 
         extra_auths = '''
         ${{ inputs.extra-auths }}
@@ -169,33 +100,13 @@ runs:
           if not isinstance(extra_auths, dict):
             print(f'expected a dict for extra-auths, but got: {type(extra_auths)=}')
             exit(1)
-
-          docker_cfg['auths'] |= extra_auths
-
-          extra_auth_netlocs = tuple(extra_auths.keys())
         else:
-          extra_auth_netlocs = ()
+          extra_auths = None
 
-        docker_cfg_dir = os.path.join(os.environ['HOME'], '.docker')
-        docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
-
-        os.makedirs(docker_cfg_dir, exist_ok=True)
-        with open(docker_cfg_path, 'w') as f:
-          json.dump(docker_cfg, f)
+        docker_cfg = oidc.write_docker_config(
+          image_references=image_references,
+          extra_auths=extra_auths,
+        )
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           f.write(f'docker-cfg={json.dumps(docker_cfg)}\n')
-          f.write(f'access-token={token}\n')
-
-        if '${{ inputs.print-summary }}' == 'false':
-          exit(0)
-
-        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-          f.write(textwrap.dedent(f'''\
-          ## OCI-Auth Summary
-          authenticated against: `{netloc}`
-          user: `{orig_username}`
-          type: `{registry_type}`
-          docker-cfg written to: `{docker_cfg_path}`
-          extra-auth-netlocs: `{extra_auth_netlocs}`
-          '''))
