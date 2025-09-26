@@ -137,7 +137,7 @@ class ReleaseNotesDoc:
         for release_note in self.release_notes:
             if release_note.type is ReleaseNotesType.PRERENDERED:
                 if len(self.release_notes) != 1:
-                    raise RuntimeError(
+                    logger.warning(
                         f'Only expected one prerendered release-note for {self.ocm=} '
                         f'(found {len(self.release_notes)})'
                     )
