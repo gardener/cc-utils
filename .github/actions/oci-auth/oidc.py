@@ -31,6 +31,7 @@ class OidcConfiguration:
 
         data_class = {
             oci.model.OciRegistryType.AWS: AwsOidcConfiguration,
+            oci.model.OciRegistryType.AZURE: AzureOidcConfiguration,
             oci.model.OciRegistryType.GAR: GarOidcConfiguration,
         }.get(registry_type)
 
@@ -55,6 +56,13 @@ class AwsOidcConfiguration(OidcConfiguration):
 
 
 @dataclasses.dataclass
+class AzureOidcConfiguration(OidcConfiguration):
+    client_id: str
+    tenant_id: str
+    audience: str = 'api://AzureADTokenExchange'
+
+
+@dataclasses.dataclass
 class GarOidcConfiguration(OidcConfiguration):
     project_name: str
     project_id: int
@@ -76,7 +84,7 @@ class GarOidcConfiguration(OidcConfiguration):
 
 def find_oidc_cfg(
     image_reference: oci.model.OciImageReference,
-) -> AwsOidcConfiguration | GarOidcConfiguration:
+) -> AwsOidcConfiguration | AzureOidcConfiguration | GarOidcConfiguration:
     github_server_url = os.environ['GITHUB_SERVER_URL']
     github_org = os.environ['GITHUB_REPOSITORY_OWNER']
 
@@ -127,6 +135,7 @@ def _fetch_with_retries(
     session: requests.Session,
     method: str='GET',
     json: dict | None=None,
+    data: dict | None=None,
     headers: dict | None=None,
     remaining_retries: int=3,
 ) -> requests.Response:
@@ -134,6 +143,7 @@ def _fetch_with_retries(
         method=method,
         url=url,
         json=json,
+        data=data,
         headers=headers,
     )
 
@@ -147,6 +157,7 @@ def _fetch_with_retries(
                 session=session,
                 method=method,
                 json=json,
+                data=data,
                 headers=headers,
                 remaining_retries=remaining_retries - 1,
             )
@@ -201,6 +212,69 @@ def authenticate_against_aws(
         'access_key_id': access_key_id,
         'secret_access_key': secret_access_key,
         'session_token': session_token,
+    }
+
+
+def authenticate_against_azure(
+    oidc_cfg: AzureOidcConfiguration,
+    gh_token: str,
+    gh_token_url: str,
+    registry: str,
+) -> dict[str, str]:
+    '''
+    See https://github.com/Azure/login for reference.
+    '''
+    session = requests.Session()
+
+    res = _fetch_with_retries(
+        url=f'{gh_token_url}&audience={oidc_cfg.audience}',
+        session=session,
+        headers={
+            'Authorization': f'Bearer {gh_token}',
+        },
+    )
+    gh_oidc_token = res.json()['value']
+
+    body = {
+        'client_id': oidc_cfg.client_id,
+        'scope': 'https://management.azure.com/.default',
+        'grant_type': 'client_credentials',
+        'client_assertion_type': 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+        'client_assertion': gh_oidc_token,
+    }
+    res = _fetch_with_retries(
+        url=f'https://login.microsoftonline.com/{oidc_cfg.tenant_id}/oauth2/v2.0/token',
+        session=session,
+        method='POST',
+        data=body,
+        headers={
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    )
+    auth_token = res.json()['access_token']
+
+    body = {
+        'grant_type': 'access_token',
+        'service': registry,
+        'access_token': auth_token,
+    }
+    res = _fetch_with_retries(
+        url=f'https://{registry}/oauth2/exchange',
+        session=session,
+        method='POST',
+        data=body,
+        headers={
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    )
+    refresh_token = res.json()['refresh_token']
+
+    username = '00000000-0000-0000-0000-000000000000'
+
+    token = base64.b64encode(f'{username}:{refresh_token}'.encode()).decode()
+
+    return {
+        'auth': token,
     }
 
 
@@ -307,6 +381,14 @@ def write_docker_config(
                 oidc_cfg=oidc_cfg,
                 gh_token=gh_token,
                 gh_token_url=gh_token_url,
+            )
+
+        elif registry_type is oci.model.OciRegistryType.AZURE:
+            auth = authenticate_against_azure(
+                oidc_cfg=oidc_cfg,
+                gh_token=gh_token,
+                gh_token_url=gh_token_url,
+                registry=image_reference.netloc,
             )
 
         elif registry_type is oci.model.OciRegistryType.GAR:
