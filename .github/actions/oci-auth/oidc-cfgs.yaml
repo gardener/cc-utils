@@ -93,7 +93,30 @@
   identity_pool_name: github-actions
   identity_provider_name: github-tools-actions-provider
   oci_repository_prefixes:
+    - asia-docker.pkg.dev/sap-se-gcp-k8s-delivery
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+    - us-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-dev
+
+- name: tools-aws-delivery-dev
+  type: aws
+  role_to_assume: arn:aws:iam::251637920682:role/GHA-Container-Registry-Admin
+  oci_repository_prefixes:
+    - public.ecr.aws/europe-sap-se-k8s-delivery
+    - 251637920682.dkr.ecr.eu-north-1.amazonaws.com
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-dev
+
+- name: tools-azure-delivery-dev
+  type: azure
+  client_id: b08be046-21f6-4fa0-8892-023af8c22a8d
+  tenant_id: 69b863e3-480a-4ee9-8bd0-20a8adb6909b
+  oci_repository_prefixes:
+    - europesapsek8sdeliverydevprivate.azurecr.io
+    - europesapsek8sdeliverydevpublic.azurecr.io
   github_host: gh-tools
   github_orgs:
     - kubernetes-dev
