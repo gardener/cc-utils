@@ -317,7 +317,7 @@ def main():
             node_filter=cnudie.iter.Filter.components,
         ):
             for rn in all_release_note_docs:
-                if rn.component_id == cnode.component_id:
+                if rn.component_id.name == cnode.component_id.name:
                     filtered_release_notes_docs.append(
                         rnu.filter_release_notes(
                             release_notes_doc=rn,
