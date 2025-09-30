@@ -88,7 +88,7 @@ runs:
 
         image_references = [
           image_reference.strip()
-          for image_reference in '${{ inputs.oci-image-reference }}'.split(',')
+          for image_reference in '''${{ inputs.oci-image-reference }}'''.split(',')
         ]
 
         extra_auths = '''
