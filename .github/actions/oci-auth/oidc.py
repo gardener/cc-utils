@@ -342,9 +342,12 @@ def authenticate_against_gar(
     }
 
 
-def authenticate_against_ghcr() -> dict[str, str]:
+def authenticate_against_ghcr() -> dict[str, str] | None:
     username = os.environ['GITHUB_ACTOR']
     password = os.environ['GITHUB_TOKEN']
+
+    if not username or not password:
+        return None
 
     token = base64.b64encode(f'{username}:{password}'.encode()).decode()
 
@@ -404,6 +407,9 @@ def write_docker_config(
         else:
             print(f'Error: Unsupported {registry_type=}')
             exit(1)
+
+        if not auth:
+            continue
 
         auths[image_reference.netloc] = auth
 
