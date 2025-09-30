@@ -102,7 +102,7 @@
 
 - name: tools-aws-delivery-dev
   type: aws
-  role_to_assume: arn:aws:iam::251637920682:role/GHA-Container-Registry-Admin
+  role_to_assume: arn:aws:iam::251637920682:role/GitHub-Action-Container-Registry-Writer
   oci_repository_prefixes:
     - public.ecr.aws/europe-sap-se-k8s-delivery
     - 251637920682.dkr.ecr.eu-north-1.amazonaws.com
