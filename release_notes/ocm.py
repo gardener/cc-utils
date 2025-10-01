@@ -274,6 +274,7 @@ def release_notes_docs_as_markdown(
 
 def read_release_notes_from_dir(
     release_notes_docs_dir: str,
+    reference_version: str | None=None,
 ) -> collections.abc.Iterator[rnm.ReleaseNotesDoc]:
     for cur_dir_path, _, fnames in os.walk(release_notes_docs_dir):
         for fname in fnames:
@@ -284,6 +285,14 @@ def read_release_notes_from_dir(
 
             with open(file_path) as file:
                 raw_release_notes_doc = yaml.safe_load(file)
+
+            if (
+                reference_version
+                and (doc_reference_version := raw_release_notes_doc.get('reference_version'))
+                and doc_reference_version != reference_version
+            ):
+                # the release notes doc is probably a leftover from a previous release -> skip it
+                continue
 
             yield dacite.from_dict(
                 data_class=rnm.ReleaseNotesDoc,

@@ -109,6 +109,12 @@ on:
           An optional, comma-separated list of OCM-Repositories that should be used for looking-up
           OCM-Component-Versions. The OCM releases repository will always be appended to the list if
           it is not part of it yet.
+      release-notes-path:
+        required: false
+        type: string
+        default: .ocm/release-notes
+        description: |
+          The relative path (from repository root) to the directory containing the release-notes docs.
 
     outputs:
       ocm-repository:
@@ -223,6 +229,18 @@ jobs:
           commit-message: ${{ steps.pre.outputs.commit-message }}
           commit-objects-artefact: release-commit-objects
           callback-action-path: ${{ inputs.version-commit-callback-action-path }}
+          callback-command: |
+            release_notes_path="${{ inputs.release-notes-path }}"
+            release_notes_path="${release_notes_path%/}/" # ensure trailing "/"
+
+            release_notes_files=$(git ls-tree ${{ github.sha }} ${release_notes_path} --name-only)
+
+            for file in $release_notes_files; do
+              if [[ -f "${file}" && "${file}" == *.release-notes.yaml ]]; then
+                # insert version at the beginning so that existing versions take precedence
+                sed -i "1i reference_version: ${EFFECTIVE_VERSION}" "${file}"
+              fi
+            done
           versionfile: ${{ inputs.versionfile }}
           version-operation: ${{ inputs.version-operation }}
           commit-kind: ${{ inputs.mode == 'release' && 'release' || 'build' }}

@@ -59,6 +59,18 @@ inputs:
 
       A typical use-case for such a callback action is installation of runtime dependencies, such
       as golang-toolchain and doing code-generation using such dependencies.
+  callback-command:
+    required: false
+    type: string
+    default: ''
+    description: |
+      an (optional) command to run during creation of version commit. It can be assumed PWD is set
+      to repository-root. Effective version will already have been written, honouring either
+      `versionfile` or `write-callback` and chosen `version-operation`.
+
+      The effective version will be available via an env var `EFFECTIVE_VERSION`. Any diff created
+      by the callback-command will be included in version-commit. The command should _not_ create
+      a commit itself.
   commit-message:
     required: false
     type: string
@@ -201,6 +213,16 @@ runs:
       with:
         effective-version: ${{ steps.calc-version.outputs.effective-version }}
         commit-kind: ${{ inputs.commit-kind }}
+
+    - name: run-callback-command
+      if: ${{ inputs.callback-command != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        export EFFECTIVE_VERSION="${{ steps.calc-version.outputs.effective-version }}"
+
+        ${{ inputs.callback-command }}
 
     - name: version
       id: version

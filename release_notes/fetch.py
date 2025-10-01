@@ -389,7 +389,10 @@ def collect_release_notes(
     repo_path = git_helper.repo_path
     local_release_notes_path = os.path.join(repo_path, '.ocm/release-notes')
 
-    release_notes_docs = list(rno.read_release_notes_from_dir(local_release_notes_path))
+    release_notes_docs = list(rno.read_release_notes_from_dir(
+        release_notes_docs_dir=local_release_notes_path,
+        reference_version=release_version,
+    ))
     for release_notes_doc in release_notes_docs:
         if (
             not release_notes_doc.ocm
