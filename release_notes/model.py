@@ -309,11 +309,17 @@ def iter_source_blocks(source, content: str) -> tuple[
                 reference_identifier=res.group('reference_str'),
                 component_name=component_name,
             )
-            if not block.target_group.lower() in ['user', 'operator', 'developer', 'dependency']:
+            if not block.target_group.lower() in ReleaseNotesAudience:
                 malformed_blocks.append(res.group())
                 continue
+
+            if not block.category.lower() in ReleaseNotesCategory:
+                malformed_blocks.append(res.group())
+                continue
+
             if block.has_content():
                 valid_blocks.append(block)
+
         except IndexError as e:
             malformed_blocks.append(res.group())
             logger.debug(f'cannot find group in content: {e}')
