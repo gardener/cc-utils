@@ -211,34 +211,38 @@ def _determine_blocks_to_include(
 
     source_blocks_to_be_included: set[rnm.SourceBlock] = set()
     for filter_in_commit in filter_in_commits:
-        source_blocks_to_be_included.update(rnm.iter_source_blocks(
+        blocks, _ = rnm.iter_source_blocks(
             source=filter_in_commit,
             content=filter_in_commit.message,
-        ))
+        )
+        source_blocks_to_be_included.update(blocks)
         for pr in commit_pulls[filter_in_commit.hexsha]:
             if pr.body is None:
                 continue
-            source_blocks_to_be_included.update(rnm.iter_source_blocks(
+            blocks, _ = rnm.iter_source_blocks(
                 source=pr,
                 content=pr.body,
-            ))
+            )
+            source_blocks_to_be_included.update(blocks)
 
     logger.info(f'added {len(source_blocks_to_be_included)} source blocks')
 
     # contains release notes which should be filtered out
     blacklisted_source_blocks: set[rnm.SourceBlock] = set()
     for filter_out_commit in filter_out_commits:
-        blacklisted_source_blocks.update(rnm.iter_source_blocks(
+        blocks, _ = rnm.iter_source_blocks(
             source=filter_out_commit,
             content=filter_out_commit.message,
-        ))
+        )
+        blacklisted_source_blocks.update(blocks)
         for pr in commit_pulls[filter_out_commit.hexsha]:
             if pr.body is None:
                 continue
-            blacklisted_source_blocks.update(rnm.iter_source_blocks(
+            blocks, _ = rnm.iter_source_blocks(
                 source=pr,
                 content=pr.body,
-            ))
+            )
+            blacklisted_source_blocks.update(blocks)
 
     if blacklisted_source_blocks:
         logger.info(f'added {len(blacklisted_source_blocks)} blacklisted source blocks')
