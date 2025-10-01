@@ -271,15 +271,20 @@ class SourceBlock:
         return False
 
 
-def iter_source_blocks(source, content: str) -> collections.abc.Iterable[SourceBlock]:
+def iter_source_blocks(source, content: str) -> tuple[
+    list[SourceBlock],
+    list[str],
+]:
     '''
-    Searches for code blocks in release note notation and returns all found.
-    Only valid note blocks are returned, which means that the format has been followed.
-    However, it does not check if the category / group exists.
+    Searches for code blocks in release note notation.
+    Returns valid blocks and malformed blocks separately.
 
     :param content: the content to look for release notes in
-    :return: a list of valid note blocks
+    :return: returns a tuple with valid blocks first, and malformed second
     '''
+    malformed_blocks = []
+    valid_blocks = []
+
     while '<!--' in content:
         comment_start_idx = content.find('<!--')
         comment_stop_idx = content.find('-->', comment_start_idx + len('<!--'))
@@ -305,13 +310,17 @@ def iter_source_blocks(source, content: str) -> collections.abc.Iterable[SourceB
                 component_name=component_name,
             )
             if not block.target_group.lower() in ['user', 'operator', 'developer', 'dependency']:
+                malformed_blocks.append(res.group())
                 continue
             if block.has_content():
-                yield block
+                valid_blocks.append(block)
         except IndexError as e:
+            malformed_blocks.append(res.group())
             logger.debug(f'cannot find group in content: {e}')
             # group not found, ignore
             continue
+
+    return valid_blocks, malformed_blocks
 
 
 @dataclasses.dataclass(frozen=True)
