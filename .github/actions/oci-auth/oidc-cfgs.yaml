@@ -1,5 +1,5 @@
 # github.com / gardener-project
-- name: gardener-project
+- name: gar-gardener-project
   type: gar
   project_name: gardener-project
   project_id: 694386720375
@@ -14,7 +14,7 @@
     - open-component-model
 
 # ghtools / gardener-project
-- name: tools-gardener-project
+- name: tools-gar-gardener-project
   type: gar
   project_name: gardener-project
   project_id: 694386720375
@@ -28,7 +28,7 @@
     - kubernetes
 
 # ghtools / delivery
-- name: tools-delivery
+- name: tools-gar-delivery
   type: gar
   project_name: sap-se-gcp-k8s-delivery
   project_id: 370994582649
@@ -42,8 +42,8 @@
     - kubernetes
     - open-delivery-gear
 
-# ghtools / gardener-project
-- name: wdf-gardener-project
+# ghwdf / gardener-project
+- name: wdf-gar-gardener-project
   type: gar
   project_name: gardener-project
   project_id: 694386720375
@@ -57,7 +57,7 @@
     - kubernetes
 
 # ghwdf / delivery
-- name: wdf-delivery
+- name: wdf-gar-delivery
   type: gar
   project_name: sap-se-gcp-k8s-delivery
   project_id: 370994582649
@@ -71,7 +71,7 @@
     - kubernetes
 
 # ghwdf / delivery-dev
-- name: wdf-delivery-dev
+- name: wdf-gar-delivery-dev
   type: gar
   project_name: sap-se-gcp-k8s-delivery
   project_id: 370994582649
@@ -85,7 +85,7 @@
     - kubernetes-dev
 
 # ghtools / delivery-dev
-- name: tools-delivery-dev
+- name: tools-gar-delivery-dev
   type: gar
   project_name: sap-se-gcp-k8s-delivery
   project_id: 370994582649
@@ -120,3 +120,40 @@
   github_host: gh-tools
   github_orgs:
     - kubernetes-dev
+
+# ghtools / delivery-staging
+- name: tools-gar-delivery-staging
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-staging-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
+    - asia-docker.pkg.dev/sap-se-gcp-k8s-delivery
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+    - us-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-staging
+
+- name: tools-aws-delivery-staging
+  type: aws
+  role_to_assume: arn:aws:iam::251637920682:role/GitHub-Action-Container-Registry-Writer
+  oci_repository_prefixes:
+    - public.ecr.aws/europe-sap-se-k8s-delivery
+    - 251637920682.dkr.ecr.eu-north-1.amazonaws.com
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-staging
+
+- name: tools-azure-delivery-staging
+  type: azure
+  client_id: b08be046-21f6-4fa0-8892-023af8c22a8d
+  tenant_id: 69b863e3-480a-4ee9-8bd0-20a8adb6909b
+  oci_repository_prefixes:
+    - europesapsek8sdeliverystagingprivate.azurecr.io
+    - europesapsek8sdeliverystagingpublic.azurecr.io
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-staging
