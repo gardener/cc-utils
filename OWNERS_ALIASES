@@ -1,0 +1,13 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  cc-utils-reviewers:
+  - ccwienk
+  - 8R0WNI3
+  - zkdev
+  - TuanAnh17N
+  cc-utils-approvers:
+  - ccwienk
+  - 8R0WNI3
+  - zkdev
+  - TuanAnh17N
