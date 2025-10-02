@@ -1,4 +1,3 @@
-import collections.abc
 import logging
 import traceback
 
@@ -9,29 +8,9 @@ import cnudie.retrieve
 import cnudie.util
 import oci.client as oc
 import oci.model as om
-import version
+
 
 logger = logging.getLogger(__name__)
-
-
-def iter_componentversions_to_purge(
-    component: ocm.Component | ocm.ComponentDescriptor,
-    policy: version.VersionRetentionPolicies,
-    oci_client: oc.Client,
-) -> collections.abc.Generator[ocm.ComponentIdentity, None, None]:
-    oci_ref = cnudie.util.oci_ref(component=component)
-    if isinstance(component, ocm.ComponentDescriptor):
-        component = component.component
-
-    for v in version.versions_to_purge(
-        versions=oci_client.tags(oci_ref.ref_without_tag),
-        reference_version=component.version,
-        policy=policy,
-    ):
-        yield ocm.ComponentIdentity(
-            name=component.name,
-            version=v,
-        )
 
 
 def remove_component_descriptor_and_referenced_artefacts(
