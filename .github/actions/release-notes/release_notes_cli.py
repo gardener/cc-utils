@@ -308,6 +308,7 @@ def main():
 
     for variant_cfg in release_notes_variants_cfg:
         filtered_release_notes_docs = []
+        seen_component_ids = set()
         variant_markdown_path = os.path.join(tmp_dir.name, f'{variant_cfg.name}-release-notes.md')
 
         for cnode in cnudie.iter.iter(
@@ -318,6 +319,10 @@ def main():
         ):
             for rn in all_release_note_docs:
                 if rn.component_id.name == cnode.component_id.name:
+                    if rn.component_id in seen_component_ids:
+                        continue
+                    seen_component_ids.add(rn.component_id)
+
                     filtered_release_notes_docs.append(
                         rnu.filter_release_notes(
                             release_notes_doc=rn,
