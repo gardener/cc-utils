@@ -13,7 +13,7 @@ try:
     import ocm
 except ImportError:
     # make local development more convenient
-    repo_root = os.path.join(os.path.dirname(__file__), '../../..')
+    repo_root = os.path.join(os.path.dirname(__file__), "../../..")
     sys.path.insert(1, repo_root)
     import ocm
 
@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 class UpstreamUpdatePolicy(enum.StrEnum):
-    STRICTLY_FOLLOW = 'strictly-follow'
-    ACCEPT_HOTFIXES = 'accept-hotfixes'
+    STRICTLY_FOLLOW = "strictly-follow"
+    ACCEPT_HOTFIXES = "accept-hotfixes"
 
 
 def create_ocm_lookups(
@@ -71,7 +71,7 @@ def create_ocm_lookups(
 def create_diff_in_base_component(
     upgrade_vector: ocm.gardener.UpgradeVector,
     repo_dir: str,
-    rel_path: str='.ocm/base-component.yaml',
+    rel_path: str = ".ocm/base-component.yaml",
 ) -> bool:
     path = os.path.join(repo_dir, rel_path)
     if not os.path.isfile(path):
@@ -87,22 +87,28 @@ def create_diff_in_base_component(
     with open(path) as f:
         base_component = yaml.safe_load(f)
 
-    if not 'componentReferences' in base_component:
-        logger.info(
-            f'{rel_path=} does not contain `componentReferences` - delegating to callback'
-        )
+    if not "componentReferences" in base_component:
+        logger.info(f"{rel_path=} does not contain `componentReferences` - delegating to callback")
         return False
 
-    for cref in base_component['componentReferences']:
-        cname = cref['componentName']
-        cver = cref['version']
+    for cref in base_component["componentReferences"]:
+        cname = cref["componentName"]
+        cver = cref["version"]
+        calias = cref["name"]
 
         if cname != upgrade_vector.component_name:
             continue
 
+        # for Gardenlinux we might have two references with different names, so we also need to filter here
+        if calias != upgrade_vector.whence.alias:
+            logger.warning(
+                f"{cname}:{cver} with alias {calias} does not match {upgrade_vector.whence.alias} - skipping"
+            )
+            continue
+
         # sanity-check: whence-version must match
         if cver != upgrade_vector.whence.version:
-            logger.warning(f'{cname}:{cver} does not match {upgrade_vector.whence=} - skipping')
+            logger.warning(f"{cname}:{cver} does not match {upgrade_vector.whence=} - skipping")
             continue
 
         break
@@ -110,9 +116,9 @@ def create_diff_in_base_component(
         return False
 
     # we found a reasonable candidate
-    cref['version'] = upgrade_vector.whither.version
+    cref["version"] = upgrade_vector.whither.version
 
-    with open(path, 'w') as f:
+    with open(path, "w") as f:
         yaml.safe_dump(base_component, f)
 
     return True
@@ -130,7 +136,7 @@ def create_diff_using_callback(
 
     wither_component_descriptor = component_descriptor_lookup(upgrade_vector.whither)
     tmp = tempfile.NamedTemporaryFile(delete_on_close=False)
-    with open(tmp.name, 'w') as f:
+    with open(tmp.name, "w") as f:
         yaml.dump(
             data=dataclasses.asdict(wither_component_descriptor),
             stream=f,
@@ -163,18 +169,18 @@ def create_upgrade_pullrequest_diff(
     if create_diff_in_base_component(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
-        rel_path='.ocm/base-component.yaml',
+        rel_path=".ocm/base-component.yaml",
     ):
-        logger.info('created upgrade-diff in base-component')
+        logger.info("created upgrade-diff in base-component")
         created_diff = True
 
     if create_diff_using_callback(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
-        rel_path='.ci/set_dependency_version',
+        rel_path=".ci/set_dependency_version",
         component_descriptor_lookup=component_descriptor_lookup,
     ):
-        logger.info('created upgrade-diff using callback')
+        logger.info("created upgrade-diff using callback")
         created_diff = True
 
     rnt.release_notes_docs_into_files(
@@ -192,17 +198,19 @@ def retrieve_release_notes(
     oci_client: oci.client.Client,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
 ) -> list[rnm.ReleaseNotesDoc]:
-    logger.info(f'fetching release-notes for {upgrade_vector=}')
+    logger.info(f"fetching release-notes for {upgrade_vector=}")
 
-    release_notes_docs = list(rno.release_notes_for_vector(
-        upgrade_vector=upgrade_vector,
-        component_descriptor_lookup=component_descriptor_lookup,
-        version_lookup=version_lookup,
-        oci_client=oci_client,
-        version_filter=version_filter,
-    ))
+    release_notes_docs = list(
+        rno.release_notes_for_vector(
+            upgrade_vector=upgrade_vector,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            oci_client=oci_client,
+            version_filter=version_filter,
+        )
+    )
 
-    logger.info(f'fetched {len(release_notes_docs)} release-notes documents')
+    logger.info(f"fetched {len(release_notes_docs)} release-notes documents")
 
     return release_notes_docs
 
@@ -219,7 +227,7 @@ def create_upgrade_pullrequest(
     branch: str,
     oci_client: oci.client.Client,
 ) -> github.pullrequest.UpgradePullRequest:
-    logger.info(f'found {upgrade_vector=}')
+    logger.info(f"found {upgrade_vector=}")
     git_helper = gitutil.GitHelper(
         repo=repo_dir,
         git_cfg=gitutil.GitCfg(repo_url=repo_url),
@@ -245,7 +253,7 @@ def create_upgrade_pullrequest(
     )
 
     grouped_release_notes_docs = rno.group_release_notes_docs(release_notes_docs)
-    logger.info(f'grouped into {len(grouped_release_notes_docs)} release-notes documents')
+    logger.info(f"grouped into {len(grouped_release_notes_docs)} release-notes documents")
 
     release_notes_markdown = rno.release_notes_docs_as_markdown(
         release_notes_docs=grouped_release_notes_docs,
@@ -253,7 +261,7 @@ def create_upgrade_pullrequest(
     )
 
     bom_diff_markdown = github.pullrequest.bom_diff(
-        delivery_dashboard_url=None, # XXX add URL once delivery-dashboard is available publicly
+        delivery_dashboard_url=None,  # XXX add URL once delivery-dashboard is available publicly
         from_component=from_component,
         to_component=to_component,
         component_descriptor_lookup=component_descriptor_lookup,
@@ -273,7 +281,7 @@ def create_upgrade_pullrequest(
 
     fv = upgrade_vector.whence.version
     tv = upgrade_vector.whither.version
-    commit_message = f'Upgrade {upgrade_vector.component_name}\n\nfrom {fv} to {tv}'
+    commit_message = f"Upgrade {upgrade_vector.component_name}\n\nfrom {fv} to {tv}"
 
     with github.pullrequest.commit_and_push_to_tmp_branch(
         repository=repository,
@@ -295,7 +303,7 @@ def create_upgrade_pullrequest(
             pull_request.create_comment(body=extra_bodypart)
 
         if auto_merge:
-            logger.info(f'Merging PR#{pull_request.number} -> {branch=}')
+            logger.info(f"Merging PR#{pull_request.number} -> {branch=}")
             pull_request.merge(
                 merge_method=merge_method,
             )
@@ -325,24 +333,23 @@ def create_upgrade_pullrequests(
     merge_method: str,
     branch: str,
     oci_client: oci.client.Client,
-    upstream_component_name: str | None=None,
+    upstream_component_name: str | None = None,
     upstream_update_policy: UpstreamUpdatePolicy = UpstreamUpdatePolicy.STRICTLY_FOLLOW,
-    ignore_prerelease_versions: bool=True,
+    ignore_prerelease_versions: bool = True,
 ) -> collections.abc.Iterable[github.pullrequest.UpgradePullRequest]:
     for cref in ocm.gardener.iter_greatest_component_references(
         references=ocm.gardener.iter_component_references(component=component),
     ):
-        logger.info(f'processing {cref=}')
+        logger.info(f"processing {cref=}")
         upgrade_vectors: list[ocm.gardener.UpgradeVector] = []
 
         if upstream_component_name:
             upstream_version = version.greatest_version(
-                versions=version_lookup(upstream_component_name),
-                ignore_prerelease_versions=ignore_prerelease_versions
+                versions=version_lookup(upstream_component_name), ignore_prerelease_versions=ignore_prerelease_versions
             )
 
             if not upstream_version:
-                logger.warning(f'no versions for upstream {upstream_component_name=}')
+                logger.warning(f"no versions for upstream {upstream_component_name=}")
                 continue
 
             upstream_cd: ocm.ComponentDescriptor = component_descriptor_lookup(
@@ -357,10 +364,10 @@ def create_upgrade_pullrequests(
                     upstream_target_version = uref.version
                     break
             else:
-                logger.info(f'upstream has no reference for {cref.componentName}')
+                logger.info(f"upstream has no reference for {cref.componentName}")
                 continue
 
-            if upstream_update_policy  is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+            if upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
                 candidates = (upstream_target_version,)
             elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
                 cref_versions = version_lookup(cref.componentName)
@@ -374,32 +381,26 @@ def create_upgrade_pullrequests(
                 else:
                     candidates = (upstream_target_version,)
             else:
-                raise ValueError(f'unknown {upstream_update_policy=}')
+                raise ValueError(f"unknown {upstream_update_policy=}")
 
             for target in candidates:
                 tv = version.parse_to_semver(target)
                 cv = version.parse_to_semver(cref.version)
 
                 if tv == cv:
-                    logger.info(f'already at target {cref.componentName} {target=} (skip)')
+                    logger.info(f"already at target {cref.componentName} {target=} (skip)")
                     continue
 
                 if tv < cv and upstream_update_policy is not UpstreamUpdatePolicy.STRICTLY_FOLLOW:
                     logger.info(
-                        f'skip (no downgrade for ACCEPT_HOTFIXES): {cref.componentName} '
-                        f'{cref.version=} -> {target=}'
+                        f"skip (no downgrade for ACCEPT_HOTFIXES): {cref.componentName} "
+                        f"{cref.version=} -> {target=}"
                     )
                     continue
                 upgrade_vectors.append(
                     ocm.gardener.UpgradeVector(
-                        whence=ocm.ComponentIdentity(
-                            name=cref.componentName,
-                            version=cref.version
-                        ),
-                        whither=ocm.ComponentIdentity(
-                            name=cref.componentName,
-                            version=target
-                        ),
+                        whence=ocm.ComponentIdentity(name=cref.componentName, version=cref.version, alias=cref.name),
+                        whither=ocm.ComponentIdentity(name=cref.componentName, version=target, alias=cref.name),
                     )
                 )
         else:
@@ -411,7 +412,7 @@ def create_upgrade_pullrequests(
             )
 
             if not upgrade_vector:
-                logger.info(f'did not find an upgrade-proposal for {cref=}')
+                logger.info(f"did not find an upgrade-proposal for {cref=}")
                 continue
 
             upgrade_vectors.append(upgrade_vector)
@@ -421,7 +422,7 @@ def create_upgrade_pullrequests(
                 upgrade_vector=uv,
                 upgrade_pullrequests=upgrade_pullrequests,
             ):
-                logger.info(f'upgrade-pullrequest for {uv=} already exists (skipping)')
+                logger.info(f"upgrade-pullrequest for {uv=} already exists (skipping)")
                 continue
 
             yield create_upgrade_pullrequest(
@@ -446,5 +447,5 @@ def main():
     pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

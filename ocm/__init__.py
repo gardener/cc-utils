@@ -470,6 +470,7 @@ class ComponentReference(Artifact, LabelMethodsMixin):
         return ComponentIdentity(
             name=self.componentName,
             version=self.version,
+            alias=self.name,
         )
 
 

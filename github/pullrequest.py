@@ -88,20 +88,28 @@ def parse_pullrequest_title(
 
     title = title.removeprefix("[ci:").removesuffix("]")
 
-    kind, component_name, version_vector = title.split(":")
+    kind, component_name_or_alias, version_vector = title.split(":")
     version_whence, version_whither = version_vector.split("->")
 
-    if kind != "component":
+    alias = None
+    if kind == "alias":
+        alias = component_name_or_alias
+        component_name = get_component_name_from_alias(component_name_or_alias)
+    elif kind == "component":
+        component_name = component_name_or_alias
+    else:
         raise ValueError(f"upgrade-target-type {kind=} not implemented")
 
     return ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
             name=component_name,
             version=version_whence,
+            alias=alias,
         ),
         whither=ocm.ComponentIdentity(
             name=component_name,
             version=version_whither,
+            alias=alias,
         ),
     )
 
@@ -124,6 +132,12 @@ def upgrade_pullrequest_title(
     cname = upgrade_vector.component_name
     from_version = upgrade_vector.whence.version
     to_version = upgrade_vector.whither.version
+
+    # special case: if component is gardenlinux, and an alias is given, use alias in title. We do this, such that we can distinguish between
+    # upgrade-prs for gardenlinux (e.g. "gardenlinux" vs. "gardenlinux-test")
+    if cname == "github.com/gardenlinux/gardenlinux" and upgrade_vector.whither.alias:
+        type_name = "alias"
+        cname = upgrade_vector.whither.alias
 
     return f"[ci:{type_name}:{cname}:{from_version}->{to_version}]"
 
@@ -312,6 +326,7 @@ def set_dependency_cmd_env(
     cmd_env = os.environ.copy()
     cmd_env["DEPENDENCY_TYPE"] = "component"
     cmd_env["DEPENDENCY_NAME"] = upgrade_vector.component_name
+    cmd_env["DEPENDENCY_ALIAS"] = upgrade_vector.whither.alias or ""
     cmd_env["DEPENDENCY_VERSION"] = upgrade_vector.whither.version
     cmd_env["REPO_DIR"] = repo_dir
 
