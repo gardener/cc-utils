@@ -17,7 +17,6 @@ inputs:
       the base64-encoded certificate-bundle for the server-endpoint.
   cluster-cfg:
     type: string
-    default: gardener/clusters/testmachinery-canary.yaml
     description: |
       Refers to a file located in a GitHub repository containing the k8s-api-endpoint as well as
       the k8s-api-ca. If the `server` _and_ `server-ca` inputs are specified as well, those will
