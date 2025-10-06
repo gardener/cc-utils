@@ -11,10 +11,12 @@ on:
       images-yaml-path:
         description: 'Path to the images.yaml file.'
         required: false
+        type: string
         default: 'imagevector/images.yaml'
       release-notes-path:
         description: 'Path where the release-notes.md file will be generated.'
         required: false
+        type: string
         default: '/tmp/release-notes.md'
       base-branch:
         description: 'The base branch for the pull request.'
@@ -44,9 +46,9 @@ jobs:
       - name: Read release notes file
         id: release_notes
         run: |
-          release-notes-path="${{ inputs.release-notes-path }}"
-          if [ -f "$release-notes-path" ]; then
-            notes=$(cat "$release-notes-path")
+          release_notes_path="${{ inputs.release-notes-path }}"
+          if [ -f "$release_notes_path" ]; then
+            notes=$(cat "$release_notes_path")
             notes="${notes//'%'/'%25'}"
             notes="${notes//$'\n'/'%0A'}"
             notes="${notes//$'\r'/'%0D'}"
