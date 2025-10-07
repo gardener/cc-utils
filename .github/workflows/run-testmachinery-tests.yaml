@@ -11,6 +11,7 @@ on:
       k8s-api-endpoint:
         required: false
         type: string
+        default: https://api.tm-os-opensource.core.shoot.canary.k8s-hana.ondemand.com
         description: |
           The URL referring to the k8s-apiserver-endpoint in which the testmachinery-instance to use
           runs. Pipeline-Runs will authenticate against this cluster using OIDC.

@@ -65,9 +65,30 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: prepare-cluster-cfg
-      id: prepare
-      if: ${{ inputs.server == '' || inputs.server-ca == '' }}
+    - name: prepare server-ca
+      id: prepare-server-ca
+      if: ${{ inputs.server != '' && inputs.server-ca == '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        server="${{ inputs.server }}"
+
+        # normalise api-url: remove `https://` prefix and add `:443` suffix if required
+        normalised_api_url="${server#https://}"
+        if [[ "${normalised_api_url}" != *:443 ]]; then
+          normalised_api_url="${normalised_api_url}:443"
+        fi
+
+        server_ca=$(echo | openssl s_client -showcerts -connect "${normalised_api_url}" 2>/dev/null \
+          | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+          | base64 -w 0 \
+          | tr -d '\n')
+
+        echo "server_ca=$server_ca" >> "$GITHUB_OUTPUT"
+    - name: prepare cluster-cfg
+      id: prepare-cluster-cfg
+      if: ${{ inputs.server == '' && inputs.server-ca == '' }}
       shell: bash
       run: |
         cluster_cfg="${{ inputs.cluster-cfg }}"
@@ -75,10 +96,10 @@ runs:
         echo "repository=$(echo "${cluster_cfg}" | cut -d '/' -f1,2)" >> ${GITHUB_OUTPUT}
         echo "path=$(echo "${cluster_cfg}" | cut -d '/' -f3-)" >> ${GITHUB_OUTPUT}
     - name: checkout cluster-cfg repo
-      if: ${{ inputs.server == '' || inputs.server-ca == '' }}
+      if: ${{ inputs.server == '' && inputs.server-ca == '' }}
       uses: actions/checkout@v4
       with:
-        repository: ${{ steps.prepare.outputs.repository }}
+        repository: ${{ steps.prepare-cluster-cfg.outputs.repository }}
         path: ./cluster-cfg-repo
     - name: auth
       id: auth
@@ -100,8 +121,10 @@ runs:
         server="${{ inputs.server }}"
         server_ca="${{ inputs.server-ca }}"
 
-        if [ -z "${server}" -o -z ${server_ca} ]; then
-          cluster_cfg_file="./cluster-cfg-repo/${{ steps.prepare.outputs.path }}"
+        if [ -n "${server}" -a -z ${server_ca} ]; then
+          server_ca="${{ steps.prepare-server-ca.outputs.server_ca }}"
+        elif [ -z "${server}" -a -z ${server_ca} ]; then
+          cluster_cfg_file="./cluster-cfg-repo/${{ steps.prepare-cluster-cfg.outputs.path }}"
           server=$(cat $cluster_cfg_file | yq .api)
           server_ca=$(cat $cluster_cfg_file | yq .ca)
         fi
