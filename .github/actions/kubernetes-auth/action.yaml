@@ -34,9 +34,6 @@ inputs:
     default: gardener
     description: |
       the audience to request during OIDC-flow
-  oidc-user:
-    type: string
-    default: gha
   kubeconfig-path:
     type: string
     default: kubeconfig.yaml
@@ -166,12 +163,12 @@ runs:
           - name: gha
             context:
               cluster: cluster
-              user: ${{ inputs.oidc-user }}
+              user: gha
         current-context: gha
         kind: Config
         preferences: {}
         users:
-          - name: ${{ inputs.oidc-user }}
+          - name: gha
             user:
               token: ${auth_token}
         EOF
