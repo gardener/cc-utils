@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/gardener/cc-utils/job-image-base:0.107.0
+ARG BASE_IMAGE=ghcr.io/gardener/cc-utils/job-image-base:0.108.0
 FROM $BASE_IMAGE AS builder
 COPY VERSION /metadata/VERSION
 COPY . /cc/utils/
