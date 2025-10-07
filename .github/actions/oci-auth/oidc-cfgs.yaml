@@ -157,3 +157,77 @@
   github_host: gh-tools
   github_orgs:
     - kubernetes-staging
+
+# ghtools / delivery-canary
+- name: tools-gar-delivery-canary
+  type: gar
+  project_name: sap-se-gcp-k8s-c-delivery
+  project_id: 924064794200
+  service_account: gardener-canary-readwrite@sap-se-gcp-k8s-c-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
+    - asia-docker.pkg.dev/sap-se-gcp-k8s-c-delivery
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-c-delivery
+    - us-docker.pkg.dev/sap-se-gcp-k8s-c-delivery
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-canary
+
+- name: tools-aws-delivery-canary
+  type: aws
+  role_to_assume: arn:aws:iam::821160992362:role/GitHub-Action-Container-Registry-Writer
+  oci_repository_prefixes:
+    - public.ecr.aws/europe-sap-se-k8s-c-delivery
+    - 821160992362.dkr.ecr.eu-north-1.amazonaws.com
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-canary
+
+- name: tools-azure-delivery-canary
+  type: azure
+  client_id: c6f88f32-3eb7-416f-8a46-7b43cc1cb3df
+  tenant_id: 69b863e3-480a-4ee9-8bd0-20a8adb6909b
+  oci_repository_prefixes:
+    - europesapsek8sdeliverycanaryprivate.azurecr.io
+    - europesapsek8sdeliverycanarypublic.azurecr.io
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-canary
+
+# ghtools / delivery-live
+- name: tools-gar-delivery-live
+  type: gar
+  project_name: sap-se-gcp-k8s-l-delivery
+  project_id: 782931607272
+  service_account: gardener-live-readwrite@sap-se-gcp-k8s-l-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
+    - asia-docker.pkg.dev/sap-se-gcp-k8s-l-delivery
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-l-delivery
+    - us-docker.pkg.dev/sap-se-gcp-k8s-l-delivery
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-live
+
+- name: tools-aws-delivery-live
+  type: aws
+  role_to_assume: arn:aws:iam::054157087603:role/GitHub-Action-Container-Registry-Writer
+  oci_repository_prefixes:
+    - public.ecr.aws/europe-sap-se-k8s-l-delivery
+    - 054157087603.dkr.ecr.eu-north-1.amazonaws.com
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-live
+
+- name: tools-azure-delivery-live
+  type: azure
+  client_id: 0d365f96-e2dd-449d-8aca-5d39f7e9eaf6
+  tenant_id: 69b863e3-480a-4ee9-8bd0-20a8adb6909b
+  oci_repository_prefixes:
+    - europesapsek8sdeliveryliveprivate.azurecr.io
+    - europesapsek8sdeliverylivepublic.azurecr.io
+  github_host: gh-tools
+  github_orgs:
+    - kubernetes-live
