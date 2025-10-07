@@ -44,9 +44,8 @@ runs:
         summary=$(python3 "${{ github.action_path }}/update-images.py" \
           --images-yaml-path "${{ inputs.images-yaml-path }}" \
           --release-notes-path "${{ inputs.release-notes-path }}")
-        
-        summary="${summary//'%'/'%25'}"
-        summary="${summary//$'\n'/'%0A'}"
-        summary="${summary//$'\r'/'%0D'}"
-        echo "summary=${summary}" >> $GITHUB_OUTPUT
-
+        {
+          echo "summary<<EOF"
+          echo "$summary"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT

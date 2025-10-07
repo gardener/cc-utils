@@ -49,10 +49,11 @@ jobs:
           release_notes_path="${{ inputs.release-notes-path }}"
           if [ -f "$release_notes_path" ]; then
             notes=$(cat "$release_notes_path")
-            notes="${notes//'%'/'%25'}"
-            notes="${notes//$'\n'/'%0A'}"
-            notes="${notes//$'\r'/'%0D'}"
-            echo "notes_content=${notes}" >> $GITHUB_OUTPUT
+          {
+            echo "notes_content<<EOF"
+            echo "$notes"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
           else
             echo "No release-notes.md file found. No updates were made."
             echo "notes_content=" >> $GITHUB_OUTPUT
