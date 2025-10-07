@@ -15,6 +15,11 @@ inputs:
     type: string
     description: |
       the base64-encoded certificate-bundle for the server-endpoint.
+  server-ca-discovery-url:
+    type: string
+    description: |
+      url to the Gardener discovery server to retrieve the Kubernetes server CA, e.g.
+      `https://discovery.ingress.garden.example.com/projects/<project_name>/shoots/<shoot-uid>/cluster-ca`
   cluster-cfg:
     type: string
     description: |
@@ -73,17 +78,22 @@ runs:
         set -euo pipefail
 
         server="${{ inputs.server }}"
+        server_ca_discovery_url="${{ inputs.server-ca-discovery-url }}"
 
-        # normalise api-url: remove `https://` prefix and add `:443` suffix if required
-        normalised_api_url="${server#https://}"
-        if [[ "${normalised_api_url}" != *:443 ]]; then
-          normalised_api_url="${normalised_api_url}:443"
+        if [ -n "${server_ca_discovery_url}" ]; then
+          server_ca=$(curl "${server_ca_discovery_url}" | jq -r .certs | base64 -w 0 | tr -d '\n')
+        else
+          # normalise api-url: remove `https://` prefix and add `:443` suffix if required
+          normalised_api_url="${server#https://}"
+          if [[ "${normalised_api_url}" != *:443 ]]; then
+            normalised_api_url="${normalised_api_url}:443"
+          fi
+
+          server_ca=$(echo | openssl s_client -showcerts -connect "${normalised_api_url}" 2>/dev/null \
+            | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+            | base64 -w 0 \
+            | tr -d '\n')
         fi
-
-        server_ca=$(echo | openssl s_client -showcerts -connect "${normalised_api_url}" 2>/dev/null \
-          | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
-          | base64 -w 0 \
-          | tr -d '\n')
 
         echo "server_ca=$server_ca" >> "$GITHUB_OUTPUT"
     - name: prepare cluster-cfg

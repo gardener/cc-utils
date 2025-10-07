@@ -22,6 +22,12 @@ on:
       k8s-api-ca:
         required: false
         type: string
+      k8s-api-ca-discovery-url:
+        required: false
+        type: string
+        default: https://discovery.ingress.garden.canary.k8s.ondemand.com/projects/core/shoots/751e98f4-a57d-40f7-b8de-e5dbf4f48d2d/cluster-ca
+        description: |
+          url to the Gardener discovery server to retrieve the Kubernetes server CA
       cluster-cfg:
         required: false
         type: string
@@ -108,6 +114,7 @@ jobs:
         with:
           server: ${{ inputs.k8s-api-endpoint }}
           server-ca: ${{ inputs.k8s-api-ca }}
+          server-ca-discovery-url: ${{ inputs.k8s-api-ca-discovery-url }}
           cluster-cfg: ${{ inputs.cluster-cfg }}
           kubeconfig-path: ${{ inputs.kubeconfig-path }}
           service-account-name: ${{ inputs.service-account-name }}
