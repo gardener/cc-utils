@@ -106,7 +106,7 @@ jobs:
 
           ---
 
-          ### Component Changelogs
+          # Component Changelogs
           This section lists the release notes for all updated components. Please review them for any breaking changes.
 
           ${{ steps.release_notes.outputs.notes_content }}
@@ -123,7 +123,7 @@ jobs:
 
           ---
 
-          ### ✅ Reviewer Checklist
+          # ✅ Reviewer Checklist
           - [ ] I have reviewed the release notes for all updated components.
           - [ ] I have verified that no breaking changes require modifications to our Helm charts or code.
           - [ ] I have confirmed that the changes in \`${{ inputs.images-yaml-path }}\` are correct.

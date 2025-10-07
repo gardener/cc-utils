@@ -294,6 +294,7 @@ def apply_patch_updates(
 ) -> list[ImageUpdate]:
     """
     Apply patch version updates to existing image entries.
+    Only creates one update record per major.minor showing the final patch version jump.
 
     Finds entries with the same major.minor version and updates them to the latest patch.
     Only updates existing entries, does not create new ones.
@@ -308,25 +309,31 @@ def apply_patch_updates(
     """
     updates: list[ImageUpdate] = []
 
-    for patch_tag in patch_tags:
+    # Group patch tags by major.minor version
+    tags_by_version: dict[tuple[int, int], list[str]] = defaultdict(list)
+    for tag in patch_tags:
         try:
-            patch_version = parse_to_semver(patch_tag)
+            version = parse_to_semver(tag)
+            key = (version.major, version.minor)
+            tags_by_version[key].append(tag)
         except ValueError:
             continue
 
+    # For each major.minor, find the corresponding image entry and update to highest patch
+    for (major, minor), tags in tags_by_version.items():
+        highest_patch_tag = max(tags, key=parse_to_semver)
+
+        # Find the image entry with matching major.minor
         for img_entry in image_list:
             try:
                 img_version = parse_to_semver(img_entry.tag)
-                if (img_version.major, img_version.minor) == (
-                    patch_version.major,
-                    patch_version.minor,
-                ):
+                if (img_version.major, img_version.minor) == (major, minor):
                     old_tag = img_entry.tag
-                    img_entry.update_tag(patch_tag)
+                    img_entry.update_tag(highest_patch_tag)
                     updates.append(ImageUpdate(
                         image_name=name,
                         old_tag=old_tag,
-                        new_tag=patch_tag,
+                        new_tag=highest_patch_tag,
                         update_type="patch",
                     ))
                     break
@@ -343,6 +350,7 @@ def create_minor_version_entries(
 ) -> tuple[list[ImageUpdate], list[ImageEntry]]:
     """
     Create new image entries for minor/major version updates.
+    Only creates one entry per major.minor (the highest patch version).
 
     Creates new entries using the first existing entry as a template,
     updating the tag and targetVersion fields appropriately.
@@ -360,25 +368,32 @@ def create_minor_version_entries(
     updates: list[ImageUpdate] = []
     new_entries: list[ImageEntry] = []
 
-    for minor_tag in minor_tags:
+    # Group minor tags by major.minor version
+    tags_by_version: dict[tuple[int, int], list[str]] = defaultdict(list)
+    for tag in minor_tags:
         try:
-            minor_version = parse_to_semver(minor_tag)
+            version = parse_to_semver(tag)
+            key = (version.major, version.minor)
+            tags_by_version[key].append(tag)
         except ValueError:
             continue
 
-        # Create new entry based on template
-        target_version = f"{minor_version.major}.{minor_version.minor}.x"
-        new_entry = image_list[0].copy_as_template(minor_tag, target_version)
+    # For each major.minor, use only the highest patch version
+    for (major, minor), tags in tags_by_version.items():
+        highest_tag = max(tags, key=parse_to_semver)
+
+        # Create new entry for the highest patch version only
+        target_version = f"{major}.{minor}.x"
+        new_entry = image_list[0].copy_as_template(highest_tag, target_version)
         new_entries.append(new_entry)
 
         # Find the previous highest version for the update record
         all_tags = [img.tag for img in image_list] + [entry.tag for entry in new_entries]
-
         previous_tags = []
         for tag in all_tags:
             try:
                 version = parse_to_semver(tag)
-                if version < minor_version:
+                if version < parse_to_semver(highest_tag):
                     previous_tags.append(tag)
             except ValueError:
                 continue
@@ -387,7 +402,7 @@ def create_minor_version_entries(
         updates.append(ImageUpdate(
             image_name=name,
             old_tag=old_tag,
-            new_tag=minor_tag,
+            new_tag=highest_tag,
             update_type="minor",
         ))
 
@@ -602,7 +617,7 @@ def create_release_notes(
             updates_by_image[image_name].append(new_tag)
 
     with open(filename, "w") as f:
-        f.write("# Release Notes\n\n")
+        f.write("## Release Notes\n\n")
         f.write(
             "The following images have been updated. Please review the release notes for each "
             "component to check if changes need to be made to our Helm charts:\n\n"
@@ -613,7 +628,7 @@ def create_release_notes(
         )
 
         for image_name in sorted(updates_by_image.keys()):
-            f.write(f"## {image_name}\n\n")
+            f.write(f"### {image_name}\n\n")
             repo_url = repos_by_name.get(image_name)
 
             unique_tags = sorted(list(set(updates_by_image[image_name])), key=parse_to_semver)
