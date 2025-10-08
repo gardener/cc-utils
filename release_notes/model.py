@@ -242,11 +242,11 @@ class SourceBlock:
         if isinstance(self.source, git.Commit):
             commit_hexsha = self.source.hexsha
             reference = f'[{org}/{repo}@{commit_hexsha}]({repo_url}/commit/{commit_hexsha})'
-            username = self.source.author.name
+            source_username = self.source.author.name
         elif isinstance(self.source, github3.pulls.ShortPullRequest):
             pr_number = self.source.number
             reference = f'[#{pr_number}]({repo_url}/pull/{pr_number})'
-            username = self.source.user.login
+            source_username = self.source.user.login
         else:
             raise ValueError(f'unsupported release-notes source: {type(self.source)=}')
 
@@ -257,7 +257,7 @@ class SourceBlock:
             audience=ReleaseNotesAudience(self.target_group.lower()),
             author=ReleaseNotesAuthor(
                 hostname=hostname,
-                username=username,
+                username=self.author or source_username, # prefer author from release-note
             ),
             reference=reference,
         )
