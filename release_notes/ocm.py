@@ -245,10 +245,15 @@ def group_release_notes_docs(
     docs_by_component_id: dict[ocm.ComponentIdentity, rnm.ReleaseNotesDoc] = {}
 
     for doc in release_notes_docs:
-        if doc.component_id in docs_by_component_id:
-            docs_by_component_id[doc.component_id].release_notes.extend(doc.release_notes)
-        else:
+        if doc.component_id not in docs_by_component_id:
             docs_by_component_id[doc.component_id] = doc
+            continue
+
+        release_notes_doc = docs_by_component_id[doc.component_id]
+
+        for release_note in doc.release_notes:
+            if release_note not in release_notes_doc.release_notes:
+                release_notes_doc.release_notes.append(release_note)
 
     return list(docs_by_component_id.values())
 
