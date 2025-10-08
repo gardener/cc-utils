@@ -109,7 +109,7 @@ runs:
       uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
-        gh-token: ${{ inputs.github-token }}
+        gh-token: ${{ github.server_url == 'https://github.com' && inputs.github-token || '' }} # only try to authenticate for gh-com
     - name: create-and-update-upgrade-pullrequests
       shell: python
       run: |
