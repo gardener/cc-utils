@@ -81,6 +81,7 @@ inputs:
     type: string
     description: |
       passed to `version` action as `versionfile`. see this action for documentation
+    required: false
   github-token:
     description: |
       the github-auth-token to use for authenticating against GitHub and OCI-Registry.
@@ -511,6 +512,7 @@ runs:
       id: bump
       uses: gardener/cc-utils/.github/actions/version@master
       with:
+        versionfile: ${{ inputs.version-versionfile }}
         read-callback: ${{ inputs.version-read-callback }}
         write-callback: ${{ inputs.version-write-callback }}
         version-operation: ${{ inputs.next-version }}
