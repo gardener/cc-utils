@@ -412,7 +412,7 @@ runs:
         fi
 
     - name: create github-release
-      if: ${{ inputs.release-on-github }}
+      if: ${{ inputs.release-on-github == 'true' }}
       shell: python
       run: |
         import os
