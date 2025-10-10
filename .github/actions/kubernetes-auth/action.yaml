@@ -9,6 +9,7 @@ description: |
 inputs:
   server:
     type: string
+    required: true
     description: |
       the endpoint serving the k8s-endpoint against which to authenticate
   server-ca:
@@ -20,20 +21,6 @@ inputs:
     description: |
       url to the Gardener discovery server to retrieve the Kubernetes server CA, e.g.
       `https://discovery.ingress.garden.example.com/projects/<project_name>/shoots/<shoot-uid>/cluster-ca`
-  cluster-cfg:
-    type: string
-    description: |
-      Refers to a file located in a GitHub repository containing the k8s-api-endpoint as well as
-      the k8s-api-ca. If the `server` _and_ `server-ca` inputs are specified as well, those will
-      take precedence over this input parameter.
-
-      The path must adhere to the following format: `<org>/<repo>/<path-to-file.yaml>`.
-
-      The file is expected to have to following format:
-      ```
-      api: <api-url>
-      ca: <base64-encoded-ca>
-      ```
   audience:
     type: string
     default: gardener
@@ -72,7 +59,7 @@ runs:
   steps:
     - name: prepare server-ca
       id: prepare-server-ca
-      if: ${{ inputs.server != '' && inputs.server-ca == '' }}
+      if: ${{ inputs.server-ca == '' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -96,21 +83,6 @@ runs:
         fi
 
         echo "server_ca=$server_ca" >> "$GITHUB_OUTPUT"
-    - name: prepare cluster-cfg
-      id: prepare-cluster-cfg
-      if: ${{ inputs.server == '' && inputs.server-ca == '' }}
-      shell: bash
-      run: |
-        cluster_cfg="${{ inputs.cluster-cfg }}"
-
-        echo "repository=$(echo "${cluster_cfg}" | cut -d '/' -f1,2)" >> ${GITHUB_OUTPUT}
-        echo "path=$(echo "${cluster_cfg}" | cut -d '/' -f3-)" >> ${GITHUB_OUTPUT}
-    - name: checkout cluster-cfg repo
-      if: ${{ inputs.server == '' && inputs.server-ca == '' }}
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ steps.prepare-cluster-cfg.outputs.repository }}
-        path: ./cluster-cfg-repo
     - name: auth
       id: auth
       shell: bash
@@ -131,12 +103,8 @@ runs:
         server="${{ inputs.server }}"
         server_ca="${{ inputs.server-ca }}"
 
-        if [ -n "${server}" -a -z ${server_ca} ]; then
+        if [ -z ${server_ca} ]; then
           server_ca="${{ steps.prepare-server-ca.outputs.server_ca }}"
-        elif [ -z "${server}" -a -z ${server_ca} ]; then
-          cluster_cfg_file="./cluster-cfg-repo/${{ steps.prepare-cluster-cfg.outputs.path }}"
-          server=$(cat $cluster_cfg_file | yq .api)
-          server_ca=$(cat $cluster_cfg_file | yq .ca)
         fi
 
         gha_token_url="${token_url}&audience=${{ inputs.audience }}"
