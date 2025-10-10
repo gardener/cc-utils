@@ -191,6 +191,21 @@ on:
               os: linux
               arch: x86_64
           ```
+      version-read-callback:
+        type: string
+        required: false
+        description: |
+          passed to `version` action as `read-callback`. see this action for documentation
+      version-write-callback:
+        type: string
+        required: false
+        description: |
+          passed to `version` action as `write-callback`. see this action for documentation
+      version-versionfile:
+        type: string
+        required: false
+        description: |
+          passed to `version` action as `versionfile`. see this action for documentation
       include-subcomponent-release-notes:
         type: boolean
         default: false
@@ -285,6 +300,9 @@ jobs:
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
           assets: ${{ inputs.assets }}
+          version-read-callback: ${{ inputs.version-read-callback }}
+          version-write-callback: ${{ inputs.version-write-callback }}
+          version-versionfile: ${{ inputs.version-versionfile }}
 
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
