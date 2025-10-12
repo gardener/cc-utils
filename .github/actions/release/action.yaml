@@ -139,6 +139,13 @@ inputs:
       GitHub tag template to use for the created release tag. Currently only supported template-var:
       ${version} (bash-syntax): Version read from local component descriptor (i.e. previous version
       operations are honoured).
+  github-additional-tag-templates:
+    required: false
+    type: string
+    description: |
+      Optional newline-separated list of additional tag templates. Each non-empty line will be
+      treated like `github-tag-template` (supporting ${version} substitution) and an additional
+      GitHub tag pointing to the release commit will be created.
   on-existing-component-descriptor:
     default: fail
     type: choice
@@ -193,10 +200,26 @@ runs:
         EOF
         version=$(yq .component.version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
+
+        # main git tag
         tag_name="${{ inputs.github-tag-template }}"
         tag_ref="refs/tags/${tag_name}"
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
+
+        # additional git tags
+        additional_tag_refs=()
+        while IFS=$'\n' read -r tag; do
+            tag_name=$(echo "$tag" | xargs) # trim whitespace
+            if [ -n "$tag_name" ] && [ "$tag_name" != "${{ inputs.github-tag-template }}" ]; then
+                additional_tag_refs+=("refs/tags/$tag_name")
+            fi
+        done <<< "${{ inputs.github-additional-tag-templates }}"
+        echo "additional-tag-refs=${additional_tag_refs[*]}" >> $GITHUB_OUTPUT
+
+        orig_ref="$(git rev-parse @)"
+        echo "orig-ref=${orig_ref}" >> $GITHUB_OUTPUT
+        
         cat <<"EOF" > /tmp/assets.yaml
         ${{ inputs.assets }}
         EOF
@@ -353,16 +376,33 @@ runs:
         path: /tmp/component-descriptor.tar.gz
         name: component-descriptor
 
-    - name: push release-tag
+    - name: push tag-ref
       shell: bash
       run: |
         set -eu
 
-        orig_ref="$(git rev-parse @)"
         push_spec="@:${{ steps.preprocess.outputs.tag-ref }}"
-        echo "pushing release-commit using ${push_spec}"
+        echo "pushing tag ref using ${push_spec}"
         git push origin "${push_spec}"
 
+    - name: push additional-tag-refs
+      if: ${{ steps.preprocess.outputs.additional-tag-refs }}
+      shell: bash
+      run: |
+        set -eu
+        
+        for tag_ref in ${{ steps.preprocess.outputs.additional-tag-refs }}; do
+          push_spec="@:$tag_ref"
+          echo "pushing additional tag ref using ${push_spec}"
+          git push origin "${push_spec}"
+        done
+
+    - name: push release-commit
+      shell: bash
+      run: |
+        set -eu
+        
+        orig_ref="${{ steps.preprocess.outputs.orig-ref }}"
         case "${{ inputs.release-commit-target }}" in
           tag)
           echo "chose to not push tag to source-branch: exiting now"

@@ -157,6 +157,14 @@ on:
         description: |
           GitHub tag template to use for the created release tag. Currently only supported
           template-var: ${version} (bash-syntax).
+      github-additional-tag-templates:
+        required: false
+        type: string
+        description: |
+          Optional newline-separated list of additional tag templates. Each non-empty line will be
+          treated like `github-tag-template` (supporting ${version} substitution) and an additional
+          GitHub tag pointing to the release commit will be created. Empty or duplicate (already
+          existing) tags are ignored.
       assets:
         type: string
         required: false
@@ -299,6 +307,7 @@ jobs:
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
+          github-additional-tag-templates: ${{ inputs.github-additional-tag-templates }}
           assets: ${{ inputs.assets }}
           version-read-callback: ${{ inputs.version-read-callback }}
           version-write-callback: ${{ inputs.version-write-callback }}
