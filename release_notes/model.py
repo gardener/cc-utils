@@ -299,12 +299,15 @@ def iter_source_blocks(source, content: str) -> tuple[
             if component_name and '|' in component_name:
                 component_name = None
 
+            if author := res.group('author'):
+                author = author.removeprefix('@')
+
             block = SourceBlock(
                 source=source,
                 category=res.group('category'),
                 target_group=res.group('target_group'),
                 note_message=res.group('note'),
-                author=res.group('author').removeprefix('@'),
+                author=author,
                 reference_identifier=res.group('reference_str'),
                 component_name=component_name,
             )
