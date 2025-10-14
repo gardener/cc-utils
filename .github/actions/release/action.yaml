@@ -219,7 +219,7 @@ runs:
 
         orig_ref="$(git rev-parse @)"
         echo "orig-ref=${orig_ref}" >> $GITHUB_OUTPUT
-        
+
         cat <<"EOF" > /tmp/assets.yaml
         ${{ inputs.assets }}
         EOF
@@ -390,7 +390,7 @@ runs:
       shell: bash
       run: |
         set -eu
-        
+
         for tag_ref in ${{ steps.preprocess.outputs.additional-tag-refs }}; do
           push_spec="@:$tag_ref"
           echo "pushing additional tag ref using ${push_spec}"
@@ -401,7 +401,7 @@ runs:
       shell: bash
       run: |
         set -eu
-        
+
         orig_ref="${{ steps.preprocess.outputs.orig-ref }}"
         case "${{ inputs.release-commit-target }}" in
           tag)
