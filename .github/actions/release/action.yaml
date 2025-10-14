@@ -386,7 +386,7 @@ runs:
         git push origin "${push_spec}"
 
     - name: push additional-tag-refs
-      if: ${{ steps.preprocess.outputs.additional-tag-refs }}
+      if: ${{ steps.preprocess.outputs.additional-tag-refs != '' }}
       shell: bash
       run: |
         set -eu
