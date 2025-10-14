@@ -304,7 +304,7 @@ def iter_source_blocks(source, content: str) -> tuple[
                 category=res.group('category'),
                 target_group=res.group('target_group'),
                 note_message=res.group('note'),
-                author=res.group('author'),
+                author=res.group('author').removeprefix('@'),
                 reference_identifier=res.group('reference_str'),
                 component_name=component_name,
             )
