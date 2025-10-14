@@ -207,16 +207,6 @@ runs:
         echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
         echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
 
-        # additional git tags
-        additional_tag_refs=()
-        while IFS=$'\n' read -r tag; do
-            tag_name=$(echo "$tag" | xargs) # trim whitespace
-            if [ -n "$tag_name" ] && [ "$tag_name" != "${{ inputs.github-tag-template }}" ]; then
-                additional_tag_refs+=("refs/tags/$tag_name")
-            fi
-        done <<< "${{ inputs.github-additional-tag-templates }}"
-        echo "additional-tag-refs=${additional_tag_refs[*]}" >> $GITHUB_OUTPUT
-
         orig_ref="$(git rev-parse @)"
         echo "orig-ref=${orig_ref}" >> $GITHUB_OUTPUT
 
@@ -389,13 +379,29 @@ runs:
       if: ${{ steps.preprocess.outputs.additional-tag-refs != '' }}
       shell: bash
       run: |
-        set -eu
+        set -euo pipefail
 
-        for tag_ref in ${{ steps.preprocess.outputs.additional-tag-refs }}; do
-          push_spec="@:$tag_ref"
-          echo "pushing additional tag ref using ${push_spec}"
-          git push origin "${push_spec}"
-        done
+        # pass `version` to tag-template
+        export version="${{ steps.preprocess.outputs.version}}"
+
+        cat  <<EOF > /tmp/tags
+        ${{ inputs.github-additional-tag-templates }}
+        EOF
+
+        while IFS=$'\n' read -r tag; do
+            tag_name=$(echo "$tag" | xargs) # trim whitespace
+            if [ -z "${tag_name}" ]; then
+              echo "error: saw empty tag in github-additional-tag-templates input"
+              exit 1
+            fi
+            if [ "$tag_name" == "${{ inputs.github-tag-template }}" ]; then
+              echo "warning: saw duplicate tag in github-additional-tag-templates input:"
+              echo $tag_name
+              echo "-> ignoring"
+              continue
+            fi
+            git push origin @:refs/tags/$tag_name
+        done < /tmp/tags
 
     - name: push release-commit
       shell: bash
