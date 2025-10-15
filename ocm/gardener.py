@@ -132,18 +132,26 @@ def iter_component_references(
 def iter_greatest_component_references(
     references: collections.abc.Iterable[ocm.ComponentReference],
 ) -> collections.abc.Iterable[ocm.ComponentReference]:
-    greatest_crefs = {} # cname -> cref
+    '''
+    Returns the greatest component references from the given iterable.
+    We might have multiple component references for the same component name,
+    but with different `name` attributes (e.g. for testing and for
+    productive purposes), so this method groups the references by (component name, name)
+    and returns the greatest version for each group.
+    '''
+    greatest_crefs = {} # (cname, name) -> cref
 
     for reference in references:
         cid = reference.component_id
-        if cid.name in greatest_crefs:
+        key = (cid.name, reference.name)
+        if key in greatest_crefs:
             candidate_version = version.parse_to_semver(cid.version)
-            have_version = version.parse_to_semver(greatest_crefs[cid.name].component_id.version)
+            have_version = version.parse_to_semver(greatest_crefs[key].component_id.version)
 
             if candidate_version > have_version:
-                greatest_crefs[cid.name] = reference
+                greatest_crefs[key] = reference
         else:
-            greatest_crefs[cid.name] = reference
+            greatest_crefs[key] = reference
 
     yield from greatest_crefs.values()
 
