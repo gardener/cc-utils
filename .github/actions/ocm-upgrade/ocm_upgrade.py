@@ -306,9 +306,10 @@ def create_upgrade_pullrequest(
 def upgrade_pullrequest_exists(
     upgrade_vector: ocm.gardener.UpgradeVector,
     upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
+    component_reference_name: str,
 ) -> bool:
     for upgrade_pullrequest in upgrade_pullrequests:
-        if upgrade_pullrequest.upgrade_vector == upgrade_vector:
+        if upgrade_pullrequest.upgrade_vector == upgrade_vector and component_reference_name == upgrade_pullrequest.component_reference_name:
             return True
     return False
 
@@ -420,6 +421,7 @@ def create_upgrade_pullrequests(
             if upgrade_pullrequest_exists(
                 upgrade_vector=uv,
                 upgrade_pullrequests=upgrade_pullrequests,
+                component_reference_name=cref.name
             ):
                 logger.info(f'upgrade-pullrequest for {uv=} already exists (skipping)')
                 continue
