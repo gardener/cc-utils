@@ -139,6 +139,7 @@ def request_pull_requests_from_api(
     github_api_lookup: GithubApiLookup,
     github_access: ocm.GithubAccess,
     commits: list[git.Commit],
+    component: ocm.Component,
     group_size: int = 200,
     min_seconds_per_group: int = 300,
 ) -> dict[str, list[gh3p.ShortPullRequest]]:
@@ -202,6 +203,7 @@ def request_pull_requests_from_api(
                     if github.pullrequest.parse_pullrequest_title(
                         title=pullrequest.title,
                         invalid_ok=True,
+                        reference_component=component
                     ):
                         # we retrieve release-notes from sub-components using OCM; hence,
                         # we need to ignore upgrade-pullrequests that still have
