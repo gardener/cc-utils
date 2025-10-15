@@ -159,6 +159,7 @@ def _determine_blocks_to_include(
     github_access: ocm.GithubAccess,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
+    component: ocm.Component,
 ) -> set[rnm.SourceBlock]:
     logger.info(
         f'Found {(commit_count := len(filter_in_commits))} relevant commits for release notes '
@@ -199,6 +200,7 @@ def _determine_blocks_to_include(
         commits=[*filter_in_commits, *filter_out_commits],
         group_size=commit_processing_group_size,
         min_seconds_per_group=processing_group_min_seconds,
+        component=component,
     )
     if throttled:
         logger.info('Finished throttled processing.')
@@ -359,6 +361,7 @@ def fetch_release_notes(
         github_access=github_access,
         git_helper=git_helper,
         github_api_lookup=github_api_lookup,
+        component=component,
     )
 
     release_notes = [
