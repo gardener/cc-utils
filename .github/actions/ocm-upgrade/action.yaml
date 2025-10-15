@@ -73,6 +73,16 @@ inputs:
       - strictly-follow
       - accept-hotfixes
     default: strictly-follow
+  pr-naming-pattern:
+    description: |
+      Pattern to use for naming the created pull requests. Allowed values are:
+        - component-name: Use the component name (default behavior)
+        - reference-name: Use the component reference name. This allows for having multiple references to the same component but with different names and puposes (e.g. testing and production)
+    type: choice
+    options:
+      - component-name
+      - reference-name
+    default: component-name
 
 runs:
   using: composite
@@ -200,6 +210,7 @@ runs:
             upstream_component_name=upstream_component,
             upstream_update_policy=upstream_update_policy,
             ignore_prerelease_versions=True,
+            pr_naming_pattern='${{ inputs.pr-naming-pattern }}'
           )
         )
 
