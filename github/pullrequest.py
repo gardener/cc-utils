@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class UpgradePullRequest:
     pull_request: github3.pulls.PullRequest
     upgrade_vector: ocm.gardener.UpgradeVector
+    component_reference_name: str|None = None
 
     @property
     def component_name(self) -> str:
