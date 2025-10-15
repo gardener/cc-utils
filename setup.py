@@ -58,18 +58,21 @@ setuptools.setup(
     py_modules=modules(),
     packages=packages(),
     package_data={
-        '':['*.mako'],
+        '': ['*.mako'],
         'ci': ['VERSION'],
-        'concourse':[
+        'concourse': [
             'resources/LAST_RELEASED_TAG',
             'resources/*.mako',
             '*.mako',
         ],
-        'ocm':[
+        'ocm': [
             'ocm-component-descriptor-schema.yaml',
         ],
     },
     install_requires=list(requirements()),
     entry_points={
+        'console_scripts': [
+            'validate-release-notes=release_notes.cli:validate_release_notes_cli',
+        ],
     },
 )

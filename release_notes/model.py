@@ -192,7 +192,7 @@ _source_block_pattern = re.compile(
         r'(?P<source_component_name>\S+)?[^\S\n]?(?P<reference_str>\S+)'
         r'?[^\S\n]?(?P<author>\S+)?[^\S\n]*\n(?P<note>.+?)\n\x60{3}'
     ),
-   flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
+    flags=re.DOTALL | re.IGNORECASE | re.MULTILINE
 )
 
 
@@ -256,7 +256,7 @@ class SourceBlock:
             audience=ReleaseNotesAudience(self.target_group.lower()),
             author=ReleaseNotesAuthor(
                 hostname=hostname,
-                username=self.author or source_username, # prefer author from release-note
+                username=self.author or source_username,  # prefer author from release-note
             ),
             reference=reference,
         )
@@ -329,6 +329,12 @@ def iter_source_blocks(source, content: str) -> tuple[
             continue
 
     return valid_blocks, malformed_blocks
+
+def validate_release_notes(source, content: str) -> None:
+    """ Function validates release notes, on err raises value error"""
+    _, malformed_blocks = iter_source_blocks(source, content)
+    if malformed_blocks:
+        raise ValueError(f'found malformed release-notes blocks: {malformed_blocks}')
 
 
 @dataclasses.dataclass(frozen=True)
