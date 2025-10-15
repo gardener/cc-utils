@@ -41,8 +41,8 @@ class UpgradePullRequest:
     ):
         '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
 
-        A Upgrade is considered to be obsolete, iff the following conditions hold true:
-        - the reference product contains a component reference with the same name
+        An Upgrade is considered to be obsolete, iff the following conditions hold true:
+        - the reference product contains a component reference with the same component name and reference name
         - the destination version is greater than the greatest reference component version
         '''
         # find matching component versions
@@ -53,6 +53,7 @@ class UpgradePullRequest:
             [
                 rc for rc in reference_component.componentReferences
                 if rc.componentName == self.upgrade_vector.component_name
+                and rc.name == self.component_reference_name
             ],
             key=lambda r: version.parse_to_semver(r.version)
         )
