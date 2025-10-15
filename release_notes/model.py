@@ -330,6 +330,7 @@ def iter_source_blocks(source, content: str) -> tuple[
 
     return valid_blocks, malformed_blocks
 
+
 def validate_release_notes(source, content: str) -> None:
     """ Function validates release notes, on err raises value error"""
     _, malformed_blocks = iter_source_blocks(source, content)

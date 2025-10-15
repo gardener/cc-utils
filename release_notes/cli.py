@@ -4,6 +4,7 @@ import argparse
 
 from release_notes.model import validate_release_notes
 
+
 def parse_args() -> argparse.Namespace:
     """ Parses CLI for the release notes validation """
     parser = argparse.ArgumentParser(
