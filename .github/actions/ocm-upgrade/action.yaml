@@ -185,6 +185,7 @@ runs:
           github.pullrequest.iter_upgrade_pullrequests(
             repository=repository,
             state='all',
+            reference_component=component,
           )
         )
 
