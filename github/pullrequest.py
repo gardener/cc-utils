@@ -85,14 +85,14 @@ def parse_pullrequest_title(
     invalid_ok=False,
     title_regex_pattern: str | None=None,
     reference_component: ocm.Component | None=None,
-) -> tuple[ocm.gardener.UpgradeVector, str | None]:
+) -> ocm.gardener.UpgradeVector | tuple[ocm.gardener.UpgradeVector, str]:
     if not title_regex_pattern:
         title_regex_pattern = r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$'
 
     title_pattern = re.compile(title_regex_pattern)
     if not title_pattern.fullmatch(title):
         if invalid_ok:
-            return None, None
+            return None
         raise ValueError(f'{title=} is not a valid upgrade-pullrequest-title')
 
     title = title.removeprefix('[ci:').removesuffix(']')
@@ -109,9 +109,9 @@ def parse_pullrequest_title(
     elif kind == "component":
         component_name = component_name_or_reference_name
     else:
-        raise ValueError(f"upgrade-target-type {kind=} not implemented")
+        raise ValueError(f'upgrade-target-type {kind=} not implemented')
 
-    return ocm.gardener.UpgradeVector(
+    upgrade_vector = ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
             name=component_name,
             version=version_whence,
@@ -120,7 +120,12 @@ def parse_pullrequest_title(
             name=component_name,
             version=version_whither,
         )
-    ), reference_name
+    )
+
+    if reference_name:
+        return upgrade_vector, reference_name
+
+    return upgrade_vector
 
 
 def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePullRequest:
