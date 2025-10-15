@@ -121,13 +121,19 @@ def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePu
 
 def upgrade_pullrequest_title(
     upgrade_vector: ocm.gardener.UpgradeVector,
+    reference_name: str | None=None,
 ) -> str:
-    type_name = 'component'
-    cname = upgrade_vector.component_name
+    if reference_name:
+        type_name = 'name'
+        component_name_or_reference_name = reference_name
+    else:
+        type_name = 'component'
+        component_name_or_reference_name = upgrade_vector.component_name
+
     from_version = upgrade_vector.whence.version
     to_version = upgrade_vector.whither.version
 
-    return f'[ci:{type_name}:{cname}:{from_version}->{to_version}]'
+    return f'[ci:{type_name}:{component_name_or_reference_name}:{from_version}->{to_version}]'
 
 
 def iter_upgrade_pullrequests(
