@@ -77,7 +77,7 @@ def get_component_name_from_reference_name(reference_name: str, reference_compon
     for component_reference in reference_component.componentReferences:
         if component_reference.name == reference_name:
             return component_reference.componentName
-    raise ValueError(f'No component reference found with name: {reference_name}')
+    raise ValueError(f'No component reference found {reference_name=}.')
 
 
 def parse_pullrequest_title(
