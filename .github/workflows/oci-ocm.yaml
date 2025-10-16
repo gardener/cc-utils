@@ -111,6 +111,11 @@ on:
           Contained files will be merged recursively into existing directories.
         type: string
         required: false
+      build-directory:
+        description: |
+          relative path to repository-root in which docker-build should be run.
+        type: string
+        default: '.'
       untar-build-ctx-artefact:
         description: |
           If passed, along w/ build-ctx-artefact, the downloaded artefact is assumed to contain
@@ -334,7 +339,7 @@ jobs:
         with:
           outputs: type=docker
           tags: ${{ matrix.args.image-reference }}
-          context: '.'
+          context: ${{ inputs.build-directory }}
           platforms: ${{ matrix.args.platform-name }}
           target: ${{ inputs.target }}
           file: ${{ inputs.dockerfile }}
