@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 class UpgradePullRequest:
     pull_request: github3.pulls.PullRequest
     upgrade_vector: ocm.gardener.UpgradeVector
+    component_reference_name: str|None = None
 
     @property
     def component_name(self) -> str:
@@ -40,8 +41,8 @@ class UpgradePullRequest:
     ):
         '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
 
-        A Upgrade is considered to be obsolete, iff the following conditions hold true:
-        - the reference product contains a component reference with the same name
+        An Upgrade is considered to be obsolete, iff the following conditions hold true:
+        - the reference product contains a component reference with the same component name and reference name
         - the destination version is greater than the greatest reference component version
         '''
         # find matching component versions
@@ -52,6 +53,7 @@ class UpgradePullRequest:
             [
                 rc for rc in reference_component.componentReferences
                 if rc.componentName == self.upgrade_vector.component_name
+                and rc.name == self.component_reference_name
             ],
             key=lambda r: version.parse_to_semver(r.version)
         )
@@ -71,11 +73,19 @@ class UpgradePullRequest:
         self.pull_request.repository.ref(head_ref).delete()
 
 
+def get_component_name_from_reference_name(reference_name: str, reference_component: ocm.Component) -> str:
+    for component_reference in reference_component.componentReferences:
+        if component_reference.name == reference_name:
+            return component_reference.componentName
+    raise ValueError(f'No component reference found {reference_name=}.')
+
+
 def parse_pullrequest_title(
     title: str,
     invalid_ok=False,
     title_regex_pattern: str | None=None,
-) -> ocm.gardener.UpgradeVector:
+    reference_component: ocm.Component | None=None,
+) -> ocm.gardener.UpgradeVector | tuple[ocm.gardener.UpgradeVector, str]:
     if not title_regex_pattern:
         title_regex_pattern = r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$'
 
@@ -87,23 +97,35 @@ def parse_pullrequest_title(
 
     title = title.removeprefix('[ci:').removesuffix(']')
 
-    kind, component_name, version_vector = title.split(':')
+    kind, component_name_or_reference_name, version_vector = title.split(":")
+    version_whence, version_whither = version_vector.split("->")
 
-    if kind != 'component':
+    reference_name = None
+    if kind == "name":
+        reference_name = component_name_or_reference_name
+        if not reference_component:
+            raise ValueError('reference_component must be given when parsing pullrequest title with kind=name')
+        component_name = get_component_name_from_reference_name(reference_name, reference_component)
+    elif kind == "component":
+        component_name = component_name_or_reference_name
+    else:
         raise ValueError(f'upgrade-target-type {kind=} not implemented')
 
-    version_whence, version_whiter = version_vector.split('->')
-
-    return ocm.gardener.UpgradeVector(
+    upgrade_vector = ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
             name=component_name,
             version=version_whence,
         ),
         whither=ocm.ComponentIdentity(
             name=component_name,
-            version=version_whiter,
+            version=version_whither,
         )
     )
+
+    if reference_name:
+        return upgrade_vector, reference_name
+
+    return upgrade_vector
 
 
 def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePullRequest:
@@ -119,25 +141,33 @@ def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePu
 
 def upgrade_pullrequest_title(
     upgrade_vector: ocm.gardener.UpgradeVector,
+    reference_name: str | None=None,
 ) -> str:
-    type_name = 'component'
-    cname = upgrade_vector.component_name
+    if reference_name:
+        type_name = 'name'
+        component_name_or_reference_name = reference_name
+    else:
+        type_name = 'component'
+        component_name_or_reference_name = upgrade_vector.component_name
+
     from_version = upgrade_vector.whence.version
     to_version = upgrade_vector.whither.version
 
-    return f'[ci:{type_name}:{cname}:{from_version}->{to_version}]'
+    return f'[ci:{type_name}:{component_name_or_reference_name}:{from_version}->{to_version}]'
 
 
 def iter_upgrade_pullrequests(
     repository: github3.repos.Repository,
     state: str='all',
     title_regex_pattern: str | None=None,
+    reference_component: ocm.Component | None=None,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
     def has_upgrade_pr_title(pull_request):
         return parse_pullrequest_title(
             title=pull_request.title,
             invalid_ok=True,
             title_regex_pattern=title_regex_pattern,
+            reference_component=reference_component,
         ) is not None
 
     for pull_request in repository.pull_requests(

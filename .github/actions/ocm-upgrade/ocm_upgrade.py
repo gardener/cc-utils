@@ -218,6 +218,7 @@ def create_upgrade_pullrequest(
     merge_method: str,
     branch: str,
     oci_client: oci.client.Client,
+    component_reference_name: str | None=None,
 ) -> github.pullrequest.UpgradePullRequest:
     logger.info(f'found {upgrade_vector=}')
     git_helper = gitutil.GitHelper(
@@ -285,6 +286,7 @@ def create_upgrade_pullrequest(
         pull_request = repository.create_pull(
             title=github.pullrequest.upgrade_pullrequest_title(
                 upgrade_vector=upgrade_vector,
+                reference_name=component_reference_name,
             ),
             base=branch,
             head=upgrade_branch_name,
@@ -306,9 +308,10 @@ def create_upgrade_pullrequest(
 def upgrade_pullrequest_exists(
     upgrade_vector: ocm.gardener.UpgradeVector,
     upgrade_pullrequests: collections.abc.Collection[github.pullrequest.UpgradePullRequest],
+    component_reference_name: str,
 ) -> bool:
     for upgrade_pullrequest in upgrade_pullrequests:
-        if upgrade_pullrequest.upgrade_vector == upgrade_vector:
+        if upgrade_pullrequest.upgrade_vector == upgrade_vector and component_reference_name == upgrade_pullrequest.component_reference_name:
             return True
     return False
 
@@ -325,6 +328,7 @@ def create_upgrade_pullrequests(
     merge_method: str,
     branch: str,
     oci_client: oci.client.Client,
+    pr_naming_pattern: str,
     upstream_component_name: str | None=None,
     upstream_update_policy: UpstreamUpdatePolicy = UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=True,
@@ -416,10 +420,15 @@ def create_upgrade_pullrequests(
 
             upgrade_vectors.append(upgrade_vector)
 
+        component_reference_name = None
+        if pr_naming_pattern == 'reference-name':
+            component_reference_name = cref.name
+
         for uv in upgrade_vectors:
             if upgrade_pullrequest_exists(
                 upgrade_vector=uv,
                 upgrade_pullrequests=upgrade_pullrequests,
+                component_reference_name=cref.name
             ):
                 logger.info(f'upgrade-pullrequest for {uv=} already exists (skipping)')
                 continue
@@ -435,6 +444,7 @@ def create_upgrade_pullrequests(
                 merge_method=merge_method,
                 branch=branch,
                 oci_client=oci_client,
+                component_reference_name=component_reference_name,
             )
             # early-exit after first created upgrade PR as a workaround (for now) to prevent
             # unintended sideeffects (e.g. dirty worktree, git conflicts)
