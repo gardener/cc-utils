@@ -108,7 +108,7 @@ on:
 
           Will be parsed as a YAML document, and has two forms:
 
-          - single string (the artefact-name>
+          - single string (the artefact-name)
           - map: <platform-name>: <artefact-name>
 
           The latter form is helpful if platform-specific artefacts are needed.
@@ -131,6 +131,11 @@ on:
           a tarfile, and will be extracted. This parameter's name is used to specify the
           filename of said tarfile. This is useful, as GitHubActions choose to use ZIP by default,
           so wrapping in TAR is a recommended practise, e.g. to preserve executable bits.
+
+          Consistently to `build-ctx-artefact`, has two forms (parsed as YAML document):
+
+          - single string (the fname)
+          - map: <platform-name>: <fname>
         type: string
         required: false
       name:
@@ -256,6 +261,24 @@ jobs:
           else:
             build_artefacts = dict()
 
+          untar_build_artefact = '''
+          ${{ inputs.untar-build-ctx-artefact }}
+          '''.strip()
+
+          if untar_build_artefact:
+            untar_build_artefact = yaml.safe_load(untar_build_artefact)
+            if isinstance(untar_build_artefact, str):
+              untar_build_artefacts = {
+                p: untar_build_artefact for p in platform_names
+              }
+            elif isinstance(untar_build_artefact, dict):
+              untar_build_artefacts = untar_build_artefact
+            else:
+              print(f'error: expected either a string, or a dict: {untar_build_artefact=}')
+              exit(1)
+          else:
+            untar_build_artefacts = dict()
+
           image_ref_base = '/'.join(ref_parts)
 
           # todo: validate version
@@ -275,12 +298,14 @@ jobs:
               print(f'WARNING: no runner for {platform_name=}')
             platform_tag = f'${{ inputs.tag }}-{platform_name.replace("/", "_")}'
             build_artefact = build_artefacts.get(platform_name, '')
+            untar_build_artefact = untar_build_artefacts.get(platform_name, '')
             args.append({
               'platform-name': platform_name,
               'runner': runners_by_platform.get(platform_name, '${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}'),
               'tag': platform_tag,
               'image-reference': f'{image_ref_base}:{platform_tag}',
               'build-artefact': build_artefact,
+              'untar-build-artefact': untar_build_artefact,
             })
 
           pprint.pprint(args)
@@ -353,9 +378,9 @@ jobs:
           name: ${{ matrix.args.build-artefact }}
           merge-multiple: true
       - name: untar build-ctx-artefact
-        if: ${{ matrix.args.build-artefact && inputs.untar-build-ctx-artefact }}
+        if: ${{ matrix.args.build-artefact && matrix.args.untar-build-artefact }}
         run: |
-          fname="${{ inputs.untar-build-ctx-artefact }}"
+          fname="${{ matrix.args.untar-build-artefact }}"
           echo "untarring ${fname}"
           tar xf "${fname}"
       - name: prebuild-hook
