@@ -104,8 +104,17 @@ on:
         required: false
       build-ctx-artefact:
         description: |
-          If passed, this value is interpreted as an GitHub Actions Artifact name. It is downloaded
-          into the default working directory after doing a repository-checkout.
+          Specifies GitHub-Actions-Artifact to download.
+
+          Will be parsed as a YAML document, and has two forms:
+
+          - single string (the artefact-name>
+          - map: <platform-name>: <artefact-name>
+
+          The latter form is helpful if platform-specific artefacts are needed.
+
+          Artefacts are downloaded into the default working directory after
+          doing a repository-checkout.
 
           Note that thus-imported files will overwrite existing ones from repository-checkout.
           Contained files will be merged recursively into existing directories.
@@ -229,6 +238,24 @@ jobs:
           if (oci_repository := '${{ inputs.oci-repository }}'):
             ref_parts.append(oci_repository.strip('/'))
 
+          build_artefact = '''
+          ${{ inputs.build-ctx-artefact }}
+          '''.strip()
+
+          if build_artefact:
+            build_artefact = yaml.safe_load(build_artefact)
+            if isinstance(build_artefact, str):
+              build_artefacts = {
+                p: build_artefact for p in platform_names
+              }
+            elif isinstance(build_artefact, dict):
+              build_artefacts = build_artefact
+            else:
+              print(f'error: expected either a string, or a dict: {build_artefact=}')
+              exit(1)
+          else:
+            build_artefacts = dict()
+
           image_ref_base = '/'.join(ref_parts)
 
           # todo: validate version
@@ -247,11 +274,13 @@ jobs:
             if not platform_name in runners_by_platform:
               print(f'WARNING: no runner for {platform_name=}')
             platform_tag = f'${{ inputs.tag }}-{platform_name.replace("/", "_")}'
+            build_artefact = build_artefacts.get(platform_name, '')
             args.append({
               'platform-name': platform_name,
               'runner': runners_by_platform.get(platform_name, '${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}'),
               'tag': platform_tag,
               'image-reference': f'{image_ref_base}:{platform_tag}',
+              'build-artefact': build_artefact,
             })
 
           pprint.pprint(args)
@@ -318,13 +347,13 @@ jobs:
           commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
           after-import: rebase
       - name: retrieve build-ctx-artefact
-        if: ${{ inputs.build-ctx-artefact }}
+        if: ${{ matrix.args.build-artefact != '' }}
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
-          name: ${{ inputs.build-ctx-artefact }}
+          name: ${{ matrix.args.build-artefact }}
           merge-multiple: true
       - name: untar build-ctx-artefact
-        if: ${{ inputs.build-ctx-artefact && inputs.untar-build-ctx-artefact }}
+        if: ${{ matrix.args.build-artefact && inputs.untar-build-ctx-artefact }}
         run: |
           fname="${{ inputs.untar-build-ctx-artefact }}"
           echo "untarring ${fname}"
