@@ -123,6 +123,7 @@ def create_diff_using_callback(
     repo_dir: str,
     rel_path: str,
     component_descriptor_lookup,
+    component_reference_name: str | None=None,
 ) -> bool:
     path = os.path.join(repo_dir, rel_path)
     if not os.path.isfile(path):
@@ -141,6 +142,7 @@ def create_diff_using_callback(
         upgrade_vector=upgrade_vector,
         repo_dir=repo_dir,
         whither_component_descriptor_path=tmp.name,
+        component_reference_name=component_reference_name,
     )
 
     subprocess.run(
@@ -157,6 +159,7 @@ def create_upgrade_pullrequest_diff(
     repo_dir: str,
     release_notes_docs: collections.abc.Iterable[rnm.ReleaseNotesDoc],
     component_descriptor_lookup,
+    component_reference_name: str | None=None,
 ) -> bool:
     created_diff = False
 
@@ -173,6 +176,7 @@ def create_upgrade_pullrequest_diff(
         repo_dir=repo_dir,
         rel_path='.ci/set_dependency_version',
         component_descriptor_lookup=component_descriptor_lookup,
+        component_reference_name=component_reference_name,
     ):
         logger.info('created upgrade-diff using callback')
         created_diff = True
@@ -270,6 +274,7 @@ def create_upgrade_pullrequest(
         repo_dir=repo_dir,
         release_notes_docs=grouped_release_notes_docs,
         component_descriptor_lookup=component_descriptor_lookup,
+        component_reference_name=component_reference_name,
     )
 
     fv = upgrade_vector.whence.version
