@@ -344,6 +344,7 @@ def set_dependency_cmd_env(
     repo_dir: str,
     github_cfg_name: str=None,
     whither_component_descriptor_path: str=None,
+    component_reference_name: str | None=None,
 ) -> dict[str, str]:
     '''
     returns a cmd-env-block (in form of a dict) to pass to `set_depedency_version` callbacks.
@@ -353,6 +354,9 @@ def set_dependency_cmd_env(
     '''
     cmd_env = os.environ.copy()
     cmd_env['DEPENDENCY_TYPE'] = 'component'
+    if component_reference_name:
+        cmd_env['DEPENDENCY_TYPE'] = 'component-reference-name'
+        cmd_env['DEPENDENCY_REFERENCE_NAME'] = component_reference_name
     cmd_env['DEPENDENCY_NAME'] = upgrade_vector.component_name
     cmd_env['DEPENDENCY_VERSION'] = upgrade_vector.whither.version
     cmd_env['REPO_DIR'] = repo_dir
