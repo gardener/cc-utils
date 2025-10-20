@@ -136,14 +136,14 @@ def iter_greatest_component_references(
     Returns the greatest component references from the given iterable.
     We might have multiple component references for the same component name,
     but with different `name` attributes (e.g. for testing and for
-    productive purposes), so this method groups the references by (component name, name)
+    productive purposes), so this method groups the references by "<component_name>:<reference_name>"
     and returns the greatest version for each group.
     '''
-    greatest_crefs = {} # (cname, name) -> cref
+    greatest_crefs = {} # "<component_name>:<reference_name>" -> cref
 
     for reference in references:
         cid = reference.component_id
-        key = (cid.name, reference.name)
+        key = f'{cid.name}:{reference.name}'
         if key in greatest_crefs:
             candidate_version = version.parse_to_semver(cid.version)
             have_version = version.parse_to_semver(greatest_crefs[key].component_id.version)

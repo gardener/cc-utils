@@ -185,37 +185,41 @@ def iter_upgrade_pullrequests(
 
 def iter_obsolete_upgrade_pull_requests(
     upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
+    pr_naming_pattern: str,
     keep_hotfix_versions: bool=True,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
     grouped_upgrade_pull_requests = collections.defaultdict(list)
 
-    def group_name(upgrade_pull_request: UpgradePullRequest):
+    def group_name(upgrade_pull_request: UpgradePullRequest, pr_naming_pattern: str) -> str:
         '''
-        calculate groupname, depending on whether or not we should keep hotfix_versions;
+        calculate groupname, depending on whether or not we should keep hotfix_versions and on the pr naming pattern;
         for each upgrade-pr-group, we keep only exactly one version (the greatest tgt-version);
         therefore, to prevent hotfix-upgrades from being removed, collect hotfixes in a separate
         group.
         '''
-        cname = upgrade_pull_request.component_name
+
+        key = upgrade_pull_request.component_name
+        if pr_naming_pattern == 'component-reference-name':
+            key = f'{upgrade_pull_request.component_name}:{upgrade_pull_request.component_reference_name}'
 
         if not keep_hotfix_versions:
-            return cname
+            return key
 
         from_version = version.parse_to_semver(upgrade_pull_request.upgrade_vector.whence.version)
         to_version = version.parse_to_semver(upgrade_pull_request.upgrade_vector.whither.version)
 
         if from_version.major != to_version.major:
-            return cname # not a hotfix
+            return key # not a hotfix
         if from_version.minor != to_version.minor:
-            return cname # not a hotfix (hardcode hotfixes differ at patchlevel, always)
+            return key # not a hotfix (hardcode hotfixes differ at patchlevel, always)
 
         # we have a hotfix version (patchlevel differs)
-        return f'{cname}:{from_version.major}.{from_version.minor}'
+        return f'{key}:{from_version.major}.{from_version.minor}'
 
     for upgrade_pull_request in upgrade_pull_requests:
         if upgrade_pull_request.pull_request.state != 'open':
             continue
-        name = group_name(upgrade_pull_request)
+        name = group_name(upgrade_pull_request,pr_naming_pattern)
         grouped_upgrade_pull_requests[name].append(upgrade_pull_request)
 
     for upgrade_pull_request_group in grouped_upgrade_pull_requests.values():
