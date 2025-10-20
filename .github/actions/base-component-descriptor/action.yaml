@@ -245,7 +245,7 @@ runs:
             ## Base-Component-Descriptor
 
             ```
-            {textwrap.indent(component_descriptor_str, '  ')}
+          {textwrap.indent(component_descriptor_str, '  ')}
             ```
           '''))
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
