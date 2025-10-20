@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v5
       - name: Read Version
         id: version
         run: |
