@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
 
 jobs:
+  prepare: # required by oci-ocm-workflow
+    uses: ./.github/workflows/prepare.yaml
+    with:
+      mode: release
   version:
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -21,6 +25,7 @@ jobs:
 
   build-and-push:
     needs:
+      - prepare
       - version
     permissions:
       contents: read
@@ -29,7 +34,7 @@ jobs:
     uses: ./.github/workflows/oci-ocm.yaml
     with:
       name: job-image-base
-      oci-registry: europe-docker.pkg.dev/gardener-project/releases
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
       oci-repository: cicd/job-image-base
       oci-platforms: 'linux/amd64,linux/arm64'
       version: ${{ needs.version.outputs.version }}
