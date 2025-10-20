@@ -328,7 +328,6 @@ jobs:
       matrix:
         args: ${{ fromJSON(needs.preprocess.outputs.args) }}
     steps:
-      - uses: docker/setup-buildx-action@v3
       - name: inject-authtoken-for-dockerhub
         id: extra-auth
         shell: bash
@@ -362,6 +361,7 @@ jobs:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+      - uses: docker/setup-buildx-action@v3
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           remove-trusted-label: false
