@@ -60,6 +60,13 @@ on:
           - bump-major: increment major-version by 1
           - bump-minor: increment minor-version by 1
           - bump-patch: increment patch-version by 1
+      version-prerelease:
+        type: string
+        required: false
+        default: ''
+        description: |
+          explicitly set `prerelease` (only honoured in conjunction with `version-operation` being
+          set to `set-prerelease`). Shell-expressions may be used.
       base-component-file:
         default: .ocm/base-component.yaml
         type: string
@@ -218,6 +225,9 @@ jobs:
           else
             echo "unknown mode: ${mode}"
             exit 1
+          fi
+          if ${{ inputs.version-prerelease != '' }}; then
+            prerelease='${{ inputs.version-prerelease }}'
           fi
           echo "prerelease=${prerelease}" >> ${GITHUB_OUTPUT}
           echo "commit-message=${commit_msg}" >> ${GITHUB_OUTPUT}
