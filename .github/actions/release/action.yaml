@@ -345,6 +345,68 @@ runs:
             stream=f,
           )
 
+    - name: attach-branch-info-to-component-descriptor
+      shell: python
+      run: |
+        import dataclasses
+        import hashlib
+        import os
+
+        import yaml
+
+        import oci.client
+        import ocm
+
+
+        if not os.path.isfile(branch_info_filename := '.ocm/branch-info.yaml'):
+          print(f'file "{branch_info_filename}" does not exist - will not attach to component descriptor')
+          exit(0)
+
+        print(f'found "{branch_info_filename}" file - will attach contents to component descriptor')
+
+        with open('/tmp/component-descriptor.yaml') as file:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            component_descriptor_dict=yaml.safe_load(file.read()),
+          )
+
+        component = component_descriptor.component
+        tgt_oci_ref = component.current_ocm_repo.component_version_oci_ref(component)
+
+        oci_client = oci.client.client_with_dockerauth()
+
+        with open(branch_info_filename, 'rb') as file:
+          branch_info_bytes = file.read()
+
+        branch_info_digest = f'sha256:{hashlib.sha256(branch_info_bytes).hexdigest()}'
+
+        oci_client.put_blob(
+          image_reference=tgt_oci_ref,
+          digest=branch_info_digest,
+          octets_count=len(branch_info_bytes),
+          data=branch_info_bytes,
+        )
+
+        component.resources.append(
+          ocm.Resource(
+            name='branch-info',
+            version=component.version,
+            type='application/yaml',
+            access=ocm.LocalBlobAccess(
+              localReference=branch_info_digest,
+              size=len(branch_info_bytes),
+              mediaType='application/yaml',
+            ),
+          ),
+        )
+
+        # pass modified component-descriptor to subsequent steps
+        with open('/tmp/component-descriptor.yaml', 'w') as file:
+          yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            Dumper=ocm.EnumValueYamlDumper,
+            stream=file,
+          )
+
     - name: publish OCM Component-Descriptor
       shell: bash
       id: publish-component-descriptor
