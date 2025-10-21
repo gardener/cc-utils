@@ -42,7 +42,8 @@ class UpgradePullRequest:
         '''returns a boolean indicating whether or not this Upgrade PR is "obsolete"
 
         An Upgrade is considered to be obsolete, iff the following conditions hold true:
-        - the reference product contains a component reference with the same component name and reference name
+        - the reference product contains a component reference with the same component name and
+          reference name
         - the destination version is greater than the greatest reference component version
         '''
         # find matching component versions
@@ -73,7 +74,10 @@ class UpgradePullRequest:
         self.pull_request.repository.ref(head_ref).delete()
 
 
-def get_component_name_from_reference_name(reference_name: str, reference_component: ocm.Component) -> str:
+def get_component_name_from_reference_name(
+    reference_name: str,
+    reference_component: ocm.Component,
+) -> str:
     for component_reference in reference_component.componentReferences:
         if component_reference.name == reference_name:
             return component_reference.componentName
@@ -104,7 +108,9 @@ def parse_pullrequest_title(
     if kind == "name":
         reference_name = component_name_or_reference_name
         if not reference_component:
-            raise ValueError('reference_component must be given when parsing pullrequest title with kind=name')
+            raise ValueError(
+                'reference_component must be given when parsing pullrequest title with kind=name'
+            )
         component_name = get_component_name_from_reference_name(reference_name, reference_component)
     elif kind == "component":
         component_name = component_name_or_reference_name
@@ -192,15 +198,15 @@ def iter_obsolete_upgrade_pull_requests(
 
     def group_name(upgrade_pull_request: UpgradePullRequest, pr_naming_pattern: str) -> str:
         '''
-        calculate groupname, depending on whether or not we should keep hotfix_versions and on the pr naming pattern;
-        for each upgrade-pr-group, we keep only exactly one version (the greatest tgt-version);
-        therefore, to prevent hotfix-upgrades from being removed, collect hotfixes in a separate
-        group.
+        calculate groupname, depending on whether or not we should keep hotfix_versions and on the pr
+        naming pattern; for each upgrade-pr-group, we keep only exactly one version (the greatest
+        tgt-version); therefore, to prevent hotfix-upgrades from being removed, collect hotfixes in a
+        separate group.
         '''
 
         key = upgrade_pull_request.component_name
         if pr_naming_pattern == 'component-reference-name':
-            key = f'{upgrade_pull_request.component_name}:{upgrade_pull_request.component_reference_name}'
+            key += f':{upgrade_pull_request.component_reference_name}'
 
         if not keep_hotfix_versions:
             return key

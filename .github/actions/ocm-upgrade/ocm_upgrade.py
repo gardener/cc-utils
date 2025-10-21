@@ -316,7 +316,10 @@ def upgrade_pullrequest_exists(
     component_reference_name: str | None=None,
 ) -> bool:
     for upgrade_pullrequest in upgrade_pullrequests:
-        if upgrade_pullrequest.upgrade_vector == upgrade_vector and component_reference_name == upgrade_pullrequest.component_reference_name:
+        if (
+            upgrade_pullrequest.upgrade_vector == upgrade_vector
+            and component_reference_name == upgrade_pullrequest.component_reference_name
+        ):
             return True
     return False
 
