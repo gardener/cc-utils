@@ -4,7 +4,9 @@ import enum
 import json
 import logging
 import os
+import typing
 
+import dacite
 import jsonschema
 import yaml
 
@@ -46,6 +48,17 @@ class ValidationCfg:
     schema: ValidationMode
     access: ValidationMode
     artefact_uniqueness: ValidationMode
+
+    @staticmethod
+    def from_dict(cfg: dict, /) -> typing.Self:
+        return dacite.from_dict(
+            ValidationCfg,
+            data=cfg,
+            config=dacite.Config(
+                cast=(enum.Enum,),
+                convert_key=lambda k: k.replace('_', '-'),
+            )
+        )
 
 
 @dataclasses.dataclass(kw_only=True)
