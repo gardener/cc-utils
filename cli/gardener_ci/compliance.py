@@ -23,12 +23,12 @@ import re
 import dacite
 import yaml
 
-import ci.util
 import ccc.oci
-import cnudie.iter
+import ci.util
 import cnudie.retrieve
 import ctx
 import ocm
+import ocm.iter
 import ocm.util
 import reutil
 
@@ -129,10 +129,10 @@ def diff(
             component_filter = None
 
         return tuple(
-            component_node.component for component_node in cnudie.iter.iter(
+            component_node.component for component_node in ocm.iter.iter(
                 component=component_descriptor.component,
                 lookup=component_descriptor_lookup,
-                node_filter=cnudie.iter.Filter.components,
+                node_filter=ocm.iter.Filter.components,
             ) if not component_filter or component_filter(component_node.component)
         )
 

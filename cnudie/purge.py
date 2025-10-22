@@ -2,13 +2,12 @@ import collections.abc
 import logging
 import traceback
 
-import ocm
-
-import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
 import oci.client as oc
 import oci.model as om
+import ocm
+import ocm.iter
 import version
 
 logger = logging.getLogger(__name__)
@@ -50,16 +49,16 @@ def remove_component_descriptor_and_referenced_artefacts(
     current_component = None
     resources_with_removal_errors = []
 
-    for node in cnudie.iter.iter(
+    for node in ocm.iter.iter(
         component=component,
         lookup=lookup,
         recursion_depth=-1 if recursive else 0,
     ):
-        # cnudie.iter.iter will return sequences of:
+        # ocm.iter.iter will return sequences of:
         # - component-node (always exactly one per component)
         # - resource-nodes (if any)
         # - source-nodes (if any)
-        if isinstance(node, cnudie.iter.ComponentNode):
+        if isinstance(node, ocm.iter.ComponentNode):
             if current_component: # skip for first iteration
                 _remove_component_descriptor(
                     component=current_component,
@@ -69,10 +68,10 @@ def remove_component_descriptor_and_referenced_artefacts(
             current_component = node.component
             continue
 
-        if isinstance(node, cnudie.iter.SourceNode):
+        if isinstance(node, ocm.iter.SourceNode):
             continue # we ignore source-nodes for now
 
-        if isinstance(node, cnudie.iter.ResourceNode):
+        if isinstance(node, ocm.iter.ResourceNode):
             if not node.resource.relation is ocm.ResourceRelation.LOCAL:
                 logger.debug(f'skipping non-local {node.resource.name=}')
                 continue
@@ -121,7 +120,7 @@ def _remove_component_descriptor(
 
 
 def _remove_resource(
-    node: cnudie.iter.ResourceNode,
+    node: ocm.iter.ResourceNode,
     oci_client: oc.Client,
     absent_ok: bool=False,
 ) -> bool:
