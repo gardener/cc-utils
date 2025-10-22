@@ -85,6 +85,11 @@ def validate(
                 recursion_depth=0,
             ),
             oci_client=oci_client,
+            validation_cfg=ocm.validate.ValidationCfg(
+                schema=ocm.validate.ValidationMode.FAIL,
+                access=ocm.validate.ValidationMode.FAIL,
+                artefact_uniqueness=ocm.validate.ValidationMode.FAIL,
+            ),
         )
     )
 
