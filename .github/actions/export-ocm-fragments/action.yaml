@@ -191,14 +191,19 @@ runs:
               while chunk := f.read(4096):
                 fhash.update(chunk)
 
-            # symlink, unless file already is named according to its content-hash-digest
+            # mv and symlink, unless file already is named according to its content-hash-digest
+            # (in case of conflicts (same fname added by different jobs), this will still result
+            # in symlinks overwriting each other; however, references in component-descriptor will
+            # be fine, and artefacts will retain original fnames, which is more convenient for
+            # users inspecting them).
             fhashname = f'sha256:{fhash.hexdigest()}'
             if fname != fhashname:
-              os.symlink(fname, fhashname)
+              os.replace(fpath, os.path.join(blobs_dir, fhashname))
+              os.symlink(fhashname, fpath)
               orig_name_to_digest_names[fname] = fhashname
               orig_name_to_digest_names[os.path.join(blobs_dir, fname)] = fhashname
               ocm_tar.add(
-                name=fhashname,
+                name=os.path.join(blobs_dir, fhashname),
                 arcname=f'blobs.d/{fhashname}',
               )
 
