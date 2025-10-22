@@ -9,8 +9,8 @@ import ccc.oci
 import cnudie.purge
 import cnudie.retrieve
 import cnudie.util
-import cnudie.validate
 import ctx
+import ocm.validate
 import version
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ def validate(
     oci_client = ccc.oci.oci_client()
 
     violations = tuple(
-        cnudie.validate.iter_violations(
+        ocm.validate.iter_violations(
             nodes=ocm.iter.iter(
                 component=component,
                 recursion_depth=0,
