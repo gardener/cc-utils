@@ -8,6 +8,7 @@ Code in this module is not intended for re-use.
 import collections.abc
 import copy
 import dataclasses
+import datetime
 import enum
 import os
 
@@ -369,3 +370,15 @@ def add_resources_from_imagevector(
         component.labels.remove(imagevector_label)
 
     return component
+
+
+def find_creation_time(
+    component: ocm.Component,
+) -> datetime.datetime | None:
+    if creation_time := component.creationTime:
+        return datetime.datetime.fromisoformat(creation_time)
+
+    if label := component.find_label('cloud.gardener/ocm/creation-date'):
+        return datetime.datetime.fromisoformat(label.value)
+
+    return None
