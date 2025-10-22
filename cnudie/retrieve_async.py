@@ -9,12 +9,14 @@ import tarfile
 import tempfile
 
 import aiohttp.client_exceptions
+import cachetools
+import dacite
 import requests
 import yaml
 
-import cachetools
-import dacite
+
 import ocm
+import ocm.iter as oi
 import ocm.oci
 
 import ci.util
@@ -649,14 +651,13 @@ async def component_diff(
     component_descriptor_lookup: ComponentDescriptorLookupById,
     ignore_component_names=(),
 ) -> cnudie.util.ComponentDiff:
-    import ocm.iter as oi
-    import cnudie.iter_async as cia # late import to avoid cyclic dependencies
+    import ocm.iter_async as oia # late import to avoid cyclic dependencies
 
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
 
     left_components = [
-        component_node.component async for component_node in cia.iter(
+        component_node.component async for component_node in oia.iter(
             component=left_component,
             lookup=component_descriptor_lookup,
             node_filter=oi.Filter.components,
@@ -664,7 +665,7 @@ async def component_diff(
     ]
 
     right_components = [
-        component_node.component async for component_node in cia.iter(
+        component_node.component async for component_node in oia.iter(
             component=right_component,
             lookup=component_descriptor_lookup,
             node_filter=oi.Filter.components,
