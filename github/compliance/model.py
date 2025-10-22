@@ -5,8 +5,8 @@ import enum
 import functools
 import typing
 
-import cnudie.iter
 import ocm
+import ocm.iter
 
 
 class Severity(enum.IntEnum):
@@ -74,7 +74,7 @@ class ScanState(enum.Enum):
     FAILED = 'failed'
 
 
-Target = typing.Union[cnudie.iter.ResourceNode, cnudie.iter.SourceNode, 'cmm.CfgElementStatusReport']
+Target = typing.Union[ocm.iter.ResourceNode, ocm.iter.SourceNode, 'cmm.CfgElementStatusReport']
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -104,9 +104,9 @@ ClassificationCallback = collections.abc.Callable[[ScanResult], Severity]
 
 
 def is_ocm_artefact_node(
-    element: cnudie.iter.SourceNode | cnudie.iter.ResourceNode | object,
+    element: ocm.iter.SourceNode | ocm.iter.ResourceNode | object,
 ):
-    if isinstance(element, (cnudie.iter.SourceNode, cnudie.iter.ResourceNode)):
+    if isinstance(element, (ocm.iter.SourceNode, ocm.iter.ResourceNode)):
         return True
 
     return False
@@ -272,11 +272,11 @@ class ScanResultGroupCollection:
 
 
 def artifact_from_node(
-    node: cnudie.iter.ResourceNode | cnudie.iter.SourceNode,
+    node: ocm.iter.ResourceNode | ocm.iter.SourceNode,
 ) -> ocm.Source | ocm.Resource:
-    if isinstance(node, cnudie.iter.SourceNode):
+    if isinstance(node, ocm.iter.SourceNode):
         return node.source
-    elif isinstance(node, cnudie.iter.ResourceNode):
+    elif isinstance(node, ocm.iter.ResourceNode):
         return node.resource
     else:
         raise TypeError(node)

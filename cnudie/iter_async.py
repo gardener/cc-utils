@@ -1,9 +1,9 @@
 import collections.abc
 
-import cnudie.iter
 import cnudie.retrieve_async
 import ocm
 import ocm.gardener
+import ocm.iter
 
 
 async def iter(
@@ -11,11 +11,11 @@ async def iter(
     lookup: cnudie.retrieve_async.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
-    node_filter: collections.abc.Callable[[cnudie.iter.Node], bool]=None,
+    node_filter: collections.abc.Callable[[ocm.iter.Node], bool]=None,
     ocm_repo: ocm.OcmRepository | str=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
-    reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
-) -> collections.abc.AsyncGenerator[cnudie.iter.Node, None, None]:
+    reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool]=None,
+) -> collections.abc.AsyncGenerator[ocm.iter.Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
 
@@ -50,8 +50,8 @@ async def iter(
         component: ocm.Component,
         lookup: cnudie.retrieve_async.ComponentDescriptorLookupById,
         recursion_depth,
-        path: tuple[cnudie.iter.NodePathEntry]=(),
-        reftype: cnudie.iter.NodeReferenceType=cnudie.iter.NodeReferenceType.COMPONENT_REFERENCE,
+        path: tuple[ocm.iter.NodePathEntry]=(),
+        reftype: ocm.iter.NodeReferenceType=ocm.iter.NodeReferenceType.COMPONENT_REFERENCE,
     ):
         if component_filter and component_filter(component):
             return
@@ -59,20 +59,20 @@ async def iter(
         if reftype_filter and reftype_filter(reftype):
             return
 
-        path = (*path, cnudie.iter.NodePathEntry(component, reftype))
+        path = (*path, ocm.iter.NodePathEntry(component, reftype))
 
-        yield cnudie.iter.ComponentNode(
+        yield ocm.iter.ComponentNode(
             path=path,
         )
 
         for resource in component.resources:
-            yield cnudie.iter.ResourceNode(
+            yield ocm.iter.ResourceNode(
                 path=path,
                 resource=resource,
             )
 
         for source in component.sources:
-            yield cnudie.iter.SourceNode(
+            yield ocm.iter.SourceNode(
                 path=path,
                 source=source,
             )
@@ -122,7 +122,7 @@ async def iter(
                 lookup=lookup,
                 recursion_depth=recursion_depth,
                 path=path,
-                reftype=cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL,
+                reftype=ocm.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL,
             ):
                 yield node
 
@@ -135,7 +135,7 @@ async def iter(
         if node_filter and not node_filter(node):
             continue
 
-        if prune_unique and isinstance(node, cnudie.iter.ComponentNode):
+        if prune_unique and isinstance(node, ocm.iter.ComponentNode):
             if node.component.identity() in seen_component_ids:
                 continue
             else:
@@ -150,8 +150,8 @@ def iter_resources(
     recursion_depth: int=-1,
     prune_unique: bool=True,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
-    reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
-) -> collections.abc.AsyncGenerator[cnudie.iter.ResourceNode, None, None]:
+    reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool]=None,
+) -> collections.abc.AsyncGenerator[ocm.iter.ResourceNode, None, None]:
     '''
     curried version of `iter` w/ node-filter preset to yield only resource-nodes
     '''
@@ -160,7 +160,7 @@ def iter_resources(
         lookup=lookup,
         recursion_depth=recursion_depth,
         prune_unique=prune_unique,
-        node_filter=cnudie.iter.Filter.resources,
+        node_filter=ocm.iter.Filter.resources,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
     )

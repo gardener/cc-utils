@@ -2,7 +2,6 @@ import collections.abc
 import dataclasses
 import enum
 
-import cnudie.retrieve
 import ocm
 import ocm.gardener
 
@@ -102,7 +101,7 @@ class Filter:
 
 def iter(
     component: ocm.Component,
-    lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
+    lookup: ocm.ComponentDescriptorLookup=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
     node_filter: collections.abc.Callable[[Node], bool]=None,
@@ -142,7 +141,7 @@ def iter(
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
         component: ocm.Component,
-        lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+        lookup: ocm.ComponentDescriptorLookup,
         recursion_depth,
         path: tuple[NodePathEntry]=(),
         reftype: NodeReferenceType=NodeReferenceType.COMPONENT_REFERENCE,
@@ -238,7 +237,7 @@ def iter(
 
 def iter_resources(
     component: ocm.Component,
-    lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
+    lookup: ocm.ComponentDescriptorLookup=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,

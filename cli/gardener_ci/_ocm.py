@@ -18,12 +18,12 @@ import dacite
 import yaml
 
 import ocm
+import ocm.iter
 import ocm.oci
 import ocm.upload
 
 import ccc.oci
 import ci.util
-import cnudie.iter
 import cnudie.retrieve
 import ctx
 import tarutil
@@ -344,15 +344,15 @@ def traverse(
     ))
     component = component_descriptor.component
 
-    for node in cnudie.iter.iter(
+    for node in ocm.iter.iter(
         component=component,
         lookup=component_descriptor_lookup,
     ):
         indent = len(node.path * 2)
 
-        is_component_node = isinstance(node, cnudie.iter.ComponentNode)
-        is_source_node = isinstance(node, cnudie.iter.SourceNode)
-        is_resource_node = isinstance(node, cnudie.iter.ResourceNode)
+        is_component_node = isinstance(node, ocm.iter.ComponentNode)
+        is_source_node = isinstance(node, ocm.iter.SourceNode)
+        is_resource_node = isinstance(node, ocm.iter.ResourceNode)
 
         if is_component_node and not components:
             continue
@@ -384,20 +384,20 @@ def traverse(
             }):
                 continue
 
-        if isinstance(node, cnudie.iter.ComponentNode):
+        if isinstance(node, ocm.iter.ComponentNode):
             if not print_expr:
                 prefix = 'c'
                 print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
             else:
                 print(eval(print_expr, {'node': node, 'artefact': None})) # nosec B307
-        if isinstance(node, cnudie.iter.ResourceNode):
+        if isinstance(node, ocm.iter.ResourceNode):
             if not print_expr:
                 prefix = 'r'
                 indent += 1
                 print(f'{prefix}{" " * indent}{node.resource.name}')
             else:
                 print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
-        if isinstance(node, cnudie.iter.SourceNode):
+        if isinstance(node, ocm.iter.SourceNode):
             if not print_expr:
                 prefix = 's'
                 indent += 1

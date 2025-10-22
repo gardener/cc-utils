@@ -331,9 +331,9 @@ def download(parsed):
             Dumper=ocm.EnumValueYamlDumper,
         )
         if parsed.recursive:
-            import cnudie.iter
+            import ocm.iter
 
-            for node in cnudie.iter.iter(
+            for node in ocm.iter.iter(
                 component=component,
                 lookup=lambda cid, repo=None: _fetch_component_descriptor(
                     name=cid.name,
@@ -342,7 +342,7 @@ def download(parsed):
                 ),
                 recursion_depth=-1,
                 prune_unique=True,
-                node_filter=cnudie.iter.Filter.components,
+                node_filter=ocm.iter.Filter.components,
                 ocm_repo=ocm_repo,
             ):
                 comp = node.component
