@@ -390,11 +390,11 @@ runs:
           ocm.Resource(
             name='branch-info',
             version=component.version,
-            type='application/yaml',
+            type='vnd.sap/branch-info+yaml',
             access=ocm.LocalBlobAccess(
               localReference=branch_info_digest,
               size=len(branch_info_bytes),
-              mediaType='application/yaml',
+              mediaType='vnd.sap/branch-info+yaml',
             ),
           ),
         )
