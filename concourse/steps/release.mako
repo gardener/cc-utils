@@ -447,9 +447,16 @@ nodes = cnudie.iter.iter(
   component=component,
   lookup=component_descriptor_lookup,
 )
+validation_cfg = ocm.validate.ValidationCfg(
+  schema=ocm.validate.ValidationMode.SKIP,
+  access=ocm.validate.ValidationMode.WARN,
+  artefact_uniqueness=ocm.validate.ValidationMode.WARN,
+)
+
 for validation_error in ocm.validate.iter_violations(
   nodes=nodes,
   oci_client=oci_client,
+  violation_cfg=validation_cfg,
 ):
   logger.warning(f'{validation_error=}')
 
