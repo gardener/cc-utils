@@ -276,6 +276,7 @@ def artefact(
 
 def upload(
     file: str,
+    overwrite: bool=False,
 ):
     with open(file) as f:
         component_descriptor = ocm.ComponentDescriptor.from_dict(
@@ -290,9 +291,15 @@ def upload(
 
     oci_client = ccc.oci.oci_client()
 
+    if overwrite:
+        on_exist = ocm.upload.UploadMode.OVERWRITE
+    else:
+        on_exist = ocm.upload.UploadMode.FAIL
+
     ocm.upload.upload_component_descriptor(
         component_descriptor=component_descriptor,
         oci_client=oci_client,
+        on_exist=on_exist,
     )
 
 
