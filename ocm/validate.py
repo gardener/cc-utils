@@ -32,6 +32,12 @@ class ValidationMode(enum.StrEnum):
     FAIL = 'fail'
 
 
+class ValidationType(enum.StrEnum):
+    SCHEMA = 'schema'
+    ACCESS = 'access'
+    ARTEFACT_UNIQUENESS = 'artefact-uniqueness'
+
+
 @dataclasses.dataclass
 class ValidationCfg:
     '''
@@ -47,6 +53,7 @@ class ValidationResult:
     mode: ValidationMode
     passed: bool
     node: oi.Node
+    type: ValidationType
 
     @property
     def ok(self) -> bool:
@@ -216,7 +223,7 @@ def iter_results_for_component_node(
         yield check_uniqueness(
             artefacts=node.component.resources,
             kind='resource',
-            )
+        )
 
 
 def iter_results_for_node(
@@ -258,7 +265,7 @@ def iter_violations(
     nodes: collections.abc.Iterable[oi.Node],
     oci_client: oci.client.Client,
     validation_cfg: ValidationCfg,
-) -> collections.abc.Generator[ValidationError, None, None]:
+) -> collections.abc.Iterable[ValidationError]:
     for result in iter_results(
         nodes=nodes,
         validation_cfg=validation_cfg,
