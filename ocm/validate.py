@@ -1,13 +1,21 @@
 import collections.abc
 import dataclasses
 import enum
+import json
 import logging
+import os
+
+import jsonschema
+import yaml
 
 import ocm
 import ocm.iter as oi
 import oci.model
 
 logger = logging.getLogger(__name__)
+
+own_dir = os.path.dirname(__file__)
+ocm_jsonschema_path = os.path.join(own_dir, 'ocm-component-descriptor-schema.yaml')
 
 
 class ValidationMode(enum.StrEnum):
@@ -79,13 +87,6 @@ class ValidationError(ValidationResult):
         return f'{node_id_path}: {self.error}'
 
 
-def iter_results_for_component_node(
-    node: oi.Node,
-    validation_cfg: ValidationCfg,
-) -> collections.abc.Iterable[ValidationResult]:
-    pass
-
-
 def iter_results_for_resource_node(
     node: oi.Node,
     validation_cfg: ValidationCfg,
@@ -153,9 +154,17 @@ def iter_results_for_component_node(
             meta=ocm.Metadata(),
         )
 
+        # convert into JSON-Serialisable dict
+        component_descriptor = dataclasses.asdict(component_descriptor)
+        component_descriptor = json.dumps(
+            obj=component_descriptor,
+            cls=ocm.EnumJSONEncoder,
+        )
+        component_descriptor = json.loads(component_descriptor)
+
         try:
             jsonschema.validate(
-                instance=dataclasses.asdict(component_descriptor),
+                instance=component_descriptor,
                 schema=ocm_schema,
             )
             yield ValidationResult(
@@ -207,7 +216,7 @@ def iter_results_for_component_node(
         yield check_uniqueness(
             artefacts=node.component.resources,
             kind='resource',
-        )
+            )
 
 
 def iter_results_for_node(
