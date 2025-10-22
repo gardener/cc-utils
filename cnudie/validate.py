@@ -3,8 +3,7 @@ import dataclasses
 import logging
 
 import ocm
-
-import cnudie.iter as ci
+import ocm.iter as oi
 import oci.model
 
 logger = logging.getLogger(__name__)
@@ -12,20 +11,20 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class ValidationError:
-    node: ci.Node
+    node: oi.Node
     error: str
 
     @property
     def as_error_message(self):
-        def _node_id(node: ci.Node | ocm.Component):
-            if isinstance(node, ci.ComponentNode):
+        def _node_id(node: oi.Node | ocm.Component):
+            if isinstance(node, oi.ComponentNode):
                 return f'{node.component.name}:{node.component.version}'
             elif isinstance(node, ocm.Component):
                 component = node
                 return f'{component.name}:{component.version}'
-            elif isinstance(node, ci.ResourceNode):
+            elif isinstance(node, oi.ResourceNode):
                 artefact = node.resource
-            elif isinstance(node, ci.SourceNode):
+            elif isinstance(node, oi.SourceNode):
                 artefact = node.source
             else:
                 raise TypeError(node)
@@ -38,7 +37,7 @@ class ValidationError:
 
 
 def _validate_resource_node(
-    node: ci.ResourceNode,
+    node: oi.ResourceNode,
     oci_client: oci.client.Client,
 ) -> ValidationError | None:
     resource = node.resource
@@ -74,15 +73,15 @@ def _validate_resource_node(
 
 
 def iter_violations(
-    nodes: collections.abc.Iterable[ci.Node],
+    nodes: collections.abc.Iterable[oi.Node],
     oci_client: oci.client.Client,
 ) -> collections.abc.Generator[ValidationError, None, None]:
     for node in nodes:
-        if isinstance(node, ci.ComponentNode):
+        if isinstance(node, oi.ComponentNode):
             continue # no validation, yet
-        elif isinstance(node, ci.SourceNode):
+        elif isinstance(node, oi.SourceNode):
             continue # no validation, yet
-        elif isinstance(node, ci.ResourceNode):
+        elif isinstance(node, oi.ResourceNode):
             if validation_error := _validate_resource_node(
                 node=node,
                 oci_client=oci_client,

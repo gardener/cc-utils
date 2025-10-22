@@ -24,12 +24,12 @@ except ImportError:
     print(f'note: added {repo_root} to python-path (sys.path)', file=sys.stderr)
     import ocm
 
-import cnudie.iter
 import cnudie.retrieve
 import github
 import gitutil
 import oci.auth
 import oci.client
+import ocm.iter
 import release_notes.fetch as rnf
 import release_notes.model as rnm
 import release_notes.ocm as rno
@@ -311,11 +311,11 @@ def main():
         seen_component_ids = set()
         variant_markdown_path = os.path.join(tmp_dir.name, f'{variant_cfg.name}-release-notes.md')
 
-        for cnode in cnudie.iter.iter(
+        for cnode in ocm.iter.iter(
             component=component_descriptor.component,
             lookup=component_descriptor_lookup,
             recursion_depth=variant_cfg.recursion_depth,
-            node_filter=cnudie.iter.Filter.components,
+            node_filter=ocm.iter.Filter.components,
         ):
             for rn in all_release_note_docs:
                 if rn.component_id.name == cnode.component_id.name:

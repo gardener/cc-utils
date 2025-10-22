@@ -21,15 +21,15 @@ import typing
 import dacite
 
 import ci.util
-import ctt.replicate
-import cnudie.iter
 import cnudie.retrieve
 import container.util
-import ocm
-import ocm.gardener
+import ctt.replicate
 import oci
 import oci.client
 import oci.model as om
+import ocm
+import ocm.gardener
+import ocm.iter
 
 import ctt.filters as filters
 import ctt.model
@@ -298,7 +298,7 @@ def determine_changed_components(
     component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
-    reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool]=None,
+    reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool]=None,
 ) -> collections.abc.Generator[ocm.ComponentDescriptor, None, None]:
     component = component_descriptor.component
 
@@ -331,7 +331,7 @@ def determine_changed_components(
         )
 
     if not (
-        reftype_filter and reftype_filter(cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL)
+        reftype_filter and reftype_filter(ocm.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL)
     ) and (
         extra_crefs_label := component.find_label(ocm.gardener.ExtraComponentReferencesLabel.name)
     ):
@@ -543,7 +543,7 @@ def create_replication_plan_step(
     oci_client: oci.client.Client,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     component_filter: collections.abc.Callable[[ocm.Component], bool] | None=None,
-    reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool] | None=None,
+    reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool] | None=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
 ) -> ctt.model.ReplicationPlanStep:
     tgt_ocm_repo = ocm.OciOcmRepository(
@@ -595,7 +595,7 @@ def process_images(
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
     tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
-) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
+) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
     `skip_component_upload` parameter will still replicate all its resources (i.e. oci images)
@@ -608,8 +608,8 @@ def process_images(
 
     reftype_filter = None
     if remove_label and remove_label(ocm.gardener.ExtraComponentReferencesLabel.name):
-        def filter_extra_component_refs(reftype: cnudie.iter.NodeReferenceType) -> bool:
-            return reftype is cnudie.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL
+        def filter_extra_component_refs(reftype: ocm.iter.NodeReferenceType) -> bool:
+            return reftype is ocm.iter.NodeReferenceType.EXTRA_COMPONENT_REFS_LABEL
 
         reftype_filter = filter_extra_component_refs
 
@@ -699,10 +699,10 @@ def process_replication_plan_step(
     inject_ocm_coordinates_into_oci_manifests: bool=False,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool] | None=None,
-    reftype_filter: collections.abc.Callable[[cnudie.iter.NodeReferenceType], bool] | None=None,
+    reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool] | None=None,
     skip_cd_validation: bool=False,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool] | None=None,
-) -> collections.abc.Generator[cnudie.iter.Node, None, None]:
+) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     def process_replication_resource_element(
         replication_resource_element: ctt.model.ReplicationResourceElement,
     ) -> ctt.model.ReplicationResourceElement:
@@ -798,7 +798,7 @@ def process_replication_plan_step(
 
     for replication_plan_component in replication_plan_step.components:
         if is_root_component_descriptor(replication_plan_component.target):
-            # store modified root target component descriptor because `cnudie.iter.iter` won't
+            # store modified root target component descriptor because `ocm.iter.iter` won't
             # resolve the (updated) root component descriptor again
             root_component_descriptor = replication_plan_component.target
 
@@ -895,16 +895,16 @@ def process_replication_plan_step(
     ):
         root_component_descriptor = patched_root_component_descriptor
 
-    for node in cnudie.iter.iter(
+    for node in ocm.iter.iter(
         component=root_component_descriptor,
         lookup=tgt_component_descriptor_lookup,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
     ):
-        if cnudie.iter.Filter.components(node):
+        if ocm.iter.Filter.components(node):
             pass
-        elif cnudie.iter.Filter.resources(node):
-            node: cnudie.iter.ResourceNode
+        elif ocm.iter.Filter.resources(node):
+            node: ocm.iter.ResourceNode
 
             if node.resource.access.type not in (
                 ocm.AccessType.OCI_REGISTRY,

@@ -649,7 +649,7 @@ async def component_diff(
     component_descriptor_lookup: ComponentDescriptorLookupById,
     ignore_component_names=(),
 ) -> cnudie.util.ComponentDiff:
-    import cnudie.iter as ci
+    import ocm.iter as oi
     import cnudie.iter_async as cia # late import to avoid cyclic dependencies
 
     left_component = cnudie.util.to_component(left_component)
@@ -659,7 +659,7 @@ async def component_diff(
         component_node.component async for component_node in cia.iter(
             component=left_component,
             lookup=component_descriptor_lookup,
-            node_filter=ci.Filter.components,
+            node_filter=oi.Filter.components,
         ) if component_node.component.name not in ignore_component_names
     ]
 
@@ -667,7 +667,7 @@ async def component_diff(
         component_node.component async for component_node in cia.iter(
             component=right_component,
             lookup=component_descriptor_lookup,
-            node_filter=ci.Filter.components,
+            node_filter=oi.Filter.components,
         ) if component_node.component.name not in ignore_component_names
     ]
 

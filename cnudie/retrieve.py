@@ -16,11 +16,13 @@ import cachetools
 import dacite
 import ocm
 import ocm.oci
+import ocm.iter as oi
 
 import ci.util
 import cnudie.util
 import oci.client as oc
 import oci.model as om
+
 
 logger = logging.getLogger(__name__)
 
@@ -728,8 +730,6 @@ def component_diff(
     component_descriptor_lookup: ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
 ) -> cnudie.util.ComponentDiff:
-    import cnudie.iter as ci # late import to avoid cyclic dependencies
-
     left_component = cnudie.util.to_component(left_component)
     right_component = cnudie.util.to_component(right_component)
 
@@ -737,18 +737,18 @@ def component_diff(
         component_descriptor_lookup = create_default_component_descriptor_lookup()
 
     left_components = tuple(
-        component_node.component for component_node in ci.iter(
+        component_node.component for component_node in oi.iter(
             component=left_component,
             lookup=component_descriptor_lookup,
-            node_filter=ci.Filter.components,
+            node_filter=oi.Filter.components,
             recursion_depth=recursion_depth,
         ) if component_node.component.name not in ignore_component_names
     )
     right_components = tuple(
-        component_node.component for component_node in ci.iter(
+        component_node.component for component_node in oi.iter(
             component=right_component,
             lookup=component_descriptor_lookup,
-            node_filter=ci.Filter.components,
+            node_filter=oi.Filter.components,
             recursion_depth=recursion_depth,
         ) if component_node.component.name not in ignore_component_names
     )

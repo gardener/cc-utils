@@ -3,9 +3,9 @@ import logging
 import sys
 
 import ocm
+import ocm.iter
 
 import ccc.oci
-import cnudie.iter
 import cnudie.purge
 import cnudie.retrieve
 import cnudie.util
@@ -80,7 +80,7 @@ def validate(
 
     violations = tuple(
         cnudie.validate.iter_violations(
-            nodes=cnudie.iter.iter(
+            nodes=ocm.iter.iter(
                 component=component,
                 recursion_depth=0,
             ),
