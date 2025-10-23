@@ -34,7 +34,6 @@ def requirements():
         'aliyun-python-sdk-ram',
         'brypt',
         'boto3',
-        'cryptography',
         'dockerfile-parse',
         'docutils',
         'google-api-core',
@@ -91,7 +90,6 @@ def modules():
         'http_requests',
         'mailutil',
         'makoutil',
-        'signingserver',
     )
     for name in omit_modules:
         module_names.remove(name)

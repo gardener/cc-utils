@@ -3,10 +3,12 @@ A client for Signing-Server
 '''
 
 import dataclasses
+import enum
 import hashlib
 import io
 import logging
 import re
+import typing
 import urllib.parse
 
 import cryptography.x509
@@ -15,10 +17,26 @@ import requests
 import urllib3
 
 import ci.util
-import model.signing_server as ms
 
 
 logger = logging.getLogger(__name__)
+
+
+class SigningAlgorithm(enum.StrEnum):
+    RSASSA_PSS = 'rsassa-pss'
+    RSASSA_PKCS1_V1_5 = 'rsassa-pkcs1-v1_5'
+
+    @staticmethod
+    def as_rfc_standard(algorithm: typing.Union['SigningAlgorithm', str]) -> str:
+        # parses the algorithm to the standard format described in
+        # https://datatracker.ietf.org/doc/html/rfc3447
+        algorithm = SigningAlgorithm(algorithm.lower())
+        if algorithm is SigningAlgorithm.RSASSA_PSS:
+            return 'RSASSA-PSS'
+        elif algorithm is SigningAlgorithm.RSASSA_PKCS1_V1_5:
+            return 'RSASSA-PKCS1-v1_5'
+        else:
+            raise ValueError(algorithm)
 
 
 @dataclasses.dataclass
@@ -38,7 +56,7 @@ class SigningResponse:
     Instances are typically created from SigningserverClient.
     '''
     raw: str
-    signing_algorithm: ms.SigningAlgorithm
+    signing_algorithm: SigningAlgorithm
 
     @property
     def certificate(self) -> str:
@@ -103,13 +121,13 @@ class SigningserverClient:
         content: str | bytes | io.IOBase=None,
         digest: str | bytes=None,
         hash_algorithm='sha256',
-        signing_algorithm: ms.SigningAlgorithm | str = ms.SigningAlgorithm.RSASSA_PSS,
+        signing_algorithm: SigningAlgorithm | str = SigningAlgorithm.RSASSA_PSS,
         remaining_retries: int=3,
     ):
         if not (bool(content) ^ bool(digest)):
             raise ValueError('exactly one of `content` or `digest` must be passed')
 
-        signing_algorithm = ms.SigningAlgorithm(signing_algorithm)
+        signing_algorithm = SigningAlgorithm(signing_algorithm)
         url = ci.util.urljoin(
             self.cfg.base_url,
             'sign',
