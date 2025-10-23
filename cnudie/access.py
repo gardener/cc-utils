@@ -9,14 +9,21 @@ import oci.model
 
 def s3_access_as_blob_descriptor(
     s3_client: 'botocore.client.S3',
-    s3_access: ocm.S3Access,
+    s3_access: ocm.S3Access | ocm.LegacyS3Access,
     chunk_size: int=4096,
     name: str=None,
 ) -> ioutil.BlobDescriptor:
     if not s3_client:
         raise ValueError('must pass-in s3-client')
 
-    blob = s3_client.get_object(Bucket=s3_access.bucketName, Key=s3_access.objectKey)
+    if isinstance(s3_access, ocm.LegacyS3Access):
+        bucket = s3_access.bucketName
+        key = s3_access.objectKey
+    else:
+        bucket = s3_access.bucket
+        key = s3_access.key
+
+    blob = s3_client.get_object(Bucket=bucket, Key=key)
 
     size = blob['ContentLength']
     body = blob['Body']
@@ -24,7 +31,7 @@ def s3_access_as_blob_descriptor(
     return ioutil.BlobDescriptor(
         content=body.iter_chunks(chunk_size=chunk_size),
         size=size,
-        name=name or f's3://{s3_access.bucketName}/{s3_access.objectKey}',
+        name=name or f's3://{bucket}/{key}',
     )
 
 
@@ -62,7 +69,14 @@ def access_to_digest_lookup(
         )
 
     elif access.type is ocm.AccessType.S3:
-        blob = s3_client.get_object(Bucket=access.bucketName, Key=access.objectKey)['Body']
+        if isinstance(access, ocm.LegacyS3Access):
+            bucket = access.bucketName
+            key = access.objectKey
+        else:
+            bucket = access.bucket
+            key = access.key
+
+        blob = s3_client.get_object(Bucket=bucket, Key=key)['Body']
 
         digest = hashlib.sha256()
         for chunk in blob.iter_chunks(chunk_size=chunk_size):
