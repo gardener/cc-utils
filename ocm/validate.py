@@ -87,7 +87,7 @@ class ValidationError(ValidationResult):
 
     @property
     def as_error_message(self):
-        def _node_id(node: oi.Node | ocm.Component):
+        def node_id(node: oi.Node | ocm.Component):
             if isinstance(node, oi.ComponentNode):
                 return f'{node.component.name}:{node.component.version}'
             elif isinstance(node, ocm.Component):
@@ -102,9 +102,14 @@ class ValidationError(ValidationResult):
 
             return f'{artefact.name}:{artefact.version}'
 
-        node_id_path = '/'.join((_node_id(node) for node in self.node.path))
+        node_id_path = '/'.join(
+            f'{node.component.name}:{node.component.version}' for node in self.node.path
+        )
 
-        return f'{node_id_path}: {self.error}'
+        if not isinstance(self.node, oi.ComponentNode):
+            node_id_path = f'{node_id_path}/{node_id(self.node.component)}'
+
+        return f'{node_id_path}: {self.error}'.removeprefix('/')
 
 
 def iter_results_for_resource_node(
