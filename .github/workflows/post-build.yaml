@@ -29,6 +29,13 @@ on:
             - overwrite
             - skip # silently ignore
             - fail
+      on-validation-errors:
+        type: string
+        default: fail
+        description: |
+          How to behave in case of validation-errors. Allowed values are:
+          - fail     # mark pipeline as failed
+          - continue # do not mark pipeline as failed (potentially run further jobs)
       ocm-post-process:
         type: string
         default: component-cli
@@ -166,6 +173,14 @@ jobs:
         with:
           oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-validate
+        with:
+          component-descriptor-path: /tmp/ocm/component-descriptor.yaml
+          on-validation-errors: ${{ inputs.on-validation-errors }}
+          validation-cfg: |
+            schema: fail
+            access: fail
+            artefact-uniqueness: fail
       - name: upload-component-descriptor-to-ocm-repository
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         run: |
