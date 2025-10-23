@@ -89,7 +89,8 @@ class ValidationError(ValidationResult):
     def as_error_message(self):
         def node_id(node: oi.Node | ocm.Component):
             if isinstance(node, oi.ComponentNode):
-                return f'{node.component.name}:{node.component.version}'
+                component = node.component.component
+                return f'{component.name}:{component.version}'
             elif isinstance(node, ocm.Component):
                 component = node
                 return f'{component.name}:{component.version}'
@@ -103,7 +104,8 @@ class ValidationError(ValidationResult):
             return f'{artefact.name}:{artefact.version}'
 
         node_id_path = '/'.join(
-            f'{node.component.name}:{node.component.version}' for node in self.node.path
+            f'{node.component.component.name}:{node.component.component.version}'
+            for node in self.node.path
         )
 
         if not isinstance(self.node, oi.ComponentNode):
@@ -174,10 +176,13 @@ def iter_results_for_component_node(
         with open(ocm_jsonschema_path) as f:
             ocm_schema = yaml.safe_load(f)
 
-        component_descriptor = ocm.ComponentDescriptor(
-            component=node.component,
-            meta=ocm.Metadata(),
-        )
+        if isinstance(node.component, ocm.Component):
+            component_descriptor = ocm.ComponentDescriptor(
+                component=node.component,
+                meta=ocm.Metadata(),
+            )
+        else:
+            component_descriptor = node.component
 
         # convert into JSON-Serialisable dict
         component_descriptor = dataclasses.asdict(component_descriptor)
