@@ -117,6 +117,7 @@ def test_iter_results():
             component=invalid_component,
             lookup=None,
             recursion_depth=0,
+            strip_component_descriptor=False,
         )
     )
 
@@ -149,6 +150,7 @@ def test_ValidationError_as_error_message():
             component=valid_ocm_component_descriptor,
             lookup=None,
             recursion_depth=0,
+            strip_component_descriptor=False,
         )
     )
 
