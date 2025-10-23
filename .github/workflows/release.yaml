@@ -36,6 +36,16 @@ on:
 
           If not passed, an artefact named `base-component-descriptor` will be assumed to
           exist, and used as default / fallback.
+      on-validation-errors:
+        default: fail
+        type: string
+        description: |
+          How to behave in case of validation-errors. Allowed values are:
+          - fail     # abort release
+          - continue # ignore and create release (if possible)
+
+          Validation can be customised using `ocm-validation-cfg` input (currently, only
+          OCM-Component-Descriptor validation is implemented).
       release-commit-objects:
         required: false
         type: string
@@ -303,6 +313,7 @@ jobs:
           next-version: ${{ inputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
+          on-validation-errors: ${{ inputs.on-validation-errors }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}

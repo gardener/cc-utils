@@ -156,6 +156,12 @@ inputs:
       - skip
       - overwrite
       - fail
+  on-validation-errors:
+    default: fail
+    type: choice
+    options:
+      - fail
+      - continue
   release-notes-path:
     required: false
     type: string
@@ -406,7 +412,15 @@ runs:
             Dumper=ocm.EnumValueYamlDumper,
             stream=file,
           )
-
+    - name: validate OCM Component-Descriptor
+      uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-validate
+      with:
+        component-descriptor-path: /tmp/component-descriptor.yaml
+        on-validation-errors: ${{ inputs.on-validation-errors }}
+        validation-cfg: |
+          schema: fail
+          access: fail
+          artefact-uniqueness: fail
     - name: publish OCM Component-Descriptor
       shell: bash
       id: publish-component-descriptor
