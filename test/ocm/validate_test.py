@@ -141,3 +141,27 @@ def test_iter_results():
             break
     else:
         pytest.fail('did not find ValidationError with type artefact-uniqueness')
+
+
+def test_ValidationError_as_error_message():
+    nodes = tuple(
+        ocm.iter.iter(
+            component=valid_ocm_component_descriptor,
+            lookup=None,
+            recursion_depth=0,
+        )
+    )
+
+    ve = ocm.validate.ValidationError(
+        mode=ocm.validate.ValidationMode.FAIL,
+        passed=False,
+        node=nodes[0],
+        type=ocm.validate.ValidationType.SCHEMA,
+        error='something went wrong',
+    )
+
+    message = ve.as_error_message
+
+    assert 'something went wrong' in message
+    assert valid_ocm_component_descriptor.component.name in message
+    assert valid_ocm_component_descriptor.component.version in message
