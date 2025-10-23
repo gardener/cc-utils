@@ -191,7 +191,7 @@ def iter_upgrade_pullrequests(
 
 def iter_obsolete_upgrade_pull_requests(
     upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
-    pr_naming_pattern: str,
+    pr_naming_pattern: str='component-name',
     keep_hotfix_versions: bool=True,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
     grouped_upgrade_pull_requests = collections.defaultdict(list)
