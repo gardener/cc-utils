@@ -13,7 +13,7 @@ class NodeReferenceType(enum.StrEnum):
 
 @dataclasses.dataclass(frozen=True)
 class NodePathEntry:
-    component: ocm.Component
+    component: ocm.Component | ocm.ComponentDescriptor
     reftype: NodeReferenceType = NodeReferenceType.COMPONENT_REFERENCE
 
 
@@ -27,13 +27,14 @@ class Node:
 
     @property
     def component_id(self):
-        return self.component.identity()
+        return self.component.component.identity()
 
 
 @dataclasses.dataclass
 class ComponentNode(Node):
     def __str__(self) -> str:
-        return f'{self.component.name}:{self.component.version}'
+        component = self.component.component
+        return f'{component.name}:{component.version}'
 
 
 class ArtefactNode:
@@ -100,7 +101,7 @@ class Filter:
 
 
 def iter(
-    component: ocm.Component,
+    component: ocm.Component | ocm.ComponentDescriptor,
     lookup: ocm.ComponentDescriptorLookup=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
@@ -108,6 +109,7 @@ def iter(
     ocm_repo: ocm.OcmRepository | str=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[NodeReferenceType], bool]=None,
+    strip_component_descriptor: bool=True,
 ) -> collections.abc.Generator[Node, None, None]:
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
@@ -129,8 +131,10 @@ def iter(
     @param reftype_filter: use to exclude components (and their references) from the iterator if
                            they are of a certain reference type; thereby `True` means the component
                            should be filtered out
+    @param strip_component_descriptor: if True, yielded nodes will contain `ocm.Component`.
+                                       otherwise, `ocm.ComponentDescriptor`.
     '''
-    if isinstance(component, ocm.ComponentDescriptor):
+    if strip_component_descriptor:
         component = component.component
 
     seen_component_ids = set()
@@ -140,13 +144,13 @@ def iter(
 
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
-        component: ocm.Component,
+        component: ocm.Component | ocm.ComponentDescriptor,
         lookup: ocm.ComponentDescriptorLookup,
         recursion_depth,
         path: tuple[NodePathEntry]=(),
         reftype: NodeReferenceType=NodeReferenceType.COMPONENT_REFERENCE,
     ):
-        if component_filter and component_filter(component):
+        if component_filter and component_filter(component.component):
             return
 
         if reftype_filter and reftype_filter(reftype):
@@ -158,13 +162,13 @@ def iter(
             path=path,
         )
 
-        for resource in component.resources:
+        for resource in component.component.resources:
             yield ResourceNode(
                 path=path,
                 resource=resource,
             )
 
-        for source in component.sources:
+        for source in component.component.sources:
             yield SourceNode(
                 path=path,
                 source=source,
@@ -175,7 +179,7 @@ def iter(
         elif recursion_depth > 0:
             recursion_depth -= 1
 
-        for cref in component.componentReferences:
+        for cref in component.component.componentReferences:
             cref_id = ocm.ComponentIdentity(
                 name=cref.componentName,
                 version=cref.version,
@@ -186,14 +190,17 @@ def iter(
             else:
                 referenced_component_descriptor = lookup(cref_id)
 
+            if strip_component_descriptor:
+                referenced_component_descriptor = referenced_component_descriptor.component
+
             yield from inner_iter(
-                component=referenced_component_descriptor.component,
+                component=referenced_component_descriptor,
                 lookup=lookup,
                 recursion_depth=recursion_depth,
                 path=path,
             )
 
-        if not (extra_crefs_label := component.find_label(
+        if not (extra_crefs_label := component.component.find_label(
             name=ocm.gardener.ExtraComponentReferencesLabel.name,
         )):
             return
@@ -209,8 +216,11 @@ def iter(
             else:
                 referenced_component_descriptor = lookup(extra_cref_id)
 
+            if strip_component_descriptor:
+                referenced_component_descriptor = referenced_component_descriptor.component
+
             yield from inner_iter(
-                component=referenced_component_descriptor.component,
+                component=referenced_component_descriptor,
                 lookup=lookup,
                 recursion_depth=recursion_depth,
                 path=path,
@@ -227,7 +237,7 @@ def iter(
             continue
 
         if prune_unique and isinstance(node, ComponentNode):
-            if node.component.identity() in seen_component_ids:
+            if node.component.component.identity() in seen_component_ids:
                 continue
             else:
                 seen_component_ids.add(node.component_id)
@@ -242,6 +252,7 @@ def iter_resources(
     prune_unique: bool=True,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[NodeReferenceType], bool]=None,
+    strip_component_descriptor: bool=True,
 ) -> collections.abc.Generator[ResourceNode, None, None]:
     '''
     curried version of `iter` w/ node-filter preset to yield only resource-nodes
@@ -254,4 +265,5 @@ def iter_resources(
         node_filter=Filter.resources,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
+        strip_component_descriptor=strip_component_descriptor,
     )
