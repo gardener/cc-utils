@@ -178,6 +178,13 @@ class GithubAccess(Access):
 
 @dc(kw_only=True)
 class S3Access(Access):
+    bucket: str
+    key: str
+    region: str | None = None
+
+
+@dc(kw_only=True)
+class LegacyS3Access(Access):
     bucketName: str
     objectKey: str
     region: str | None = None
@@ -488,6 +495,7 @@ class Resource(Artifact, LabelMethodsMixin):
         | OciAccess
         | RelativeOciAccess
         | S3Access
+        | LegacyS3Access
         | dict
         | None
     )

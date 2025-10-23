@@ -68,6 +68,9 @@ def artifact_url(
         return access.reference
 
     elif isinstance(access, ocm.S3Access):
+        return f'http://{access.bucket}.s3.amazonaws.com/{access.key}'
+
+    elif isinstance(access, ocm.LegacyS3Access):
         return f'http://{access.bucketName}.s3.amazonaws.com/{access.objectKey}'
 
     elif isinstance(access, ocm.LocalBlobGlobalAccess):
