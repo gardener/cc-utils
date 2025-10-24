@@ -95,6 +95,12 @@ runs:
         )
 
         if not component_diff:
+          component_diff_str = (
+            f'No differences were found between current ({component_version}) '
+            f'and greatest release ({greatest_version}).'
+          )
+          print(component_diff_str)
+
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
             f.write('has-diff=false\n')
 
@@ -102,7 +108,7 @@ runs:
             f.write(textwrap.dedent(f'''\
               ## Component-Diff
 
-              No differences were found between current ({component_version}) and greatest release ({greatest_version}).
+              {component_diff_str}
             '''))
             sys.exit(0)
 
@@ -110,6 +116,7 @@ runs:
             data=component_diff,
             Dumper=ocm.EnumValueYamlDumper,
         )
+        print(component_diff_str)
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           f.write('has-diff=true\n')
