@@ -130,6 +130,7 @@ def iter_results_for_resource_node(
             node=node,
             type=ValidationType.ACCESS,
         )
+        return
 
     access: ocm.OciAccess = resource.access
     image_reference = access.imageReference
