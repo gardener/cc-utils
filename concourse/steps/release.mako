@@ -117,7 +117,6 @@ import ci.util
 import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
-import cnudie.validate
 import concourse.steps.component_descriptor_util as cdu
 import concourse.steps.release
 import concourse.model.traits.version
@@ -126,6 +125,7 @@ import concourse.util
 import ocm
 import ocm.upload
 import ocm.util
+import ocm.validate
 import release_notes.fetch as rnf
 import release_notes.ocm
 import release_notes.tarutil
@@ -447,9 +447,16 @@ nodes = cnudie.iter.iter(
   component=component,
   lookup=component_descriptor_lookup,
 )
-for validation_error in cnudie.validate.iter_violations(
+validation_cfg = ocm.validate.ValidationCfg(
+  schema=ocm.validate.ValidationMode.SKIP,
+  access=ocm.validate.ValidationMode.WARN,
+  artefact_uniqueness=ocm.validate.ValidationMode.WARN,
+)
+
+for validation_error in ocm.validate.iter_violations(
   nodes=nodes,
   oci_client=oci_client,
+  violation_cfg=validation_cfg,
 ):
   logger.warning(f'{validation_error=}')
 

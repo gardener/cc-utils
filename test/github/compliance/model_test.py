@@ -1,7 +1,7 @@
 import dataclasses
 
-import cnudie.iter
 import github.compliance.model as gcm
+import ocm.iter
 
 
 @dataclasses.dataclass
@@ -13,8 +13,8 @@ class Component:
 def node_path_entry(
     name: str='component1',
     version: str='componentVersion1',
-) -> cnudie.iter.NodePathEntry:
-    return cnudie.iter.NodePathEntry(
+) -> ocm.iter.NodePathEntry:
+    return ocm.iter.NodePathEntry(
         component=Component(
             name=name,
             version=version,
@@ -30,7 +30,7 @@ class Artefact:
 
 @dataclasses.dataclass
 class ScanResult(gcm.ScanResult):
-    scanned_element = cnudie.iter.ResourceNode(
+    scanned_element = ocm.iter.ResourceNode(
         path=(node_path_entry(),),
         resource=Artefact(),
     )
@@ -56,14 +56,14 @@ def test_ScanResultGroup():
     assert empty_group.results_without_findings == ()
 
     result_medium = ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
+        scanned_element=ocm.iter.ResourceNode(
             path=(node_path_entry(),),
             resource=Artefact(),
         ),
         severity=gcm.Severity.MEDIUM,
     )
     result_critical = ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
+        scanned_element=ocm.iter.ResourceNode(
             path=(node_path_entry(),),
             resource=Artefact(),
         ),
@@ -89,7 +89,7 @@ def test_ScanResultGroup():
     assert group_with_findings.results_without_findings == ()
 
     result_with_scan_error = ScanResult(
-        scanned_element=cnudie.iter.ResourceNode(
+        scanned_element=ocm.iter.ResourceNode(
             path=(node_path_entry(),),
             resource=Artefact(),
         ),
@@ -129,13 +129,13 @@ def test_ScanResultGroupCollection_result_groups():
     # one group (same component-name/-version/artefact-name/-version/latest-processing-date)
     results = (
         gcm.ScanResult(
-            scanned_element=cnudie.iter.ResourceNode(
+            scanned_element=ocm.iter.ResourceNode(
                 path=(node_path_entry(name='c1', version='cv1'),),
                 resource=Artefact(name='a1', version='av1'),
             ),
         ),
         gcm.ScanResult(
-            scanned_element=cnudie.iter.ResourceNode(
+            scanned_element=ocm.iter.ResourceNode(
                 path=(node_path_entry(name='c1', version='cv1'),),
                 resource=Artefact(name='a1', version='av1'),
             ),
@@ -156,13 +156,13 @@ def test_ScanResultGroupCollection_result_groups():
     # two groups (different component-name/-version/artefact-name/-version)
     results = (
         gcm.ScanResult(
-            scanned_element=cnudie.iter.ResourceNode(
+            scanned_element=ocm.iter.ResourceNode(
                 path=(node_path_entry(name='c1', version='cv1'),),
                 resource=Artefact(name='a1', version='av1'),
             ),
         ),
         gcm.ScanResult(
-            scanned_element=cnudie.iter.ResourceNode(
+            scanned_element=ocm.iter.ResourceNode(
                 path=(node_path_entry(name='c2', version='cv2'),),
                 resource=Artefact(name='a2', version='av2'),
             ),
@@ -180,14 +180,14 @@ def test_ScanResultGroupCollection_result_groups():
     # two groups (different processing-date)
     results = (
         ScanResult(
-            scanned_element=cnudie.iter.ResourceNode(
+            scanned_element=ocm.iter.ResourceNode(
                 path=(node_path_entry(name='c1', version='cv1'),),
                 resource=Artefact(name='a1', version='av1'),
             ),
             severity=gcm.Severity.MEDIUM,
         ),
         ScanResult(
-            scanned_element=cnudie.iter.ResourceNode(
+            scanned_element=ocm.iter.ResourceNode(
                 path=(node_path_entry(name='c2', version='cv2'),),
                 resource=Artefact(name='a2', version='av2'),
             ),

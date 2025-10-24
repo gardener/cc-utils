@@ -1,0 +1,118 @@
+name: validate-ocm-component-descriptor
+description: |
+  A (slightly opinionated) action for validating OCM-Component-Descriptors. Works well in
+  conjunction w/ `export-ocm-fragment` / `merge-component-descriptor` actions, but can also
+  be used in other contexts.
+
+inputs:
+  component-descriptor-path:
+    description: |
+      Path to the OCM-Component-Descriptor document to validate
+    type: string
+    required: true
+  validation-cfg:
+    description: |
+      A YAML-Document that configures the validations to do. Each attribute must be one of:
+      - skip
+      - warn
+      - fail
+
+      Skipping will result in validation codepath to be skipped. This is particularly useful for
+      checking artefact-accesses, as this may require additional configuration, such as access
+      credentials, which may not be available.
+
+      `warn` vs `fail` will have an effect to either reported success (see result output), or
+      exitcode.
+    type: string
+    default: |
+      schema: fail
+      access: fail
+      artefact-uniqueness: fail
+  on-validation-errors:
+    description: |
+      Controls how this action should convey (fatal) findings (see `validation-cfg` input). If
+      a validation that was configured to `fail` was found, this action will fail (exit w/ exit-code
+      != 0) if `on-validation-errors` is set to `fail`. If it is set to `continue`, the exit-code
+      will be zero. In the latter case, it is the caller's obligation to react on status as signalled
+      via output (see documentation on outputs below) (see documentation on outputs below).
+    type: choice
+    options:
+      - fail
+      - continue
+    default: fail
+
+outputs:
+  ok:
+    description: |
+      `true`, if validation yielded no violations, or the worst violation was `warn`(ing). The latter
+      depends on passed `validation-cfg` input.
+      Otherwise (if there was a finding that should result in failure), `false`.
+
+      Evaluating this output is only needed, if `on-validation-errors` is not set to `fail`.
+    value: ${{ steps.val.outputs.ok }}
+  result-description:
+    description: |
+      a human-readable text describing validation-results.
+    value: ${{ steps.val.outputs.result-description }}
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: validate-component-descriptor
+      id: val
+      shell: python
+      run: |
+        import os
+        import sys
+
+        sys.path.insert(1, '${{ github.action_path }}')
+
+        import yaml
+
+        import ocm.validate
+
+        import validate
+
+        validation_cfg = ocm.validate.ValidationCfg.from_dict(
+          yaml.safe_load('''\
+        ${{ inputs.validation-cfg }}
+        '''))
+
+        total, warnings, errors = validate.validate(
+          component_descriptor_path='${{ inputs.component-descriptor-path }}',
+          validation_cfg=validation_cfg,
+        )
+
+        print(f'{total=} validation-results, thereof {len(warnings)=}, {len(errors)=}')
+
+        if not errors:
+          ok_str = 'true'
+          ok = True
+        else:
+          ok_str = 'false'
+          ok = False
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write(f'ok={ok_str}\n')
+
+        error_str = '\n'.join(r.as_error_message for r in errors)
+        warn_str = '\n'.join(r.as_error_message for r in warnings)
+
+        if ok:
+          description = f'Validation succeeded with {len(warnings)=}:\n{warn_str}'
+        else:
+          description = \
+            f'Validation failed with {len(errors)=}, {len(warnings)=}:\n{error_str}\n{warn_str}'
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write('result-description<<EOF\n')
+          f.write(description)
+          f.write('EOF\n')
+
+        print('Validation-Result:\n')
+        print(description)
+
+        if not ok and '${{ inputs.on-validation-errors }}' == 'fail':
+          print('there were errors, and `on-validation-errors` is set to `fail` -> exiting w/ 1')
+          exit(1)

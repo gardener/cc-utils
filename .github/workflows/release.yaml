@@ -36,6 +36,16 @@ on:
 
           If not passed, an artefact named `base-component-descriptor` will be assumed to
           exist, and used as default / fallback.
+      on-validation-errors:
+        default: fail
+        type: string
+        description: |
+          How to behave in case of validation-errors. Allowed values are:
+          - fail     # abort release
+          - continue # ignore and create release (if possible)
+
+          Validation can be customised using `ocm-validation-cfg` input (currently, only
+          OCM-Component-Descriptor validation is implemented).
       release-commit-objects:
         required: false
         type: string
@@ -268,6 +278,14 @@ jobs:
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
           private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+      - uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-validate
+        with:
+          component-descriptor-path: /tmp/ocm/component-descriptor.yaml
+          on-validation-errors: ${{ inputs.on-validation-errors }}
+          validation-cfg: |
+            schema: fail
+            access: fail
+            artefact-uniqueness: fail
       - uses: gardener/cc-utils/.github/actions/release-notes@master
         id: release-notes
         with:
