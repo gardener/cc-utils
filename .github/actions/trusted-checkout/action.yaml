@@ -84,6 +84,10 @@ inputs:
     type: string
     description: |
       passed as `repository` input to checkout-action
+  ref:
+    type: string
+    description: |
+      passed as `ref` input to checkout-action
 outputs:
   token:
     description: |
@@ -130,12 +134,14 @@ runs:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
         repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
     - uses: actions/checkout@v4
       if: ${{ inputs.token != '' || steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
         repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
         token: ${{ steps.token.outputs.token || inputs.token }}
 
     - name: checkout-submodules
