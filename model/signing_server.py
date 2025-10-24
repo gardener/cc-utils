@@ -2,27 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import enum
-import typing
-
 import model.base
-
-
-class SigningAlgorithm(enum.StrEnum):
-    RSASSA_PSS = 'rsassa-pss'
-    RSASSA_PKCS1_V1_5 = 'rsassa-pkcs1-v1_5'
-
-    @staticmethod
-    def as_rfc_standard(algorithm: typing.Union['SigningAlgorithm', str]) -> str:
-        # parses the algorithm to the standard format described in
-        # https://datatracker.ietf.org/doc/html/rfc3447
-        algorithm = SigningAlgorithm(algorithm.lower())
-        if algorithm is SigningAlgorithm.RSASSA_PSS:
-            return 'RSASSA-PSS'
-        elif algorithm is SigningAlgorithm.RSASSA_PKCS1_V1_5:
-            return 'RSASSA-PKCS1-v1_5'
-        else:
-            raise NotImplementedError(algorithm)
 
 
 class SigningServerConfig(model.base.NamedModelElement):

@@ -12,8 +12,8 @@ import cryptography.hazmat.primitives.serialization as crypto_serialiation
 import pytest
 
 import cosign
-import model.signing_server
 import oci.model
+import signingserver
 
 
 @pytest.fixture
@@ -191,7 +191,7 @@ def test_image_signing(
     )
 
     signature = 'rsassa-pss-signature-dummy'
-    signing_algorithm = model.signing_server.SigningAlgorithm.RSASSA_PSS
+    signing_algorithm = signingserver.SigningAlgorithm.RSASSA_PSS
 
     signed_manifest = cosign.sign_manifest(
         manifest=manifest,
@@ -224,7 +224,7 @@ def test_image_signing(
     assert signed_manifest == manifest_resigned # nothing should have changed during re-signing
 
     signature = 'rsassa-pkcs1-v1-5-signature-dummy'
-    signing_algorithm = model.signing_server.SigningAlgorithm.RSASSA_PKCS1_V1_5
+    signing_algorithm = signingserver.SigningAlgorithm.RSASSA_PKCS1_V1_5
 
     manifest_different_algorithm = cosign.sign_manifest(
         manifest=dataclasses.replace(manifest_resigned), # copy of previous manifest
@@ -243,7 +243,7 @@ def test_image_signing(
     assert signature_layer.digest == payload_with_annotations_digest
 
     signature = 'rsassa-pss-signature-dummy-changed-again'
-    signing_algorithm = model.signing_server.SigningAlgorithm.RSASSA_PSS
+    signing_algorithm = signingserver.SigningAlgorithm.RSASSA_PSS
 
     manifest_different_key = cosign.sign_manifest(
         manifest=dataclasses.replace(manifest_different_algorithm), # copy of previous manifest
@@ -262,7 +262,7 @@ def test_image_signing(
     assert signature_layer.digest == payload_with_annotations_digest
 
     signature = 'rsassa-pss-signature-dummy-changed-payload'
-    signing_algorithm = model.signing_server.SigningAlgorithm.RSASSA_PSS
+    signing_algorithm = signingserver.SigningAlgorithm.RSASSA_PSS
 
     manifest_different_key = cosign.sign_manifest(
         manifest=dataclasses.replace(manifest_different_algorithm), # copy of previous manifest
