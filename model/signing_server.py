@@ -25,11 +25,6 @@ class SigningAlgorithm(enum.StrEnum):
             raise NotImplementedError(algorithm)
 
 
-class SigningServerEndpoint(model.base.NamedModelElement):
-    def url(self) -> str:
-        return self.raw.get('url')
-
-
 class SigningServerConfig(model.base.NamedModelElement):
     def private_key(self) -> str:
         return self.raw['private_key']
