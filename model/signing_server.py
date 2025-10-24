@@ -14,9 +14,3 @@ class SigningServerConfig(model.base.NamedModelElement):
 
     def ca_certificates(self):
         return self.raw['ca_certificates']
-
-    def algorithm(self) -> SigningAlgorithm:
-        return SigningAlgorithm(self.raw.get('algorithm', SigningAlgorithm.RSASSA_PSS))
-
-    def signature_name(self) -> str:
-        return self.raw['signature_name']
