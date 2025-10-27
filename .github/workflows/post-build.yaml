@@ -173,7 +173,7 @@ jobs:
         with:
           oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-validate
+      - uses: gardener/cc-utils/.github/actions/ocm-validate@master
         with:
           component-descriptor-path: /tmp/ocm/component-descriptor.yaml
           on-validation-errors: ${{ inputs.on-validation-errors }}

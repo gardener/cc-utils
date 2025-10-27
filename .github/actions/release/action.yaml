@@ -413,7 +413,7 @@ runs:
             stream=file,
           )
     - name: validate OCM Component-Descriptor
-      uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-validate
+      uses: gardener/cc-utils/.github/actions/ocm-validate@master
       with:
         component-descriptor-path: /tmp/component-descriptor.yaml
         on-validation-errors: ${{ inputs.on-validation-errors }}
