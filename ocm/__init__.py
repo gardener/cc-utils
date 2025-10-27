@@ -6,6 +6,7 @@ import functools
 import io
 import json
 import logging
+import typing
 import os
 import urllib.parse
 
@@ -592,6 +593,15 @@ class Component(LabelMethodsMixin):
     labels: list[Label] = dataclasses.field(default_factory=list)
 
     creationTime: str | None = None
+
+    @property
+    def component(self) -> typing.Self:
+        '''
+        returns a reference to self. This is a convenience-shortcut for making it easier to
+        ensure `ocm.Component` is present in cases where either `ocm.ComponentDescriptor` or
+        `ocm.Component` are accepted.
+        '''
+        return self
 
     @property
     def current_ocm_repo(self):
