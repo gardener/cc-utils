@@ -45,7 +45,6 @@ def requirements():
         'msal',
         'openstacksdk',
         'oss2',
-        'pycryptodome',
         'pylama',
         'pylint',
         'python-gitlab',
@@ -87,7 +86,6 @@ def modules():
     omit_modules = (
         'ctx',
         'dockerutil',
-        'http_requests',
         'mailutil',
         'makoutil',
     )
@@ -110,7 +108,6 @@ def packages():
     omit_packages = (
         'ccc',
         'concourse',
-        'delivery',
         'mail',
         'model',
         'slackclient',
