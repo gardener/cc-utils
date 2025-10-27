@@ -12,7 +12,6 @@ import sys
 import typing
 import zlib
 
-import cachecontrol
 import requests
 
 from requests.adapters import HTTPAdapter
@@ -76,6 +75,7 @@ def mount_default_adapter(
     retry_cfg: Retry=_default_retry_cfg,
 ):
     if AdapterFlag.CACHE in flags:
+        import cachecontrol
         adapter_constructor = cachecontrol.CacheControlAdapter
     else:
         adapter_constructor = HTTPAdapter
