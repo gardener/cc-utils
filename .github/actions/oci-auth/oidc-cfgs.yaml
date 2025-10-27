@@ -55,6 +55,7 @@
   github_host: gh-wdf
   github_orgs:
     - kubernetes
+    - kubernetes-cicd
 
 # ghwdf / delivery
 - name: wdf-gar-delivery
