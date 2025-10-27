@@ -179,7 +179,7 @@ jobs:
           on-validation-errors: ${{ inputs.on-validation-errors }}
           validation-cfg: |
             schema: fail
-            access: fail
+            access: ${{ steps.prep.outputs.can-push == 'true' && 'fail' || 'skip' }}
             artefact-uniqueness: fail
       - name: upload-component-descriptor-to-ocm-repository
         if: ${{ steps.prep.outputs.can-push == 'true' }}
