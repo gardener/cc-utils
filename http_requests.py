@@ -97,26 +97,6 @@ def mount_default_adapter(
     return session
 
 
-def check_http_code(function):
-    '''
-    a decorator that will check on `requests.Response` instances returned by HTTP requests
-    issued with `requests`. In case the response code indicates an error, a warning is logged
-    and a `requests.HTTPError` is raised.
-
-    @param: the function to wrap; should be `requests.<http-verb>`, e.g. requests.get
-    @raises: `requests.HTTPError` if response's status code indicates an error
-    '''
-    @functools.wraps(function)
-    def http_checker(*args, **kwargs):
-        result = function(*args, **kwargs)
-        if not result.ok:
-            url = kwargs.get('url', None)
-            logger.warning(f'{result.status_code=} - {result.content=}: {url=}')
-        result.raise_for_status()
-        return result
-    return http_checker
-
-
 class AuthenticatedRequestBuilder:
     '''
     Wrapper around the 'requests' library, handling concourse-specific
