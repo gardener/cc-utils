@@ -11,6 +11,7 @@ import sys
 import dacite
 
 import ocm
+import ocm.iter
 import ocm.oci
 import ocm.upload
 
@@ -331,8 +332,6 @@ def download(parsed):
             Dumper=ocm.EnumValueYamlDumper,
         )
         if parsed.recursive:
-            import ocm.iter
-
             for node in ocm.iter.iter(
                 component=component,
                 lookup=lambda cid, repo=None: _fetch_component_descriptor(
