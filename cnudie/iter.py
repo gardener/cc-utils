@@ -3,6 +3,12 @@ deprecation note: this package (cnudie.iter) is _deprecated_. Switch to `ocm.ite
 '''
 
 print('Warning: deprecation note. package `cnudie.iter` is deprecated. Switch to `ocm.iter`')
+import sys
+if 'ocm.iter' in sys.module:
+    print(
+        'Error: ocm.iter was already imported - aborting to avoid runtime errors from mixed imports'
+    )
+    exit(1)
 
 import collections.abc
 import dataclasses
