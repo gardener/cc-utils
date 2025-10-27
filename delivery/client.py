@@ -12,7 +12,6 @@ import requests.sessions
 import ocm
 
 import ci.util
-import cnudie.util
 import delivery.jwt
 import delivery.model as dm
 import http_requests
@@ -452,7 +451,7 @@ class DeliveryServiceClient:
         if any((name, version, ocm_repo_url)):
             if component:
                 raise ValueError('must pass either name (and version and ocm_repo_url) OR component')
-        elif component and (component := cnudie.util.to_component(component)):
+        elif component and (component := component.component):
             name = component.name
             version = component.version
         else:
