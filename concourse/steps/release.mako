@@ -114,7 +114,6 @@ import ccc.concourse
 import ccc.github
 import ccc.oci
 import ci.util
-import cnudie.iter
 import cnudie.retrieve
 import cnudie.util
 import concourse.steps.component_descriptor_util as cdu
@@ -123,6 +122,7 @@ import concourse.model.traits.version
 import concourse.model.traits.release
 import concourse.util
 import ocm
+import ocm.iter
 import ocm.upload
 import ocm.util
 import ocm.validate
@@ -443,7 +443,7 @@ create_and_push_tags(
 % endif
 
 logger.info('validating component-descriptor')
-nodes = cnudie.iter.iter(
+nodes = ocm.iter.iter(
   component=component,
   lookup=component_descriptor_lookup,
 )
