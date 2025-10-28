@@ -456,7 +456,7 @@ validation_cfg = ocm.validate.ValidationCfg(
 for validation_error in ocm.validate.iter_violations(
   nodes=nodes,
   oci_client=oci_client,
-  violation_cfg=validation_cfg,
+  validation_cfg=validation_cfg,
 ):
   logger.warning(f'{validation_error=}')
 
