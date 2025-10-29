@@ -84,7 +84,6 @@
   github_host: gh-wdf
   github_orgs:
     - kubernetes-dev
-    - kubernetes-staging
 
 # ghtools / delivery-dev
 - name: tools-gar-delivery-dev
@@ -122,6 +121,20 @@
   github_host: gh-tools
   github_orgs:
     - kubernetes-dev
+
+# ghwdf / delivery-staging
+- name: wdf-gar-delivery-dev
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-staging-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github_host: gh-wdf
+  github_orgs:
+    - kubernetes-staging
 
 # ghtools / delivery-staging
 - name: tools-gar-delivery-staging
