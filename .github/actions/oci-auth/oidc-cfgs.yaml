@@ -84,6 +84,7 @@
   github_host: gh-wdf
   github_orgs:
     - kubernetes-dev
+    - kubernetes-staging
 
 # ghtools / delivery-dev
 - name: tools-gar-delivery-dev
