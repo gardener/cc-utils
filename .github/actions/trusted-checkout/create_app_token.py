@@ -56,7 +56,13 @@ def main():
         return f'{p.github_api}/{suffix}'
 
     installation = sess.get(api_url(f'orgs/{p.github_org}/installation')).json()
-    installation_id = installation.get('id')
+    installation_id = installation.get('id', None)
+
+    if installation_id is None:
+        print(
+            f'Error: did not find an installation for github-app ({p.client_id=} in {p.github_org})'
+        )
+        exit(1)
 
     if p.repositories:
         body = {
