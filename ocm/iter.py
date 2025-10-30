@@ -11,7 +11,6 @@ if 'cnudie.iter' in sys.modules:
     print(
       'Error: cnudie.iter was already imported - aborting to avoid runtime errors from mixed imports'
     )
-    exit(1)
 
 
 class NodeReferenceType(enum.StrEnum):

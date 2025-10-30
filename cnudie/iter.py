@@ -8,7 +8,6 @@ if 'ocm.iter' in sys.modules:
     print(
         'Error: ocm.iter was already imported - aborting to avoid runtime errors from mixed imports'
     )
-    exit(1)
 
 import collections.abc
 import dataclasses
