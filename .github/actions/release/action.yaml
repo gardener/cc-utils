@@ -396,11 +396,11 @@ runs:
           ocm.Resource(
             name='branch-info',
             version=component.version,
-            type='vnd.sap/branch-info+yaml',
+            type='application/vnd.gardener.cloud.branch-info+yaml',
             access=ocm.LocalBlobAccess(
               localReference=branch_info_digest,
               size=len(branch_info_bytes),
-              mediaType='vnd.sap/branch-info+yaml',
+              mediaType='application/vnd.gardener.cloud.branch-info+yaml',
             ),
           ),
         )
