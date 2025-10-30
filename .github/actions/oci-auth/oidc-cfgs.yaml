@@ -176,12 +176,13 @@
 # ghwdf / delivery-canary
 - name: wdf-gar-delivery-canary
   type: gar
-  project_name: sap-se-gcp-k8s-delivery
-  project_id: 370994582649
-  service_account: gardener-canary-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  project_name: sap-se-gcp-k8s-c-delivery
+  project_id: 924064794200
+  service_account: gardener-canary-readwrite@sap-se-gcp-k8s-c-delivery.iam.gserviceaccount.com
   identity_pool_name: github-actions
   identity_provider_name: github-wdf-actions-provider
   oci_repository_prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-c-delivery
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
   github_host: gh-wdf
   github_orgs:
@@ -227,12 +228,14 @@
 # ghwdf / delivery-live
 - name: wdf-gar-delivery-live
   type: gar
-  project_name: sap-se-gcp-k8s-delivery
-  project_id: 370994582649
-  service_account: gardener-live-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  project_name: sap-se-gcp-k8s-l-delivery
+  project_id: 782931607272
+  service_account: gardener-live-readwrite@sap-se-gcp-k8s-l-delivery.iam.gserviceaccount.com
   identity_pool_name: github-actions
   identity_provider_name: github-wdf-actions-provider
   oci_repository_prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-l-delivery
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-c-delivery
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
   github_host: gh-wdf
   github_orgs:
