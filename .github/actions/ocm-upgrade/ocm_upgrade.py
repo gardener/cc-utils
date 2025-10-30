@@ -396,9 +396,9 @@ def create_upgrade_pullrequests(
                     logger.info(f'already at target {cref.componentName} {target=} (skip)')
                     continue
 
-                if tv < cv and upstream_update_policy is not UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+                if tv < cv:
                     logger.info(
-                        f'skip (no downgrade for ACCEPT_HOTFIXES): {cref.componentName} '
+                        f'skip (no downgrades): {cref.componentName} '
                         f'{cref.version=} -> {target=}'
                     )
                     continue
