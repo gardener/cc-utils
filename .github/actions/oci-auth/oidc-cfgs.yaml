@@ -173,6 +173,20 @@
   github_orgs:
     - kubernetes-staging
 
+# ghwdf / delivery-canary
+- name: wdf-gar-delivery-canary
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-canary-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github_host: gh-wdf
+  github_orgs:
+    - kubernetes-canary
+
 # ghtools / delivery-canary
 - name: tools-gar-delivery-canary
   type: gar
@@ -209,6 +223,20 @@
   github_host: gh-tools
   github_orgs:
     - kubernetes-canary
+
+# ghwdf / delivery-live
+- name: wdf-gar-delivery-live
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-live-readwrite@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github_host: gh-wdf
+  github_orgs:
+    - kubernetes-live
 
 # ghtools / delivery-live
 - name: tools-gar-delivery-live
