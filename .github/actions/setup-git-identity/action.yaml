@@ -13,6 +13,10 @@ inputs:
     description: The Git user email
     required: false
     default: ''
+  github_hostname:
+    description: Overwrite of the GitHub hostname to determine the appropriate default GHA user
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -28,8 +32,12 @@ runs:
           user_email=${{ inputs.user_email }}
 
           if [[ -z "$user_email" ]]; then
-            # determine user email address based on current GH-instance
-            github_host="${GITHUB_SERVER_URL#https://}"
+            github_host=${{ inputs.github_hostname }}
+
+            if [[ -z "$github_host" ]]; then
+              # determine user email address based on current GH-instance
+              github_host="${GITHUB_SERVER_URL#https://}"
+            fi
 
             case "$github_host" in
               github.com*)
