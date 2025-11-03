@@ -633,6 +633,7 @@ runs:
     - name: create-bump-commit
       id: bump
       uses: gardener/cc-utils/.github/actions/version@master
+      # must be kept in sync with version action called in release workflow (except "version-operation")
       with:
         versionfile: ${{ inputs.version-versionfile }}
         read-callback: ${{ inputs.version-read-callback }}
