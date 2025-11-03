@@ -210,22 +210,73 @@ jobs:
     needs:
       - component-descriptor
       - repo-metadata
-    # only run for default-branch, and never run for forks
-    if: ${{ github.ref_name == github.event.repository.default_branch &&
-            ! fromJSON(needs.repo-metadata.outputs.fork) &&
-            github.event_name == 'push'
-        }}
+    # never run for forks and only for push events
+    if: ${{ ! fromJSON(needs.repo-metadata.outputs.fork) && github.event_name == 'push' }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
       id-token: write
     steps:
+      - uses: actions/checkout@v4
+      - name: Preprocess
+        id: preprocess
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ${{ github.ref_name == github.event.repository.default_branch }}; then
+            info="INFO: On default branch, creating draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=true" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+
+          if [ ! -f .ocm/branch-info.yaml ]; then
+            info="INFO: Not on default branch and no .ocm/branch-info.yaml file, skipping draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=false" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+
+          release_branch_template=$(cat .ocm/branch-info.yaml | yq .release-branch-template)
+
+          if [ $release_branch_template == "null" ]; then
+            info="INFO: Not on default branch and no release-branch-template found, skipping draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=false" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+
+          # replace $major/$minor/$patch with regex patterns and mark start/end of line
+          regex="${release_branch_template//\$major/[0-9]+}"
+          regex="${regex//\$minor/[0-9]+}"
+          regex="${regex//\$patch/[0-9]+}"
+          regex="${regex//\./\\.}"
+          regex="^${regex}$"
+
+          if [[ "${{ github.ref_name }}" =~ $regex ]]; then
+            info="INFO: On release branch, creating draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=true" >> ${GITHUB_OUTPUT}
+            exit 0
+          else
+            info="INFO: Not on release branch, skipping draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=false" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
       - name: fetch-prepare-values
-        if: ${{ inputs.ocm-repositories == '' }}
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' && inputs.ocm-repositories == '' }}
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         id: prep
         run: |
           if [ -f prepare-workflow-values.tar ]; then
@@ -236,9 +287,8 @@ jobs:
             ocm_repos="${{ inputs.ocm-repositories }}"
           fi
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
-      - uses: actions/checkout@v4
       - name: draft-release-notes
-        id: drn
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/release-notes@master
         with:
           component-descriptor: ${{ needs.component-descriptor.outputs.component-descriptor }}
@@ -263,6 +313,7 @@ jobs:
               recursion_depth: 0
               include_resources: true
       - name: update-draft-release
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/draft-release@master
         with:
           version: ${{ needs.component-descriptor.outputs.version }}

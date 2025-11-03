@@ -98,7 +98,7 @@ def main():
 
     for release, deleted in github.release.delete_outdated_draft_releases(repository):
         if deleted:
-            print('Deleted obsolete draft {release.name=}')
+            print(f'Deleted obsolete draft {release.name=}')
         else:
             print(f'Failed to delete draft {release.name=}')
 
