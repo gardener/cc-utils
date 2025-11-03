@@ -230,6 +230,13 @@ on:
         description: |
           passed as same-named input to release-notes action. Controls whether copies of
           release-notes of sub-components are included.
+      create-release-branch:
+        type: boolean
+        default: false
+        description: |
+          controls whether a release-/hotfix-branch should be created for the current release.
+          Honours the `.ocm/branch-info.yaml`'s `release-branch-template` setting if any, otherwise
+          defaults to "release-v$major.$minor" as template.
 
     outputs:
       release-notes:
@@ -334,3 +341,65 @@ jobs:
             channel_id: ${{ inputs.slack-channel-id }}
             title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
             file: /tmp/release-notes/slack-release-notes.md
+
+      - name: reset-repository-to-release-commit
+        if: ${{ inputs.create-release-branch == 'true' && inputs.next-version != 'bump-patch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # note: only works if capture-commit action was only used to create the release-commit
+          commit_digest="$(git rev-parse refs/capture-commit)"
+
+          git reset --hard "$commit_digest"
+
+      - name: create-release-branch-bump-commit
+        if: ${{ inputs.create-release-branch == 'true' && inputs.next-version != 'bump-patch' }}
+        uses: gardener/cc-utils/.github/actions/version@master
+        # must be kept in sync with version action called in release action (except "version-operation")
+        with:
+          versionfile: ${{ inputs.version-versionfile }}
+          read-callback: ${{ inputs.version-read-callback }}
+          write-callback: ${{ inputs.version-write-callback }}
+          callback-action-path: ${{ inputs.next-version-callback-action-path }}
+          commit-message: "next version: ${version}"
+          version-operation: bump-patch
+          prerelease: dev
+          repository-operation: commit-to-head
+          commit-kind: bump
+
+      - name: create-and-push-release-branch
+        if: ${{ inputs.create-release-branch == 'true' && inputs.next-version != 'bump-patch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${{ steps.component-descriptor.outputs.version }}"
+
+          if [[ $version == v* ]]; then
+            prefix="v"
+            semver_version="${version#v}"
+          else
+            prefix=""
+            semver_version="$version"
+          fi
+
+          export major=$(echo "$semver_version" | cut -d. -f1)
+          export minor=$(echo "$semver_version" | cut -d. -f2)
+          export patch=$(echo "$semver_version" | cut -d. -f3)
+
+          # default values if not present in .ocm/branch-info.yaml file
+          release_branch_template="release-v$major.$minor"
+
+          if [ -f .ocm/branch-info.yaml ]; then
+            release_branch_template_overwrite=$(cat .ocm/branch-info.yaml | yq .release-branch-template)
+
+            if [ $release_branch_template_overwrite != "null" ]; then
+              echo "INFO: Found .ocm/branch-info.yaml file with branch template $release_branch_template_overwrite"
+              release_branch_template=$release_branch_template_overwrite
+            fi
+          fi
+
+          branch="$(echo $release_branch_template | envsubst)" # fill in values of major/minor/patch
+
+          git push origin "@:refs/heads/$branch"
