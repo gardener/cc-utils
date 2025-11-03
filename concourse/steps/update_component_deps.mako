@@ -209,6 +209,15 @@ for component_reference in greatest_component_references:
         # consideration
         upgrade_pull_requests.append(pull_request)
 
+        # early-exit after first created upgrade PR as a workaround (for now) to prevent
+        # unintended sideeffects (e.g. dirty worktree, git conflicts)
+        # -> possible upgrade PRs for other components will be created upon the next execution
+        break
+    else:
+        continue
+
+    break # early-exit (see above)
+
 for upgrade_pull_request in github.pullrequest.iter_obsolete_upgrade_pull_requests(
     list(upgrade_pull_requests)
 ):
