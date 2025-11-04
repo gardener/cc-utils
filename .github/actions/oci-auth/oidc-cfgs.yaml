@@ -41,6 +41,7 @@
   github_orgs:
     - kubernetes
     - open-delivery-gear
+    - bobcat
 
 # ghwdf / gardener-project
 - name: wdf-gar-gardener-project
