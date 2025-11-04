@@ -41,6 +41,19 @@
   github_orgs:
     - kubernetes
     - open-delivery-gear
+
+# ghtools / delivery-readonly
+- name: tools-gar-delivery-readonly
+  type: gar
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-delivery-readonly@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-tools-actions-provider
+  oci_repository_prefixes:
+    - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+  github_host: gh-tools
+  github_orgs:
     - bobcat
 
 # ghwdf / gardener-project
