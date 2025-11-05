@@ -17,6 +17,10 @@ inputs:
     description: Overwrite of the GitHub hostname to determine the appropriate default GHA user
     required: false
     default: ''
+  scope:
+    description: Either the path to the git config or one of the special values "local" and "global"
+    required: false
+    default: local
 runs:
   using: composite
   steps:
@@ -24,11 +28,20 @@ runs:
       shell: bash
       run: |
         git config --global --add safe.directory $PWD
-        if ! git config user.name >/dev/null; then
-          git config user.name "${{ inputs.user_name }}"
+
+        if [[ "${{ inputs.scope }}" == "global" ]]; then
+          config_scope="--global"
+        elif [[ "${{ inputs.scope }}" == "local" ]]; then
+          config_scope="--local"
+        else
+          config_scope="--file ${{ inputs.scope }}"
         fi
 
-        if ! git config user.email >/dev/null; then
+        if ! git config $config_scope user.name >/dev/null; then
+          git config $config_scope user.name "${{ inputs.user_name }}"
+        fi
+
+        if ! git config $config_scope user.email >/dev/null; then
           user_email=${{ inputs.user_email }}
 
           if [[ -z "$user_email" ]]; then
@@ -58,5 +71,5 @@ runs:
             user_email="${user_id}+github-actions[bot]@users.noreply.${github_host}"
           fi
 
-          git config user.email "$user_email"
+          git config $config_scope user.email "$user_email"
         fi
