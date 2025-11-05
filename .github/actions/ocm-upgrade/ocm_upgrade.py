@@ -5,9 +5,11 @@ import dataclasses
 import enum
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
+import typing
 
 try:
     import ocm
@@ -17,6 +19,7 @@ except ImportError:
     sys.path.insert(1, repo_root)
     import ocm
 
+import dacite
 import github3.repos
 import yaml
 
@@ -49,6 +52,34 @@ class MergeMethod(enum.StrEnum):
     MERGE = 'merge'
     REBASE = 'rebase'
     SQUASH = 'squash'
+
+
+@dataclasses.dataclass
+class MergePolicyConfig:
+    merge_policy: MergePolicy
+    merge_method: MergeMethod
+    components: list[str] | str
+
+    def __post_init__(self):
+        if isinstance(self.components, str):
+            self.components = [self.components]
+
+    @staticmethod
+    def from_dict(raw: dict) -> typing.Self:
+        return dacite.from_dict(
+            data_class=MergePolicyConfig,
+            data=raw,
+            config=dacite.Config(
+                cast=[enum.Enum],
+                convert_key=lambda key: key.replace('_', '-'),
+            ),
+        )
+
+    def matches(self, component_name: str) -> bool:
+        for component in self.components:
+            if re.fullmatch(component, component_name):
+                return True
+        return False
 
 
 def create_ocm_lookups(
@@ -347,6 +378,7 @@ def create_upgrade_pullrequests(
     repository: github3.repos.Repository,
     merge_policy: MergePolicy,
     merge_method: MergeMethod,
+    merge_policy_configs: list[MergePolicyConfig],
     branch: str,
     oci_client: oci.client.Client,
     pr_naming_pattern: str,
@@ -359,6 +391,15 @@ def create_upgrade_pullrequests(
     ):
         logger.info(f'processing {cref=}')
         upgrade_vectors: list[ocm.gardener.UpgradeVector] = []
+
+        for merge_policy_config in merge_policy_configs:
+            if merge_policy_config.matches(cref.componentName):
+                current_merge_policy = merge_policy_config.merge_policy
+                current_merge_method = merge_policy_config.merge_method
+                break
+        else:
+            current_merge_policy = merge_policy
+            current_merge_method = merge_method
 
         if upstream_component_name:
             upstream_version = version.greatest_version(
@@ -461,8 +502,8 @@ def create_upgrade_pullrequests(
                 repo_dir=repo_dir,
                 repo_url=repo_url,
                 repository=repository,
-                merge_policy=merge_policy,
-                merge_method=merge_method,
+                merge_policy=current_merge_policy,
+                merge_method=current_merge_method,
                 branch=branch,
                 oci_client=oci_client,
                 component_reference_name=component_reference_name,

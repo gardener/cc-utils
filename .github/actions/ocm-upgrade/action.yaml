@@ -54,6 +54,21 @@ inputs:
       - rebase
       - merge
       - squash
+  merge-policies:
+    required: false
+    type: string
+    description: |
+      A YAML-formatted string defining merge-policies/-methods per component. Components which are
+      not contained in the list will fallback to the separate inputs `merge-policy` and `merge-method`.
+
+      Example:
+      ```
+      - components:
+          - acme.org/my-component
+          - acme.org/my-other-component
+        merge-policy: automerge # manual
+        merge-method: rebase # merge, squash
+      ```
   prepare-action-path:
     description: |
       Path (relative to repository-root) to a local action. If given, this action will be called
@@ -164,6 +179,14 @@ runs:
         merge_policy = ocm_upgrade.MergePolicy('${{ inputs.merge-policy }}')
         merge_method = ocm_upgrade.MergeMethod('${{ inputs.merge-method }}')
 
+        merge_policy_configs_raw = yaml.safe_load('''\
+        ${{ inputs.merge-policies }}
+        ''') or []
+        merge_policy_configs = [
+          ocm_upgrade.MergePolicyConfig.from_dict(merge_policy_config_raw)
+          for merge_policy_config_raw in merge_policy_configs_raw
+        ]
+
         with open('/tmp/github-token') as f:
           github_token = f.read().strip()
 
@@ -200,6 +223,7 @@ runs:
             repository=repository,
             merge_policy=merge_policy,
             merge_method=merge_method,
+            merge_policy_configs=merge_policy_configs,
             branch='${{ github.ref_name }}',
             oci_client=oci_client,
             upstream_component_name=upstream_component,

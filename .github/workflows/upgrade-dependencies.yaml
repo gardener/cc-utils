@@ -59,6 +59,21 @@ on:
             - rebase
             - merge
             - squash
+      merge-policies:
+        required: false
+        type: string
+        description: |
+          A YAML-formatted string defining merge-policies/-methods per component. Components which are
+          not contained in the list will fallback to the separate inputs `merge-policy` and `merge-method`.
+
+          Example:
+          ```
+          - components:
+              - acme.org/my-component
+              - acme.org/my-other-component
+            merge-policy: automerge # manual
+            merge-method: rebase # merge, squash
+          ```
       prepare-action-path:
         required: false
         type: string
@@ -115,6 +130,7 @@ jobs:
           github-token: ${{ steps.checkout.outputs.token }}
           merge-policy: ${{ inputs.merge-policy }}
           merge-method: ${{ inputs.merge-method }}
+          merge-policies: ${{ inputs.merge-policies }}
           prepare-action-path: ${{ inputs.prepare-action-path }}
           upstream-component-name: ${{ inputs.upstream-component-name }}
           upstream-update-policy: ${{ inputs.upstream-update-policy }}
