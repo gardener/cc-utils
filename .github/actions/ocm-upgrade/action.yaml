@@ -161,14 +161,8 @@ runs:
           ocm_repositories=ocm_repositories,
         )
 
-        merge_method = '${{ inputs.merge-method }}'
-        merge_policy = '${{ inputs.merge-policy }}'
-        if merge_policy == 'automerge':
-          auto_merge = True
-        elif merge_policy == 'manual':
-          auto_merge = False
-        else:
-          raise ValueError(f'unexpected {merge_policy=}')
+        merge_policy = ocm_upgrade.MergePolicy('${{ inputs.merge-policy }}')
+        merge_method = ocm_upgrade.MergeMethod('${{ inputs.merge-method }}')
 
         with open('/tmp/github-token') as f:
           github_token = f.read().strip()
@@ -204,7 +198,7 @@ runs:
             repo_dir=repo_dir,
             repo_url=f'https://{host}/{org}/{repo}',
             repository=repository,
-            auto_merge=auto_merge,
+            merge_policy=merge_policy,
             merge_method=merge_method,
             branch='${{ github.ref_name }}',
             oci_client=oci_client,

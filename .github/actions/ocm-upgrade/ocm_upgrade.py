@@ -40,6 +40,17 @@ class UpstreamUpdatePolicy(enum.StrEnum):
     ACCEPT_HOTFIXES = 'accept-hotfixes'
 
 
+class MergePolicy(enum.StrEnum):
+    AUTOMERGE = 'automerge'
+    MANUAL = 'manual'
+
+
+class MergeMethod(enum.StrEnum):
+    MERGE = 'merge'
+    REBASE = 'rebase'
+    SQUASH = 'squash'
+
+
 def create_ocm_lookups(
     ocm_repositories: collections.abc.Iterable[str],
 ) -> tuple[
@@ -218,8 +229,8 @@ def create_upgrade_pullrequest(
     repo_dir: str,
     repo_url: str,
     repository: github3.repos.Repository,
-    auto_merge: bool,
-    merge_method: str,
+    merge_policy: MergePolicy,
+    merge_method: MergeMethod,
     branch: str,
     oci_client: oci.client.Client,
     component_reference_name: str | None=None,
@@ -281,6 +292,8 @@ def create_upgrade_pullrequest(
     tv = upgrade_vector.whither.version
     commit_message = f'Upgrade {upgrade_vector.component_name}\n\nfrom {fv} to {tv}'
 
+    auto_merge = merge_policy is MergePolicy.AUTOMERGE
+
     with github.pullrequest.commit_and_push_to_tmp_branch(
         repository=repository,
         git_helper=git_helper,
@@ -304,7 +317,7 @@ def create_upgrade_pullrequest(
         if auto_merge:
             logger.info(f'Merging PR#{pull_request.number} -> {branch=}')
             pull_request.merge(
-                merge_method=merge_method,
+                merge_method=merge_method.value,
             )
 
     return github.pullrequest.as_upgrade_pullrequest(pull_request)
@@ -332,8 +345,8 @@ def create_upgrade_pullrequests(
     repo_dir: str,
     repo_url: str,
     repository: github3.repos.Repository,
-    auto_merge: bool,
-    merge_method: str,
+    merge_policy: MergePolicy,
+    merge_method: MergeMethod,
     branch: str,
     oci_client: oci.client.Client,
     pr_naming_pattern: str,
@@ -448,7 +461,7 @@ def create_upgrade_pullrequests(
                 repo_dir=repo_dir,
                 repo_url=repo_url,
                 repository=repository,
-                auto_merge=auto_merge,
+                merge_policy=merge_policy,
                 merge_method=merge_method,
                 branch=branch,
                 oci_client=oci_client,
