@@ -237,16 +237,21 @@ runs:
 
         echo "version=${version}" >> $GITHUB_OUTPUT
 
-        echo "## Version-Commit Summary" >> $GITHUB_STEP_SUMMARY
+        echo "<details><summary>" >> $GITHUB_STEP_SUMMARY
+        echo " <h2>Version-Commit Summary</h2>" >> $GITHUB_STEP_SUMMARY
+        echo "</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
 
         len=$(git show | wc -c)
         if [ $len -gt 4098 ]; then
           # GHA only allows a maximum of 1024 kiB. Let's stay well below this limit, and also avoid
           # spamming build-summary with lengthy diff.
           git log --stat -1 >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
           exit 0
         else
           git show >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
         fi
 
     - name: capture-commit

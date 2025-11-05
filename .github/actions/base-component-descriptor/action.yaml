@@ -242,11 +242,15 @@ runs:
 
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
           f.write(textwrap.dedent(f'''\
-            ## Base-Component-Descriptor
+            <details>
+            <summary>
+             <h2>Base-Component-Descriptor</h2>
+            </summary>
 
             ```
           {textwrap.indent(component_descriptor_str, '  ')}
             ```
+            </details>
           '''))
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
