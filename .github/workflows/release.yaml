@@ -237,6 +237,14 @@ on:
           controls whether a release-/hotfix-branch should be created for the current release.
           Honours the `.ocm/branch-info.yaml`'s `release-branch-template` setting if any, otherwise
           defaults to "release-v$major.$minor" as template.
+      cleanup-release-branches:
+        type: boolean
+        default: false
+        description: |
+          controls whether stale release-/hotfix-branches should be automatically purged. A release
+          branch is considered stale if its version (major, minor, or patch, according to
+          `significant-part` in `.ocm/branch-info.yaml`) is older than the current version by at
+          least the `supported-versions-count`.
 
     outputs:
       release-notes:
@@ -403,3 +411,9 @@ jobs:
           branch="$(echo $release_branch_template | envsubst)" # fill in values of major/minor/patch
 
           git push origin "@:refs/heads/$branch"
+
+      - name: cleanup-stale-release-branches
+        if: ${{ inputs.cleanup-release-branches == 'true' }}
+        uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
+        with:
+          version: ${{ steps.component-descriptor.outputs.version }}

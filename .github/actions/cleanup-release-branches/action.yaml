@@ -1,0 +1,31 @@
+name: Cleanup Release Branches
+description: |
+  Deletes stale release branches in the remote git repository. A release branch is considered stale
+  if its version (major, minor, or patch, according to `significant-part` in `.ocm/branch-info.yaml`)
+  is older than the current version by at least the `supported-versions-count`.
+
+inputs:
+  version:
+    required: true
+    type: string
+    description: |
+      The version of the currently running release. Is used as a reference to determine stale branches.
+  branch-info-file:
+    required: false
+    type: string
+    default: .ocm/branch-info.yaml
+    description: |
+      The relative path to the `branch-info.yaml` file.
+
+runs:
+  using: composite
+  steps:
+    - name: Cleanup Release Branches
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "Deleting stale GitHub release branches..."
+        "${GITHUB_ACTION_PATH}/cleanup_branches.py" \
+          --version "${{ inputs.version }}" \
+          --branch-info-file "${{ inputs.branch-info-file }}"
