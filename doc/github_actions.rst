@@ -173,3 +173,37 @@ always be based on target-repository's local workflow- and actions-definitions.
    Be sure to grant `pull-requests: write`-permission to all workflows called from
    pull_request_target-event (this is needed so trusted-checkout action is able to remove
    trusted-label).
+
+Release Branches
+================
+
+To allow an automatic management of release branches (i.e. branch creation/deletion, draft release
+notes), it is necessary to provide general information on the release cycle in the special
+`.ocm/branch-info.yaml` file (see
+`model class <https://github.com/gardener/cc-utils/blob/master/ocm/branch_info.py>`_ for its
+expected structure and default values). Example:
+
+.. code-block:: yaml
+
+   # .ocm/branch-info.yaml
+   release-branch-template: release-v$major.$minor # e.g. release-v1.0
+   branch-policy:
+      significant-part: minor # major, minor, patch
+      supported-versions-count: 2
+      release-cadence: 2w # d (days), w (weeks), y | yr (years) | null
+
+The `release-cadence` together with the `supported-versions-count` are used to determine an
+estimated end-of-life date for each release. This method can be leveraged by a component-responsible
+to convey the information what kind of maintenance/releases can be expected to the stakeholders. In
+case either of both properties is set to `null`, there will be no end-of-life date being calculated.
+This might be reasonable in case the component has an infrequent or irregular release schedule.
+
+By setting the `create-release-branch: true` input for the `release.yaml` workflow, a successful
+release will automatically create a new release branch according to the specified
+`release-branch-template`. This will include an automatic version bump to the next patch version as
+well.
+
+By setting the `cleanup-release-branches: true` input for the `release.yaml` workflow, stale release
+branches will be automatically deleted upon a successful release. A branch is considered stale if it
+matches the `release-branch-template` and sts version (major, minor, or patch, according to
+`significant-part`) is older than the current version by at least the `supported-versions-count`.
