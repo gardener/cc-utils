@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class UpgradePullRequest:
     pull_request: github3.pulls.PullRequest
     upgrade_vector: ocm.gardener.UpgradeVector
-    component_reference_name: str|None = None
+    component_reference_name: str | None = None
 
     @property
     def component_name(self) -> str:
@@ -34,6 +34,25 @@ class UpgradePullRequest:
         whence_version = version.parse_to_semver(self.upgrade_vector.whence.version)
         whiter_version = version.parse_to_semver(self.upgrade_vector.whither.version)
         return whence_version > whiter_version
+
+    def matching_component_references(
+        self,
+        reference_component: ocm.Component,
+    ) -> collections.abc.Iterable[ocm.ComponentReference]:
+        '''
+        Yields those component references of `reference_component` which match the component name
+        of this upgrade vector and, if `component_reference_name` is set, also have a matching name.
+        '''
+        for component_reference in reference_component.componentReferences:
+            if component_reference.componentName != self.upgrade_vector.component_name:
+                continue
+            if (
+                self.component_reference_name
+                and self.component_reference_name != component_reference.name
+            ):
+                continue
+
+            yield component_reference
 
     def is_obsolete(
         self,
@@ -51,12 +70,8 @@ class UpgradePullRequest:
             raise ValueError(reference_component)
 
         reference_refs = sorted(
-            [
-                rc for rc in reference_component.componentReferences
-                if rc.componentName == self.upgrade_vector.component_name
-                and rc.name == self.component_reference_name
-            ],
-            key=lambda r: version.parse_to_semver(r.version)
+            self.matching_component_references(reference_component=reference_component),
+            key=lambda r: version.parse_to_semver(r.version),
         )
 
         if not reference_refs:
