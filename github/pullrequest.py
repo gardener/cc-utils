@@ -208,6 +208,7 @@ def iter_obsolete_upgrade_pull_requests(
     upgrade_pull_requests: collections.abc.Iterable[UpgradePullRequest],
     pr_naming_pattern: str='component-name',
     keep_hotfix_versions: bool=True,
+    reference_component: ocm.Component | None=None,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
     grouped_upgrade_pull_requests = collections.defaultdict(list)
 
@@ -240,6 +241,14 @@ def iter_obsolete_upgrade_pull_requests(
     for upgrade_pull_request in upgrade_pull_requests:
         if upgrade_pull_request.pull_request.state != 'open':
             continue
+
+        if reference_component and upgrade_pull_request.is_obsolete(
+            reference_component=reference_component,
+        ):
+            # whence version is already behind current component reference version
+            yield upgrade_pull_request
+            continue
+
         name = group_name(upgrade_pull_request,pr_naming_pattern)
         grouped_upgrade_pull_requests[name].append(upgrade_pull_request)
 
