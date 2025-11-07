@@ -263,6 +263,35 @@ trusted-label).</p>
 </div>
 </section>
 </section>
+<section id="release-branches">
+<h2>Release Branches<a class="headerlink" href="#release-branches" title="Link to this heading"></a></h2>
+<p>To allow an automatic management of release branches (i.e. branch creation/deletion, draft release
+notes), it is necessary to provide general information on the release cycle in the special
+<code class="code docutils literal notranslate"><span class="pre">.ocm/branch-info.yaml</span></code> file (see
+<a class="reference external" href="https://github.com/gardener/cc-utils/blob/master/ocm/branch_info.py">model class</a> for its
+expected structure and default values). Example:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># .ocm/branch-info.yaml</span>
+<span class="nt">release-branch-template</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">release-v$major.$minor</span><span class="w"> </span><span class="c1"># e.g. release-v1.0</span>
+<span class="nt">branch-policy</span><span class="p">:</span>
+<span class="w">   </span><span class="nt">significant-part</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">minor</span><span class="w"> </span><span class="c1"># major, minor, patch</span>
+<span class="w">   </span><span class="nt">supported-versions-count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">   </span><span class="nt">release-cadence</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2w</span><span class="w"> </span><span class="c1"># d (days), w (weeks), y | yr (years) | null</span>
+</pre></div>
+</div>
+<p>The <code class="code docutils literal notranslate"><span class="pre">release-cadence</span></code> together with the <code class="code docutils literal notranslate"><span class="pre">supported-versions-count</span></code> are used to determine an
+estimated end-of-life date for each release. This method can be leveraged by a component-responsible
+to convey the information what kind of maintenance/releases can be expected to the stakeholders. In
+case either of both properties is set to <code class="code docutils literal notranslate"><span class="pre">null</span></code>, there will be no end-of-life date being calculated.
+This might be reasonable in case the component has an infrequent or irregular release schedule.</p>
+<p>By setting the <code class="code docutils literal notranslate"><span class="pre">create-release-branch:</span> <span class="pre">true</span></code> input for the <code class="code docutils literal notranslate"><span class="pre">release.yaml</span></code> workflow, a successful
+release will automatically create a new release branch according to the specified
+<code class="code docutils literal notranslate"><span class="pre">release-branch-template</span></code>. This will include an automatic version bump to the next patch version as
+well.</p>
+<p>By setting the <code class="code docutils literal notranslate"><span class="pre">cleanup-release-branches:</span> <span class="pre">true</span></code> input for the <code class="code docutils literal notranslate"><span class="pre">release.yaml</span></code> workflow, stale release
+branches will be automatically deleted upon a successful release. A branch is considered stale if it
+matches the <code class="code docutils literal notranslate"><span class="pre">release-branch-template</span></code> and sts version (major, minor, or patch, according to
+<code class="code docutils literal notranslate"><span class="pre">significant-part</span></code>) is older than the current version by at least the <code class="code docutils literal notranslate"><span class="pre">supported-versions-count</span></code>.</p>
+</section>
 </section>
 
 
