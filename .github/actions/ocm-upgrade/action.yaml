@@ -238,7 +238,7 @@ runs:
         for obsolete_pullrequest in github.pullrequest.iter_obsolete_upgrade_pull_requests(
           upgrade_pull_requests=upgrade_pullrequests,
           keep_hotfix_versions=True,
-          pr_naming_pattern='${{ inputs.pr-naming-pattern }}'
+          pr_naming_pattern='${{ inputs.pr-naming-pattern }}',
           reference_component=component,
         ):
           obsolete_pullrequest.purge()
