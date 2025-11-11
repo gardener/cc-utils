@@ -246,7 +246,9 @@ runs:
 
           if not 'type' in artefact:
             artefact['type'] = magic.detect_from_filename(
-              os.path.join(blobs_dir, local_ref),
+              os.path.realpath(
+                os.path.join(blobs_dir, local_ref)
+              ),
             ).mime_type
 
         ocm_artefacts_yaml_bytes = yaml.safe_dump(ocm_artefacts).encode('utf-8')
