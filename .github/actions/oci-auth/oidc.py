@@ -360,8 +360,17 @@ def write_docker_config(
     image_references: collections.abc.Iterable[str],
     extra_auths: dict | None=None,
 ) -> dict:
-    gh_token = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
-    gh_token_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+    try:
+        gh_token = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
+        gh_token_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+    except KeyError:
+        print('Error: the following environment-variables are not set:')
+        print('- ACTIONS_ID_TOKEN_REQUEST_TOKEN')
+        print('- ACTIONS_ID_TOKEN_REQUEST_URL')
+        print()
+        print('This typically indicates the job was not run with needed permission:')
+        print('  id-token: write')
+        exit(1)
 
     auths = {}
 
