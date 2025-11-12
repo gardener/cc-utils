@@ -520,7 +520,10 @@ def iter_replication_resource_elements(
         (component_descriptor.component, resource)
         for component_descriptor in component_descriptors
         for resource in component_descriptor.component.resources
-        if resource.access.type is ocm.AccessType.OCI_REGISTRY
+        if resource.access.type in (
+            ocm.AccessType.OCI_REGISTRY,
+            ocm.AccessType.RELATIVE_OCI_REFERENCE,
+        )
     ]
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
