@@ -59,8 +59,12 @@ class PrependTargetUploader(UploaderBase):
         tgt_oci_registry: str,
         target_as_source: bool=False,
     ) -> ctt.model.ReplicationResourceElement:
-        if replication_resource_element.source.access.type is not ocm.AccessType.OCI_REGISTRY:
-            raise RuntimeError(f'PrependTargetUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
+        supported_access_types = (
+            ocm.AccessType.OCI_REGISTRY,
+            ocm.AccessType.RELATIVE_OCI_REFERENCE,
+        )
+        if replication_resource_element.source.access.type not in supported_access_types:
+            raise RuntimeError(f'PrependTargetUploader only supports {supported_access_types=}')
 
         if not target_as_source:
             src_ref = replication_resource_element.src_ref
@@ -131,8 +135,12 @@ class RepositoryUploader(UploaderBase):
         tgt_oci_registry: str,
         target_as_source: bool=False,
     ) -> ctt.model.ReplicationResourceElement:
-        if replication_resource_element.source.access.type is not ocm.AccessType.OCI_REGISTRY:
-            raise RuntimeError(f'RepositoryUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
+        supported_access_types = (
+            ocm.AccessType.OCI_REGISTRY,
+            ocm.AccessType.RELATIVE_OCI_REFERENCE,
+        )
+        if replication_resource_element.source.access.type not in supported_access_types:
+            raise RuntimeError(f'RepositoryUploader only supports {supported_access_types=}')
 
         if not target_as_source:
             src_ref = replication_resource_element.src_ref
