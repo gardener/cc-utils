@@ -74,6 +74,7 @@ on:
         description: |
           How the next version (from bump-commit) should be calculated. Will be passed to `version`
           action. (some) allowed values are:
+            - automatic (use `.ocm/branch-info.yaml` to determine the version part to bump)
             - bump-major
             - bump-minor
             - bump-patch
@@ -288,6 +289,67 @@ jobs:
           ocm_repos="$(cat prepare-values.d/ocm-repositories)"
           rm -rf prepare-values.d prepare-workflow-values.tar
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+      - name: prepare-next-version-operation
+        id: prep-next-version
+        shell: python
+        run: |
+          import os
+
+          import yaml
+
+          import ocm.branch_info
+
+
+          next_version = '${{ inputs.next-version }}'
+
+          if next_version != 'automatic':
+            print(f'INFO: {next_version=} is not set to "automatic", no special handling needed')
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'next-version={next_version}\n')
+            exit(0)
+
+          if not os.path.isfile(branch_info_file := '.ocm/branch-info.yaml'):
+            print(f'ERROR: Did not find {branch_info_file=} but next-version was set to "automatic"')
+            exit(1)
+
+          with open(branch_info_file) as f:
+            branch_info_raw = yaml.safe_load(f)
+
+          branch_info = ocm.branch_info.BranchInfo.from_dict(branch_info_raw)
+          branch_policy = branch_info.branch_policy
+
+          branch_name = '${{ github.ref_name }}'
+
+          if branch_info.release_branch_pattern.fullmatch(branch_name):
+            print(f'INFO: Running on release branch {branch_name}')
+
+            if branch_policy.significant_part is ocm.branch_info.VersionParts.MAJOR:
+              next_version = 'bump-minor'
+            elif branch_policy.significant_part is ocm.branch_info.VersionParts.MINOR:
+              next_version = 'bump-patch'
+            elif branch_policy.significant_part is ocm.branch_info.VersionParts.PATCH:
+              print(f'ERROR: Significant part is "patch", but no smaller part to bump')
+              exit(1)
+            else:
+              print(f'ERROR: Unknown significant_part {branch_policy.significant_part}')
+              exit(1)
+
+          else:
+            print(f'INFO: Running on non-release branch {branch_name}')
+
+            if branch_policy.significant_part is ocm.branch_info.VersionParts.MAJOR:
+              next_version = 'bump-major'
+            elif branch_policy.significant_part is ocm.branch_info.VersionParts.MINOR:
+              next_version = 'bump-minor'
+            elif branch_policy.significant_part is ocm.branch_info.VersionParts.PATCH:
+              next_version = 'bump-patch'
+            else:
+              print(f'ERROR: Unknown significant_part {branch_policy.significant_part}')
+              exit(1)
+
+          print(f'INFO: "automatic" version operation has been resolved to {next_version=}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'next-version={next_version}\n')
       - uses: actions/create-github-app-token@v2
         id: app-token
         with:
@@ -325,7 +387,7 @@ jobs:
           release-commit-objects: ${{ inputs.release-commit-objects }}
           release-commit-objects-artefact: release-commit-objects
           release-commit-target: ${{ inputs.release-commit-target }}
-          next-version: ${{ inputs.next-version }}
+          next-version: ${{ steps.prep-next-version.outputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           on-validation-errors: ${{ inputs.on-validation-errors }}
@@ -351,7 +413,7 @@ jobs:
             file: /tmp/release-notes/slack-release-notes.md
 
       - name: reset-repository-to-release-commit
-        if: ${{ inputs.create-release-branch == 'true' && inputs.next-version != 'bump-patch' }}
+        if: ${{ inputs.create-release-branch == 'true' && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -362,7 +424,7 @@ jobs:
           git reset --hard "$commit_digest"
 
       - name: create-release-branch-bump-commit
-        if: ${{ inputs.create-release-branch == 'true' && inputs.next-version != 'bump-patch' }}
+        if: ${{ inputs.create-release-branch == 'true' && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         uses: gardener/cc-utils/.github/actions/version@master
         # must be kept in sync with version action called in release action (except "version-operation")
         with:
@@ -377,7 +439,7 @@ jobs:
           commit-kind: bump
 
       - name: create-and-push-release-branch
-        if: ${{ inputs.create-release-branch == 'true' && inputs.next-version != 'bump-patch' }}
+        if: ${{ inputs.create-release-branch == 'true' && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         shell: bash
         run: |
           set -euo pipefail
