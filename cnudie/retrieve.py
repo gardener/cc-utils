@@ -470,12 +470,22 @@ def oci_component_descriptor_lookup(
             ocm_repository_lookup,
         )
 
-        raw = _raw_component_descriptor_from_oci(
-            component_id=component_id,
-            ocm_repos=ocm_repos,
-            oci_client=local_oci_client,
-            absent_ok=absent_ok,
-        )
+        for ocm_repo in ocm_repos:
+            if isinstance(ocm_repo, str):
+                ocm_repo = ocm.OciOcmRepository(
+                    baseUrl=ocm_repo,
+                )
+
+            if raw := _raw_component_descriptor_from_oci(
+                component_id=component_id,
+                ocm_repos=(ocm_repo,),
+                oci_client=local_oci_client,
+                absent_ok=True,
+            ):
+                break
+        else:
+            raw = None
+
         if not raw and absent_ok:
             return
         elif not raw and not absent_ok:
@@ -490,6 +500,13 @@ def oci_component_descriptor_lookup(
         except tarfile.ReadError as tre:
             tre.add_note(f'{component_id=}')
             raise tre
+
+        # ensure OCM repository in which component descriptor was found is the current OCM repository
+        if (
+            not component_descriptor.component.current_ocm_repo
+            or component_descriptor.component.current_ocm_repo.oci_ref != ocm_repo.oci_ref
+        ):
+            component_descriptor.component.repositoryContexts.append(ocm_repo)
 
         return component_descriptor
 
