@@ -445,11 +445,7 @@ def oci_component_descriptor_lookup(
             raise tre
 
         # ensure OCM repository in which component descriptor was found is the current OCM repository
-        if (
-            not component_descriptor.component.current_ocm_repo
-            or component_descriptor.component.current_ocm_repo.oci_ref != ocm_repo.oci_ref
-        ):
-            component_descriptor.component.repositoryContexts.append(ocm_repo)
+        component_descriptor.component.set_current_ocm_repo(ocm_repo)
 
         return component_descriptor
 
