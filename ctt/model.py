@@ -1,5 +1,6 @@
 import dataclasses
 
+import ci.util
 import oci.model
 import ocm
 
@@ -19,13 +20,15 @@ class ReplicationResourceElement(ReplicationResourceOptions):
     source: ocm.Resource
     target: ocm.Resource
     component_id: ocm.ComponentIdentity
+    src_ocm_repo: ocm.OciOcmRepository
 
     @property
     def src_ref(self) -> oci.model.OciImageReference:
         if self.source.access.type is ocm.AccessType.OCI_REGISTRY:
             return oci.model.OciImageReference(self.source.access.imageReference)
         elif self.source.access.type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
-            return oci.model.OciImageReference(self.source.access.reference, normalise=False)
+            full_ref = ci.util.urljoin(self.src_ocm_repo.oci_ref, self.source.access.reference)
+            return oci.model.OciImageReference(full_ref, normalise=False)
         else:
             raise ValueError(self.source.access.type)
 

@@ -14,6 +14,7 @@ def replication_resource_element():
         source=None,
         target=None,
         component_id=None,
+        src_ocm_repo=None,
     )
 
 

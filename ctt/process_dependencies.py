@@ -131,6 +131,7 @@ class ProcessingPipeline:
             source=copy.deepcopy(resource),
             target=copy.deepcopy(resource),
             component_id=component.identity(),
+            src_ocm_repo=component.current_ocm_repo,
         )
 
         replication_resource_element = self._processor.process(replication_resource_element)
