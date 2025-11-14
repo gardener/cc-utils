@@ -304,7 +304,7 @@ async def raw_component_descriptor_from_oci(
     ocm_repos: collections.abc.Iterable[ocm.OciOcmRepository | str],
     oci_client: oca.Client,
     absent_ok: bool=False,
-) -> bytes:
+) -> bytes | None:
     for ocm_repo in ocm_repos:
         if isinstance(ocm_repo, str):
             ocm_repo = ocm.OciOcmRepository(
