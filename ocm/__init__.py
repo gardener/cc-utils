@@ -618,6 +618,14 @@ class Component(LabelMethodsMixin):
         if self.resources:
             yield from self.resources
 
+    def set_current_ocm_repo(self, ocm_repo: OciOcmRepository):
+        if not self.current_ocm_repo:
+            self.repositoryContexts = [ocm_repo]
+        elif self.current_ocm_repo.oci_ref != ocm_repo.oci_ref:
+            self.repositoryContexts.append(ocm_repo)
+        else:
+            pass # current OCM repo is already the desired one
+
 
 @dc
 class NestedDigestSpec:

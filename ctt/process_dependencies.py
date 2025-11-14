@@ -460,8 +460,7 @@ def iter_replication_plan_components(
         source = copy.deepcopy(component_descriptor)
         target = copy.deepcopy(component_descriptor)
 
-        if target.component.current_ocm_repo.oci_ref != tgt_ocm_repo.oci_ref:
-            target.component.repositoryContexts.append(tgt_ocm_repo)
+        target.component.set_current_ocm_repo(tgt_ocm_repo)
 
         if remove_label:
             target.component.labels = [
