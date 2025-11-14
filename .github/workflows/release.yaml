@@ -289,6 +289,8 @@ jobs:
           ocm_repos="$(cat prepare-values.d/ocm-repositories)"
           rm -rf prepare-values.d prepare-workflow-values.tar
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+      - name: checkout
+        uses: actions/checkout@v4
       - name: prepare-next-version-operation
         id: prep-next-version
         shell: python
