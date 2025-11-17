@@ -258,6 +258,10 @@ on:
         description: |
           The component-descriptor document, as it was uploaded during release
         value: ${{ jobs.release-and-bump.outputs.component-descriptor }}
+      version:
+        description: |
+          The component-version (for convenience)
+        value: ${{ jobs.release-and-bump.outputs.version }}
 jobs:
   release-and-bump:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
@@ -269,6 +273,7 @@ jobs:
     outputs:
       release-notes: ${{ steps.release-notes.outputs.release-notes }}
       component-descriptor: ${{ steps.release.outputs.component-descriptor }}
+      version: ${{ steps.component-descriptor.outputs.version }}
 
     steps:
       - name: collect-component-descriptor
