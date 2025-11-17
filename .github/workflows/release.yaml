@@ -415,7 +415,7 @@ jobs:
             file: /tmp/release-notes/slack-release-notes.md
 
       - name: reset-repository-to-release-commit
-        if: ${{ inputs.create-release-branch == 'true' && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -426,7 +426,7 @@ jobs:
           git reset --hard "$commit_digest"
 
       - name: create-release-branch-bump-commit
-        if: ${{ inputs.create-release-branch == 'true' && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         uses: gardener/cc-utils/.github/actions/version@master
         # must be kept in sync with version action called in release action (except "version-operation")
         with:
@@ -441,7 +441,7 @@ jobs:
           commit-kind: bump
 
       - name: create-and-push-release-branch
-        if: ${{ inputs.create-release-branch == 'true' && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -477,7 +477,7 @@ jobs:
           git push origin "@:refs/heads/$branch"
 
       - name: cleanup-stale-release-branches
-        if: ${{ inputs.cleanup-release-branches == 'true' }}
+        if: ${{ inputs.cleanup-release-branches }}
         uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
         with:
           version: ${{ steps.component-descriptor.outputs.version }}
