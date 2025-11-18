@@ -70,6 +70,15 @@ class ReleaseNotesAudience(enum.StrEnum):
     OPERATOR = 'operator'
     USER = 'user'
 
+    @staticmethod
+    def audience_priority(audience: typing.Self) -> int:
+        return {
+            ReleaseNotesAudience.OPERATOR: 0,
+            ReleaseNotesAudience.USER: 1,
+            ReleaseNotesAudience.DEVELOPER: 2,
+            ReleaseNotesAudience.DEPENDENCY: 3,
+        }[audience]
+
 
 class AuthorType(enum.StrEnum):
     GITHUB_USER = 'githubUser'
@@ -151,12 +160,15 @@ class ReleaseNotesDoc:
         )
 
         for category in sorted_categories:
-            release_notes = categorised_release_notes[category]
+            sorted_release_notes = sorted(
+                categorised_release_notes[category],
+                key=lambda rn: ReleaseNotesAudience.audience_priority(rn.audience)
+            )
             title = ReleaseNotesCategory.category_title(category)
 
             block_lines = [f'## {title}']
 
-            for release_note in release_notes:
+            for release_note in sorted_release_notes:
                 release_note: ReleaseNoteEntry
                 author = f'@{release_note.author.username}'
                 audience = release_note.audience.name
