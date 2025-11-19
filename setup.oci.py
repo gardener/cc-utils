@@ -16,6 +16,8 @@ def requirements():
 
 def modules():
     return [
+        'ioutil',
+        'tarutil',
     ]
 
 
