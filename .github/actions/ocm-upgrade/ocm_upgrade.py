@@ -57,7 +57,7 @@ class MergeMethod(enum.StrEnum):
 @dataclasses.dataclass
 class MergePolicyConfig:
     merge_policy: MergePolicy
-    merge_method: MergeMethod
+    merge_method: MergeMethod | None # only required if `merge_policy` is `automerge`
     components: list[str] | str
 
     def __post_init__(self):
