@@ -81,6 +81,14 @@ on:
           An optional path (relative to repository-root) to a local action. If given, this action
           will be called prior to calling `set_dependency_version` callback. Useful to install
           preliminaries, such as golang toolchain.
+      pr-naming-pattern:
+        required: false
+        description: |
+          Pattern to use for naming the created pull requests. Allowed values are:
+            - component-name: Use the component name (default behavior)
+            - reference-name: Use the component reference name. This allows for having multiple references to the same component but with different names and puposes (e.g. testing and production)
+        type: string
+        default: component-name
       upstream-component-name:
         required: false
         type: string
@@ -132,5 +140,6 @@ jobs:
           merge-method: ${{ inputs.merge-method }}
           merge-policies: ${{ inputs.merge-policies }}
           prepare-action-path: ${{ inputs.prepare-action-path }}
+          pr-naming-pattern: ${{ inputs.pr-naming-pattern }}
           upstream-component-name: ${{ inputs.upstream-component-name }}
           upstream-update-policy: ${{ inputs.upstream-update-policy }}
