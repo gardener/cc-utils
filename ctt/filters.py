@@ -6,6 +6,8 @@ import abc
 import enum
 import reutil
 
+import ci.util
+import oci.model
 import ocm
 
 
@@ -44,7 +46,6 @@ class ImageFilter(FilterBase):
         self._image_ref_filter = reutil.re_filter(
             include_regexes=include_image_refs,
             exclude_regexes=exclude_image_refs,
-            value_transformation=lambda oci_resource: oci_resource.access.imageReference,
         )
         self._image_name_filter = reutil.re_filter(
             include_regexes=include_image_names,
@@ -59,10 +60,15 @@ class ImageFilter(FilterBase):
         component: ocm.Component,
         resource: ocm.Resource,
     ) -> bool:
-        if resource.access.type is not ocm.AccessType.OCI_REGISTRY:
+        if resource.access.type is ocm.AccessType.OCI_REGISTRY:
+            image_reference = resource.access.imageReference
+        elif resource.access.type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
+            src_ocm_repo = oci.model.OciImageReference(component.current_ocm_repo.oci_ref)
+            image_reference = ci.util.urljoin(src_ocm_repo.netloc, resource.access.reference)
+        else:
             return False
 
-        name_matches = self._image_ref_filter(resource) and \
+        name_matches = self._image_ref_filter(image_reference) and \
             self._image_name_filter(resource)
 
         if not name_matches:
