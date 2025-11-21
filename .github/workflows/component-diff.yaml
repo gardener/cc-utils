@@ -23,11 +23,6 @@ on:
         description: |
           Indicates whether (at least) one of the component dependency versions has changed.
         value: ${{ jobs.component-diff.outputs.has-diff }}
-      component-diff:
-        description: |
-          The determined component diff between the current and the greatest version, structured
-          according to `cnudie.util.ComponentDiff`.
-        value: ${{ jobs.component-diff.outputs.component-diff }}
 
 jobs:
   component-diff:
@@ -37,7 +32,6 @@ jobs:
       id-token: write
     outputs:
       has-diff: ${{ steps.component-diff.outputs.has-diff }}
-      component-diff: ${{ steps.component-diff.outputs.component-diff }}
     steps:
       - uses: actions/checkout@v4
       - name: collect-component-descriptor

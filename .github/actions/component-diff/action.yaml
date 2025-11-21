@@ -25,11 +25,6 @@ outputs:
     description: |
       Indicates whether (at least) one of the component dependency versions has changed.
     value: ${{ steps.component-diff.outputs.has-diff }}
-  component-diff:
-    description: |
-      The determined component diff between the current and the greatest version, structured
-      according to `cnudie.util.ComponentDiff`.
-    value: ${{ steps.component-diff.outputs.component-diff }}
 
 runs:
   using: composite
@@ -112,17 +107,8 @@ runs:
             '''))
             sys.exit(0)
 
-        component_diff_str = yaml.dump(
-            data=component_diff,
-            Dumper=ocm.EnumValueYamlDumper,
-        )
-        print(component_diff_str)
-
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           f.write('has-diff=true\n')
-          f.write('component-diff<<EOF\n')
-          f.write(component_diff_str)
-          f.write('EOF\n')
 
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
           f.write(textwrap.dedent(f'''\
