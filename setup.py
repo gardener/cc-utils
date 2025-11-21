@@ -24,6 +24,8 @@ def modules():
         if module.is_file() and module.name.endswith('.py')
     ]
 
+    module_names.remove('ioutil')
+    module_names.remove('tarutil')
     # avoid including other setup-scripts
     module_names.remove('setup.gha')
     module_names.remove('setup.oci')
