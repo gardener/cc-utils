@@ -57,3 +57,45 @@ def github_api(
         )
 
     return github_api
+
+
+def github_app_api(
+    github_app_private_key: str | bytes,
+    github_app_id: int,
+    repo_url: str | None=None,
+) -> github3.GitHub | github3.GitHubEnterprise:
+    '''
+    returns an initialised github-api instance, which is already logged in using the provided app
+    credentials and honouring some environment variables typically present for GitHub-Actions-runs.
+
+    This function is intended to be used in GitHub-Actions.
+    '''
+    host, org, _ = host_org_and_repo(
+        repo_url=repo_url,
+    )
+
+    if host == 'github.com':
+        github_api = github3.GitHub()
+    else:
+        server_url = os.environ.get('GITHUB_SERVER_URL', f'https://{host}')
+        github_api = github3.GitHubEnterprise(
+            url=server_url,
+        )
+
+    if isinstance(github_app_private_key, str):
+        github_app_private_key = github_app_private_key.encode('utf-8')
+
+    github_api.login_as_app(
+        private_key_pem=github_app_private_key,
+        app_id=github_app_id,
+    )
+
+    installation = github_api.app_installation_for_organization(org)
+
+    github_api.login_as_app_installation(
+        private_key_pem=github_app_private_key,
+        app_id=github_app_id,
+        installation_id=installation.id,
+    )
+
+    return github_api
