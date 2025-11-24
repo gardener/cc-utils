@@ -383,6 +383,11 @@ def write_docker_config(
 
         registry_type = image_reference.registry_type
 
+        if registry_type is oci.model.OciRegistryType.UNKNOWN:
+            print(f'Warning: {image_reference=} has unknown registry-type; will not retrieve')
+            print( '         access-token via OIDC') # noqa: E201
+            continue
+
         if registry_type is not oci.model.OciRegistryType.GHCR:
             oidc_cfg = find_oidc_cfg(
                 image_reference=image_reference,
