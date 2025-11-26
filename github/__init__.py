@@ -2,13 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import collections.abc
+import dataclasses
 import os
+import re
 import typing
 
 import github3
 
 RepoUrl: typing.TypeAlias = str
-GithubApiLookup = typing.Callable[[RepoUrl], github3.GitHub]
+GithubApiLookup = collections.abc.Callable[[RepoUrl], github3.GitHub | None]
 
 
 def host_org_and_repo(
@@ -99,3 +102,51 @@ def github_app_api(
     )
 
     return github_api
+
+
+@dataclasses.dataclass
+class GitHubAppCredentials:
+    private_key: str | bytes
+    app_id: int
+    host: str
+    repo_urls: list[str] | None = None
+
+    def matches(self, repo_url: str) -> bool:
+        host, org, repo = host_org_and_repo(repo_url)
+
+        if self.repo_urls is None:
+            return self.host == host
+
+        repo_url = '/'.join((host, org, repo))
+
+        for repo_url_regex in self.repo_urls:
+            if re.fullmatch(repo_url_regex, repo_url):
+                return True
+
+        return False
+
+
+def github_app_api_lookup(
+    github_app_credentials: collections.abc.Sequence[GitHubAppCredentials],
+) -> GithubApiLookup:
+    def github_api_lookup(
+        repo_url: str,
+        /,
+        absent_ok: bool=False,
+    ) -> github3.GitHub | github3.GitHubEnterprise | None:
+        for creds in github_app_credentials:
+            if not creds.matches(repo_url):
+                continue
+
+            return github_app_api(
+                github_app_private_key=creds.private_key,
+                github_app_id=creds.app_id,
+                repo_url=repo_url,
+            )
+
+        if absent_ok:
+            return None
+
+        raise ValueError(f'no matching GitHub-App credentials for {repo_url=}')
+
+    return github_api_lookup
