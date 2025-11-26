@@ -101,20 +101,30 @@ runs:
 
         if [ "${summary_kind}" == 'full' ]; then
         cat << EOF > ${GITHUB_STEP_SUMMARY}
-        ## Capture-Commit Summary
+        <details>
+          <summary>
+            <h2>Capture-Commit Summary</h2>
+          </summary>
+
         commit-digest: \`$(cat ${commit_out})\`
         objects-listing (tarfile):
         $(tar tf ${objects_out})
         commit-message:
         $(git show)
+        </details>
         EOF
 
         elif [ "${summary_kind}" == 'short' ]; then
         cat << EOF > ${GITHUB_STEP_SUMMARY}
-        ## Capture-Commit Summary
+        <details>
+          <summary>
+            <h2>Capture-Commit Summary</h2>
+          </summary>
+
         commit-digest: \`$(cat ${commit_out})\`
         objects-listing (tarfile):
         $(tar tf ${objects_out})
+        </details>
         EOF
 
         elif [ "${summary_kind}" == 'none' ]; then
