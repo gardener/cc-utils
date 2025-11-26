@@ -3,6 +3,7 @@ description: |
   Deletes stale release branches in the remote git repository. A release branch is considered stale
   if its version (major, minor, or patch, according to `significant-part` in `.ocm/branch-info.yaml`)
   is older than the current version by at least the `supported-versions-count`.
+  Requires `contents: write` permissions in the calling workflow. 
 
 inputs:
   version:
@@ -22,6 +23,8 @@ runs:
   steps:
     - name: Cleanup Release Branches
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
 
