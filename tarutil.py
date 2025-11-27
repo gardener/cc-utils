@@ -1,4 +1,5 @@
 import logging
+import os.path
 import tarfile
 import typing
 
@@ -173,3 +174,24 @@ def filtered_tarfile_generator(
         yield final_padding
         if chunk_callback:
             chunk_callback(final_padding)
+
+
+def tar_filter(
+    member: tarfile.TarInfo,
+    *args,
+    **kwargs,
+) -> tarfile.TarInfo | None:
+    '''
+    Can be used as tarfile extraction filter method to skip potentially dangerous tar file members
+    to prevent directory traversal attacks. It skips:
+    - Non-regular files such as directories
+    - Hard links and symbolic links that point to absolute paths
+    '''
+    if (
+        not member.isfile()
+        or ((member.islnk() or member.issym) and os.path.isabs(member.linkname))
+    ):
+        logger.warning(f'skipped tarfile {member.name=} because of applied filter')
+        return None
+
+    return member
