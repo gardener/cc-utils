@@ -18,21 +18,6 @@ import tarutil
 logger = logging.getLogger(__name__)
 
 
-def tar_filter(
-    member: tarfile.TarInfo,
-    *args,
-    **kwargs,
-) -> tarfile.TarInfo | None:
-    if (
-        not member.isfile()
-        or ((member.islnk() or member.issym) and os.path.isabs(member.linkname))
-    ):
-        logger.warning(f'skipped tarfile {member.name=} because of applied filter')
-        return None
-
-    return member
-
-
 def release_notes_docs_into_tarstream(
     release_notes_docs: collections.abc.Iterable[rnm.ReleaseNotesDoc],
 ) -> collections.abc.Iterable[bytes]:
@@ -79,7 +64,7 @@ def tarstream_into_release_notes_docs(
     )
 
     for member in tar:
-        if not tar_filter(member):
+        if not tarutil.tar_filter(member):
             continue
 
         fileobj = tar.extractfile(member=member)
@@ -111,7 +96,7 @@ def tarstream_into_release_notes_files(
     with tarfile.open(fileobj=tarutil.FilelikeProxy(tarstream), mode='r|*') as tar:
         tar.extractall( # nosec B202 files are already being filtered by `tar_filter`
             path=release_notes_dir,
-            filter=tar_filter,
+            filter=tarutil.tar_filter,
         )
 
 
