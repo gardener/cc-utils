@@ -128,14 +128,14 @@ runs:
         )
         unlink /tmp/key
         echo "token=${token}" >> ${GITHUB_OUTPUT}
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       if: ${{ inputs.token == '' && steps.token.outputs.token == '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.ref }}
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       if: ${{ inputs.token != '' || steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}

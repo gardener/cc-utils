@@ -33,7 +33,7 @@ jobs:
     outputs:
       has-diff: ${{ steps.component-diff.outputs.has-diff }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: collect-component-descriptor
         id: component-descriptor
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
