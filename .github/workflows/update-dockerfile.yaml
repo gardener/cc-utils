@@ -12,7 +12,7 @@ jobs:
     outputs:
       fork: ${{ steps.repo-metadata.outputs.fork}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Retrieve repository metadata
         id: repo-metadata
         uses: ./.github/actions/repo-metadata
@@ -34,7 +34,7 @@ jobs:
       changes_detected: ${{ steps.check_changes.outputs.changes_detected }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Git Identity
         uses: ./.github/actions/setup-git-identity
