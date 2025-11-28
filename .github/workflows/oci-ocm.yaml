@@ -343,7 +343,7 @@ jobs:
         id: extra-auth
         shell: bash
         run: |
-          set -eu
+          set -euo pipefail
           # cannot check in if-clause above, as `secrets` ctx is not accessible there
           if [ -z '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
             exit 0
