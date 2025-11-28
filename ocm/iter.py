@@ -5,13 +5,6 @@ import enum
 import ocm
 import ocm.gardener
 
-import sys
-if 'cnudie.iter' in sys.modules:
-    # todo: drop after all known usages of cnudie.iter are gone
-    print(
-      'Error: cnudie.iter was already imported - aborting to avoid runtime errors from mixed imports'
-    )
-
 
 class NodeReferenceType(enum.StrEnum):
     COMPONENT_REFERENCE = 'componentReference'
