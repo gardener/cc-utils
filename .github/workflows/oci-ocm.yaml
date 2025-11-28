@@ -345,9 +345,7 @@ jobs:
         run: |
           set -euo pipefail
           # cannot check in if-clause above, as `secrets` ctx is not accessible there
-          if [ -z '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
-            exit 0
-          fi
+          if [ -n '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
           cat <<EOF >> /tmp/config.json
           {
             "registry-1.docker.io": {
@@ -364,6 +362,9 @@ jobs:
             }
           }
           EOF
+          else
+          echo "{}" >> /tmp/config.json
+          fi
           echo 'extra-auths<<EOF' >> "${GITHUB_OUTPUT}"
           if ${{ secrets.auth-token != '' }}; then
             target_host=$(echo '${{ matrix.args.image-reference }}' | cut -d/ -f1)
