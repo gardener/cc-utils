@@ -369,7 +369,7 @@ jobs:
           if ${{ secrets.auth-token != '' }}; then
             target_host=$(echo '${{ matrix.args.image-reference }}' | cut -d/ -f1)
             jq \
-              "setpath([\"$target_host\"], {\"auth\": \"${{ secrets.auth-token }}\"})" \
+              "setpath([\"$target_host\"]; {\"auth\": \"${{ secrets.auth-token }}\"})" \
               /tmp/config.json \
               >> "${GITHUB_OUTPUT}"
           else
