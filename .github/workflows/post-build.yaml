@@ -108,6 +108,17 @@ on:
         type: boolean
         default: true
         description: see partner input for details
+    secrets:
+      oci-auth-token:
+        required: false
+        description: |
+          An optional authtoken to use for authenticating against oci-push-target (used to publish
+          OCM-Component-Descriptor). It is written
+          unchanged into `$HOME/.docker/config.json`, and is assumed to be base64-encoded output of
+          `<username>:<secret>`.
+
+          Note that it is only necessary to pass an auth-token if OIDC-authentication is not
+          possible. OIDC-Authentication should be preferred over using a static token.
     outputs:
       component-descriptor:
         description: |
@@ -167,12 +178,25 @@ jobs:
           rm -rf prepare-values.d prepare-workflow-values.tar
           echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
 
+      - name: create-extra-auth
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # we cannot check secrets on step-level
+          if [ -z "${{ secrets.oci-auth-token }}" ]; then
+            exit 0
+          fi
+          host=$(echo ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }} | cut -d/ -f1)
+          echo "extra-auths={\"$host\": {\"auth\": \"${{ secrets.oci-auth-token }}\"}}" \
+            >> $GITHUB_OUTPUT
       - name: authenticate-against-oci-registry
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - uses: gardener/cc-utils/.github/actions/ocm-validate@master
         with:
           component-descriptor-path: /tmp/ocm/component-descriptor.yaml
