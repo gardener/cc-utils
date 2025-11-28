@@ -103,7 +103,7 @@ runs:
   using: composite
   steps:
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         token: ${{ inputs.github-token }}
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
