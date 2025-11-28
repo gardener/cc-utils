@@ -45,16 +45,6 @@ on:
         description: |
           A comma-separated list of additional tags to set. Existing tags will be updated.
           Commonly used to reset `latest`-tag.
-      auth-token:
-        type: string
-        required: false
-        description: |
-          An optional authtoken to use for authenticating against push-target. It is written
-          unchanged into `$HOME/.docker/config.json`, and is assumed to be base64-encoded output of
-          `<username>:<secret>`.
-
-          Note that it is only necessary to pass an auth-token if OIDC-authentication is not
-          possible. OIDC-Authentication should be preferred over using a static token.
       oci-platforms-to-runners-map:
         type: string
         description: |
@@ -190,6 +180,16 @@ on:
           (which will result in the build to see the to-be-released commit, with correct
           commit-digest).
         default: release-commit-objects # exported from prepare.yaml
+    secrets:
+      auth-token:
+        required: false
+        description: |
+          An optional authtoken to use for authenticating against push-target. It is written
+          unchanged into `$HOME/.docker/config.json`, and is assumed to be base64-encoded output of
+          `<username>:<secret>`.
+
+          Note that it is only necessary to pass an auth-token if OIDC-authentication is not
+          possible. OIDC-Authentication should be preferred over using a static token.
 
     outputs:
       ocm-resource:
@@ -365,10 +365,10 @@ jobs:
           }
           EOF
           echo 'extra-auths<<EOF' >> "${GITHUB_OUTPUT}"
-          if ${{ inputs.auth-token != '' }}; then
+          if ${{ secrets.auth-token != '' }}; then
             target_host=$(echo '${{ matrix.args.image-reference }}' | cut -d/ -f1)
             jq \
-              "setpath([\"$target_host\"], {\"auth\": \"${{ inputs.auth-token }}\"})" \
+              "setpath([\"$target_host\"], {\"auth\": \"${{ secrets.auth-token }}\"})" \
               /tmp/config.json \
               >> "${GITHUB_OUTPUT}"
           else
@@ -448,13 +448,16 @@ jobs:
     steps:
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: inject-authtoken
-        if: ${{ inputs.auth-token != '' }}
         id: extra-auth
         shell: bash
         run: |
           set -euo pipefail
+          # cannot access secret in if on step-level
+          if ${{ secrets.auth-token == '' }}; then
+            exit 0
+          fi
           hostname=$(echo ${{ needs.preprocess.outputs.target-image-ref }} | cut -d/ -f1 )
-          echo "extra-auths={\"$hostname\": {\"auth\": \"${{ inputs.auth-token }}\" }}" \
+          echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" \
             >> $GITHUB_OUTPUT
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
