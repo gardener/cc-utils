@@ -193,14 +193,14 @@ on:
       dockerhub-auth-token:
         required: false
         description: |
-          An optional authtoken that is harcdcoded to be used for authentication against dockerhub.
+          An optional authtoken that is hardcoded to be used for authentication against dockerhub.
           This is often needed in order to avoid running into rate-limits.
 
-          For convenience, if this workflows is called inheriting all secrets, this is read from
+          For convenience, if this workflow is called inheriting all secrets, this is read from
           hardcoded secret `DOCKERHUB_RO_AUTH`. If passing secrets explicitly, and auth against
           dockerhub is required, this input must be provided.
 
-          It is passed as-as, and should be the result of base64-encoding `user:secret`
+          It is passed as-is, and should be the result of base64-encoding `user:secret`
 
     outputs:
       ocm-resource:
