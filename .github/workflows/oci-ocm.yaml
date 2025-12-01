@@ -366,16 +366,16 @@ jobs:
           cat <<EOF >> /tmp/config.json
           {
             "registry-1.docker.io": {
-              "auth": "${dockerhub_token}"
+              "auth": "${dockerhub_token:-}"
             },
             "docker.io": {
-              "auth": "${dockerhub_token}"
+              "auth": "${dockerhub_token:-}"
             },
             "index.docker.io": {
-              "auth": "${dockerhub_token}"
+              "auth": "${dockerhub_token:-}"
             },
             "https://index.docker.io/v1/": {
-              "auth": "${dockerhub_token}"
+              "auth": "${dockerhub_token:-}"
             }
           }
           EOF
