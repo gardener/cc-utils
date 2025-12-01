@@ -360,22 +360,25 @@ jobs:
             dockerhub_token='${{ secrets.dockerhub-auth-token }}'
           elif [ -n '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
             dockerhub_token='${{ secrets.DOCKERHUB_RO_AUTH }}'
+          else
+            dockerhub_token=''
+            echo "warning: did not receive a token for dockerhub"
           fi
 
           if [ -n '${dockerhub_token:-}' ]; then
           cat <<EOF >> /tmp/config.json
           {
             "registry-1.docker.io": {
-              "auth": "${dockerhub_token:-}"
+              "auth": "${dockerhub_token}"
             },
             "docker.io": {
-              "auth": "${dockerhub_token:-}"
+              "auth": "${dockerhub_token}"
             },
             "index.docker.io": {
-              "auth": "${dockerhub_token:-}"
+              "auth": "${dockerhub_token}"
             },
             "https://index.docker.io/v1/": {
-              "auth": "${dockerhub_token:-}"
+              "auth": "${dockerhub_token}"
             }
           }
           EOF
