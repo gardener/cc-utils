@@ -190,6 +190,17 @@ on:
 
           Note that it is only necessary to pass an auth-token if OIDC-authentication is not
           possible. OIDC-Authentication should be preferred over using a static token.
+      dockerhub-auth-token:
+        required: false
+        description: |
+          An optional authtoken that is harcdcoded to be used for authentication against dockerhub.
+          This is often needed in order to avoid running into rate-limits.
+
+          For convenience, if this workflows is called inheriting all secrets, this is read from
+          hardcoded secret `DOCKERHUB_RO_AUTH`. If passing secrets explicitly, and auth against
+          dockerhub is required, this input must be provided.
+
+          It is passed as-as, and should be the result of base64-encoding `user:secret`
 
     outputs:
       ocm-resource:
@@ -345,20 +356,26 @@ jobs:
         run: |
           set -euo pipefail
           # cannot check in if-clause above, as `secrets` ctx is not accessible there
-          if [ -n '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
+          if [ -n '${{ secrets.dockerhub-auth-token }}' ]; then
+            dockerhub_token='${{ secrets.dockerhub-auth-token }}'
+          elif [ -n '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
+            dockerhub_token='${{ secrets.DOCKERHUB_RO_AUTH }}'
+          fi
+
+          if [ -n '${dockerhub_token:-}' ]; then
           cat <<EOF >> /tmp/config.json
           {
             "registry-1.docker.io": {
-              "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
+              "auth": "${dockerhub_token}"
             },
             "docker.io": {
-              "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
+              "auth": "${dockerhub_token}"
             },
             "index.docker.io": {
-              "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
+              "auth": "${dockerhub_token}"
             },
             "https://index.docker.io/v1/": {
-              "auth": "${{ secrets.DOCKERHUB_RO_AUTH }}"
+              "auth": "${dockerhub_token}"
             }
           }
           EOF
