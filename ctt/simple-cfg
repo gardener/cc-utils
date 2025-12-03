@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# writes a simple "processing.cfg" for CTT to stdout
+#
+# needs a single argument, which is used as target_repository
+
+if [ $# != 1 ]; then
+  echo "usage: ${BASH_SOURCE[0]} ocm-repository"
+  exit 1
+fi
+
+target_registry=$1
+
+cat <<EOF
+targets:
+  default:
+    type: RegistriesTarget
+    kwargs:
+      registries:
+        - $target_registry
+      ocm_repository: $target_registry
+
+processors:
+  no-op:
+    type: NoOpProcessor
+
+uploaders:
+  prepend_target:
+    type: PrependTargetUploader
+
+image_processing_cfg:
+  - name: default
+    filter:
+      - type: MatchAllFilter
+    processor: no-op
+    target: default
+    upload:
+      - prepend_target
+EOF
