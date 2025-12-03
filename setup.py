@@ -65,6 +65,10 @@ setuptools.setup(
             'resources/*.mako',
             '*.mako',
         ],
+        'ctt':[
+            'cli',
+            'simple-cfg',
+        ],
         'ocm':[
             'ocm-component-descriptor-schema.yaml',
         ],
