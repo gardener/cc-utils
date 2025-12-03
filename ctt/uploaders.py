@@ -5,7 +5,6 @@
 import abc
 import collections.abc
 
-import ci.util
 import ctt.model
 import ctt.util as ctt_util
 import ocm
@@ -83,7 +82,10 @@ class PrependTargetUploader(UploaderBase):
         # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
         # Instead, leave it up to the configuration to decide on the joining character.
         if not self._remove_prefixes:
-            tgt_ref = ci.util.urljoin(tgt_oci_registry, src_base_ref)
+            tgt_ref = '/'.join((
+                tgt_oci_registry.rstrip('/'),
+                src_base_ref.lstrip('/'),
+            ))
         else:
             tgt_ref = tgt_oci_registry + src_base_ref
 
@@ -156,7 +158,10 @@ class RepositoryUploader(UploaderBase):
             src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
 
         if self._repository:
-            tgt_ref = ci.util.urljoin(tgt_oci_registry, self._repository)
+            tgt_ref = '/'.join((
+                tgt_oci_registry.rstrip('/'),
+                self._repository.lstrip('/'),
+            ))
         else:
             tgt_ref = tgt_oci_registry
 
@@ -164,7 +169,10 @@ class RepositoryUploader(UploaderBase):
         # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
         # Instead, leave it up to the configuration to decide on the joining character.
         if not self._remove_prefixes:
-            tgt_ref = ci.util.urljoin(tgt_ref, src_base_ref)
+            tgt_ref = '/'.join((
+                tgt_ref.rstrip('/'),
+                src_base_ref.lstrip('/'),
+            ))
         else:
             tgt_ref = tgt_ref + src_base_ref
 

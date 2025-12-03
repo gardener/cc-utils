@@ -19,10 +19,10 @@ import threading
 import typing
 
 import dacite
+import yaml
 
-import ci.util
 import cnudie.retrieve
-import container.util
+import ctt.oci_util
 import ctt.replicate
 import oci
 import oci.client
@@ -179,7 +179,8 @@ def create_ctt_label(
 
 
 def parse_processing_cfg(path: str):
-    raw_cfg = ci.util.parse_yaml_file(path)
+    with open(path) as f:
+        raw_cfg = yaml.safe_load(f)
 
     processing_cfg_dir = os.path.abspath(os.path.dirname(path))
     for _, cfg in raw_cfg.get('processors', {}).items():
@@ -193,7 +194,8 @@ def _target(target_cfg: dict):
     target_type = target_cfg['type']
     target_ctor = getattr(targets, target_type, None)
     if not target_ctor:
-        ci.util.fail(f'no such target: {target_type}')
+        logger.critical(f'no such target: {target_type}')
+        exit(1)
     target = target_ctor(**target_cfg.get('kwargs', {}))
     return target
 
@@ -209,7 +211,8 @@ def _processor(processor_cfg: dict):
     proc_type = processor_cfg['type']
     proc_ctor = getattr(processors, proc_type, None)
     if not proc_ctor:
-        ci.util.fail(f'no such image processor: {proc_type}')
+        logger.critical(f'no such image processor: {proc_type}')
+        exit(1)
     processor = proc_ctor(**processor_cfg.get('kwargs', {}))
     return processor
 
@@ -218,7 +221,8 @@ def _uploader(uploader_cfg: dict):
     upload_type = uploader_cfg['type']
     upload_ctor = getattr(uploaders, upload_type, None)
     if not upload_ctor:
-        ci.util.fail(f'no such uploader: {upload_type}')
+        logger.critical(f'no such uploader: {upload_type}')
+        exit(1)
     uploader = upload_ctor(**uploader_cfg.get('kwargs', {}))
     return uploader
 
@@ -423,7 +427,7 @@ def process_upload_request(
         return f'sha256:{manifest_digest}'
 
     try:
-        _, patched_tgt_ref, raw_manifest = container.util.filter_image(
+        _, patched_tgt_ref, raw_manifest = ctt.oci_util.filter_image(
             source_ref=src_ref,
             target_ref=tgt_ref,
             remove_files=remove_files,
@@ -640,7 +644,10 @@ def process_images(
                     'in case `ocm_repository` is not specified in the target configuration, only a '
                     'single registry is allowed'
                 )
-            ocm_repository = ci.util.urljoin(registries[0], tgt_ocm_repo_path)
+            ocm_repository = '/'.join((
+                registries[0].rstrip('/'),
+                tgt_ocm_repo_path.lstrip('/'),
+            ))
 
         registries_by_ocm_repository[ocm_repository].update(registries)
 
