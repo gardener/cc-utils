@@ -5,19 +5,17 @@ import hashlib
 import io
 import json
 import logging
-import tarfile
 import zlib
 
 import dacite
 import requests
 
-import tarutil
 import oci.auth as oa
 import oci.client as oc
 import oci.convert as oconv
 import oci.model as om
 import oci.platform as op
-import ioutil
+
 
 logger = logging.getLogger(__name__)
 
@@ -494,71 +492,4 @@ def replicate_blobs(
     return om.OciImageManifest(
         config=replicate_blob(src_oci_manifest.config),
         layers=[replicate_blob(blob) for blob in src_oci_manifest.layers],
-    )
-
-
-def image_layers_as_tarfile_generator(
-    image_reference: str,
-    oci_client: oc.Client,
-    chunk_size=tarfile.RECORDSIZE,
-    include_config_blob=True,
-    fallback_to_first_subimage_if_index=False,
-) -> collections.abc.Generator[bytes, None, None]:
-    '''
-    returns a generator yielding a tar-archive with the passed oci-image's layer-blobs as
-    members. This is somewhat similar to the result of a `docker save` with the notable difference
-    that the cfg-blob is discarded.
-    This function is useful to e.g. upload file system contents of an oci-container-image to some
-    scanning-tool (provided it supports the extraction of tar-archives)
-    If include_config_blob is set to False the config blob will be ignored.
-
-    If fallback_to_first_subimage_if_index is set to True, in case of oci-image-manifest-list the
-    first sub-manifest is taken.
-    '''
-    manifest = oci_client.manifest(
-        image_reference=image_reference,
-        accept=om.MimeTypes.prefer_multiarch,
-    )
-
-    image_reference = om.OciImageReference.to_image_ref(image_reference)
-
-    if fallback_to_first_subimage_if_index and isinstance(manifest, om.OciImageManifestList):
-        logger.warn(
-            f'image-index handling not fully implemented - will only scan first image, '
-            f'{image_reference=}, {manifest.mediaType=}'
-        )
-        manifest_ref = manifest.manifests[0]
-        manifest = oci_client.manifest(
-            image_reference=f'{image_reference.ref_without_tag}@{manifest_ref.digest}',
-        )
-
-    blob_refs = manifest.blobs() if include_config_blob else manifest.layers
-
-    if not include_config_blob:
-        logger.debug('skipping config blob')
-
-    def resolve_blob(
-        blob_ref: om.OciBlobRef,
-        image_reference: str,
-    ) -> ioutil.BlobDescriptor:
-        content = oci_client.blob(
-            image_reference=image_reference,
-            digest=blob_ref.digest,
-            stream=True,
-        ).iter_content(chunk_size=chunk_size)
-
-        return ioutil.BlobDescriptor(
-            content=content,
-            size=blob_ref.size,
-            name=f'{blob_ref.digest}.tar',
-        )
-
-    return tarutil.concat_blobs_as_tarstream(
-        blobs=(
-            resolve_blob(
-                blob_ref=blob_ref,
-                image_reference=image_reference,
-            )
-            for blob_ref in blob_refs
-        ),
     )
