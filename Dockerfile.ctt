@@ -1,0 +1,15 @@
+FROM alpine:3
+
+RUN --mount=type=bind,source=.,target=/src,rw \
+  cat /src/gardener-cicd-libs.apk-packages | xargs apk add --no-cache \
+&&  cd /src && python3 /src/setup.py bdist_wheel \
+&&  python3 /src/setup.oci.py bdist_wheel \
+&&  python3 /src/setup.ocm.py bdist_wheel \
+&&  pip install --upgrade --no-cache-dir --break-system-packages \
+    --find-links /src/dist \
+    gardener-cicd-libs==$(cat /src/VERSION)
+
+COPY ctt/cli /ctt/cli
+COPY ctt/simple-cfg /ctt/simple-cfg
+
+ENTRYPOINT [ "/ctt/cli" ]
