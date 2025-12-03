@@ -4,15 +4,15 @@
 
 import dataclasses
 import enum
-from os import path
+import logging
+import os
+import re
+import tempfile
 import typing
+from urllib.parse import urlparse, ParseResult
 
 import yaml
 import git
-import tempfile
-from urllib.parse import urlparse, ParseResult
-import re
-import logging
 
 import ctx
 import ocm
@@ -133,7 +133,7 @@ def buildAndApplyBOM(
 
 
 def _parseBOM(local_path: str) -> RBSCBom:
-    with open(path.join(local_path, "bom.yaml"), "r") as bom_file:
+    with open(os.path.join(local_path, "bom.yaml"), "r") as bom_file:
         raw_src_bom = yaml.load(bom_file, Loader=yaml.SafeLoader)
         ci.util._count_elements(raw_src_bom)
         src_bom = RBSCBom(
@@ -160,7 +160,7 @@ def _parseBOM(local_path: str) -> RBSCBom:
 
 
 def _writeBOM(bom: RBSCBom, local_path: str):
-    with open(path.join(local_path, "bom.yaml"), 'w') as bom_file:
+    with open(os.path.join(local_path, "bom.yaml"), 'w') as bom_file:
         yaml.dump(
             data=dataclasses.asdict(bom),
             stream=bom_file,
@@ -197,7 +197,7 @@ def _pushToGit(repo: git.Repo, origin: git.Remote):
     actor = git.Actor("CNUDIE-Transport-Tool", "")
 
     index = repo.index
-    index.add([path.join(repo.working_tree_dir, 'bom.yaml')])
+    index.add([os.path.join(repo.working_tree_dir, 'bom.yaml')])
     index.commit("New BOM Version", author=actor, committer=actor)
     push_response = origin.push()
 
