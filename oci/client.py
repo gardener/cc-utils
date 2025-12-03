@@ -622,6 +622,23 @@ class Client:
                 f'rq against {url=} failed {res.status_code=} {res.reason=} {method=} {res.content}'
             )
 
+        if res.status_code == 429 and remaining_retries > 0:
+            logger.warning(
+                f'quota was exceeded, will wait a minute and then retry again ({remaining_retries=})'
+            )
+            time.sleep(60)
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                **kwargs,
+            )
+
         if raise_for_status:
             if res.status_code != 404 and not res.ok:
                 logger.debug(f'{url=} {res.content=} {res.headers=}')

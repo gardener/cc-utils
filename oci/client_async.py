@@ -386,6 +386,23 @@ class Client:
                 f'rq against {url=} failed {res.status=} {res.reason=} {method=} {await res.text()}'
             )
 
+        if res.status_code == 429 and remaining_retries > 0:
+            logger.warning(
+                f'quota was exceeded, will wait a minute and then retry again ({remaining_retries=})'
+            )
+            await asyncio.sleep(60)
+            return await self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                **kwargs,
+            )
+
         if raise_for_status:
             if res.status != 404 and not res.ok:
                 logger.debug(f'{url=} {await res.text()=} {res.headers=}')
