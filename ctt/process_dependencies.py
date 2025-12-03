@@ -183,7 +183,8 @@ def parse_processing_cfg(path: str):
 
     processing_cfg_dir = os.path.abspath(os.path.dirname(path))
     for _, cfg in raw_cfg.get('processors', {}).items():
-        cfg['kwargs']['base_dir'] = processing_cfg_dir
+        kwargs = cfg.get('kwargs', {})
+        kwargs['base_dir'] = processing_cfg_dir
 
     return raw_cfg
 
