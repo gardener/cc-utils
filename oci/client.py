@@ -16,6 +16,7 @@ import urllib.parse
 import dacite
 import dateutil.parser
 import requests
+import requests.adapters
 import requests.auth
 import www_authenticate
 
@@ -278,7 +279,9 @@ def no_credentials_lookup(*args, **kwargs) -> None:
     return None
 
 
-def client_with_dockerauth() -> 'Client':
+def client_with_dockerauth(
+    http_connection_pool_size: int=10,
+) -> 'Client':
     '''
     convenience function creating an oci.client.Client which will use default docker-cfg
     to lookup credentials. If no such cfg is available, the returned client will use
@@ -286,10 +289,18 @@ def client_with_dockerauth() -> 'Client':
 
     Use `Client`-initialiser if more control over client-creation is needed.
     '''
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=http_connection_pool_size,
+        pool_maxsize=http_connection_pool_size,
+    )
+    session.mount('https://', adapter)
+
     return Client(
         credentials_lookup=oa.docker_credentials_lookup(
             absent_ok=True,
         ),
+        session=session,
     )
 
 
