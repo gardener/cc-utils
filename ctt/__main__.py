@@ -1,0 +1,67 @@
+import argparse
+
+import cnudie.retrieve
+import ctt.process_dependencies
+import oci.auth
+import oci.client
+
+'''
+exposes a CLI for "CTT" (fka: CNUDIE Transport Tool)
+'''
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--src-repo',
+        required=True,
+        help='path to OCM-Repository-Root',
+    )
+    parser.add_argument(
+        '--ocm-component',
+        required=True,
+        help='the OCM-Component-version to replicate (format: <name>:<version>)',
+    )
+    parser.add_argument(
+        '--docker-config',
+        default=None,
+    )
+    parser.add_argument(
+        '--processing-cfg',
+        required=True,
+    )
+
+    parsed = parser.parse_args()
+
+    if not ':' in parsed.ocm_component:
+        print(f'{parsed.ocm_component=} does not match expected format (<name>:<version>)')
+        exit(1)
+
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_config,
+        ),
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.src_repo),
+        oci_client=oci_client,
+    )
+
+    component_descriptor = component_descriptor_lookup(
+        parsed.ocm_component,
+        absent_ok=False, # let the exception propagate to convey a detailed error-message
+    )
+
+    print(f'starting replication of {parsed.ocm_component}')
+    for _ in ctt.process_dependencies.process_images(
+        processing_cfg_path=parsed.processing_cfg,
+        root_component_descriptor=component_descriptor,
+        component_descriptor_lookup=component_descriptor_lookup,
+        oci_client=oci_client,
+    ):
+        pass
+
+
+if __name__ == '__main__':
+    main()

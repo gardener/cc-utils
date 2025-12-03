@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+# CLI for CTT's-functions
+
+own_dir=$(dirname ${BASH_SOURCE[0]})
+
+usage() {
+cat <<EOF
+Usage: ${BASH_SOURCE[0]} replicate|simple-cfg
+
+Start by generating a configuration (simple-cfg command). Output is helpful for replicate-cmd.
+EOF
+}
+
+if [ $# -eq 0 ]; then
+  usage
+  exit 1
+fi
+
+cmd=$1
+shift
+
+if [ $cmd == 'simple-cfg' ]; then
+  exec $own_dir/simple-cfg "${@}"
+fi
+
+if [ $cmd == 'replicate' ]; then
+  exec python -m ctt "${@}"
+fi
+
+usage
+exit 1
