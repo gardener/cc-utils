@@ -6,7 +6,6 @@ import abc
 import enum
 import reutil
 
-import ci.util
 import oci.model
 import ocm
 
@@ -64,7 +63,10 @@ class ImageFilter(FilterBase):
             image_reference = resource.access.imageReference
         elif resource.access.type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
             src_ocm_repo = oci.model.OciImageReference(component.current_ocm_repo.oci_ref)
-            image_reference = ci.util.urljoin(src_ocm_repo.netloc, resource.access.reference)
+            image_reference = '/'.join((
+                src_ocm_repo.netloc,
+                resource.access.reference.lstrip('/'),
+            ))
         else:
             return False
 
