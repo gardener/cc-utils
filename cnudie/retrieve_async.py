@@ -19,7 +19,6 @@ import ocm
 import ocm.iter as oi
 import ocm.oci
 
-import ci.util
 import cnudie.retrieve
 import cnudie.util
 import oci.client_async as oca
@@ -200,9 +199,10 @@ def file_system_cache_component_descriptor_lookup(
                 f'{component_id.name}-{component_id.version}',
             )
             if os.path.isfile(descriptor_path):
-                return ocm.ComponentDescriptor.from_dict(
-                    ci.util.parse_yaml_file(descriptor_path)
-                )
+                with open(descriptor_path) as f:
+                    return ocm.ComponentDescriptor.from_dict(
+                        yaml.safe_load(f),
+                    )
 
         # component descriptor not found in lookup
         return _writeback
@@ -314,11 +314,11 @@ async def raw_component_descriptor_from_oci(
         if not isinstance(ocm_repo, ocm.OciOcmRepository):
             raise NotImplementedError(ocm_repo)
 
-        target_ref = ci.util.urljoin(
-            ocm_repo.oci_ref,
+        target_ref = '/'.join((
+            ocm_repo.oci_ref.rstrip('/'),
             'component-descriptors',
             f'{component_id.name.lower()}:{component_id.version}', # oci-spec allows only lowercase
-        )
+        ))
 
         manifest = await oci_client.manifest(
             image_reference=target_ref,

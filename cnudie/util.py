@@ -5,7 +5,6 @@ import textwrap
 
 import deprecated
 
-import ci.util
 import ocm
 import oci.model as om
 
@@ -125,11 +124,11 @@ def oci_ref(
     )
 
     return om.OciImageReference(
-        ci.util.urljoin(
-            repo_base_url,
+        '/'.join((
+            repo_base_url.rstrip('/'),
             'component-descriptors',
             f'{component.name.lower()}:{component.version}',
-        )
+        ))
     )
 
 

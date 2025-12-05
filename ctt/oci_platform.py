@@ -5,8 +5,6 @@
 import re
 import typing
 
-import deprecated
-
 import oci.model as om
 
 
@@ -33,13 +31,6 @@ class PlatformFilter:
 
     def __repr__(self):
         return f'{self.__class__.__name__}({self.included_platform_regexes=})'
-
-    @deprecated.deprecated
-    @staticmethod
-    def create(
-        included_platforms: typing.List[str],
-    ) -> typing.Callable[[om.OciPlatform], bool]:
-        return PlatformFilter(included_platform_regexes=included_platforms)
 
 
 def normalise(p: om.OciPlatform):

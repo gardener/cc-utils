@@ -1,0 +1,42 @@
+name: Release-CTT
+on:
+  workflow_dispatch:
+    inputs:
+      slack-channel-id:
+        type: string
+        default: C0170EXLULE # gardener-cicd channel
+        description: which slack-channel to post release-notes to (defaults to gardener-cicd)
+      post-to-slack:
+        type: boolean
+        default: true
+        description: post to slack
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-ctt.yaml
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    with:
+      mode: 'release'
+
+  release-to-github-and-bump:
+    uses: ./.github/workflows/release.yaml
+    needs:
+      - build
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    with:
+      release-commit-target: branch
+      next-version: bump-minor
+      github-tag-template: 'ctt/${version}'
+      version-versionfile: ctt/VERSION
+      slack-channel-id: ${{ inputs.post-to-slack && inputs.slack-channel-id || '' }}
