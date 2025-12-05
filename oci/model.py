@@ -175,6 +175,11 @@ class OciImageReference:
 
     @property
     @functools.cache
+    def with_unmixed_tag(self) -> str:
+        return str(self.with_tag(self.tag))
+
+    @property
+    @functools.cache
     def has_tag(self):
         return not self.tag_type is OciTagType.NO_TAG
 
