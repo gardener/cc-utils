@@ -9,11 +9,11 @@ import shutil
 import tarfile
 import tempfile
 
+import cachetools
+import dacite
 import requests
 import yaml
 
-import cachetools
-import dacite
 import ocm
 import ocm.oci
 import ocm.iter as oi
