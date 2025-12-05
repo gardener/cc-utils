@@ -1,0 +1,47 @@
+name: Build CTT
+on:
+  push:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the "mode" to use. passed to `prepare` (currently for selecting  target-registries)
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yaml
+    with:
+      mode: ${{ inputs.mode || 'snapshot' }}
+      versionfile: ctt/VERSION
+      version-prerelease: ${{ (inputs.mode == 'snapshot' || inputs.mode == '') && 'dev0' || '' }}
+      base-component-file: .ocm/ctt-component.yaml
+
+  build-ctt-oci-image:
+    name: Build CTT-OCI-Image
+    needs:
+      - prepare
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/oci-ocm.yaml
+    with:
+      name: ctt-image
+      dockerfile: Dockerfile.ctt
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
+      oci-repository: cicd/ctt-image
+      oci-platforms: 'linux/amd64,linux/arm64'
+      version: ${{ needs.prepare.outputs.version }}
+      ocm-labels: |
+        - name: gardener.cloud/cve-categorisation
+          value:
+            authentication_enforced: false
+            availability_requirement: low
+            confidentiality_requirement: high
+            integrity_requirement: high
+            network_exposure: protected
+            user_interaction: gardener-operator
