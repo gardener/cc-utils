@@ -5,7 +5,7 @@ RUN --mount=type=bind,source=.,target=/src,rw \
         bash \
         python3 \
         py3-pip \
-&&  cd /src && python3 /src/setup.py bdist_wheel \
+&&  cd /src && python3 /src/setup.ctt bdist_wheel \
 &&  python3 /src/setup.oci.py bdist_wheel \
 &&  python3 /src/setup.ocm.py bdist_wheel \
 &&  pip install --upgrade --no-cache-dir --break-system-packages \
