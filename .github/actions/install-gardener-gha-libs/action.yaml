@@ -76,7 +76,7 @@ runs:
           setup_file="${1}"
           if ! python3 "${setup_file}" bdist_wheel \
             --dist-dir dist &>/tmp/build.log; then
-            echo package-build returned an error - dumping log:
+            echo package-build for ${setup_file} returned an error - dumping log:
             cat /tmp/build.log
             echo ----
             echo will now exit
