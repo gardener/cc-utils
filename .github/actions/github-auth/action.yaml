@@ -1,0 +1,184 @@
+name: Authenticate against GitHub using OIDC
+description: |
+  An opinionated action used to retrieve a GitHub access token using OIDC. The calling GHA run must
+  be configured in the `oidc-federation.json` file of the `.github` repository of the passed
+  `organization`.
+
+inputs:
+  token-server:
+    type: string
+    required: true
+    description: |
+      The URL of the github-oidc-federation server which offers a `/token-exchange` endpoint. See
+      github.com/gardener/github-oidc-federation for more information. By convention, pass-in the
+      organization variable `FEDERATED_GITHUB_ACCESS_TOKEN_SERVER`.
+  host:
+    type: string
+    required: false
+    description: |
+      The GitHub host the access token should be valid for. If not specified, defaults to current
+      GitHub host.
+  organization:
+    type: string
+    required: false
+    description: |
+      The GitHub organization the access token should be valid for. If not specified, defaults to
+      current repository owner.
+  repositories:
+    type: string
+    required: false
+    description: |
+      The (newline separated) list of repositories the access token should be valid for. If omitted,
+      the token will be valid for all repositories in the specified `organization`.
+
+      Example:
+      ```
+      repositories: |
+        repo1
+        repo2
+      ```
+  permissions:
+    type: string
+    default: |
+      contents: read
+    description: |
+      The permissions that should be granted to the access token. Permission names are expected to
+      be in snake_case format. For a list of available permissions, please refer to
+      https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps.
+
+      Example:
+      ```
+      permissions: |
+        contents: read
+        issues: write
+      ```
+  audience:
+    type: string
+    default: github-oidc-federation
+
+outputs:
+  token:
+    value: ${{ steps.token.outputs.token }}
+    description: |
+      The GitHub access token.
+
+runs:
+  using: composite
+  steps:
+    - name: Preprocess Inputs
+      id: preprocess
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if ${{ inputs.host != '' }}; then
+          host="${{ inputs.host }}"
+        else
+          server_url="${{ github.server_url }}"
+          host="${server_url#*://}"
+        fi
+
+        if ${{ inputs.organization != '' }}; then
+          organization="${{ inputs.organization }}"
+        else
+          organization="${{ github.repository_owner }}"
+        fi
+
+        cat <<EOF > /tmp/repositories
+        ${{ inputs.repositories }}
+        EOF
+
+        cat <<EOF > /tmp/permissions
+        ${{ inputs.permissions }}
+        EOF
+
+        # store input as single line JSON string
+        repositories="$(jq -Rsc 'split("\n") | map(select(length > 0))' /tmp/repositories)"
+        permissions="$(yq -o json /tmp/permissions | jq -c)"
+
+        echo "host=${host}" >> "$GITHUB_OUTPUT"
+        echo "organization=${organization}" >> "$GITHUB_OUTPUT"
+        echo "repositories=${repositories}" >> "$GITHUB_OUTPUT"
+        echo "permissions=${permissions}" >> "$GITHUB_OUTPUT"
+
+    - name: Create OIDC token
+      id: create-oidc-token
+      shell: bash
+      run: |
+        set -eo pipefail
+
+        token_request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
+        token_request_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
+
+        if [ -z ${token_request_url} ]; then
+          echo "ERROR: ACTIONS_ID_TOKEN_REQUEST_URL was not passed."
+          echo 'That typically means this workflow was not run with `id-token: write`-permission'
+          exit 1
+        fi
+
+        if [ -z "${token_request_token}" ]; then
+          echo "ERROR: ACTIONS_ID_TOKEN_REQUEST_TOKEN was not passed."
+          echo 'That typically means this workflow was not run with `id-token: write`-permission'
+          exit 1
+        fi
+
+        out_path="/tmp/resp.json"
+
+        resp=$(curl -sLS \
+          -H "Authorization: Bearer ${token_request_token}" \
+          -w "%{http_code}" \
+          -o "${out_path}" \
+          "${token_request_url}&audience=${{ inputs.audience }}"
+        )
+
+        if [[ "${resp}" -lt 200 || "${resp}" -ge 300 ]]; then
+          echo "ERROR: Failed to retrieve a GitHub identity-token"
+          cat "${out_path}"
+          exit 1
+        fi
+
+        id_token=$(cat "${out_path}" | jq -r .value)
+
+        if [ -z "${id_token}" ]; then
+          echo "ERROR: Failed to retrieve a GitHub identity-token"
+          exit 1
+        fi
+
+        echo "token=${id_token}" >> "$GITHUB_OUTPUT"
+
+    - name: Exchange ID Token for GitHub access token
+      id: token
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        out_path="/tmp/resp.json"
+        payload='{
+          "host": "${{ steps.preprocess.outputs.host }}",
+          "organization": "${{ steps.preprocess.outputs.organization }}",
+          "token": "${{ steps.create-oidc-token.outputs.token }}",
+          "repositories": ${{ steps.preprocess.outputs.repositories }},
+          "permissions": ${{ steps.preprocess.outputs.permissions }}
+        }'
+
+        echo "Payload: ${payload}"
+
+        sleep 1s # ensure the token's iat is not in the future
+
+        resp=$(curl -sLS \
+          -H "Content-Type: application/json" \
+          -w "%{http_code}" \
+          -o "${out_path}" \
+          -d "${payload}" \
+          "${{ inputs.token-server }}/token-exchange"
+        )
+
+        if [[ "${resp}" -lt 200 || "${resp}" -ge 300 ]]; then
+          echo "ERROR: Failed to retrieve GitHub token"
+          cat "${out_path}"
+          exit 1
+        fi
+
+        token=$(cat "${out_path}" | jq -r .token)
+
+        echo "token=${token}" >> "$GITHUB_OUTPUT"
