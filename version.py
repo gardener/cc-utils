@@ -16,8 +16,6 @@ from typing import (
 )
 import typing
 
-import ci.util
-
 logger = logging.getLogger(__name__)
 
 Version = semver.VersionInfo | str
@@ -166,7 +164,7 @@ def parse_to_semver(
         elif version is None:
             raise ValueError('version must not be None')
         else:
-            ci.util.warning(f'unexpected type for version: {type(version)}')
+            logger.warning(f'unexpected type for version: {type(version)}')
             version_str = str(version) # fallback
 
     try:
