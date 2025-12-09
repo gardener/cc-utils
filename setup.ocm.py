@@ -15,7 +15,12 @@ def requirements():
 
 
 def version():
-    with open(os.path.join(own_dir, 'ocm', 'VERSION')) as f:
+    version_path = os.environ.get(
+        'version_file',
+        os.path.join(own_dir, 'ocm', 'VERSION'),
+    )
+
+    with open(version_path) as f:
         return f.read().strip()
 
 
@@ -26,9 +31,22 @@ setuptools.setup(
     long_description='Open-Component_model (OCM) language bindings',
     long_description_content_type='text/markdown',
     python_requires='>=3.11',
-    py_modules=(),
-    packages=('ocm',),
+    py_modules=(
+        'gziputil',
+        'ioutil',
+        'reutil',
+        'tarutil',
+        'version',
+    ),
+    packages=(
+        'cnudie',
+        'ctt',
+        'ocm',
+    ),
     package_data={
+        'ctt': (
+            'simple-cfg',
+        ),
         'ocm': (
             'VERSION',
             'ocm-component-descriptor-schema.yaml',

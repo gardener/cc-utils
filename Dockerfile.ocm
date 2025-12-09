@@ -5,14 +5,12 @@ RUN --mount=type=bind,source=.,target=/src,rw \
         bash \
         python3 \
         py3-pip \
-&&  cd /src && python3 /src/setup.ctt bdist_wheel \
+&&  cd /src  \
+&& export version_file=/src/ocm/image-version \
+&& python3 /src/setup.ocm.py bdist_wheel \
 &&  python3 /src/setup.oci.py bdist_wheel \
-&&  python3 /src/setup.ocm.py bdist_wheel \
 &&  pip install --upgrade --no-cache-dir --break-system-packages \
     --find-links /src/dist \
-    gardener-ctt==$(cat /src/ctt/VERSION)
+    gardener-ocm==$(cat $version_file)
 
-COPY ctt/cli /ctt/cli
-COPY ctt/simple-cfg /ctt/simple-cfg
-
-ENTRYPOINT [ "/ctt/cli" ]
+ENTRYPOINT [ "python", "-m", "ocm" ]

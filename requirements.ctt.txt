@@ -1,5 +1,0 @@
-dacite
-jsonschema
-gardener-oci
-gardener-ocm
-pyyaml

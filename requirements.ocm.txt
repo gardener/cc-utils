@@ -1,5 +1,7 @@
-dacite
-jsonschema
-gardener-oci
-python-dateutil
 PyYaml
+cachetools
+dacite
+gardener-oci
+jsonschema
+python-dateutil
+semver
