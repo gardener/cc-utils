@@ -1,4 +1,4 @@
-name: Build CTT
+name: Build OCM (Image w/ CLI)
 on:
   push:
   workflow_call:
@@ -15,12 +15,12 @@ jobs:
     uses: ./.github/workflows/prepare.yaml
     with:
       mode: ${{ inputs.mode || 'snapshot' }}
-      versionfile: ctt/VERSION
+      versionfile: ocm/image-version
       version-prerelease: ${{ (inputs.mode == 'snapshot' || inputs.mode == '') && 'dev0' || '' }}
-      base-component-file: .ocm/ctt-component.yaml
+      base-component-file: .ocm/ocm-component.yaml
 
-  build-ctt-oci-image:
-    name: Build CTT-OCI-Image
+  build-ocm-oci-image:
+    name: Build OCM-OCI-Image
     needs:
       - prepare
     secrets: inherit
@@ -30,10 +30,10 @@ jobs:
       id-token: write
     uses: ./.github/workflows/oci-ocm.yaml
     with:
-      name: ctt-image
-      dockerfile: Dockerfile.ctt
+      name: ocm-image
+      dockerfile: Dockerfile.ocm
       oci-registry: ${{ needs.prepare.outputs.oci-registry }}
-      oci-repository: cicd/ctt-image
+      oci-repository: cicd/ocm
       oci-platforms: 'linux/amd64,linux/arm64'
       version: ${{ needs.prepare.outputs.version }}
       ocm-labels: |

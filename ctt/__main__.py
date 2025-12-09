@@ -10,8 +10,7 @@ exposes a CLI for "CTT" (fka: CNUDIE Transport Tool)
 '''
 
 
-def main():
-    parser = argparse.ArgumentParser()
+def configure_parser(parser):
     parser.add_argument(
         '--src-repo',
         required=True,
@@ -31,8 +30,8 @@ def main():
         required=True,
     )
 
-    parsed = parser.parse_args()
 
+def replicate(parsed):
     if not ':' in parsed.ocm_component:
         print(f'{parsed.ocm_component=} does not match expected format (<name>:<version>)')
         exit(1)
@@ -61,6 +60,15 @@ def main():
         oci_client=oci_client,
     ):
         pass
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    configure_parser(parser)
+
+    parsed = parser.parse_args()
+
+    replicate(parsed)
 
 
 if __name__ == '__main__':

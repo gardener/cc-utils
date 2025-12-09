@@ -7,4 +7,5 @@ skips = [
   'B404', # we know how to call subprocesses
   'B413', # false-positive: we do not use pyCrypto, but pycryptodome
   'B603', # we know how to call subprocesses
+  'B606', # we know how to call subprocesses
 ]

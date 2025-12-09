@@ -10,10 +10,13 @@ import sys
 
 import dacite
 
+import ctt.__main__
 import ocm
 import ocm.iter
 import ocm.oci
 import ocm.upload
+
+own_dir = os.path.dirname(__file__)
 
 
 try:
@@ -465,6 +468,20 @@ def download(parsed):
     outfh.flush()
 
 
+def replicate(parsed):
+    ctt.__main__.replicate(parsed)
+
+
+def generate_config(parsed):
+    simple_cfg_script_path = os.path.join(
+        own_dir,
+        '../ctt/simple-cfg',
+    )
+
+    # strip toplevel-command and delegate
+    os.execv(simple_cfg_script_path, sys.argv[1:])
+
+
 def main():
     parser = argparse.ArgumentParser()
     maincmd_parsers = parser.add_subparsers(
@@ -568,6 +585,20 @@ def main():
         action='store_true',
     )
     download_parser.set_defaults(callable=download)
+
+    replicate_parser = maincmd_parsers.add_parser(
+        'replicate',
+        aliases=('r',),
+    )
+    replicate_parser.set_defaults(callable=replicate)
+    ctt.__main__.configure_parser(replicate_parser)
+
+    replicate_cfg_parser = maincmd_parsers.add_parser(
+        'generate-replication-cfg',
+        aliases=('simple-cfg',),
+    )
+    replicate_cfg_parser.set_defaults(callable=generate_config)
+    replicate_cfg_parser.add_argument('params', nargs='*')
 
     if len(sys.argv) < 2:
         parser.print_usage()
