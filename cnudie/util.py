@@ -3,8 +3,6 @@ import dataclasses
 import graphlib
 import textwrap
 
-import deprecated
-
 import ocm
 import oci.model as om
 
@@ -265,11 +263,11 @@ def target_oci_ref(
     )
 
 
-@deprecated.deprecated('use ocm.util.main_source instead')
 def main_source(
     component: ocm.Component,
     absent_ok: bool=True,
 ) -> ocm.Source:
+    print('warning: cnudie.util is deprecated - use ocm.util instead')
     component = to_component(component)
     for source in component.sources:
         if label := source.find_label('cloud.gardener/cicd/source'):
