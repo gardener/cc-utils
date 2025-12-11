@@ -19,21 +19,91 @@ own_dir="$(dirname "${BASH_SOURCE[0]}")"
 git --version
 git submodule init
 github_host=$(echo ${GITHUB_SERVER_URL:-https://github.com} | cut -d/ -f3)
+audience="github-oidc-federation"
 
-if [ -z "${APP_ID:-}" -a -n "${APP_KEY:-}" ]; then
-  echo "Error: APP_ID and APP_KEY must both be set or not set"
-  exit 1
-elif [ -n "${APP_ID:-}" -a -z "${APP_KEY:-}" ]; then
-  echo "Warning: APP_KEY not set - will not create github-app-authtokens"
-  have_app=false
-elif [ -n "${APP_ID:-}" ]; then
-  # we checked both are (un)set above
-  have_app=true
-else
-  have_app=false
-fi
 
-function token() {
+function identity_token() {
+  token_request_url="${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+  token_request_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
+
+  if [ -z "${token_request_url}" ]; then
+    echo "ERROR: ACTIONS_ID_TOKEN_REQUEST_URL was not passed."
+    echo 'That typically means this workflow was not run with `id-token: write`-permission'
+    exit 1
+  fi
+
+  if [ -z "${token_request_token}" ]; then
+    echo "ERROR: ACTIONS_ID_TOKEN_REQUEST_TOKEN was not passed."
+    echo 'That typically means this workflow was not run with `id-token: write`-permission'
+    exit 1
+  fi
+
+  out_path="/tmp/resp.json"
+
+  resp=$(curl -sLS \
+    -H "Authorization: Bearer ${token_request_token}" \
+    -w "%{http_code}" \
+    -o "${out_path}" \
+    "${token_request_url}&audience=${audience}"
+  )
+
+  if [[ "${resp}" -lt 200 || "${resp}" -ge 300 ]]; then
+    echo "ERROR: Failed to retrieve a GitHub identity-token" > /dev/stderr
+    cat "${out_path}" > /dev/stderr
+    return 1
+  fi
+
+  id_token=$(cat "${out_path}" | jq -r .value)
+
+  if [ -z "${id_token}" ]; then
+    echo "ERROR: Failed to retrieve a GitHub identity-token" > /dev/stderr
+    return 1
+  fi
+
+  echo $id_token
+}
+
+function fed_token() {
+  host=$1
+  org=$2
+  repo=$3
+  id_token=$4
+
+  out_path="/tmp/resp.json"
+
+  payload="{
+    \"host\": \"${host}\",
+    \"organization\": \"${org}\",
+    \"repositories\": [\"${repo}\"],
+    \"permissions\": {\"contents\": \"read\"},
+    \"token\": \"${id_token}\"
+  }"
+
+  resp=$(curl -sLS \
+    -H "Content-Type: application/json" \
+    -w "%{http_code}" \
+    -o "${out_path}" \
+    -d "${payload}" \
+    "${TOKEN_SERVER}/token-exchange"
+  )
+
+  if [[ "${resp}" -lt 200 || "${resp}" -ge 300 ]]; then
+    echo "ERROR: Failed to retrieve GitHub token" > /dev/stderr
+    cat "${out_path}" > /dev/stderr
+    return 1
+  fi
+
+  token=$(cat "${out_path}" | jq -r .token)
+
+  if [ -z "${token}" ]; then
+    echo "ERROR: Failed to retrieve GitHub token" > /dev/stderr
+    return 1
+  fi
+
+  echo $token
+}
+
+function app_token() {
   org=$1
 
   "$own_dir/create_app_token.py" \
@@ -56,7 +126,9 @@ git submodule status | while read -r s; do
   fi
   echo "submodule at $path configured to use SSH - will reconfigure to https"
 
-  if ! $have_app; then
+  if [[ -z "${TOKEN_SERVER:-}" && ( -z "${APP_ID:-}" || -z "${APP_KEY:-}" ) ]]; then
+    echo "Neither a fed-server (inputs.token-server) nor a GitHub App (inputs.auth-app-private-key"
+    echo "and inputs.auth-app-client-id) is specified, will try to fetch submodule anonymously"
     git submodule update $path
     continue
   fi
@@ -75,7 +147,21 @@ git submodule status | while read -r s; do
   # git does not seem to honour http.<url>.extraheaders, so we have to jump through some (more)
   # hoops
   org=$(echo $sm_repo | cut -d/ -f1)
-  auth=$(echo -n x-access-token:$(token $org) | base64)
+  repo=$(echo $sm_repo | cut -d/ -f2)
+
+  # strip ".git" suffix from repository
+  repo=${repo%.git}
+
+  if [ -n "${TOKEN_SERVER:-}" ]; then
+    id_token=$(identity_token)
+    sleep 1s # ensure the token's iat is not in the future
+    token=$(fed_token $github_host $org $repo $id_token)
+  else
+    # we checked both `APP_ID` and `APP_KEY` are set
+    token=$(app_token $org)
+  fi
+
+  auth=$(echo -n x-access-token:${token} | base64)
   (
     unset GIT_DIR
     unset GIT_WORK_TREE
