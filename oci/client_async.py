@@ -386,7 +386,7 @@ class Client:
                 f'rq against {url=} failed {res.status=} {res.reason=} {method=} {await res.text()}'
             )
 
-        if res.status_code == 429 and remaining_retries > 0:
+        if res.status == 429 and remaining_retries > 0:
             logger.warning(
                 f'quota was exceeded, will wait a minute and then retry again ({remaining_retries=})'
             )
