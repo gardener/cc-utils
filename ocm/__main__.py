@@ -14,6 +14,7 @@ import cnudie.retrieve
 import ctt.__main__
 import oci.client
 import ocm
+import ocm.gardener
 import ocm.iter
 import ocm.oci
 import ocm.upload
@@ -587,6 +588,29 @@ def traverse(
                 print(eval(print_expr, {'node': node, 'artefact': node.source})) # nosec B307
 
 
+def imagevector(parsed):
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_cfg,
+        ),
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        oci_client=oci_client,
+    )
+    component = component_descriptor_lookup(parsed.name)
+    root_component = component_descriptor_lookup(parsed.root_name)
+
+    imagevector = ocm.gardener.image_vector_overwrite(
+        component=component,
+        root_component=root_component,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    print(yaml.safe_dump(imagevector))
+
+
 def generate_config(parsed):
     simple_cfg_script_path = os.path.join(
         own_dir,
@@ -749,6 +773,31 @@ def main():
     traverse_parser.add_argument(
         '--filter-expr',
         help='a python-expression used to filter nodes (omit node if evaluates to False)'
+    )
+
+    imgvector_cfg_parser = maincmd_parsers.add_parser(
+        'image-vector',
+        aliases=('i',),
+    )
+    imgvector_cfg_parser.set_defaults(callable=imagevector)
+    imgvector_cfg_parser.add_argument(
+        '--name',
+        help='OCM-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--root-name',
+        help='OCM-Root-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--ocm-repo',
+        required=True,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
     )
 
     if len(sys.argv) < 2:
