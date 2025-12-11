@@ -382,3 +382,188 @@ def find_creation_time(
         return datetime.datetime.fromisoformat(label.value)
 
     return None
+
+
+def iter_oci_image_dicts_from_cref(
+    cref: ocm.ComponentReference,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+) -> collections.abc.Iterable[dict]:
+    '''
+    yields "image-dicts" as used for image-vector-overwrites understood by gardener.
+
+    each dict is a reference to an oci-image looked-up from ocm-resource from referenced
+    ocm-component.
+    '''
+    if not (images_label := cref.find_label('imagevector.gardener.cloud/images')):
+        return
+
+    images = images_label.value['images']
+    referenced_component = component_descriptor_lookup(cref).component
+
+    for image in images:
+        if (resource_id := image.get('resourceId', None)):
+            resource_name = resource_id['name']
+        else:
+            resource_name = image['name']
+
+        for resource in referenced_component.resources:
+            if not resource.type is ocm.ArtefactType.OCI_IMAGE:
+                continue
+
+            if not resource.name == resource_name:
+                continue
+
+            image_ref = oci.model.OciImageReference(resource.access.imageReference)
+
+            image_dict = {
+                'name': image['name'],
+                'repository': image_ref.ref_without_tag,
+                'sourceRepository': cref.componentName,
+                'tag': image_ref.tag,
+            }
+
+            if (target_version := image.get('targetVersion')):
+                image_dict['targetVersion'] = target_version
+            if (labels := image.get('labels')):
+                image_dict['labels'] = labels
+
+            yield image_dict
+
+
+def iter_oci_image_dicts_from_resources(
+    component: ocm.Component,
+    resource_names_from_label: bool=True,
+    fallback_to_target_version_from_resource: bool=False,
+    resource_names: collections.abc.Iterable[str]=None,
+) -> collections.abc.Iterable[dict]:
+    '''
+    yields "image-dicts" as used for image-vector-overwrites understood by gardener.
+
+    resources are only considered of they bear the `imagevector.gardener.cloud/name` label.
+    By default, this label's value is used as value for `name` in resulting image-dict (this can
+    be disabled by passing False for `resource_names_from_label`). The latter is done for
+    "lss" (or "root") component.
+
+    If `imagevector.gardener.cloud/target-version`-label is present, its value will be conveyd as
+    `targetVersion`-attribute. If absent, the resource's `version` is used, if
+    `fallback_to_target_version_from_resource` is passed as True.
+
+    if resource_names is passed, only resources with matching names (honouring label, if configured)
+    will be considered.
+    '''
+    for resource in component.resources:
+        if not resource.type is ocm.ArtefactType.OCI_IMAGE:
+            continue
+
+        if not (name_label := resource.find_label('imagevector.gardener.cloud/name')):
+            continue
+
+        if resource_names_from_label:
+            name = name_label.value
+        else:
+            name = resource.name
+
+        if resource_names is not None and not name in resource_names:
+            continue
+
+        image_ref = oci.model.OciImageReference(resource.access.imageReference)
+        repository = image_ref.ref_without_tag
+
+        image_dict = {
+            'name': name,
+            'repository': repository,
+            'tag': image_ref.tag,
+        }
+
+        if (target_version_label := resource.find_label(
+                'imagevector.gardener.cloud/target-version'
+        )):
+            image_dict['targetVersion'] = target_version_label.value
+        elif fallback_to_target_version_from_resource:
+            image_dict['targetVersion'] = resource.version
+
+        yield image_dict
+
+
+def iter_oci_image_dicts_from_component(
+    component: ocm.Component,
+    resource_names_from_label: bool,
+    fallback_to_target_version_from_resource: bool,
+    resource_names: collections.abc.Iterable[str],
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+) -> collections.abc.Iterable[dict]:
+    component = component.component
+    for cref in component.componentReferences:
+        yield from iter_oci_image_dicts_from_cref(
+            cref=cref,
+            component_descriptor_lookup=component_descriptor_lookup,
+        )
+
+    yield from iter_oci_image_dicts_from_resources(
+        component=component,
+        resource_names_from_label=resource_names_from_label,
+        fallback_to_target_version_from_resource=fallback_to_target_version_from_resource,
+        resource_names=resource_names,
+    )
+
+
+def iter_oci_image_dicts_from_rooted_component(
+    component: ocm.Component,
+    root_component: ocm.Component,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+) -> collections.abc.Iterable[dict]:
+    component = component.component
+    seen_image_keys = set() # (name, targetVersion)
+
+    def image_dict_key(image_dict):
+        return (image_dict['name'], image_dict.get('targetVersion', None))
+
+    for image_dict in  iter_oci_image_dicts_from_component(
+        component=component,
+        resource_names_from_label=True,
+        fallback_to_target_version_from_resource=False,
+        resource_names=None,
+        component_descriptor_lookup=component_descriptor_lookup,
+    ):
+        k = image_dict_key(image_dict)
+        if k in seen_image_keys:
+            continue
+        seen_image_keys.add(k)
+        yield image_dict
+
+    if (images_label := component.find_label('imagevector.gardener.cloud/images')):
+        resource_names = [i['name'] for i in images_label.value['images']]
+    else:
+        resource_names = []
+
+    for image_dict in iter_oci_image_dicts_from_component(
+        component=root_component,
+        resource_names_from_label=False,
+        fallback_to_target_version_from_resource=True,
+        resource_names=resource_names,
+        component_descriptor_lookup=component_descriptor_lookup,
+    ):
+        k = image_dict_key(image_dict)
+        if k in seen_image_keys:
+            continue
+        seen_image_keys.add(k)
+        yield image_dict
+
+
+def image_vector_overwrite(
+    component: ocm.Component,
+    root_component: ocm.Component,
+    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+) -> dict:
+    sorted_images = sorted(
+        iter_oci_image_dicts_from_rooted_component(
+            component=component,
+            root_component=root_component,
+            component_descriptor_lookup=component_descriptor_lookup,
+        ),
+        key=lambda image_dict: image_dict['repository'],
+    )
+
+    return {
+        'images': sorted_images,
+    }
