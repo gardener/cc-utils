@@ -83,19 +83,73 @@ def iter_stale_release_branches(
         yield branch.name
 
 
+def iter_stale_draft_releases(
+    branch: str,
+    branch_info: ocm.branch_info.BranchInfo,
+    releases: collections.abc.Iterable[github3.repos.repo.release.Release],
+) -> collections.abc.Iterable[github3.repos.repo.release.Release]:
+    if not (match := branch_info.release_branch_pattern.fullmatch(branch)):
+        print(f'INFO: Skipping non-release branch {branch}')
+        return
+
+    groups = match.groupdict()
+    branch_major = int(groups['major']) if 'major' in groups else None
+    branch_minor = int(groups['minor']) if 'minor' in groups else None
+    branch_patch = int(groups['patch']) if 'patch' in groups else None
+
+    for release in releases:
+        if (
+            not release.draft
+            or not release.name
+            or not version.is_semver_parseable(release.name)
+        ):
+            continue
+
+        release_version = version.parse_to_semver(release.name)
+
+        # delete draft release in case its version matches the deleted branch version
+        if (
+            (release_version.major == branch_major or branch_major is None)
+            and (release_version.minor == branch_minor or branch_minor is None)
+            and (release_version.patch == branch_patch or branch_patch is None)
+        ):
+            yield release
+
+
 def delete_stale_release_branches(
     version_semver: semver.VersionInfo,
     branch_info: ocm.branch_info.BranchInfo,
     repo: github3.repos.repo.Repository,
 ):
-    for stale_release_branch in iter_stale_release_branches(
+    if not (stale_release_branches := list(iter_stale_release_branches(
         version_semver=version_semver,
         branch_info=branch_info,
         branches=repo.branches(),
-    ):
+    ))):
+        print('INFO: No stale release branches found')
+        return
+
+    try:
+        releases = [release for release in repo.releases(number=200)]
+    except Exception:
+        # `github3.py` raises if one of the release authors is unknown (i.e. a deleted account)
+        import traceback
+        traceback.print_exc()
+        print('WARNING: ignoring error and skipping deletion of outdates draft releases')
+        releases = []
+
+    for stale_release_branch in stale_release_branches:
         print(f'INFO: Deleting {stale_release_branch=}')
 
         repo.ref(f'heads/{stale_release_branch}').delete()
+
+        for stale_draft_release in iter_stale_draft_releases(
+            branch=stale_release_branch,
+            branch_info=branch_info,
+            releases=releases,
+        ):
+            print(f'INFO: Deleting {stale_draft_release.name=}')
+            stale_draft_release.delete()
 
 
 def main():
