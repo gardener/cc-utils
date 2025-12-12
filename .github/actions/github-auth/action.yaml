@@ -105,12 +105,12 @@ runs:
       id: create-oidc-token
       shell: bash
       run: |
-        set -eo pipefail
+        set -euo pipefail
 
-        token_request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
-        token_request_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
+        token_request_url="${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+        token_request_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
 
-        if [ -z ${token_request_url} ]; then
+        if [ -z "${token_request_url}" ]; then
           echo "ERROR: ACTIONS_ID_TOKEN_REQUEST_URL was not passed."
           echo 'That typically means this workflow was not run with `id-token: write`-permission'
           exit 1

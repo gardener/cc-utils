@@ -88,6 +88,20 @@ inputs:
     type: string
     description: |
       passed as `ref` input to checkout-action
+  token-server:
+    type: string
+    required: false
+    description: |
+      The URL of the github-oidc-federation server which offers a `/token-exchange` endpoint. See
+      github.com/gardener/github-oidc-federation for more information. By convention, pass-in the
+      organization variable `FEDERATED_GITHUB_ACCESS_TOKEN_SERVER`.
+  github-auth-token-permissions:
+    type: string
+    default: |
+      contents: read
+    description: |
+      Input is passed to `github-auth` action as `permissions` input. Hence it is only considered if
+      `token-server` input is set as well.
 outputs:
   token:
     description: |
@@ -98,9 +112,36 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: create-token
+    - name: preprocess-inputs
+      id: preprocess
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if ${{ inputs.repository != '' }}; then
+          org=$(echo '${{ inputs.repository }}' | cut -d/ -f1)
+          repo=$(echo '${{ inputs.repository }}' | cut -d/ -f2)
+        else
+          org=$(echo '${{ github.repository }}' | cut -d/ -f1)
+          repo=$(echo '${{ github.repository }}' | cut -d/ -f2)
+        fi
+
+        echo "org=${org}" >> ${GITHUB_OUTPUT}
+        echo "repo=${repo}" >> ${GITHUB_OUTPUT}
+
+    - name: create-token-via-federated-github-access-token-server
+      uses: gardener/cc-utils/.github/actions/github-auth@master
+      if: ${{ inputs.token-server != '' }}
+      id: fed-token
+      with:
+        token-server: ${{ inputs.token-server }}
+        organization: ${{ steps.preprocess.outputs.org }}
+        repositories: ${{ steps.preprocess.outputs.repo }}
+        permissions: ${{ inputs.github-auth-token-permissions }}
+
+    - name: create-token-via-github-app
       if: ${{ inputs.auth-app-private-key != '' }}
-      id: token
+      id: app-token
       shell: bash
       run: |
         set -euo pipefail
@@ -108,13 +149,10 @@ runs:
           echo 'Error: must not pass `token` if passing `auth-app-*`'
           exit 1
         fi
-        if ${{ inputs.repository != '' }}; then
-          org=$(echo '${{ inputs.repository }}' | cut -d/ -f1)
-          repo=$(echo '${{ inputs.repository }}' | cut -d/ -f2)
-        else
-          org=${{ github.repository_owner }}
-          repo=$(echo ${{ github.repository }} | cut -d/ -f2)
-        fi
+
+        org=${{ steps.preprocess.outputs.org }}
+        repo=${{ steps.preprocess.outputs.repo }}
+
         echo "creating an auth-token for org $org"
         cat <<EOF > /tmp/key
         ${{ inputs.auth-app-private-key }}
@@ -128,21 +166,39 @@ runs:
         )
         unlink /tmp/key
         echo "token=${token}" >> ${GITHUB_OUTPUT}
+
+    - name: collect-token
+      id: token
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if ${{ steps.fed-token.outputs.token != '' }}; then
+          token="${{ steps.fed-token.outputs.token }}"
+        elif ${{ steps.app-token.outputs.token != '' }}; then
+          token="${{ steps.app-token.outputs.token }}"
+        else
+          token="${{ inputs.token }}"
+        fi
+
+        echo "token=${token}" >> ${GITHUB_OUTPUT}
+
     - uses: actions/checkout@v6
-      if: ${{ inputs.token == '' && steps.token.outputs.token == '' }}
+      if: ${{ steps.token.outputs.token == '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
-        repository: ${{ inputs.repository }}
+        repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
         ref: ${{ inputs.ref }}
+
     - uses: actions/checkout@v6
-      if: ${{ inputs.token != '' || steps.token.outputs.token != '' }}
+      if: ${{ steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
-        repository: ${{ inputs.repository }}
+        repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
         ref: ${{ inputs.ref }}
-        token: ${{ steps.token.outputs.token || inputs.token }}
+        token: ${{ steps.token.outputs.token }}
 
     - name: checkout-submodules
       if: ${{ inputs.submodules == 'recursive' }}
@@ -152,6 +208,7 @@ runs:
 
         echo "checking out submodules.."
         set +x
+        TOKEN_SERVER="${{ inputs.token-server }}" \
         APP_ID="${{ inputs.auth-app-client-id }}" \
         APP_KEY="${{ inputs.auth-app-private-key }}" \
         GIT_DIR=$PWD/.git \
