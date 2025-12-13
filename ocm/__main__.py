@@ -10,10 +10,16 @@ import sys
 
 import dacite
 
+import cnudie.retrieve
+import ctt.__main__
+import oci.client
 import ocm
+import ocm.gardener
 import ocm.iter
 import ocm.oci
 import ocm.upload
+
+own_dir = os.path.dirname(__file__)
 
 
 try:
@@ -465,6 +471,156 @@ def download(parsed):
     outfh.flush()
 
 
+def replicate(parsed):
+    ctt.__main__.replicate(parsed)
+
+
+def _traverse(parsed):
+    node_kinds = parsed.node_kinds
+
+    if 'c' in node_kinds:
+        components = True
+    else:
+        components = False
+
+    if 'r' in node_kinds:
+        resources = True
+    else:
+        resources = False
+
+    if 's' in node_kinds:
+        sources = True
+    else:
+        sources = False
+
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_cfg,
+        ),
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        oci_client=oci_client,
+    )
+    component = component_descriptor_lookup(parsed.name)
+
+    traverse(
+        component=component,
+        components=components,
+        sources=sources,
+        resources=resources,
+        component_descriptor_lookup=component_descriptor_lookup,
+        print_expr=parsed.print_expr,
+        filter_expr=parsed.filter_expr,
+    )
+
+
+def traverse(
+    component: ocm.Component,
+    components: bool,
+    sources: bool,
+    resources: bool,
+    component_descriptor_lookup,
+    print_expr: str=None,
+    filter_expr: str=None,
+):
+
+    for node in ocm.iter.iter(
+        component=component,
+        lookup=component_descriptor_lookup,
+    ):
+        indent = len(node.path * 2)
+
+        is_component_node = isinstance(node, ocm.iter.ComponentNode)
+        is_source_node = isinstance(node, ocm.iter.SourceNode)
+        is_resource_node = isinstance(node, ocm.iter.ResourceNode)
+
+        if is_component_node and not components:
+            continue
+
+        if is_source_node and not sources:
+            continue
+
+        if is_resource_node and not resources:
+            continue
+
+        if filter_expr:
+            if is_component_node:
+                typestr = 'component'
+                artefact = None
+            elif is_source_node:
+                typestr = node.source.type
+                artefact = node.source
+            elif is_resource_node:
+                typestr = node.resource.type
+                artefact = node.resource
+
+            if isinstance(typestr, enum.Enum):
+                typestr = typestr.value
+
+            if not eval(filter_expr, { # nosec B307
+                'node': node,
+                'type': typestr,
+                'artefact': artefact,
+            }):
+                continue
+
+        if is_component_node:
+            if not print_expr:
+                prefix = 'c'
+                print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
+            else:
+                print(eval(print_expr, {'node': node, 'artefact': None})) # nosec B307
+        if is_resource_node:
+            if not print_expr:
+                prefix = 'r'
+                indent += 1
+                print(f'{prefix}{" " * indent}{node.resource.name}')
+            else:
+                print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
+        if is_source_node:
+            if not print_expr:
+                prefix = 's'
+                indent += 1
+                print(f'{prefix}{" " * indent}{node.source.name}')
+            else:
+                print(eval(print_expr, {'node': node, 'artefact': node.source})) # nosec B307
+
+
+def imagevector(parsed):
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_cfg,
+        ),
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        oci_client=oci_client,
+    )
+    component = component_descriptor_lookup(parsed.name)
+    root_component = component_descriptor_lookup(parsed.root_name)
+
+    imagevector = ocm.gardener.image_vector_overwrite(
+        component=component,
+        root_component=root_component,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    print(yaml.safe_dump(imagevector))
+
+
+def generate_config(parsed):
+    simple_cfg_script_path = os.path.join(
+        own_dir,
+        '../ctt/simple-cfg',
+    )
+
+    # strip toplevel-command and delegate
+    os.execv(simple_cfg_script_path, sys.argv[1:])
+
+
 def main():
     parser = argparse.ArgumentParser()
     maincmd_parsers = parser.add_subparsers(
@@ -568,6 +724,81 @@ def main():
         action='store_true',
     )
     download_parser.set_defaults(callable=download)
+
+    replicate_parser = maincmd_parsers.add_parser(
+        'replicate',
+        aliases=('r',),
+    )
+    replicate_parser.set_defaults(callable=replicate)
+    ctt.__main__.configure_parser(replicate_parser)
+
+    replicate_cfg_parser = maincmd_parsers.add_parser(
+        'generate-replication-cfg',
+        aliases=('simple-cfg',),
+    )
+    replicate_cfg_parser.set_defaults(callable=generate_config)
+    replicate_cfg_parser.add_argument('params', nargs='*')
+
+    traverse_parser = maincmd_parsers.add_parser(
+        'traverse',
+        aliases=('t',),
+    )
+    traverse_parser.set_defaults(callable=_traverse)
+    traverse_parser.add_argument(
+        '--name',
+        help='OCM-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    traverse_parser.add_argument(
+        '--ocm-repo',
+        required=True,
+    )
+    traverse_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
+    )
+    traverse_parser.add_argument(
+        '--node-kinds',
+        default='crs',
+        help='''\
+            which nodes to include: (c)omponents, (r)esources, (s)ources; applied before
+            evaluating --filter-expr
+            ''',
+    )
+    traverse_parser.add_argument(
+        '--print-expr',
+        help='a python-expression that will be used to print nodes',
+    )
+    traverse_parser.add_argument(
+        '--filter-expr',
+        help='a python-expression used to filter nodes (omit node if evaluates to False)'
+    )
+
+    imgvector_cfg_parser = maincmd_parsers.add_parser(
+        'image-vector',
+        aliases=('i',),
+    )
+    imgvector_cfg_parser.set_defaults(callable=imagevector)
+    imgvector_cfg_parser.add_argument(
+        '--name',
+        help='OCM-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--root-name',
+        help='OCM-Root-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--ocm-repo',
+        required=True,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
+    )
 
     if len(sys.argv) < 2:
         parser.print_usage()

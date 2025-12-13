@@ -6,25 +6,7 @@ import abc
 import collections.abc
 
 import ctt.model
-import ctt.util as ctt_util
 import ocm
-
-original_ref_label_name = 'cloud.gardener.cnudie/migration/original_ref'
-
-
-def labels_with_migration_hint(
-    resource: ocm.Resource,
-    src_img_ref: str,
-) -> collections.abc.Sequence[ocm.Label]:
-    original_ref_label = ocm.Label(
-        name=original_ref_label_name,
-        value=src_img_ref,
-    )
-    src_labels = resource.labels or []
-    return ctt_util.add_label(
-        src_labels=src_labels,
-        label=original_ref_label,
-    )
 
 
 class UploaderBase:
@@ -105,11 +87,6 @@ class PrependTargetUploader(UploaderBase):
 
         replication_resource_element.target.access = ocm.OciAccess(
             imageReference=tgt_ref,
-        )
-
-        replication_resource_element.target.labels = labels_with_migration_hint(
-            resource=replication_resource_element.target,
-            src_img_ref=str(replication_resource_element.src_ref),
         )
 
         return replication_resource_element
@@ -194,11 +171,6 @@ class RepositoryUploader(UploaderBase):
             imageReference=tgt_ref,
         )
 
-        replication_resource_element.target.labels = labels_with_migration_hint(
-            resource=replication_resource_element.target,
-            src_img_ref=str(replication_resource_element.src_ref),
-        )
-
         return replication_resource_element
 
 
@@ -234,11 +206,6 @@ class TagSuffixUploader(UploaderBase):
 
         replication_resource_element.target.access = ocm.OciAccess(
             imageReference=tgt_ref,
-        )
-
-        replication_resource_element.target.labels = labels_with_migration_hint(
-            resource=replication_resource_element.target,
-            src_img_ref=str(replication_resource_element.src_ref),
         )
 
         return replication_resource_element

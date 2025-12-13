@@ -1,5 +1,4 @@
 import dataclasses
-import enum
 import functools
 import hashlib
 import io
@@ -18,6 +17,7 @@ import dacite
 import yaml
 
 import ocm
+import ocm.__main__
 import ocm.iter
 import ocm.oci
 import ocm.upload
@@ -338,72 +338,20 @@ def traverse(
         oci_client=ccc.oci.oci_client(),
     )
 
-    component_descriptor = component_descriptor_lookup(ocm.ComponentIdentity(
+    component = component_descriptor_lookup(ocm.ComponentIdentity(
         name=name,
         version=version,
-    ))
-    component = component_descriptor.component
+    )).component
 
-    for node in ocm.iter.iter(
+    ocm.__main__.traverse(
         component=component,
-        lookup=component_descriptor_lookup,
-    ):
-        indent = len(node.path * 2)
-
-        is_component_node = isinstance(node, ocm.iter.ComponentNode)
-        is_source_node = isinstance(node, ocm.iter.SourceNode)
-        is_resource_node = isinstance(node, ocm.iter.ResourceNode)
-
-        if is_component_node and not components:
-            continue
-
-        if is_source_node and not sources:
-            continue
-
-        if is_resource_node and not resources:
-            continue
-
-        if filter_expr:
-            if is_component_node:
-                typestr = 'component'
-                artefact = None
-            elif is_source_node:
-                typestr = node.source.type
-                artefact = node.source
-            elif is_resource_node:
-                typestr = node.resource.type
-                artefact = node.resource
-
-            if isinstance(typestr, enum.Enum):
-                typestr = typestr.value
-
-            if not eval(filter_expr, { # nosec B307
-                'node': node,
-                'type': typestr,
-                'artefact': artefact,
-            }):
-                continue
-
-        if isinstance(node, ocm.iter.ComponentNode):
-            if not print_expr:
-                prefix = 'c'
-                print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
-            else:
-                print(eval(print_expr, {'node': node, 'artefact': None})) # nosec B307
-        if isinstance(node, ocm.iter.ResourceNode):
-            if not print_expr:
-                prefix = 'r'
-                indent += 1
-                print(f'{prefix}{" " * indent}{node.resource.name}')
-            else:
-                print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
-        if isinstance(node, ocm.iter.SourceNode):
-            if not print_expr:
-                prefix = 's'
-                indent += 1
-                print(f'{prefix}{" " * indent}{node.source.name}')
-            else:
-                print(eval(print_expr, {'node': node, 'artefact': node.source})) # nosec B307
+        components=components,
+        sources=sources,
+        resources=resources,
+        component_descriptor_lookup=component_descriptor_lookup,
+        print_expr=print_expr,
+        filter_expr=filter_expr,
+    )
 
 
 def validate(component_descriptor: str):
