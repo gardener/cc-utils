@@ -1,4 +1,4 @@
-name: Release-CTT
+name: Release-OCM-Image
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ defaults:
 
 jobs:
   build:
-    uses: ./.github/workflows/build-ctt.yaml
+    uses: ./.github/workflows/build-ocm.yaml
     permissions:
       contents: write
       packages: write
@@ -37,6 +37,6 @@ jobs:
     with:
       release-commit-target: branch
       next-version: bump-minor
-      github-tag-template: 'ctt/${version}'
-      version-versionfile: ctt/VERSION
+      github-tag-template: 'ocm/${version}'
+      version-versionfile: ocm/image-version
       slack-channel-id: ${{ inputs.post-to-slack && inputs.slack-channel-id || '' }}
