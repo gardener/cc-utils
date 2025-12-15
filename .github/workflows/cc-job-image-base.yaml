@@ -48,7 +48,7 @@ jobs:
       new_version: ${{ steps.update_version.outputs.new_version }}
       current_version: ${{ steps.update_version.outputs.current_version }}
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@gha-preview
         id: checkout
         with:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -56,7 +56,7 @@ jobs:
           auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
 
       - name: Setup Git Identity
-        uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+        uses: gardener/cc-utils/.github/actions/setup-git-identity@gha-preview
 
       - name: Update Base Image and Increment Version
         id: update_version

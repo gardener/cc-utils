@@ -130,7 +130,7 @@ runs:
         echo "repo=${repo}" >> ${GITHUB_OUTPUT}
 
     - name: create-token-via-federated-github-access-token-server
-      uses: gardener/cc-utils/.github/actions/github-auth@master
+      uses: gardener/cc-utils/.github/actions/github-auth@gha-preview
       if: ${{ inputs.token-server != '' }}
       id: fed-token
       with:
@@ -307,7 +307,7 @@ runs:
           check=True,
         )
     - if: ${{ steps.calc.outputs.remove-label }}
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@gha-preview
     - name: remove-trusted-and-add-needs-label
       if: ${{ steps.calc.outputs.remove-label != '' && inputs.remove-trusted-label == 'true' }}
       shell: python
