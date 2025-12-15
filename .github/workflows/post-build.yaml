@@ -108,6 +108,13 @@ on:
         type: boolean
         default: true
         description: see partner input for details
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
     secrets:
       oci-auth-token:
         required: false
@@ -128,6 +135,7 @@ on:
 
 jobs:
   component-descriptor:
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
@@ -220,6 +228,7 @@ jobs:
           name: component-descriptor
 
   repo-metadata:
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     outputs:
       fork: ${{ steps.repo-metadata.outputs.fork }}
@@ -236,6 +245,7 @@ jobs:
       - repo-metadata
     # never run for forks and only for push events
     if: ${{ ! fromJSON(needs.repo-metadata.outputs.fork) && github.event_name == 'push' }}
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write

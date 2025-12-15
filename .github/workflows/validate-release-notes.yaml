@@ -6,10 +6,18 @@ on:
       pull-request-body:
         type: string
         required: true
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
 jobs:
   validate-release-notes:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    environment: ${{ inputs.github-environment }}
     steps:
       - name: install-gardener-gha-libs
         uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master

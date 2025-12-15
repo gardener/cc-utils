@@ -28,10 +28,18 @@ on:
         required: false
         type: string
         default: 'chore/auto-update-images'
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
 jobs:
   update-and-pr:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.github-environment }}
     permissions:
       contents: write
       id-token: write

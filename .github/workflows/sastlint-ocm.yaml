@@ -45,8 +45,17 @@ on:
         description: |
           if set, run `setup-git-identity` action prior to running command.
 
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+
 jobs:
   run-linter:
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
