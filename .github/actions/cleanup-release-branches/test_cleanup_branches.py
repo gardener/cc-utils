@@ -13,6 +13,12 @@ class DummyBranch:
     name: str
 
 
+@dataclasses.dataclass
+class DummyRelease:
+    name: str
+    draft: bool = False
+
+
 @pytest.fixture
 def branches() -> list[DummyBranch]:
     return [
@@ -21,6 +27,20 @@ def branches() -> list[DummyBranch]:
         DummyBranch('release-v2.0'),
         DummyBranch('release-v2.0.1'),
         DummyBranch('feature-x'),
+    ]
+
+
+@pytest.fixture
+def releases() -> list[DummyRelease]:
+    return [
+        DummyRelease('v1.0'),
+        DummyRelease('v1.1'),
+        DummyRelease('v2.0-draft', draft=True),
+        DummyRelease('v2.0.1-draft', draft=True),
+        DummyRelease('v2.0.2-draft', draft=True),
+        DummyRelease('v2.0.3-draft'),
+        DummyRelease('feature-x'),
+        DummyRelease('feature-x', draft=True),
     ]
 
 
@@ -118,3 +138,34 @@ def test_stale_patch_branches(
 
     assert 'release-v2.0.1' in stale_branches
     assert len(stale_branches) == 1
+
+
+def test_stale_draft_releases(
+    releases: collections.abc.Iterable[DummyRelease],
+):
+    branch_info = get_branch_info(significant_part=ocm.branch_info.VersionParts.MINOR)
+
+    empty_stale_draft_releases = tuple(
+        stale_draft_release.name
+        for stale_draft_release in cleanup_branches.iter_stale_draft_releases(
+            branch='release-v1.0',
+            branch_info=branch_info,
+            releases=releases,
+        )
+    )
+
+    assert not empty_stale_draft_releases
+
+    stale_draft_releases = tuple(
+        stale_draft_release.name
+        for stale_draft_release in cleanup_branches.iter_stale_draft_releases(
+            branch='release-v2.0',
+            branch_info=branch_info,
+            releases=releases,
+        )
+    )
+
+    assert len(stale_draft_releases) == 3
+    assert 'v2.0-draft' in stale_draft_releases
+    assert 'v2.0.1-draft' in stale_draft_releases
+    assert 'v2.0.2-draft' in stale_draft_releases
