@@ -122,6 +122,13 @@ on:
         default: .ocm/release-notes
         description: |
           The relative path (from repository root) to the directory containing the release-notes docs.
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
     outputs:
       ocm-repository:
@@ -183,6 +190,7 @@ on:
 
 jobs:
   version-and-ocm:
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     # XXX uncomment once callers set required permission and FGATS-variable is defined
     # permissions:

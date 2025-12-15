@@ -246,6 +246,13 @@ on:
           branch is considered stale if its version (major, minor, or patch, according to
           `significant-part` in `.ocm/branch-info.yaml`) is older than the current version by at
           least the `supported-versions-count`.
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
     outputs:
       release-notes:
@@ -264,6 +271,7 @@ on:
         value: ${{ jobs.release-and-bump.outputs.version }}
 jobs:
   release-and-bump:
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write

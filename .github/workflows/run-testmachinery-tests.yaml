@@ -75,9 +75,17 @@ on:
             --no-execution-group \
             --testrun-prefix tm-extension-aws
           ```
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
 jobs:
   trigger-testmachinery-tests:
+    environment: ${{ inputs.github-environment }}
     runs-on: ubuntu-latest-static-ip
     permissions:
       id-token: write

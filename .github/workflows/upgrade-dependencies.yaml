@@ -99,6 +99,13 @@ on:
         type: string
         description: strictly-follow | accept-hotfixes
         default: strictly-follow
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
 jobs:
   prepare:
@@ -118,6 +125,7 @@ jobs:
 
   create-upgrade-pullrequests:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    environment: ${{ inputs.github-environment }}
     # run even if `prepare` job is skipped
     if: ${{ !cancelled() }}
     needs:

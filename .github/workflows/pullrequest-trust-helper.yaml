@@ -51,6 +51,13 @@ on:
           are considered to be trusted.
         type: string
         default: ''
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
 jobs:
   pullrequest-trust-helper:
@@ -58,6 +65,7 @@ jobs:
     permissions: {} # permissions are configured via fed-/app-token
       # XXX uncomment once callers set required permission and FGATS-variable is defined
       # id-token: write # will be required for fed-token
+    environment: ${{ inputs.github-environment }}
     steps:
       - uses: gardener/cc-utils/.github/actions/github-auth@master
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}

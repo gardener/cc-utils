@@ -94,9 +94,17 @@ on:
           passed as `ctx`-input to `merge-ocm-fragments` action.
         required: false
         type: string
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
 
 jobs:
   helmchart:
+    environment: ${{ inputs.github-environment }}
     permissions:
       contents: read
       packages: write
