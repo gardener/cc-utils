@@ -43,7 +43,7 @@ inputs:
       contents: read
     description: |
       The permissions that should be granted to the access token. Permission names are expected to
-      be in snake_case format. For a list of available permissions, please refer to
+      be in kebab-case format. For a list of available permissions, please refer to
       https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps.
 
       Example:

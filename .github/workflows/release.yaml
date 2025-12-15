@@ -357,7 +357,16 @@ jobs:
           print(f'INFO: "automatic" version operation has been resolved to {next_version=}')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
             f.write(f'next-version={next_version}\n')
+      - uses: gardener/cc-utils/.github/actions/github-auth@master
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          permissions: |
+            contents: write
+            pull-requests: read
       - uses: actions/create-github-app-token@v2
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
         id: app-token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
@@ -367,7 +376,7 @@ jobs:
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
           draft: false
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
           release-notes-variants: |
@@ -399,7 +408,7 @@ jobs:
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           on-validation-errors: ${{ inputs.on-validation-errors }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          git-push-token: ${{ steps.app-token.outputs.token }}
+          git-push-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
           github-additional-tag-templates: ${{ inputs.github-additional-tag-templates }}

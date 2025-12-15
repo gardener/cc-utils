@@ -120,13 +120,16 @@ jobs:
     needs:
       - prepare
     permissions:
-      contents: write
       id-token: write
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         id: checkout
         with:
           submodules: ${{ inputs.checkout-submodules }}
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          github-auth-token-permissions: |
+            contents: write
+            pull-requests: write
           auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
           auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master

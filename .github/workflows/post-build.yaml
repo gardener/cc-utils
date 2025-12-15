@@ -311,13 +311,20 @@ jobs:
             ocm_repos="${{ inputs.ocm-repositories }}"
           fi
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+      - uses: gardener/cc-utils/.github/actions/github-auth@master
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          permissions: |
+            pull-requests: read
       - name: draft-release-notes
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/release-notes@master
         with:
           component-descriptor: ${{ needs.component-descriptor.outputs.component-descriptor }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.fed-token.outputs.token || secrets.GITHUB_TOKEN }}
           draft: true
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
           release-notes-variants: |

@@ -80,8 +80,16 @@ jobs:
             echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
 
+      - uses: gardener/cc-utils/.github/actions/github-auth@master
+        if: ${{ steps.check_changes.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          permissions: |
+            pull-requests: write
+
       - uses: actions/create-github-app-token@v2
-        if: steps.check_changes.outputs.changes_detected == 'true'
+        if: ${{ steps.check_changes.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
         id: app-token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
@@ -120,4 +128,4 @@ jobs:
                 - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
           fi
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
