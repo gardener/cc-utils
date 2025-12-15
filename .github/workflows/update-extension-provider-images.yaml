@@ -32,6 +32,9 @@ on:
 jobs:
   update-and-pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -59,7 +62,16 @@ jobs:
             echo "notes_content=" >> $GITHUB_OUTPUT
           fi
 
+      - uses: gardener/cc-utils/.github/actions/github-auth@master
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          permissions: |
+            pull-requests: write
+
       - name: Create GitHub App Token
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
         id: app-token
         uses: actions/create-github-app-token@v2.1.1
         with:
@@ -93,10 +105,10 @@ jobs:
       - name: Create or Update Pull Request
         if: steps.check_changes.outputs.changes_detected == 'true'
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
         run: |
           pr_number=$(gh pr list --head ${{ inputs.branch-name }} --state open --json number --jq '.[].number')
-          
+
           pr_body=$(cat <<-EOF
           /area ops-productivity
           /kind enhancement

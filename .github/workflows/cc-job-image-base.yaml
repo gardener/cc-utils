@@ -43,8 +43,7 @@ jobs:
   update-base-image-version:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      id-token: write
     outputs:
       new_version: ${{ steps.update_version.outputs.new_version }}
       current_version: ${{ steps.update_version.outputs.current_version }}
@@ -52,6 +51,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         id: checkout
         with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
           auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
 
