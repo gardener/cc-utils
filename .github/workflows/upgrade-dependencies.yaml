@@ -105,6 +105,9 @@ jobs:
     if: ${{ inputs.component-descriptor == '' }}
     uses: ./.github/workflows/prepare.yaml
     secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
     with:
       mode: release
       post-process: ${{ inputs.ocm-post-process }}
