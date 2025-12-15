@@ -1,0 +1,14 @@
+name: test
+
+on:
+ push:
+ workflow_disaptch
+
+jobs:
+ test:
+  runs-on: ubuntu-latest
+  steps:
+    - name: dump-variable
+      shell: bash
+      run: | 
+       echo "default-runner: ${{ vars.DEFAULT_RUNNER }}"
