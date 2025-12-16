@@ -122,6 +122,7 @@ jobs:
       releases-suffix: ${{ inputs.releases-suffix }}
       ocm-repositories: ${{ inputs.ocm-repositories }}
       checkout-submodules: ${{ inputs.checkout-submodules }}
+      github-environment: ${{ inputs.github-environment }}
 
   create-upgrade-pullrequests:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
