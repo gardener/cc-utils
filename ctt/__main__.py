@@ -29,6 +29,11 @@ def configure_parser(parser):
         '--processing-cfg',
         required=True,
     )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=False,
+    )
 
 
 def replicate(parsed):
@@ -52,12 +57,18 @@ def replicate(parsed):
         absent_ok=False, # let the exception propagate to convey a detailed error-message
     )
 
-    print(f'starting replication of {parsed.ocm_component}')
+    if parsed.dry_run:
+        processing_mode = ctt.process_dependencies.ProcessingMode.DRY_RUN
+    else:
+        processing_mode = ctt.process_dependencies.ProcessingMode.REGULAR
+
+    print(f'starting replication of {parsed.ocm_component} {processing_mode=}')
     for _ in ctt.process_dependencies.process_images(
         processing_cfg_path=parsed.processing_cfg,
         root_component_descriptor=component_descriptor,
         component_descriptor_lookup=component_descriptor_lookup,
         oci_client=oci_client,
+        processing_mode=processing_mode,
     ):
         pass
 
