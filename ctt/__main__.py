@@ -34,6 +34,12 @@ def configure_parser(parser):
         action='store_true',
         default=False,
     )
+    parser.add_argument(
+        '--jobs', '-j',
+        type=int,
+        default=8,
+        help='how many replication-tasks should be run in parallel.',
+    )
 
 
 def replicate(parsed):
@@ -62,6 +68,13 @@ def replicate(parsed):
     else:
         processing_mode = ctt.process_dependencies.ProcessingMode.REGULAR
 
+    max_workers = parsed.jobs
+    if max_workers < 0:
+        print('--jobs must be positive or 0')
+        exit(1)
+    elif max_workers == 0:
+        max_workers = None
+
     print(f'starting replication of {parsed.ocm_component} {processing_mode=}')
     for _ in ctt.process_dependencies.process_images(
         processing_cfg_path=parsed.processing_cfg,
@@ -69,6 +82,7 @@ def replicate(parsed):
         component_descriptor_lookup=component_descriptor_lookup,
         oci_client=oci_client,
         processing_mode=processing_mode,
+        max_workers=max_workers,
     ):
         pass
 

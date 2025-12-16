@@ -485,6 +485,7 @@ def iter_replication_resource_elements(
     tgt_oci_registries: collections.abc.Sequence[str],
     oci_client: oci.client.Client,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
+    max_workers: int=16,
 ) -> collections.abc.Iterable[ctt.model.ReplicationResourceElement]:
     shared_targets = {
         name: _target(cfg) for name, cfg in processing_cfg.get('targets', {}).items()
@@ -531,7 +532,7 @@ def iter_replication_resource_elements(
         )
     ]
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
     yield from (
         replication_resource_element for replication_resource_element in executor.map(
             create_replication_resource_element,
@@ -553,6 +554,7 @@ def create_replication_plan_step(
     component_filter: collections.abc.Callable[[ocm.Component], bool] | None=None,
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool] | None=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
+    max_workers: int=16,
 ) -> ctt.model.ReplicationPlanStep:
     tgt_ocm_repo = ocm.OciOcmRepository(
         baseUrl=ocm_repository,
@@ -579,6 +581,7 @@ def create_replication_plan_step(
         tgt_oci_registries=tgt_oci_registries,
         oci_client=oci_client,
         replication_mode=replication_mode,
+        max_workers=max_workers,
     ))
 
     return ctt.model.ReplicationPlanStep(
@@ -602,6 +605,7 @@ def process_images(
     delivery_service_client: typing.Union['delivery.client.DeliveryServiceClient', None]=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
+    max_workers: int=16,
     tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     '''
@@ -672,6 +676,7 @@ def process_images(
             component_filter=component_filter,
             reftype_filter=reftype_filter,
             remove_label=remove_label,
+            max_workers=max_workers,
         )
         replication_plan.steps.append(replication_plan_step)
 
@@ -697,6 +702,7 @@ def process_images(
             reftype_filter=reftype_filter,
             skip_cd_validation=skip_cd_validation,
             skip_component_upload=skip_component_upload,
+            max_workers=max_workers,
         )
 
 
@@ -713,6 +719,7 @@ def process_replication_plan_step(
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool] | None=None,
     skip_cd_validation: bool=False,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool] | None=None,
+    max_workers: int=16,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     def process_replication_resource_element(
         replication_resource_element: ctt.model.ReplicationResourceElement,
@@ -796,7 +803,7 @@ def process_replication_plan_step(
             logger.error(f'exception while processing {replication_resource_element=}')
             raise e
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=16)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
     replication_resource_elements = tuple(executor.map(
         wrap_process_resource,
         replication_plan_step.resources,
