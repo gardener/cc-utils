@@ -72,6 +72,8 @@ jobs:
         id: fed-token
         with:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          repositories: |
+            ${{ github.event.repository.name }}
           permissions: |
             pull-requests: write
             members: read
