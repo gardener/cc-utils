@@ -509,7 +509,7 @@ def iter_oci_image_dicts_from_component(
 
 def iter_oci_image_dicts_from_rooted_component(
     component: ocm.Component,
-    root_component: ocm.Component,
+    root_component: ocm.Component | None,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
 ) -> collections.abc.Iterable[dict]:
     component = component.component
@@ -536,6 +536,9 @@ def iter_oci_image_dicts_from_rooted_component(
     else:
         resource_names = []
 
+    if not root_component:
+        return
+
     for image_dict in iter_oci_image_dicts_from_component(
         component=root_component,
         resource_names_from_label=False,
@@ -552,7 +555,7 @@ def iter_oci_image_dicts_from_rooted_component(
 
 def image_vector_overwrite(
     component: ocm.Component,
-    root_component: ocm.Component,
+    root_component: ocm.Component | None,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
 ) -> dict:
     sorted_images = sorted(
