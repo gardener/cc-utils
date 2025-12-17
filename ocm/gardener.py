@@ -430,59 +430,62 @@ def iter_oci_image_dicts_from_cref(
             yield image_dict
 
 
-def iter_oci_image_dicts_from_resources(
-    resources: collections.abc.Iterable[ocm.Resource],
+def oci_image_dict_from_resource(
+    resource: ocm.Resource,
     resource_names_from_label: bool=True,
     fallback_to_target_version_from_resource: bool=False,
     resource_names: collections.abc.Iterable[str]=None,
-) -> collections.abc.Iterable[dict]:
+) -> dict | None:
     '''
-    yields "image-dicts" as used for image-vector-overwrites understood by gardener.
+    returns an "image-dicts" as used for image-vector-overwrites understood by gardener for the
+    given ocm.Resource, if the following conditions are met:
 
-    resources are only considered of they bear the `imagevector.gardener.cloud/name` label.
-    By default, this label's value is used as value for `name` in resulting image-dict (this can
+    - must be of type OciImage
+    - must bear the `imagevector.gardener.cloud/name` label
+    - if resource_names is passed, name must match (see below)
+
+    By default, said label's value is used as value for `name` in resulting image-dict (this can
     be disabled by passing False for `resource_names_from_label`). The latter is done for
     "lss" (or "root") component.
 
-    If `imagevector.gardener.cloud/target-version`-label is present, its value will be conveyd as
+    If `imagevector.gardener.cloud/target-version`-label is present, its value will be conveyed as
     `targetVersion`-attribute. If absent, the resource's `version` is used, if
     `fallback_to_target_version_from_resource` is passed as True.
 
     if resource_names is passed, only resources with matching names (honouring label, if configured)
     will be considered.
     '''
-    for resource in resources:
-        if not resource.type is ocm.ArtefactType.OCI_IMAGE:
-            continue
+    if not resource.type is ocm.ArtefactType.OCI_IMAGE:
+        return None
 
-        if not (name_label := resource.find_label('imagevector.gardener.cloud/name')):
-            continue
+    if not (name_label := resource.find_label('imagevector.gardener.cloud/name')):
+        return None
 
-        if resource_names_from_label:
-            name = name_label.value
-        else:
-            name = resource.name
+    if resource_names_from_label:
+        name = name_label.value
+    else:
+        name = resource.name
 
-        if resource_names is not None and not name in resource_names:
-            continue
+    if resource_names is not None and not name in resource_names:
+        return None
 
-        image_ref = oci.model.OciImageReference(resource.access.imageReference)
-        repository = image_ref.ref_without_tag
+    image_ref = oci.model.OciImageReference(resource.access.imageReference)
+    repository = image_ref.ref_without_tag
 
-        image_dict = {
-            'name': name,
-            'repository': repository,
-            'tag': image_ref.tag,
-        }
+    image_dict = {
+        'name': name,
+        'repository': repository,
+        'tag': image_ref.tag,
+    }
 
-        if (target_version_label := resource.find_label(
-                'imagevector.gardener.cloud/target-version'
-        )):
-            image_dict['targetVersion'] = target_version_label.value
-        elif fallback_to_target_version_from_resource:
-            image_dict['targetVersion'] = resource.version
+    if (target_version_label := resource.find_label(
+            'imagevector.gardener.cloud/target-version'
+    )):
+        image_dict['targetVersion'] = target_version_label.value
+    elif fallback_to_target_version_from_resource:
+        image_dict['targetVersion'] = resource.version
 
-        yield image_dict
+    return image_dict
 
 
 def iter_oci_image_dicts_from_component(
@@ -499,12 +502,16 @@ def iter_oci_image_dicts_from_component(
             component_descriptor_lookup=component_descriptor_lookup,
         )
 
-    yield from iter_oci_image_dicts_from_resources(
-        resources=component.resources,
-        resource_names_from_label=resource_names_from_label,
-        fallback_to_target_version_from_resource=fallback_to_target_version_from_resource,
-        resource_names=resource_names,
-    )
+    for resource in component.resources:
+        resource_dict = oci_image_dict_from_resource(
+            resource=resource,
+            resource_names_from_label=resource_names_from_label,
+            fallback_to_target_version_from_resource=fallback_to_target_version_from_resource,
+            resource_names=resource_names,
+        )
+        if resource_dict is None:
+            continue
+        yield resource_dict
 
 
 def iter_oci_image_dicts_from_rooted_component(
