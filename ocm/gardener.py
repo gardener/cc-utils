@@ -431,7 +431,7 @@ def iter_oci_image_dicts_from_cref(
 
 
 def iter_oci_image_dicts_from_resources(
-    component: ocm.Component,
+    resources: collections.abc.Iterable[ocm.Resource],
     resource_names_from_label: bool=True,
     fallback_to_target_version_from_resource: bool=False,
     resource_names: collections.abc.Iterable[str]=None,
@@ -451,7 +451,7 @@ def iter_oci_image_dicts_from_resources(
     if resource_names is passed, only resources with matching names (honouring label, if configured)
     will be considered.
     '''
-    for resource in component.resources:
+    for resource in resources:
         if not resource.type is ocm.ArtefactType.OCI_IMAGE:
             continue
 
@@ -500,7 +500,7 @@ def iter_oci_image_dicts_from_component(
         )
 
     yield from iter_oci_image_dicts_from_resources(
-        component=component,
+        resources=component.resources,
         resource_names_from_label=resource_names_from_label,
         fallback_to_target_version_from_resource=fallback_to_target_version_from_resource,
         resource_names=resource_names,
