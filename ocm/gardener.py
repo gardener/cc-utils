@@ -385,20 +385,17 @@ def find_creation_time(
 
 
 def iter_oci_image_dicts_from_cref(
-    cref: ocm.ComponentReference,
-    component_descriptor_lookup: ocm.ComponentDescriptorLookup,
+    component: ocm.Component,
+    images_label: ocm.Label,
 ) -> collections.abc.Iterable[dict]:
     '''
     yields "image-dicts" as used for image-vector-overwrites understood by gardener.
 
-    each dict is a reference to an oci-image looked-up from ocm-resource from referenced
-    ocm-component.
+    `images_label` is the OCM-Label to use mappings between OCM-Resources and Image-Vectors.
+    It is typically defined at component-reference-level and named
+    `imagevector.gardener.cloud/images`.
     '''
-    if not (images_label := cref.find_label('imagevector.gardener.cloud/images')):
-        return
-
     images = images_label.value['images']
-    referenced_component = component_descriptor_lookup(cref).component
 
     for image in images:
         if (resource_id := image.get('resourceId', None)):
@@ -406,7 +403,7 @@ def iter_oci_image_dicts_from_cref(
         else:
             resource_name = image['name']
 
-        for resource in referenced_component.resources:
+        for resource in component.resources:
             if not resource.type is ocm.ArtefactType.OCI_IMAGE:
                 continue
 
@@ -418,7 +415,7 @@ def iter_oci_image_dicts_from_cref(
             image_dict = {
                 'name': image['name'],
                 'repository': image_ref.ref_without_tag,
-                'sourceRepository': cref.componentName,
+                'sourceRepository': component.name,
                 'tag': image_ref.tag,
             }
 
@@ -495,11 +492,15 @@ def iter_oci_image_dicts_from_component(
     resource_names: collections.abc.Iterable[str],
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
 ) -> collections.abc.Iterable[dict]:
-    component = component.component
     for cref in component.componentReferences:
+        if not (images_label := cref.find_label('imagevector.gardener.cloud/images')):
+            continue
+
+        # caveat: do not hide outer `component`
+        component_descriptor = component_descriptor_lookup(cref)
         yield from iter_oci_image_dicts_from_cref(
-            cref=cref,
-            component_descriptor_lookup=component_descriptor_lookup,
+            component=component_descriptor.component,
+            images_label=images_label,
         )
 
     for resource in component.resources:
