@@ -506,3 +506,4 @@ jobs:
         uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
         with:
           version: ${{ steps.component-descriptor.outputs.version }}
+          github-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}

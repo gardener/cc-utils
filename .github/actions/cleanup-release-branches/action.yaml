@@ -17,6 +17,12 @@ inputs:
     default: .ocm/branch-info.yaml
     description: |
       The relative path to the `branch-info.yaml` file.
+  github-token:
+    required: false
+    type: string
+    description: |
+      The GitHub access token to use for authentication against GitHub. If not set, will use default
+      `github.token`.
 
 runs:
   using: composite
@@ -24,7 +30,7 @@ runs:
     - name: Cleanup Release Branches
       shell: bash
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
       run: |
         set -euo pipefail
 
