@@ -384,7 +384,33 @@ def find_creation_time(
     return None
 
 
-def iter_oci_image_dicts_from_cref(
+def find_matching_oci_resource(
+    image: dict,
+    resources: collections.abc.Iterable[ocm.Resource],
+) -> ocm.Resource | None:
+    '''
+    returns (first) matching oci-image-resource, or None (if no such resource is found).
+
+    `image` is expected to be a dict from `imagevector.gardener.cloud/images`['images'].
+
+    For finding matching resource, `name` or the optional `resourceId.name` attributes are
+    matched against resource.name. Resource of type !== ociImage are ignored.
+    '''
+    if (resource_id := image.get('resourceId', None)):
+        resource_name = resource_id['name']
+    else:
+        resource_name = image['name']
+
+    for resource in resources:
+        if not resource.type is ocm.ArtefactType.OCI_IMAGE:
+            continue
+        if resource.name != resource_name:
+            continue
+
+        return resource
+
+
+def iter_oci_image_dicts_from_component_and_images_label(
     component: ocm.Component,
     images_label: ocm.Label,
 ) -> collections.abc.Iterable[dict]:
@@ -398,33 +424,27 @@ def iter_oci_image_dicts_from_cref(
     images = images_label.value['images']
 
     for image in images:
-        if (resource_id := image.get('resourceId', None)):
-            resource_name = resource_id['name']
-        else:
-            resource_name = image['name']
+        if not (resource := find_matching_oci_resource(
+            image=image,
+            resources=component.resources,
+        )):
+            continue
 
-        for resource in component.resources:
-            if not resource.type is ocm.ArtefactType.OCI_IMAGE:
-                continue
+        image_ref = oci.model.OciImageReference(resource.access.imageReference)
 
-            if not resource.name == resource_name:
-                continue
+        image_dict = {
+            'name': image['name'],
+            'repository': image_ref.ref_without_tag,
+            'sourceRepository': component.name,
+            'tag': image_ref.tag,
+        }
 
-            image_ref = oci.model.OciImageReference(resource.access.imageReference)
+        if (target_version := image.get('targetVersion')):
+            image_dict['targetVersion'] = target_version
+        if (labels := image.get('labels')):
+            image_dict['labels'] = labels
 
-            image_dict = {
-                'name': image['name'],
-                'repository': image_ref.ref_without_tag,
-                'sourceRepository': component.name,
-                'tag': image_ref.tag,
-            }
-
-            if (target_version := image.get('targetVersion')):
-                image_dict['targetVersion'] = target_version
-            if (labels := image.get('labels')):
-                image_dict['labels'] = labels
-
-            yield image_dict
+        yield image_dict
 
 
 def oci_image_dict_from_resource(
@@ -498,7 +518,7 @@ def iter_oci_image_dicts_from_component(
 
         # caveat: do not hide outer `component`
         component_descriptor = component_descriptor_lookup(cref)
-        yield from iter_oci_image_dicts_from_cref(
+        yield from iter_oci_image_dicts_from_component_and_images_label(
             component=component_descriptor.component,
             images_label=images_label,
         )
