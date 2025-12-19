@@ -495,6 +495,36 @@ def oci_image_dict_from_resource(
     return image_dict
 
 
+def iter_image_dicts_from_image_label_and_component(
+    images: collections.abc.Iterable[dict],
+    component_name: str,
+    resources: collections.abc.Iterable[ocm.Resource],
+) -> collections.abc.Iterable[dict]:
+    '''
+    yields image-dicts as understood by gardener as an image-vector-overwrite from image-dicts
+    as typically read from a `imagevector.gardener.cloud/images`-label (which in turn is
+    typically read from a component-reference), updated from access-data read from passed-in
+    resources (typically from referenced component).
+
+    Typical use for this function:
+    - read "images"-label from component-reference
+    - resolve referenced component
+    - pass images from label + resources from component
+    '''
+    for image in images:
+        if not (resource := find_matching_oci_resource(
+            image=image,
+            resources=resources,
+        )):
+            continue
+
+        yield image_dict_from_image_dict_and_resource(
+            component_name=component_name,
+            image=image,
+            resource=resource,
+        )
+
+
 def iter_oci_image_dicts_from_component(
     component: ocm.Component,
     resource_names_from_label: bool,
@@ -508,18 +538,11 @@ def iter_oci_image_dicts_from_component(
 
         # caveat: do not hide outer `component`
         inner_comp = component_descriptor_lookup(cref).component
-        for image in images_label.value['images']:
-            if not (resource := find_matching_oci_resource(
-                image=image,
-                resources=inner_comp.resources,
-            )):
-                continue
-
-            yield image_dict_from_image_dict_and_resource(
-                component_name=inner_comp.name,
-                image=image,
-                resource=resource,
-            )
+        yield from iter_image_dicts_from_image_label_and_component(
+            images=images_label.value['images'],
+            component_name=inner_comp.name,
+            resources=inner_comp.resources,
+        )
 
     for resource in component.resources:
         resource_dict = oci_image_dict_from_resource(
