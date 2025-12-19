@@ -410,11 +410,22 @@ def find_matching_oci_resource(
         return resource
 
 
+'''
+an image-dict as read from `imagevector.gardener.cloud/images`.images (OCM-Label)
+'''
+ImageDict = dict
+'''
+an image-dict as understood by Gardener as an imagevector-overwrite. Similar to ImageDict, but
+with attributes overwritten or augmented from OCM-Metadata.
+'''
+ImageOverwriteDict = dict
+
+
 def image_dict_from_image_dict_and_resource(
     component_name: str,
-    image: dict,
+    image: ImageDict,
     resource: ocm.Resource,
-) -> dict:
+) -> ImageOverwriteDict:
     '''
     creates an image-dict as understood by gardener as an imagevector-overwrite using an
     image-dict as read from `imagevector.gardener.cloud/images`-OCM-Label, and corresponding
@@ -442,7 +453,7 @@ def oci_image_dict_from_resource(
     resource_names_from_label: bool=True,
     fallback_to_target_version_from_resource: bool=False,
     resource_names: collections.abc.Iterable[str]=None,
-) -> dict | None:
+) -> ImageOverwriteDict | None:
     '''
     returns an "image-dicts" as used for image-vector-overwrites understood by gardener for the
     given ocm.Resource, if the following conditions are met:
@@ -496,10 +507,10 @@ def oci_image_dict_from_resource(
 
 
 def iter_image_dicts_from_image_label_and_component(
-    images: collections.abc.Iterable[dict],
+    images: collections.abc.Iterable[ImageDict],
     component_name: str,
     resources: collections.abc.Iterable[ocm.Resource],
-) -> collections.abc.Iterable[dict]:
+) -> collections.abc.Iterable[ImageOverwriteDict]:
     '''
     yields image-dicts as understood by gardener as an image-vector-overwrite from image-dicts
     as typically read from a `imagevector.gardener.cloud/images`-label (which in turn is
@@ -531,7 +542,7 @@ def iter_oci_image_dicts_from_component(
     fallback_to_target_version_from_resource: bool,
     resource_names: collections.abc.Iterable[str],
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
-) -> collections.abc.Iterable[dict]:
+) -> collections.abc.Iterable[ImageOverwriteDict]:
     for cref in component.componentReferences:
         if not (images_label := cref.find_label('imagevector.gardener.cloud/images')):
             continue
@@ -560,7 +571,7 @@ def iter_oci_image_dicts_from_rooted_component(
     component: ocm.Component,
     root_component: ocm.Component | None,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
-) -> collections.abc.Iterable[dict]:
+) -> collections.abc.Iterable[ImageOverwriteDict]:
     component = component.component
     seen_image_keys = set() # (name, targetVersion)
 
