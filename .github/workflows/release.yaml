@@ -246,6 +246,15 @@ on:
           branch is considered stale if its version (major, minor, or patch, according to
           `significant-part` in `.ocm/branch-info.yaml`) is older than the current version by at
           least the `supported-versions-count`.
+      github-auth-token-permissions:
+        type: string
+        default: |
+          contents: write
+          pull-requests: read
+        description: |
+          Input is passed to `github-auth` action as `permissions` input. The created GitHub access
+          token is used to fetch the release-notes, publish the release commit and delete stale
+          branches (if configured).
       github-environment:
         required: false
         default: ""
@@ -372,9 +381,7 @@ jobs:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           repositories: |
             ${{ github.event.repository.name }}
-          permissions: |
-            contents: write
-            pull-requests: read
+          permissions: ${{ inputs.github-auth-token-permissions }}
       - uses: actions/create-github-app-token@v2
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
         id: app-token
