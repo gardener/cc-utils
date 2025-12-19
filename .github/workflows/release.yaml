@@ -246,6 +246,23 @@ on:
           branch is considered stale if its version (major, minor, or patch, according to
           `significant-part` in `.ocm/branch-info.yaml`) is older than the current version by at
           least the `supported-versions-count`.
+      github-auth-token-permissions:
+        type: string
+        default: |
+          contents: write
+          pull-requests: read
+          workflows: write
+        description: |
+          Input is passed to `github-auth` action as `permissions` input. The created GitHub access
+          token is used to fetch the release-notes, publish the release commit and delete stale
+          branches (if configured).
+
+          Note: The `workflows: write` permission is required in case there is a concurrent head
+          update of the default branch affecting one of the workflow files. If the release workflow
+          tries to push the changes to a ref (!== the default branch), it will be interpreted as a
+          diff towards the default branch and hence this permission will be required (unless it will
+          be rebased against default branch prior to doing so, but this is not the workflow's default
+          behaviour).
       github-environment:
         required: false
         default: ""
@@ -372,9 +389,7 @@ jobs:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           repositories: |
             ${{ github.event.repository.name }}
-          permissions: |
-            contents: write
-            pull-requests: read
+          permissions: ${{ inputs.github-auth-token-permissions }}
       - uses: actions/create-github-app-token@v2
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
         id: app-token
