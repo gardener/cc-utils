@@ -506,7 +506,7 @@ def oci_image_dict_from_resource(
     return image_dict
 
 
-def iter_image_dicts_from_image_label_and_component(
+def iter_image_dicts_from_image_dicts_and_resources(
     images: collections.abc.Iterable[ImageDict],
     component_name: str,
     resources: collections.abc.Iterable[ocm.Resource],
@@ -549,7 +549,7 @@ def iter_oci_image_dicts_from_component(
 
         # caveat: do not hide outer `component`
         inner_comp = component_descriptor_lookup(cref).component
-        yield from iter_image_dicts_from_image_label_and_component(
+        yield from iter_image_dicts_from_image_dicts_and_resources(
             images=images_label.value['images'],
             component_name=inner_comp.name,
             resources=inner_comp.resources,
