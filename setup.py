@@ -30,6 +30,14 @@ def modules():
     module_names.remove('setup.ocm')
     module_names.remove('setup.whd')
 
+    # do not include modules already included in `gardener-ocm` to avoid pip to erroneously handle
+    # them during package-upgrades
+    module_names.remove('gziputil')
+    module_names.remove('ioutil')
+    module_names.remove('reutil')
+    module_names.remove('tarutil')
+    module_names.remove('version')
+
     return module_names
 
 
