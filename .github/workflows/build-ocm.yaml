@@ -36,6 +36,7 @@ jobs:
       oci-repository: cicd/ocm
       oci-platforms: 'linux/amd64,linux/arm64'
       version: ${{ needs.prepare.outputs.version }}
+      extra-tags: latest
       ocm-labels: |
         - name: gardener.cloud/cve-categorisation
           value:
