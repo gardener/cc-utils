@@ -140,7 +140,7 @@ runs:
         permissions: ${{ inputs.github-auth-token-permissions }}
 
     - name: create-token-via-github-app
-      if: ${{ inputs.auth-app-private-key != '' }}
+      if: ${{ inputs.auth-app-private-key != '' && inputs.token-server == '' }}
       id: app-token
       shell: bash
       run: |
