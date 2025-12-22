@@ -1,0 +1,75 @@
+Quick Reference for "CTT" (OCM Replication Tool)
+================================================
+
+The `replicate` command which is exposed from `gardener-ocm` python distribution package, and
+`ocm`-OCI-Image is used to replicate OCM-Component-Versions between OCM-Repositories backed by
+OCI-Registries. Replication includes OCI-Artefacts declared as OCM-Resources, as well as
+blobs inlined into OCM-Component-Descriptor-Artefacts. Other artefacts are replicated by reference.
+
+Name
+----
+
+"CTT" (fka: CNUDIE Transport Tool) as named back when OCM was named "CNUDIE". In order to avoid
+unnecesary confusion, and to keep in sync w/ package-names, the name "CTT" was kept. Despite the
+name, it is compatible to OCM, and would rather be called "OCM Transport Tool", or the like, if
+it were named after renaming of CNUDIE -> OCM happened.
+
+Usage
+-----
+
+It is assumed `docker` is properly installed and configured.
+
+Use `[docker run] europe-docker.pkg.dev/gardener-project/releases/cicd/ocm:latest` to run commands
+mentioned in this guide. You might opt for a versioned tag if version-pinning is desired.
+
+Using `CTT` to replicate OCM-Components is a two-step process. Firstly, a "processing-configuration"
+(processing.cfg) needs to be created. Through processing-cfg, replication behaviour can be
+controlled. If customisations are configured, processing-cfg should be persisted between
+replication-runs.
+
+A simple configuration can be generated using:
+
+```
+docker run \
+  europe-docker.pkg.dev/gardener-project/releases/cicd/ocm:latest \
+  simple-config \
+    --target $target_registry [\]
+    [--source $source_registry]
+```
+
+Where `$target_registry` is the OCI-Registry into which CTT should replicate. The optional
+`$source_registry` can be used to instruct CTT to strip `$source_registry` prefix from target
+OCI-Image-References, which can be beneficial if target-registry imposes length-restrictions.
+
+Typically, output of this command should be redirected into a file (called `processing.cfg`
+in this guide subsequently).
+
+Secondly, the actual replication can be triggered using the `replicate` command. As a pre-requisite,
+it is necessary to create a "docker-cfg" (as written by docker to $HOME/.docker/config.json
+by default) with read-access to any OCI-Registries _from_ where OCI-Artefacts need to be read
+(this will at least be `$source_registry`), and write-access towards `$target_registry`.
+
+This can be achieved by running `docker login <hostname>` for each of the involved OCI-Registries.
+
+Assuming `processing.cfg` resides in $PWD, use the following command to run replication:
+
+```
+docker run \
+  -v$HOME/.docker/config.json:/docker-cfg.json \
+  -v$PWD/processing.cfg:/processing.cfg \
+  europe-docker.pkg.dev/gardener-project/releases/cicd/ocm:latest \
+  replicate \
+    --docker-config /docker-cfg.json \
+    --processing-cfg /processing.cfg \
+    --src-repo $src_registry \
+    --ocm-component $ocm_component
+```
+
+Where $ocm_component is the OCM-Component-Version that should be replicated.
+
+Syntax: `<ocm-component-name>:<version>`, e.g. `acme.org/my-component:1.2.3`.
+
+CTT's `replicate`-command will recursively replicate any referenced sub-components. It will by
+default parallelise replication using multithreading, and will early-exit replication of
+OCI-Artefacts, if already present in replication-target. It is designed to be safe (and
+resource-efficient) to be rerun against the same replication-target multiple times.

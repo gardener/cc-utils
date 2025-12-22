@@ -46,6 +46,7 @@ setuptools.setup(
     package_data={
         'ctt': (
             'simple-cfg',
+            'README',
         ),
         'ocm': (
             'VERSION',
