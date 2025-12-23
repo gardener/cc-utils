@@ -39,39 +39,39 @@ jobs:
       - name: Setup Git Identity
         uses: ./.github/actions/setup-git-identity
 
-      - name: Get latest Docker version
-        id: get_docker_version
+      - name: Determine greatest docker and buildx versions and patch dockerfile
+        id: versions
+        shell: bash
         run: |
-          greatest_version=$(curl -sL https://download.docker.com/linux/static/stable/x86_64/ \
+          set -euo pipefail
+          docker_version=$(curl -sL https://download.docker.com/linux/static/stable/x86_64/ \
             | cut -d\" -f2 \
             | grep "docker-[[:digit:]]" \
             | cut -d- -f2 \
             | cut -d. -f1,2,3 \
             | sort -Vr \
             | head -1)
-          echo "docker_version=$greatest_version" >> $GITHUB_OUTPUT
-
-      - name: Get latest Buildx version
-        id: get_buildx_version
-        run: |
-          greatest_version=$(curl -sL https://api.github.com/repos/docker/buildx/releases \
+          buildx_version=$(curl -sL https://api.github.com/repos/docker/buildx/releases \
             -H 'Accept: application/json' \
             | jq -r '.[] | select(.draft == false and .prerelease == false) | .tag_name' \
             | sort -Vr \
             | head -1)
-          echo "buildx_version=$greatest_version" >> $GITHUB_OUTPUT
 
-      - name: Update Dockerfile with latest Versions
-        run: |
+          if [ -z "${docker_version:-}" ]; then
+            echo "Warning: failed to determine docker-version (ignoring)"
+            exit 0
+          fi
+          if [ -z "${buildx_version:-}" ]; then
+            echo "Warning: failed to determine buildx-version (ignoring)"
+            exit 0
+          fi
+
           sed -i "s/DOCKER_VERSION=.*/DOCKER_VERSION=\
-          ${{ steps.get_docker_version.outputs.docker_version }}/" Dockerfile.job-image-base
+          ${docker_version}/" Dockerfile.job-image-base
           sed -i "s/DOCKER_BUILDX_VERSION=.*/DOCKER_BUILDX_VERSION=\
-          ${{ steps.get_buildx_version.outputs.buildx_version }}/" \
+          ${buildx_version}/" \
           Dockerfile.job-image-base
 
-      - name: Check for Changes
-        id: check_changes
-        run: |
           if git diff --quiet Dockerfile.job-image-base; then
             echo "No changes detected. Exiting workflow."
             echo "changes_detected=false" >> $GITHUB_OUTPUT
