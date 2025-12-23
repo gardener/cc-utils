@@ -7,6 +7,7 @@ import io
 import json
 import os
 import sys
+import textwrap
 
 import dacite
 
@@ -624,6 +625,15 @@ def imagevector(parsed):
                 exit(1)
         components = (component,)
     else:
+        def filter_expr(node):
+            if not parsed.filter_expr:
+                return True
+            return eval( # nosec B307
+                parsed.filter_expr, {
+                    'node': node,
+                    'component': node.component,
+                })
+
         components = (
             node.component for node in
             ocm.iter.iter(
@@ -631,6 +641,7 @@ def imagevector(parsed):
                 lookup=component_descriptor_lookup,
                 node_filter=ocm.iter.Filter.components,
             )
+            if filter_expr(node)
         )
 
     images = []
@@ -828,6 +839,17 @@ def main():
         '--name',
         help='OCM-Component-Version (<name>:<version>) (required if not using --recursive)',
         required=False,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--filter-expr',
+        help=textwrap.dedent('''\
+        a python-expression to filter componentversions (only used if --recursive)
+        in scope: `component` (ocm.Component) and `node` (ocm.iter.ComponentNode)
+        True: include componentversion
+        False: exclude componentversion
+        '''),
+        required=False,
+        default=None,
     )
     imgvector_cfg_parser.add_argument(
         '--recursive',
