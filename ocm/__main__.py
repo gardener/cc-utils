@@ -602,6 +602,9 @@ def imagevector(parsed):
     root_component = component_descriptor_lookup(parsed.root_name).component
 
     if not parsed.recursive:
+        if not parsed.name:
+            print('Error: must pass --name if not using --recursive')
+            exit(1)
         if ':' in parsed.name:
             component = component_descriptor_lookup(parsed.name)
         else:
