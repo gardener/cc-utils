@@ -601,26 +601,52 @@ def imagevector(parsed):
     )
     root_component = component_descriptor_lookup(parsed.root_name).component
 
-    if ':' in parsed.name:
-        component = component_descriptor_lookup(parsed.name)
-    else:
-        component_name = parsed.name
-        for cnode in ocm.iter.iter(
-            component=root_component,
-            lookup=component_descriptor_lookup,
-            node_filter=ocm.iter.Filter.components,
-        ):
-            if cnode.component.name == component_name:
-                component = cnode.component
-                break
+    if not parsed.recursive:
+        if ':' in parsed.name:
+            component = component_descriptor_lookup(parsed.name)
         else:
-            print(f'Error: could not find any version for {parsed.name=} in {root_component.name=}')
-            exit(1)
+            component_name = parsed.name
+            for cnode in ocm.iter.iter(
+                component=root_component,
+                lookup=component_descriptor_lookup,
+                node_filter=ocm.iter.Filter.components,
+            ):
+                if cnode.component.name == component_name:
+                    component = cnode.component
+                    break
+            else:
+                print(
+                  f'Error: did not find version for {component_name=} in {root_component.name=}'
+                )
+                exit(1)
+        components = (component,)
+    else:
+        components = (
+            node.component for node in
+            ocm.iter.iter(
+                component=root_component,
+                lookup=component_descriptor_lookup,
+                node_filter=ocm.iter.Filter.components,
+            )
+        )
 
-    imagevector = ocm.gardener.image_vector_overwrite(
-        component=component,
-        root_component=root_component,
-        component_descriptor_lookup=component_descriptor_lookup,
+    images = []
+    seen_names = set()
+
+    for component in components:
+        for image in ocm.gardener.iter_oci_image_dicts_from_rooted_component(
+            component=component,
+            root_component=root_component,
+            component_descriptor_lookup=component_descriptor_lookup,
+        ):
+            name = image['name']
+            if name in seen_names:
+                continue
+            seen_names.add(name)
+            images.append(image)
+
+    imagevector = ocm.gardener.as_image_vector(
+        images=images,
     )
 
     print(yaml.safe_dump(imagevector))
@@ -797,8 +823,14 @@ def main():
     imgvector_cfg_parser.set_defaults(callable=imagevector)
     imgvector_cfg_parser.add_argument(
         '--name',
-        help='OCM-Component-Name and Version (<name>:<version>)',
-        required=True,
+        help='OCM-Component-Version (<name>:<version>) (required if not using --recursive)',
+        required=False,
+    )
+    imgvector_cfg_parser.add_argument(
+        '--recursive',
+        action='store_true',
+        default=False,
+        help='if set, will yield imagevector for all subcomponents recursively',
     )
     imgvector_cfg_parser.add_argument(
         '--root-name',
