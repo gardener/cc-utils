@@ -599,8 +599,23 @@ def imagevector(parsed):
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
         oci_client=oci_client,
     )
-    component = component_descriptor_lookup(parsed.name)
-    root_component = component_descriptor_lookup(parsed.root_name)
+    root_component = component_descriptor_lookup(parsed.root_name).component
+
+    if ':' in parsed.name:
+        component = component_descriptor_lookup(parsed.name)
+    else:
+        component_name = parsed.name
+        for cnode in ocm.iter.iter(
+            component=root_component,
+            lookup=component_descriptor_lookup,
+            node_filter=ocm.iter.Filter.components,
+        ):
+            if cnode.component.name == component_name:
+                component = cnode.component
+                break
+        else:
+            print(f'Error: could not find any version for {parsed.name=} in {root_component.name=}')
+            exit(1)
 
     imagevector = ocm.gardener.image_vector_overwrite(
         component=component,
