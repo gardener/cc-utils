@@ -419,6 +419,11 @@ an image-dict as understood by Gardener as an imagevector-overwrite. Similar to 
 with attributes overwritten or augmented from OCM-Metadata.
 '''
 ImageOverwriteDict = dict
+'''
+a full imagevector-overwrite as understood by Gardener. Has a single attribute `images` containing
+a list of `ImageOverwriteDict`s, sorted by `repository` attribute.
+'''
+ImageOverwrite = dict
 
 
 def image_dict_from_image_dict_and_resource(
@@ -613,20 +618,26 @@ def iter_oci_image_dicts_from_rooted_component(
         yield image_dict
 
 
+def as_image_vector(
+    images: collections.abc.Iterable[ImageOverwriteDict],
+) -> ImageOverwrite:
+    return {
+        'images': sorted(
+            images,
+            key=lambda image_dict: image_dict['repository'],
+        ),
+    }
+
+
 def image_vector_overwrite(
     component: ocm.Component,
     root_component: ocm.Component | None,
     component_descriptor_lookup: ocm.ComponentDescriptorLookup,
-) -> dict:
-    sorted_images = sorted(
-        iter_oci_image_dicts_from_rooted_component(
+) -> ImageOverwrite:
+    return as_image_vector(
+        images=iter_oci_image_dicts_from_rooted_component(
             component=component,
             root_component=root_component,
             component_descriptor_lookup=component_descriptor_lookup,
         ),
-        key=lambda image_dict: image_dict['repository'],
     )
-
-    return {
-        'images': sorted_images,
-    }
