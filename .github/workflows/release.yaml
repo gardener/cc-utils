@@ -442,17 +442,44 @@ jobs:
           version-write-callback: ${{ inputs.version-write-callback }}
           version-versionfile: ${{ inputs.version-versionfile }}
 
+      - name: check-slack-release-notes
+        id: check-slack-release-notes
+        if: ${{ inputs.slack-channel-id != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          path=/tmp/release-notes/slack-release-notes.md
+          size=$(stat -c%s $path)
+
+          cat <<EOF >>/tmp/slack-payload.yaml
+          channel_id: ${{ inputs.slack-channel-id }}
+          title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
+          EOF
+
+          # slack-github-action does not like empty files, hence we need to pass "payload"
+          # depending on fsize
+          if [ $size -gt 0 ]; then
+          cat <<EOF >>/tmp/slack-payload.yaml
+          file: /tmp/release-notes/slack-release-notes.md
+          filename: slack-release-notes.md
+          EOF
+          fi
+
+          echo "debug: will use the following payload for slack:"
+          cat /tmp/slack-payload.yaml
+
+          cat <<OEOF >> $GITHUB_OUTPUT
+          slack-payload<<EOF
+          $(cat /tmp/slack-payload.yaml)
+          EOF
+          OEOF
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
         uses: slackapi/slack-github-action@v2
         with:
           method: files.uploadV2
           token: ${{ secrets.slack-token || secrets.SLACK_APP_TOKEN_GARDENER_CICD }}
-          payload: |
-            channel_id: ${{ inputs.slack-channel-id }}
-            title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
-            file: /tmp/release-notes/slack-release-notes.md
-            filename: slack-release-notes.md
+          payload: ${{ steps.check-slack-release-notes.outputs.slack-payload }}
 
       - name: reset-repository-to-release-commit
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
