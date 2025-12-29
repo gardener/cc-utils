@@ -102,6 +102,14 @@ inputs:
     description: |
       Input is passed to `github-auth` action as `permissions` input. Hence it is only considered if
       `token-server` input is set as well.
+  init-git-identity:
+    type: boolean
+    default: false
+    description: |
+      if set to `true`, the repository will be initialised with default values for `user.name`
+      and `user.email`. This is needed, if commits are to be created. This is a convenience
+      short-cut for calling `setup-git-identity` from this repository (use if more control is
+      needed).
 outputs:
   token:
     description: |
@@ -337,3 +345,7 @@ runs:
           exit(0)
 
         pull_request.add_labels('${{ inputs.needs-trusted-label }}')
+    - if: ${{ inputs.init-git-identity }}
+      uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+      with:
+        scope: ${{ inputs.path || '.' }}/.git/config
