@@ -345,7 +345,7 @@ runs:
           exit(0)
 
         pull_request.add_labels('${{ inputs.needs-trusted-label }}')
-    - if: ${{ inputs.init-git-identity == true }}
+    - if: ${{ inputs.init-git-identity == 'true' }}
       uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       with:
         scope: ${{ inputs.path || '.' }}/.git/config
