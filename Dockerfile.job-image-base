@@ -1,4 +1,4 @@
-FROM cgr.dev/chainguard/wolfi-base AS builder
+FROM alpine:3 AS builder
 
 COPY gardener-cicd-libs.apk-packages .
 COPY requirements.txt .
@@ -13,7 +13,7 @@ RUN apk add --no-cache \
 && pip3 install --root /pkgs --upgrade --no-cache-dir \
    $(grep -v '#' requirements.txt | grep -v 'gardener' | tr '\n' ' ')
 
-FROM cgr.dev/chainguard/wolfi-base
+FROM alpine:3
 
 
 ARG DOCKER_CHANNEL=stable

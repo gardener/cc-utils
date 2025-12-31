@@ -10,13 +10,13 @@ grep
 iproute2
 iptables
 jq
+libc-dev
 libffi-dev
 libmagic
 openssh-client
-openssh-keyscan
 openssl-dev
-python-3.13
-python-3.13-dev
+python3
+python3-dev
 py3-pip
 sed
 xz
