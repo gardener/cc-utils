@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=europe-docker.pkg.dev/gardener-project/releases/cicd/job-image-base:0.110.0
+ARG BASE_IMAGE=ghcr.io/gardener/cc-utils/job-image-base:0.111.0
 FROM $BASE_IMAGE AS builder
 COPY VERSION /metadata/VERSION
 COPY . /cc/utils/
