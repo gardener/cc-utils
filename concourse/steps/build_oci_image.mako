@@ -248,7 +248,12 @@ for img_ref in (image_ref, *additional_image_refs, *extra_push_targets):
   ## in some cases, the built images are not accepted by all oci-registries
   ## (see oci.workarounds for details)
   oci_client = ccc.oci.oci_client()
-  ow.sanitise_image(image_ref=img_ref, oci_client=oci_client)
+  try:
+    ow.sanitise_image(image_ref=img_ref, oci_client=oci_client)
+  except:
+    print('warning: an error occurred while trying to sanitise oci-image (will ignore)')
+    import traceback
+    traceback.print_exc()
 % endfor
 
 </%def>
