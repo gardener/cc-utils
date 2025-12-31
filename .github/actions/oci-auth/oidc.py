@@ -358,6 +358,7 @@ def authenticate_against_ghcr() -> dict[str, str] | None:
 
 def write_docker_config(
     image_references: collections.abc.Iterable[str],
+    docker_cfg_path: str,
     extra_auths: dict | None=None,
 ) -> dict:
     try:
@@ -434,10 +435,6 @@ def write_docker_config(
       'auths': auths,
     }
 
-    docker_cfg_dir = os.path.join(os.environ['HOME'], '.docker')
-    docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
-
-    os.makedirs(docker_cfg_dir, exist_ok=True)
     with open(docker_cfg_path, 'w') as file:
         json.dump(docker_cfg, file)
 

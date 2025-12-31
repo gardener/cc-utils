@@ -103,8 +103,13 @@ runs:
         else:
           extra_auths = None
 
+        docker_cfg_dir = os.path.join(os.environ['HOME'], '.docker')
+        os.makedirs(docker_cfg_dir, exist_ok=True)
+        docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
+
         docker_cfg = oidc.write_docker_config(
           image_references=image_references,
+          docker_cfg_path=docker_cfg_path,
           extra_auths=extra_auths,
         )
 
