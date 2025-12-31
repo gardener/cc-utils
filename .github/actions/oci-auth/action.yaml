@@ -66,6 +66,10 @@ outputs:
     description: |
       A $HOME/.docker/config.json containing the token (for convenience)
     value: ${{ steps.oci-auth.outputs.docker-cfg }}
+  docker-cfg-path:
+    description: |
+      the path to which docker-cfg was written. Defaults to $HOME/.docker/config.json
+    value: ${{ steps.oci-auth.outputs.docker-cfg-path }}
 
 runs:
   using: composite
@@ -115,3 +119,4 @@ runs:
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           f.write(f'docker-cfg={json.dumps(docker_cfg)}\n')
+          f.write(f'docker-cfg-path={docker_cfg_path}\n')
