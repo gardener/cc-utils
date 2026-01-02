@@ -393,6 +393,7 @@ def write_docker_config(
             oidc_cfg = find_oidc_cfg(
                 image_reference=image_reference,
             )
+            print(f'info: will use {oidc_cfg=} for {image_reference=}')
 
         if registry_type is oci.model.OciRegistryType.AWS:
             auth = authenticate_against_aws(
