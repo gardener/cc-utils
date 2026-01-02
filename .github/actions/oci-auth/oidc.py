@@ -426,7 +426,11 @@ def write_docker_config(
         if not auth:
             continue
 
-        auths[image_reference.netloc] = auth
+        netloc = image_reference.netloc
+        print(f'info: adding auth for {image_reference=} ({netloc=})')
+        if netloc in auths:
+            print(f'warning: overwriting auth for {netloc=}')
+        auths[netloc] = auth
 
     if extra_auths:
         auths |= extra_auths
