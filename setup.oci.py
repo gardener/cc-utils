@@ -38,6 +38,9 @@ setuptools.setup(
     },
     install_requires=list(requirements()),
     entry_points={
+        'console_scripts': [
+            'oci = oci.__main__:main',
+        ],
     },
     extras_require={
         'async': ['aiohttp'],
