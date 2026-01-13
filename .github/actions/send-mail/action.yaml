@@ -1,0 +1,133 @@
+name: Send Mail
+
+description: |
+  Sends an mail notifcation using the provided AWS SES credentials.
+
+inputs:
+  aws-key-id:
+    type: string
+    required: true
+  aws-key:
+    type: string
+    required: true
+  aws-region:
+    type: string
+    required: false
+    default: eu-central-1
+  subject:
+    type: string
+    required: true
+  body:
+    type: string
+    required: false
+    description: |
+      The mail body. Exactly one of `body` or `body-file` must be specified. The following template
+      variables will be replaced:
+        - ${build_job_url}: URL of the current GHA run
+  body-file:
+    type: string
+    required: false
+    description: |
+      The path to a file containing the mail body. Exactly one of `body` or `body-file` must be
+      specified. The following template variables will be replaced:
+        - ${build_job_url}: URL of the current GHA run
+  smtp-headers:
+    type: string
+    required: false
+    description: |
+      Option to overwrite the default SMTP headers in YAML-format. Example:
+
+      ```
+      Subject: Foo # overwrites `subject` input
+      From: Gardener GHA <gha@gardener.cloud.sap>
+      ```
+  recipients:
+    type: string
+    required: true
+    description: |
+      Newline-separated list of recipients that should appear in "To"-clause.
+  cc-recipients:
+    type: string
+    required: false
+    default: ''
+    description: |
+      Optional newline-separated list of recipients that should appear in "Cc"-clause.
+  bcc-recipients:
+    type: string
+    required: false
+    default: ''
+    description: |
+      Optional newline-separated list of recipients that should be hidden.
+  attachments:
+    type: string
+    required: false
+    description: |
+      Optional newline-separated list of file paths that should be included as attachment.
+
+runs:
+  using: composite
+  steps:
+    - name: Send Mail
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        pip3 install pyyaml
+
+        cat <<EOF > /tmp/recipients
+        ${{ inputs.recipients }}
+        EOF
+        cat <<EOF > /tmp/cc-recipients
+        ${{ inputs.cc-recipients }}
+        EOF
+        cat <<EOF > /tmp/bcc-recipients
+        ${{ inputs.bcc-recipients }}
+        EOF
+        cat <<EOF > /tmp/attachments
+        ${{ inputs.attachments }}
+        EOF
+        cat <<EOF > /tmp/smtp-headers
+        ${{ inputs.smtp-headers }}
+        EOF
+
+        # helper: read newline-separated values from a file and append them as repeated
+        # `--flag value` pairs to the array
+        add_args_from_file() {
+          local file="$1"
+          local flag="$2"
+          local array="$3"
+
+          while IFS=$'\n' read -r val; do
+            val=$(echo "$val" | xargs) # trim whitespace
+            if [ -z "${val}" ]; then
+              continue # empty value
+            fi
+            eval "$array+=(\"--$flag\" \"$val\")"
+          done < "$file"
+        }
+
+        recipients=()
+        cc_recipients=()
+        bcc_recipients=()
+        attachments=()
+
+        add_args_from_file /tmp/recipients recipient recipients
+        add_args_from_file /tmp/cc-recipients cc-recipient cc_recipients
+        add_args_from_file /tmp/bcc-recipients bcc-recipient bcc_recipients
+        add_args_from_file /tmp/attachments attachment attachments
+
+        build_job_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+        ${GITHUB_ACTION_PATH}/send_mail.py \
+          --aws-key-id "${{ inputs.aws-key-id }}" \
+          --aws-key "${{ inputs.aws-key }}" \
+          --aws-region "${{ inputs.aws-region }}" \
+          --subject "${{ inputs.subject }}" \
+          --body "${{ inputs.body }}" \
+          --body-file "${{ inputs.body-file }}" \
+          --smtp-headers "$(cat /tmp/smtp-headers)" \
+          --build-job-url "$build_job_url" \
+          "${recipients[@]}" \
+          "${cc_recipients[@]}" \
+          "${bcc_recipients[@]}" \
+          "${attachments[@]}"
