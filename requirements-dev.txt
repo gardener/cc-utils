@@ -3,4 +3,3 @@
 -r requirements.ocm.txt
 -r requirements.txt
 -r requirements.whd.txt
--r requirements.cfg_mgmt.txt
