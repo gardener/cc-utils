@@ -15,6 +15,8 @@ def cfg(
         privileges = oa.Privileges.READWRITE
     elif privileges in ('readonly', 'read'):
         privileges = oa.Privileges.READONLY
+    elif privileges == 'admin':
+        privileges = oa.Privileges.ADMIN
     else:
         raise ValueError(privileges)
 

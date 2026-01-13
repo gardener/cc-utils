@@ -176,6 +176,13 @@ class OciRoutes:
             'list',
         )
 
+    def delete_tag(self, image_reference: str, tag: str) -> str:
+        return urljoin(
+            self.artifact_base_url(image_reference),
+            'manifests',
+            tag,
+        )
+
     def uploads_url(self, image_reference: str) -> str:
         return urljoin(
             self._blobs_url(image_reference),
@@ -900,6 +907,25 @@ class Client:
             ]
 
         return tags
+
+    def delete_tag(
+        self,
+        image_reference: str,
+        tag: str,
+    ):
+        scope = _scope(image_reference=image_reference, action='push')
+
+        res = self._request(
+            url=self.routes.delete_tag(
+                image_reference=image_reference,
+                tag=tag,
+            ),
+            image_reference=image_reference,
+            scope=scope,
+            method='DELETE',
+        )
+
+        res.raise_for_status()
 
     def has_multiarch(self, image_reference: str) -> bool:
         res = self.head_manifest(

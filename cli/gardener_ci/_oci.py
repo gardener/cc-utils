@@ -12,6 +12,8 @@ import requests
 
 import ccc.oci
 import oci
+import oci.auth
+import oci.client
 import oci.merge
 import oci.model as om
 import oci.workarounds as ow
@@ -503,3 +505,20 @@ def sanitise(image_reference: str):
     patched_ref = ow.sanitise_image(image_ref=image_reference, oci_client=oci_client)
 
     print(patched_ref)
+
+
+def untag(
+    image_reference: str,
+    tag: str,
+    docker_cfg: str | None=None
+):
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=docker_cfg,
+            absent_ok=bool(docker_cfg), # explicitly specified file must exist
+        ),
+    )
+    oci_client.delete_tag(
+        image_reference=image_reference,
+        tag=tag,
+    )
