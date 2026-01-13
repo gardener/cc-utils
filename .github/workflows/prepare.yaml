@@ -295,7 +295,7 @@ jobs:
           echo "${{ steps.version.outputs.version }}" > $p/version
           echo "${{ steps.version.outputs.commit-digest }}" > $p/commit-digest
           cat <<EOF > $p/component-descriptor
-          ${{ steps.version.outputs.component-descriptor }}
+          ${{ steps.component-descriptor.outputs.component-descriptor }}
           EOF
 
           tar cf "${{ inputs.output-artefact-filename }}" $p
