@@ -92,7 +92,7 @@ def write_to_gha_summary(message: str):
         return # not running in GHA context -> ignore for now
 
     with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
-        f.write(message)
+        f.write(f'{message}\n')
 
 
 def smtp_password_from_aws_key(
