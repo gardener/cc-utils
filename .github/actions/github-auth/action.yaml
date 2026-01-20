@@ -74,9 +74,9 @@ runs:
         if ${{ inputs.host != '' }}; then
           host="${{ inputs.host }}"
         else
-          server_url="${{ github.server_url }}"
-          host="${server_url#*://}"
+          host="${{ github.server_url }}"
         fi
+        host="${host#*://}"
 
         if ${{ inputs.organization != '' }}; then
           organization="${{ inputs.organization }}"
