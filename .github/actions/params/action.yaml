@@ -23,7 +23,7 @@ inputs:
       repository).
   trusted-label:
     type: string
-    default: reviewed/ok-to-test
+    default: ok-to-test
     description: |
       a label that, in case of pullrequests, is considered a marker for a pullrequest to be
       trusted.

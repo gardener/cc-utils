@@ -75,7 +75,7 @@ OR
   - `CONTRIBUTOR`
   - `MEMBER` (org-member)
   - `OWNER` (repository-owner)
-- the pullrequest has a certain label (default: `reviewed/ok-to-test`) set
+- the pullrequest has a certain label (default: `ok-to-test`) set
 
 The preferred approach (because it will also work for first-time contributors) is using
 "label-based trust".
@@ -133,7 +133,7 @@ If privileged pipelines are needed, use the following event-trigger:
          # used.
          # it is important to add the explicit check for label's name to prevent accidental
          # triggering (e.g. from gardener-robot setting initial set of labels)
-         if: ${{ github.event.action != 'labeled' || github.event.label.name == 'reviewed/ok-to-test' }}
+         if: ${{ github.event.action != 'labeled' || github.event.label.name == 'ok-to-test' }}
          permissions:
             pull-requests: write # needed so trusted-checkout can remove trusted-label
                                  # caveat: also needs to be set for all called workflows
