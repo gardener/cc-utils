@@ -58,7 +58,7 @@ inputs:
       are set.
   trusted-label:
     type: string
-    default: 'reviewed/ok-to-test'
+    default: 'ok-to-test'
     description: |
       a label, that can be used to mark pullrequests as trusted, regardless of author's association.
 
@@ -66,7 +66,7 @@ inputs:
       added again (adding the label will work as trigger).
   needs-trusted-label:
     type: string
-    default: 'needs/ok-to-test'
+    default: 'needs-ok-to-test'
     description: |
       a label that is added as a marker in order to notify lack of "trusted-label"
   remove-trusted-label:

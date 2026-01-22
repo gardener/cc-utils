@@ -4,7 +4,7 @@ description: |
   GitHub-Actions. This is specifically useful if `on.pull_request_target` is used in
   conjunction w/ `trusted-checkout`-action, using "label-based trust" (i.e. triggering
   of privileged pipeline-runs is restricted to presence of a certain label - default
-  being `reviewed/ok-to-test`).
+  being `ok-to-test`).
 
   If "trust-label" is absent, it will be conveyed to users that it needs to be set (by
   adding a "trust-label needed" label). If pullrequest-author is trusted, this action will
@@ -13,10 +13,10 @@ description: |
 inputs:
   trusted-label:
     type: string
-    default: 'reviewed/ok-to-test'
+    default: 'ok-to-test'
   needs-trusted-label:
     type: string
-    default: 'needs/ok-to-test'
+    default: 'needs-ok-to-test'
   trusted-teams:
     type: string
     description: |
