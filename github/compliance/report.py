@@ -494,7 +494,6 @@ def create_or_update_github_issues(
 
             due_date = None
             target_milestone = None
-            failed_milestones = []
 
             if delivery_svc_client:
                 try:
@@ -508,7 +507,7 @@ def create_or_update_github_issues(
                         due_date=due_date,
                         sprints_count=2,
                     )
-                    target_milestone, failed_milestones = gcmi.find_or_create_sprint_milestone(
+                    target_milestone, _ = gcmi.find_or_create_sprint_milestone(
                         repo=repository,
                         sprints=target_sprints,
                     )
@@ -552,7 +551,6 @@ def create_or_update_github_issues(
                     assignees=assignees,
                     assignees_statuses=assignees_statuses,
                     milestone=target_milestone,
-                    failed_milestones=failed_milestones,
                     due_date=due_date,
                     ctx_labels=ctx_labels,
                     preserve_labels_regexes=preserve_labels_regexes,
