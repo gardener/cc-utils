@@ -231,7 +231,11 @@ def docker_credentials_lookup(
         # docker's auth-cfgs only have a single value `auth` (or so we hope / assume)
         auth = auth_dict.get('auth', None)
         if not auth:
-            raise ValueError(f'did not find expected attr `auth` in {docker_cfg=} for {image_host=}')
+            if not absent_ok:
+                raise ValueError(
+                    f'did not find expected attr `auth` in {docker_cfg=} for {image_host=}'
+                )
+            return None # no matching cfg was found
 
         auth = base64.b64decode(auth).decode('utf-8')
         username, passwd = auth.split(':', 1)
