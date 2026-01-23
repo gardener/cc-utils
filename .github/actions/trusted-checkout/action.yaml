@@ -58,7 +58,7 @@ inputs:
       are set.
   trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_OK_TO_TEST_LABEL }}
+    default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST }}
     description: |
       a label, that can be used to mark pullrequests as trusted, regardless of author's association.
 

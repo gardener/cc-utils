@@ -13,7 +13,7 @@ description: |
 inputs:
   trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_OK_TO_TEST_LABEL }}
+    default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST }}
   needs-trusted-label:
     type: string
     default: 'needs-ok-to-test'

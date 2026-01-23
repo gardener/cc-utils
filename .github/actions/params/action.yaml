@@ -23,7 +23,7 @@ inputs:
       repository).
   trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_OK_TO_TEST_LABEL }}
+    default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST }}
     description: |
       a label that, in case of pullrequests, is considered a marker for a pullrequest to be
       trusted.
