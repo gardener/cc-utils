@@ -44,7 +44,7 @@ on:
           the label used to indicate the `trusted-label` needs to be set
           needs to exist for the target-repository
         type: string
-        default: 'needs-ok-to-test'
+        default: ${{ vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
       trusted-teams:
         description: |
           an optional, comma-separated list of team-names. Members of any of those teams
