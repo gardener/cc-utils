@@ -16,7 +16,7 @@ inputs:
     default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
   needs-trusted-label:
     type: string
-    default: 'needs-ok-to-test'
+    default: ${{ vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
   trusted-teams:
     type: string
     description: |
