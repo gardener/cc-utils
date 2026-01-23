@@ -502,17 +502,19 @@ def create_or_update_github_issues(
                     max_days = max_processing_days.for_severity(criticality_classification)
                     due_date = datetime.date.today() + datetime.timedelta(days=max_days)
 
-                    target_sprints = gcmi.target_sprints(
+                    sprints = gcmi.sprints_cached(
                         delivery_svc_client=delivery_svc_client,
-                        due_date=due_date,
-                        sprints_count=2,
-                    )
-                    target_milestone, _ = gcmi.find_or_create_sprint_milestone(
-                        repo=repository,
-                        sprints=target_sprints,
                     )
 
-                    if target_milestone:
+                    open_milestones = gcmi.iter_and_create_github_milestones(
+                        sprints=sprints,
+                        repo=repository,
+                    )
+
+                    if target_milestone := gcmi.find_milestone_for_due_date(
+                        milestones=open_milestones,
+                        due_date=due_date,
+                    ):
                         due_date = target_milestone.due_on.date()
                 except Exception as e:
                     import traceback
