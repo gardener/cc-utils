@@ -36,119 +36,127 @@ def _milestone_title(
     return f'{title_prefix}{title}{title_suffix}'
 
 
-def find_sprint_milestone(
-    repo: github3.repos.Repository,
-    sprints: tuple[dm.Sprint],
-    milestone_cfg: MilestoneConfiguration=None,
-) -> tuple[
-    dm.Sprint,
-    github3.repos.repo.milestone.Milestone,
-    list[github3.repos.repo.milestone.Milestone],
-]:
-    sprint_milestone = None
-    failed_milestones = []
-    all_milestones = repo.milestones(state='all')
-
-    for sprint in sprints:
-        for ms in all_milestones:
-            if ms.title == _milestone_title(
-                sprint=sprint,
-                milestone_cfg=milestone_cfg,
-            ):
-                sprint_milestone = ms
-                break
-
-        if not sprint_milestone:
-            # milestone does not exist yet -> create it
-            return (sprint, None, failed_milestones)
-
-        if sprint_milestone.state == 'open':
-            # milestone exists and is open -> use it
-            return (sprint, sprint_milestone, failed_milestones)
-
-        # milestone exists but is closed -> repeat with next sprint
-        failed_milestones.append(sprint_milestone)
-        sprint_milestone = None
-
-    return (None, None, failed_milestones)
-
-
 @functools.cache
-def find_or_create_sprint_milestone(
-    repo: github3.repos.Repository,
-    sprints: tuple[dm.Sprint],
-    milestone_cfg: MilestoneConfiguration=None,
-) -> tuple[
-    github3.repos.repo.milestone.Milestone | None,
-    list[github3.repos.repo.milestone.Milestone],
-]:
-    if not milestone_cfg:
-        milestone_cfg = MilestoneConfiguration()
-
-    sprint, milestone, failed_milestones = find_sprint_milestone(
-        repo=repo,
-        sprints=sprints,
-        milestone_cfg=milestone_cfg,
-    )
-
-    if milestone:
-        return (milestone, failed_milestones)
-
-    if not sprint:
-        # all sprints have sprint milestones which were extraordinary closed
-        # because sprints are still in the future but there milestone is closed
-        # we can't do anything here so write info to ticket
-        return (None, failed_milestones)
-
-    title = _milestone_title(
-        sprint=sprint,
-        milestone_cfg=milestone_cfg,
-    )
-
-    due_date = milestone_cfg.due_date_callback(sprint)
-
-    ms = repo.create_milestone(
-        title=title,
-        state='open',
-        description=f'used to track issues for upcoming sprint {title}',
-        due_on=due_date.isoformat(),
-    )
-
-    return (ms, failed_milestones)
-
-
-@functools.cache
-def _sprints(
+def sprints_cached(
     delivery_svc_client: delivery.client.DeliveryServiceClient,
-    today: datetime.date=datetime.date.today(), # used to refresh the cache daily
 ) -> list[dm.Sprint]:
     return delivery_svc_client.sprints()
 
 
-def target_sprints(
-    delivery_svc_client: delivery.client.DeliveryServiceClient,
-    due_date: datetime.date,
-    sprints_count: int=-1,
-) -> tuple[dm.Sprint]:
-    sprints = _sprints(
-        delivery_svc_client=delivery_svc_client,
+@functools.cache
+def milestones_cached(
+    repo: github3.repos.Repository,
+    state: str='all',
+) -> collections.abc.Iterable[github3.repos.repo.milestone.Milestone]:
+    return repo.milestones(state=state)
+
+
+def iter_and_create_github_milestones(
+    sprints: collections.abc.Iterable[dm.Sprint],
+    repo: github3.repos.Repository,
+    milestone_cfg: MilestoneConfiguration | None=None,
+    state: str='open',
+) -> collections.abc.Iterable[github3.repos.repo.milestone.Milestone]:
+    '''
+    Yields the respective GitHub milestones for the specified `sprints`. Comparison is done via the
+    title. Only milestones matching the provided `state` are yielded, others are skipped. If a
+    milestone is not existing yet, it will be created ad-hoc.
+    '''
+    if not milestone_cfg:
+        milestone_cfg = MilestoneConfiguration()
+
+    all_milestones = milestones_cached(
+        repo=repo,
     )
-    sprints.sort(key=lambda sprint: sprint.find_sprint_date(name='end_date').value.date())
 
-    targets_sprints = []
     for sprint in sprints:
-        if sprints_count > 0 and len(targets_sprints) == sprints_count:
-            # found enough sprints -> early exiting
-            break
-
-        end_date = sprint.find_sprint_date(name='end_date').value.date()
-        if end_date >= due_date:
-            targets_sprints.append(sprint)
-
-    if len(targets_sprints) < sprints_count:
-        logger.warning(
-            f'did not find {sprints_count} sprints starting from ' +
-            f'{due_date}, only found {len(targets_sprints)} sprints'
+        title = _milestone_title(
+            sprint=sprint,
+            milestone_cfg=milestone_cfg,
         )
 
-    return tuple(targets_sprints)
+        if milestone := find_milestone_for_title(
+            milestones=all_milestones,
+            title=title,
+        ):
+            logger.debug(f'GitHub milestone {title} is already existing - skipping creation')
+
+        else:
+            due_date = milestone_cfg.due_date_callback(sprint)
+
+            milestone = repo.create_milestone(
+                title=title,
+                state='open',
+                description=f'used to track issues for upcoming sprint {title}',
+                due_on=due_date.isoformat(),
+            )
+
+            logger.info(f'created GitHub milestone {title} with {due_date=}')
+
+        if state == 'all' or milestone.state == state:
+            yield milestone
+
+
+def find_milestone_for_title(
+    milestones: collections.abc.Iterable[github3.repos.repo.milestone.Milestone],
+    title: str,
+    absent_ok: bool=True,
+) -> github3.repos.repo.milestone.Milestone | None:
+    for milestone in milestones:
+        if milestone.title == title:
+            return milestone
+
+    if not absent_ok:
+        raise ValueError(f'did not find GitHub milestone {title}')
+
+    return None
+
+
+def find_milestone_for_due_date(
+    milestones: collections.abc.Iterable[github3.repos.repo.milestone.Milestone],
+    due_date: datetime.date,
+    offset: int=0,
+    use_fallback: bool=True,
+    absent_ok: bool=True,
+) -> github3.repos.repo.milestone.Milestone | None:
+    def early_exit(
+        message: str,
+        milestone: github3.repos.repo.milestone.Milestone | None,
+    ) -> github3.repos.repo.milestone.Milestone | None:
+        if not absent_ok:
+            raise ValueError(message)
+
+        logger.warning(message)
+
+        if use_fallback and milestone:
+            logger.warning(f'will use {milestone=} as a fallback')
+            return milestone
+
+        return None
+
+    sorted_milestones = sorted(milestones, key=lambda milestone: milestone.due_on)
+
+    for idx, milestone in enumerate(sorted_milestones):
+        if milestone.due_on.date() > due_date: # is due before milestone ends
+            break
+    else:
+        return early_exit(
+            message=f'did not find GitHub milestone for {due_date=}',
+            milestone=sorted_milestones[-1] if sorted_milestones else None,
+        )
+
+    tgt_idx = idx + offset
+
+    if tgt_idx < 0:
+        return early_exit(
+            message=f'did not find GitHub milestone for {due_date=} considering {offset=}',
+            milestone=sorted_milestones[0], # first milestone as a fallback
+        )
+
+    if tgt_idx >= len(sorted_milestones):
+        return early_exit(
+            message=f'did not find GitHub milestone for {due_date=} considering {offset=}',
+            milestone=sorted_milestones[-1], # last milestone as a fallback
+        )
+
+    return sorted_milestones[tgt_idx]
