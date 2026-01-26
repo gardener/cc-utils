@@ -137,7 +137,7 @@ def find_milestone_for_due_date(
     sorted_milestones = sorted(milestones, key=lambda milestone: milestone.due_on)
 
     for idx, milestone in enumerate(sorted_milestones):
-        if milestone.due_on.date() > due_date: # is due before milestone ends
+        if milestone.due_on.date() >= due_date: # is due before milestone ends
             break
     else:
         return early_exit(
