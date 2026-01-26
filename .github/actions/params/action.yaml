@@ -23,7 +23,7 @@ inputs:
       repository).
   trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
+    required: false
     description: |
       a label that, in case of pullrequests, is considered a marker for a pullrequest to be
       trusted.
@@ -182,9 +182,11 @@ runs:
               can_push_reason='untrusted fork'
           esac
           if [ '${{ github.event.action }}' == 'labeled' ] && ! $can_push; then
-            if ${{ github.event.label.name == inputs.trusted-label }}; then
+            trusted_label="${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}"
+            event_label="${{ github.event.label.name }}"
+            if [ ${event_label} == ${trusted_label} ]; then
               can_push=true
-              can_push_reason='label ${{ inputs.trusted-label }} present'
+              can_push_reason="label ${trusted_label} present"
             fi
           fi
         elif [ ${event_name} == 'workflow_dispatch' ]; then

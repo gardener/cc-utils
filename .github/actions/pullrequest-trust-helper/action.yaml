@@ -13,10 +13,10 @@ description: |
 inputs:
   trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
+    required: false
   needs-trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
+    required: false
   trusted-teams:
     type: string
     description: |
@@ -89,8 +89,8 @@ runs:
         # we need issue's API (not exposed by `pull_request`s)
         pull_request =  repository.issue(${{ github.event.number }})
 
-        trusted_label = '${{ inputs.trusted-label }}'
-        needs_trusted_label = '${{ inputs.needs-trusted-label }}'
+        trusted_label = "${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}"
+        needs_trusted_label = "${{ inputs.needs-trusted-label || vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}"
 
         has_needs_trusted_label = False
 

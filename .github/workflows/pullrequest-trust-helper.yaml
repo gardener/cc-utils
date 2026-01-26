@@ -38,13 +38,13 @@ on:
           the label to set in order to trigger pipeline-runs trusting that label
           needs to exist for the target-repository
         type: string
-        default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
+        required: false
       needs-trusted-label:
         description: |
           the label used to indicate the `trusted-label` needs to be set
           needs to exist for the target-repository
         type: string
-        default: ${{ vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
+        required: false
       trusted-teams:
         description: |
           an optional, comma-separated list of team-names. Members of any of those teams
@@ -85,7 +85,7 @@ jobs:
           private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@master
         with:
-          trusted-label: ${{ inputs.trusted-label }}
-          needs-trusted-label: ${{ inputs.needs-trusted-label }}
+          trusted-label: ${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
+          needs-trusted-label: ${{ inputs.needs-trusted-label || vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
           trusted-teams: ${{ inputs.trusted-teams }}
           github-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}

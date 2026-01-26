@@ -58,7 +58,7 @@ inputs:
       are set.
   trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
+    required: false
     description: |
       a label, that can be used to mark pullrequests as trusted, regardless of author's association.
 
@@ -66,7 +66,7 @@ inputs:
       added again (adding the label will work as trigger).
   needs-trusted-label:
     type: string
-    default: ${{ vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
+    required: false
     description: |
       a label that is added as a marker in order to notify lack of "trusted-label"
   remove-trusted-label:
@@ -242,7 +242,7 @@ runs:
 
         # if pullrequest is labelled, it is also considered trusted, regardless of
         # author's association (rationale: only codeowners can add labels)
-        trusted_label = '${{ inputs.trusted-label }}'
+        trusted_label = "${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}"
 
         if '${{ github.event.action }}' == 'labeled':
           if '${{ github.event.label.name }}' == trusted_label:
@@ -344,7 +344,7 @@ runs:
           # is an expected, and of course, acceptable case
           exit(0)
 
-        pull_request.add_labels('${{ inputs.needs-trusted-label }}')
+        pull_request.add_labels('${{ inputs.needs-trusted-label || vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}')
     - if: ${{ inputs.init-git-identity == 'true' }}
       uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       with:

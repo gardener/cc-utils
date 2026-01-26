@@ -133,7 +133,7 @@ If privileged pipelines are needed, use the following event-trigger:
          # used.
          # it is important to add the explicit check for label's name to prevent accidental
          # triggering (e.g. from gardener-robot setting initial set of labels)
-         if: ${{ github.event.action != 'labeled' || (github.event.label.name == vars.DEFAULT_LABEL_OK_TO_TEST && vars.DEFAULT_LABEL_OK_TO_TEST != '')}}
+         if: ${{ github.event.action != 'labeled' || (github.event.label.name == vars.DEFAULT_LABEL_OK_TO_TEST && vars.DEFAULT_LABEL_OK_TO_TEST != '') }}
          permissions:
             pull-requests: write # needed so trusted-checkout can remove trusted-label
                                  # caveat: also needs to be set for all called workflows
