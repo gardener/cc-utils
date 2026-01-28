@@ -31,6 +31,7 @@ class OidcConfiguration:
             oci.model.OciRegistryType.AWS: AwsOidcConfiguration,
             oci.model.OciRegistryType.AZURE: AzureOidcConfiguration,
             oci.model.OciRegistryType.GAR: GarOidcConfiguration,
+            oci.model.OciRegistryType.GCR: GarOidcConfiguration,
         }.get(registry_type)
 
         if not data_class:
@@ -408,7 +409,10 @@ def write_docker_config(
                 registry=image_reference.netloc,
             )
 
-        elif registry_type is oci.model.OciRegistryType.GAR:
+        elif (
+            registry_type is oci.model.OciRegistryType.GAR
+            or registry_type is oci.model.OciRegistryType.GCR
+        ):
             auth = authenticate_against_gar(
                 oidc_cfg=oidc_cfg,
                 gh_token=gh_token,
