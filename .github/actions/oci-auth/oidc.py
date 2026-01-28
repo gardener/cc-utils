@@ -9,8 +9,6 @@ import dacite
 import requests
 import yaml
 
-import oci.auth
-import oci.aws
 import oci.model
 
 own_dir = os.path.dirname(__file__)
