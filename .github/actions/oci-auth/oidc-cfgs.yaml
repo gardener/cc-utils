@@ -86,6 +86,19 @@
     - kubernetes
     - kubernetes-private
 
+- name: wdf-gcr-delivery
+  type: gcr
+  project_name: sap-se-gcp-k8s-delivery
+  project_id: 370994582649
+  service_account: gardener-delivery@sap-se-gcp-k8s-delivery.iam.gserviceaccount.com
+  identity_pool_name: github-actions
+  identity_provider_name: github-wdf-actions-provider
+  oci_repository_prefixes:
+    - gcr.io/gdch-partner-project
+  github_host: gh-wdf
+  github_orgs:
+    - kubernetes
+
 # ghwdf / delivery-dev
 - name: wdf-gar-delivery-dev
   type: gar
