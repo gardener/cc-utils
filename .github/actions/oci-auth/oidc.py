@@ -409,9 +409,9 @@ def write_docker_config(
                 registry=image_reference.netloc,
             )
 
-        elif (
-            registry_type is oci.model.OciRegistryType.GAR
-            or registry_type is oci.model.OciRegistryType.GCR
+        elif registry_type in (
+            oci.model.OciRegistryType.GAR,
+            oci.model.OciRegistryType.GCR,
         ):
             auth = authenticate_against_gar(
                 oidc_cfg=oidc_cfg,
