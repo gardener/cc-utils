@@ -19,7 +19,7 @@ def _create_github_jwt(
     payload = {
         'iat': now,
         'exp': now + ttl_seconds,
-        'iss': github_app_id,
+        'iss': str(github_app_id),
     }
 
     return jwt_mod.encode(
