@@ -90,14 +90,14 @@ def github_app_api(
 
     github_api.login_as_app(
         private_key_pem=github_app_private_key,
-        app_id=github_app_id,
+        app_id=str(github_app_id),
     )
 
     installation = github_api.app_installation_for_organization(org)
 
     github_api.login_as_app_installation(
         private_key_pem=github_app_private_key,
-        app_id=github_app_id,
+        app_id=str(github_app_id),
         installation_id=installation.id,
     )
 
