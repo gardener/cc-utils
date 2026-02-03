@@ -3,6 +3,7 @@ import collections.abc
 import dataclasses
 import datetime
 import enum
+import functools
 import io
 import json
 import os
@@ -11,6 +12,7 @@ import textwrap
 
 import dacite
 
+import cnudie.access
 import cnudie.retrieve
 import ctt.__main__
 import oci.client
@@ -18,6 +20,7 @@ import ocm
 import ocm.gardener
 import ocm.iter
 import ocm.oci
+import ocm.sign
 import ocm.upload
 
 own_dir = os.path.dirname(__file__)
@@ -666,6 +669,45 @@ def imagevector(parsed):
     print(yaml.safe_dump(imagevector))
 
 
+def _normalise(parsed) -> str:
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_cfg,
+        ),
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        oci_client=oci_client,
+    )
+
+    component_descriptor = component_descriptor_lookup(parsed.name)
+
+    access_to_digest_lookup = functools.partial(
+        cnudie.access.access_to_digest_lookup,
+        oci_client=oci_client,
+    )
+
+    # todo: change normalise-function to return serialised form (aka str)
+    normalised = ocm.sign.normalise_component_descriptor(
+        component_descriptor=component_descriptor,
+        component_descriptor_lookup=component_descriptor_lookup,
+        access_to_digest_lookup=access_to_digest_lookup,
+        verify_digests=parsed.validate_digests,
+    )
+
+    serialised_and_normalised = json.dumps(
+        obj=normalised,
+        separators=(',', ':'), # remove spaces as required by OCM-Spec
+    )
+
+    return serialised_and_normalised
+
+
+def normalise(parsed):
+    print(_normalise(parsed))
+
+
 def generate_config(parsed):
     simple_cfg_script_path = os.path.join(
         own_dir,
@@ -870,6 +912,41 @@ def main():
         '--docker-cfg',
         required=False,
         help='path to dockerd\'s `config.json` file',
+    )
+
+    normalise_parser = maincmd_parsers.add_parser(
+        'normalise',
+        aliases=('n',),
+        help='print normalised component-descriptor (for signature-validation and signing)',
+    )
+    normalise_parser.set_defaults(callable=normalise)
+    normalise_parser.add_argument(
+        '--ocm-repo',
+        required=True,
+    )
+    normalise_parser.add_argument(
+        '--name',
+        help='OCM-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    normalise_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
+    )
+    normalise_parser.add_argument(
+        '--validate-digests',
+        dest='validate_digests', # explicit is (in this case, specifically) better than implicit
+        action='store_true',
+        default=True,
+        required=False,
+    )
+    normalise_parser.add_argument(
+        '--no-validate-digests',
+        dest='validate_digests',
+        action='store_false',
+        default=True,
+        required=False,
     )
 
     if len(sys.argv) < 2:
