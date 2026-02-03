@@ -102,6 +102,13 @@ inputs:
     description: |
       Input is passed to `github-auth` action as `permissions` input. Hence it is only considered if
       `token-server` input is set as well.
+  github-server-url:
+    type: string
+    required: false
+    description: |
+      Input is passed to `github-auth` action as `host`, and checkout action as `github-server-url`
+      input. Example URLs are
+      "https://github.com" or "https://my-ghes-server.example.com"
   init-git-identity:
     type: boolean
     default: false
@@ -146,6 +153,7 @@ runs:
         organization: ${{ steps.preprocess.outputs.org }}
         repositories: ${{ steps.preprocess.outputs.repo }}
         permissions: ${{ inputs.github-auth-token-permissions }}
+        host: ${{ inputs.github-server-url }}
 
     - name: create-token-via-github-app
       if: ${{ inputs.auth-app-private-key != '' && inputs.token-server == '' }}
@@ -198,6 +206,7 @@ runs:
         path: ${{ inputs.path }}
         repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
         ref: ${{ inputs.ref }}
+        github-server-url: ${{ inputs.github-server-url }}
 
     - uses: actions/checkout@v6
       if: ${{ steps.token.outputs.token != '' }}
@@ -207,6 +216,7 @@ runs:
         repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
         ref: ${{ inputs.ref }}
         token: ${{ steps.token.outputs.token }}
+        github-server-url: ${{ inputs.github-server-url }}
 
     - name: checkout-submodules
       if: ${{ inputs.submodules == 'recursive' }}
