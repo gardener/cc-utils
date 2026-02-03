@@ -149,14 +149,25 @@ def parse_pullrequest_title(
     return upgrade_vector
 
 
-def as_upgrade_pullrequest(pull_request: github3.pulls.PullRequest) -> UpgradePullRequest:
-    upgrade_vector = parse_pullrequest_title(
+def as_upgrade_pullrequest(
+    pull_request: github3.pulls.PullRequest,
+    reference_component: ocm.Component | None=None
+) -> UpgradePullRequest:
+    result = parse_pullrequest_title(
         title=pull_request.title,
+        reference_component=reference_component,
     )
+
+    if isinstance(result, tuple):
+        upgrade_vector, reference_name = result
+    else:
+        upgrade_vector = result
+        reference_name = None
 
     return UpgradePullRequest(
         pull_request=pull_request,
         upgrade_vector=upgrade_vector,
+        component_reference_name=reference_name,
     )
 
 
@@ -201,6 +212,7 @@ def iter_upgrade_pullrequests(
 
         yield as_upgrade_pullrequest(
             pull_request=pull_request,
+            reference_component=reference_component,
         )
 
 
