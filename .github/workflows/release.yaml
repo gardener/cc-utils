@@ -270,6 +270,11 @@ on:
         description: |
           Optionally define github environment.
           By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
 
     outputs:
       release-notes:
@@ -289,7 +294,7 @@ on:
 jobs:
   release-and-bump:
     environment: ${{ inputs.github-environment }}
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
       packages: write

@@ -115,6 +115,11 @@ on:
         description: |
           Optionally define github environment.
           By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
     secrets:
       oci-auth-token:
         required: false
@@ -136,7 +141,7 @@ on:
 jobs:
   component-descriptor:
     environment: ${{ inputs.github-environment }}
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
       id-token: write
@@ -229,7 +234,7 @@ jobs:
 
   repo-metadata:
     environment: ${{ inputs.github-environment }}
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     outputs:
       fork: ${{ steps.repo-metadata.outputs.fork }}
     steps:
@@ -246,7 +251,7 @@ jobs:
     # never run for forks and only for push events
     if: ${{ ! fromJSON(needs.repo-metadata.outputs.fork) && github.event_name == 'push' }}
     environment: ${{ inputs.github-environment }}
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write
       id-token: write

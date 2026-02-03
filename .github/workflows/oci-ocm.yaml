@@ -187,6 +187,11 @@ on:
         description: |
           Optionally define github environment.
           By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
     secrets:
       auth-token:
         required: false
@@ -222,7 +227,7 @@ on:
 jobs:
   preprocess:
     environment: ${{ inputs.github-environment }}
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     outputs:
       args: ${{ steps.preprocess.outputs.args }}
       target-image-ref: ${{ steps.preprocess.outputs.target-image-ref }}
@@ -330,7 +335,7 @@ jobs:
             untar_build_artefact = untar_build_artefacts.get(platform_name, '')
             args.append({
               'platform-name': platform_name,
-              'runner': runners_by_platform.get(platform_name, '${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}'),
+              'runner': runners_by_platform.get(platform_name, '${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}'),
               'tag': platform_tag,
               'image-reference': f'{image_ref_base}:{platform_tag}',
               'build-artefact': build_artefact,
@@ -471,7 +476,7 @@ jobs:
       ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
       oci-reference: ${{ steps.collect-images.outputs.oci-reference }}
     environment: ${{ inputs.github-environment }}
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
       packages: write

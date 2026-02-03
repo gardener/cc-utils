@@ -58,10 +58,15 @@ on:
         description: |
           Optionally define github environment.
           By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
 
 jobs:
   pullrequest-trust-helper:
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     # XXX uncomment once callers set required permission and FGATS-variable is defined
     # permissions: # permissions are configured via fed-/app-token
     #   id-token: write # will be required for fed-token
