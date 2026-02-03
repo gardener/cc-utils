@@ -265,6 +265,7 @@ def create_upgrade_pullrequest(
     branch: str,
     oci_client: oci.client.Client,
     component_reference_name: str | None=None,
+    reference_component: ocm.Component | None=None,
 ) -> github.pullrequest.UpgradePullRequest:
     logger.info(f'found {upgrade_vector=}')
     git_helper = gitutil.GitHelper(
@@ -351,7 +352,10 @@ def create_upgrade_pullrequest(
                 merge_method=merge_method.value,
             )
 
-    return github.pullrequest.as_upgrade_pullrequest(pull_request)
+    return github.pullrequest.as_upgrade_pullrequest(
+        pull_request=pull_request,
+        reference_component=reference_component
+    )
 
 
 def upgrade_pullrequest_exists(
@@ -507,6 +511,7 @@ def create_upgrade_pullrequests(
                 branch=branch,
                 oci_client=oci_client,
                 component_reference_name=component_reference_name,
+                reference_component=component
             )
             # early-exit after first created upgrade PR as a workaround (for now) to prevent
             # unintended sideeffects (e.g. dirty worktree, git conflicts)
