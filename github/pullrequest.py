@@ -150,8 +150,8 @@ def parse_pullrequest_title(
 
 
 def as_upgrade_pullrequest(
-        pull_request: github3.pulls.PullRequest,
-        reference_component: ocm.Component | None=None
+    pull_request: github3.pulls.PullRequest,
+    reference_component: ocm.Component | None=None
 ) -> UpgradePullRequest:
     result = parse_pullrequest_title(
         title=pull_request.title,
