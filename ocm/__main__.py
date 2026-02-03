@@ -1,15 +1,22 @@
 import argparse
+import base64
 import collections.abc
 import dataclasses
 import datetime
 import enum
 import functools
+import hashlib
 import io
 import json
 import os
 import sys
 import textwrap
 
+import cryptography.exceptions
+import cryptography.hazmat.primitives.asymmetric.padding
+import cryptography.hazmat.primitives.asymmetric.utils
+import cryptography.hazmat.primitives.hashes
+import cryptography.x509
 import dacite
 
 import cnudie.access
@@ -669,7 +676,7 @@ def imagevector(parsed):
     print(yaml.safe_dump(imagevector))
 
 
-def _normalise(parsed) -> str:
+def _normalise(parsed) -> tuple[ocm.ComponentDescriptor, str]:
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(
             docker_cfg=parsed.docker_cfg,
@@ -701,11 +708,66 @@ def _normalise(parsed) -> str:
         separators=(',', ':'), # remove spaces as required by OCM-Spec
     )
 
-    return serialised_and_normalised
+    return component_descriptor, serialised_and_normalised
 
 
 def normalise(parsed):
-    print(_normalise(parsed))
+    _, normalised = _normalise(parsed)
+    print(normalised)
+
+
+def validate(parsed):
+    component_descriptor, normalised = _normalise(parsed)
+
+    digest = hashlib.sha256(normalised.encode('utf-8')).digest()
+
+    with open(parsed.ca_file, 'rb') as f:
+        certificates = cryptography.x509.load_pem_x509_certificates(
+            data=f.read(),
+        )
+
+    def parse_signature(pem: str) -> bytes:
+        start_str = '-----BEGIN SIGNATURE-----'
+        start_idx = pem.find(start_str)
+        end_str = '-----END SIGNATURE-----'
+        end_idx = pem.find(end_str)
+
+        signature = pem[start_idx + len(start_str):end_idx].strip() # strip header and footer
+        # strip pre-ambel (Signature Algorithm: <alg>) + blank line
+        start_idx = signature.find('\n')
+        signature = signature[start_idx + 1:]
+
+        return base64.b64decode(signature.strip())
+
+    cpadding = cryptography.hazmat.primitives.asymmetric.padding
+    cutils = cryptography.hazmat.primitives.asymmetric.utils
+    chashes = cryptography.hazmat.primitives.hashes
+
+    for signature in component_descriptor.signatures:
+        print(f'checking {signature.name=}')
+        signature_bytes = parse_signature(signature.signature.value)
+
+        for certificate in certificates:
+            public_key = certificate.public_key()
+
+            try:
+                public_key.verify(
+                    signature=signature_bytes,
+                    data=digest,
+                    padding=cpadding.PSS(
+                        mgf=cpadding.MGF1(chashes.SHA256()),
+                        salt_length=cpadding.PSS.MAX_LENGTH,
+                    ),
+                    algorithm=cutils.Prehashed(chashes.SHA256()),
+                )
+                print(f'{signature.name=} was valid - existing now')
+                return
+            except cryptography.exceptions.InvalidSignature:
+                print(f'{signature.name=} was invalid (if there are more, will try those)')
+                continue
+
+    print('Error: no valid signature was found')
+    exit(1)
 
 
 def generate_config(parsed):
@@ -947,6 +1009,48 @@ def main():
         action='store_false',
         default=True,
         required=False,
+    )
+
+    validate_parser = maincmd_parsers.add_parser(
+        'validate',
+        aliases=('v',),
+        help='validates signature of a component-descriptor',
+    )
+    validate_parser.set_defaults(callable=validate)
+    validate_parser.add_argument(
+        '--ocm-repo',
+        required=True,
+    )
+    validate_parser.add_argument(
+        '--name',
+        help='OCM-Component-Name and Version (<name>:<version>)',
+        required=True,
+    )
+    validate_parser.add_argument(
+        '--validate-digests',
+        dest='validate_digests', # explicit is (in this case, specifically) better than implicit
+        action='store_true',
+        default=True,
+        required=False,
+    )
+    validate_parser.add_argument(
+        '--no-validate-digests',
+        dest='validate_digests',
+        action='store_false',
+        default=True,
+        required=False,
+    )
+    # todo: allow passing normalised component-descriptor from filesystem as alternative to
+    #       retrieving from OCM-Repository
+    validate_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
+    )
+    validate_parser.add_argument(
+        '--ca-file',
+        required=True,
+        help='path to certificate(s) to trust (expected in PEM-format)',
     )
 
     if len(sys.argv) < 2:

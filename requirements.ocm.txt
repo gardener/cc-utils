@@ -1,5 +1,6 @@
 PyYaml
 cachetools
+cryptography
 dacite
 gardener-oci
 jsonschema
