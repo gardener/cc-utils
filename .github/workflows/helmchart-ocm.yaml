@@ -101,6 +101,11 @@ on:
         description: |
           Optionally define github environment.
           By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
 
 jobs:
   helmchart:
@@ -109,7 +114,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}

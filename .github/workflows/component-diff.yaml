@@ -18,6 +18,11 @@ on:
           `prepare-workflow-values` artefact, which is by default emitted by the
           `prepare.yaml` workflow (which must have been run prior to calling this workflow for
           this to succeed).
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
     outputs:
       has-diff:
         description: |
@@ -26,7 +31,7 @@ on:
 
 jobs:
   component-diff:
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: read
       id-token: write
