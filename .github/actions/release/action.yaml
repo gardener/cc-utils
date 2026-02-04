@@ -220,34 +220,24 @@ runs:
         ${{ inputs.assets }}
         EOF
 
-    - name: read-target-oci-ref
-      id: read-oci-ref
-      shell: python
+    - name: fetch-prepare-values
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: prepare-workflow-values
+
+    - name: read-ocm-repositories
+      id: read-ocm-repositories
+      shell: bash
       run: |
-        import os
-
-        import yaml
-
-        import ocm
-
-        with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
-            yaml.safe_load(f.read())
-          )
-        component = component_descriptor.component
-        tgt_ocm_repo = component.current_ocm_repo
-        tgt_oci_ref = tgt_ocm_repo.component_version_oci_ref(
-          name=component.name,
-          version=component.version,
-        )
-        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          f.write(f'ocm-target-oci-ref={tgt_oci_ref}\n')
-
+        tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+        ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
+        rm -rf prepare-values.d prepare-workflow-values.tar
+        echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry
       uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
-        oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
+        oci-image-reference: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
         gh-token: ${{ inputs.github-token }}
 
     - name: fetch-release-notes
