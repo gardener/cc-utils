@@ -158,26 +158,6 @@ jobs:
           component-descriptor-artefact: base-component-descriptor
           outdir: /tmp/ocm
           post-process: ${{ inputs.ocm-post-process }}
-      - name: read-target-oci-ref
-        id: read-oci-ref
-        shell: python
-        run: |
-          import os
-          import yaml
-          import ocm
-
-          with open('/tmp/ocm/component-descriptor.yaml') as f:
-            component_descriptor = ocm.ComponentDescriptor.from_dict(
-              yaml.safe_load(f.read())
-            )
-          component = component_descriptor.component
-          tgt_ocm_repo = component.current_ocm_repo
-          tgt_oci_ref = tgt_ocm_repo.component_version_oci_ref(
-            name=component.name,
-            version=component.version,
-          )
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-            f.write(f'ocm-target-oci-ref={tgt_oci_ref}\n')
 
       - name: fetch-prepare-values
         uses: gardener/cc-utils/.github/actions/download-artifact@master
@@ -186,10 +166,12 @@ jobs:
       - name: prepare-prepare-workflow-values
         id: prep
         run: |
-          tar xf prepare-workflow-values.tar prepare-values.d/can-push
+          tar xf prepare-workflow-values.tar prepare-values.d/can-push prepare-values.d/ocm-repositories
           can_push="$(cat prepare-values.d/can-push)"
+          ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
           rm -rf prepare-values.d prepare-workflow-values.tar
           echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
+          echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
 
       - name: create-extra-auth
         id: extra-auth
@@ -200,14 +182,14 @@ jobs:
           if [ -z "${{ secrets.oci-auth-token }}" ]; then
             exit 0
           fi
-          host=$(echo ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }} | cut -d/ -f1)
+          host=$(echo ${{ steps.prep.outputs.ocm-repositories }} | cut -d/ -f1)
           echo "extra-auths={\"$host\": {\"auth\": \"${{ secrets.oci-auth-token }}\"}}" \
             >> $GITHUB_OUTPUT
       - name: authenticate-against-oci-registry
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
-          oci-image-reference: ${{ steps.read-oci-ref.outputs.ocm-target-oci-ref }}
+          oci-image-reference: ${{ steps.prep.outputs.ocm-repositories }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - uses: gardener/cc-utils/.github/actions/ocm-validate@master
