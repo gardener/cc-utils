@@ -257,6 +257,21 @@ class OciImageReference:
             normalise=self._normalise,
         )
 
+    def with_new_digest(self, digest: str) -> 'OciImageReference':
+        if self.has_symbolical_tag:
+            # no update of the digest necessary -> only a symbolical tag is present
+            image_ref = self.original_image_reference
+        elif self.has_mixed_tag:
+            # we have to keep the symbolical tag but update the digest
+            image_ref = f'{self.with_symbolical_tag}@sha256:{digest}'
+        else:
+            image_ref = f'{self.ref_without_tag}@sha256:{digest}'
+
+        return OciImageReference(
+            image_reference=image_ref,
+            normalise=self._normalise,
+        )
+
     def __str__(self) -> str:
         if self._normalise:
             return self.normalised_image_reference

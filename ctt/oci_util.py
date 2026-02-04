@@ -105,14 +105,8 @@ def filter_image(
         manifest_dict = manifest.as_dict()
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
 
-        if target_ref.has_digest_tag:
-            # we need to recalculate digest since it may have changed due to filtering
-            manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
-
-            if target_ref.has_mixed_tag:
-                target_ref = f'{target_ref.with_symbolical_tag}@sha256:{manifest_digest}'
-            else:
-                target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
+        manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+        target_ref = target_ref.with_new_digest(digest=manifest_digest)
 
         res = oci_client.put_manifest(
             image_reference=target_ref,
@@ -158,14 +152,8 @@ def filter_image(
             manifest_list.as_dict(),
         ).encode('utf-8')
 
-        if target_ref.has_digest_tag:
-            # we need to recalculate digest since it may have changed due to filtering
-            manifest_digest = hashlib.sha256(manifest_list_bytes).hexdigest()
-
-            if target_ref.has_mixed_tag:
-                target_ref = f'{target_ref.with_symbolical_tag}@sha256:{manifest_digest}'
-            else:
-                target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
+        manifest_list_digest = hashlib.sha256(manifest_list_bytes).hexdigest()
+        target_ref = target_ref.with_new_digest(digest=manifest_list_digest)
 
         res = oci_client.put_manifest(
             image_reference=target_ref,
@@ -353,12 +341,8 @@ def filter_image(
 
         manifest_raw = json.dumps(manifest_dict).encode('utf-8')
 
-    if target_ref.has_tag:
-        target_ref = str(target_ref)
-    else:
-        # if tgt does not bear a tag, calculate hash digest as tgt
-        manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
-        target_ref = f'{target_ref.ref_without_tag}@sha256:{manifest_digest}'
+    manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+    target_ref = target_ref.with_new_digest(digest=manifest_digest)
 
     res = oci_client.put_manifest(
         image_reference=target_ref,
