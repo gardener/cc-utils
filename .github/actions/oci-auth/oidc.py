@@ -342,8 +342,8 @@ def authenticate_against_gar(
 
 
 def authenticate_against_ghcr() -> dict[str, str] | None:
-    username = os.environ['GITHUB_ACTOR']
-    password = os.environ['GITHUB_TOKEN']
+    username = os.environ.get('GITHUB_ACTOR')
+    password = os.environ.get('GITHUB_TOKEN')
 
     if not username or not password:
         return None
