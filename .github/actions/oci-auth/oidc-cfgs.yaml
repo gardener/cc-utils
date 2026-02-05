@@ -26,6 +26,7 @@
   github_host: gh-tools
   github_orgs:
     - kubernetes
+    - open-delivery-gear
 
 # ghtools / delivery
 - name: tools-gar-delivery
