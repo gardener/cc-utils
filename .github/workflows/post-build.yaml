@@ -190,6 +190,7 @@ jobs:
         uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ steps.prep.outputs.ocm-repositories }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - uses: gardener/cc-utils/.github/actions/ocm-validate@master
         with:
