@@ -36,7 +36,8 @@ inputs:
     default: gardener-project
   gh-token:
     description: |
-      The token from GitHub-Action (secrets.GITHUB_TOKEN).
+      The token from GitHub-Action (secrets.GITHUB_TOKEN). Note that it will be only honoured in case
+      it has been issued for the public GitHub instance "github.com".
     required: false
   oci-image-reference:
     required: true
@@ -88,7 +89,8 @@ runs:
         import oidc
 
 
-        os.environ['GITHUB_TOKEN'] = '${{ inputs.gh-token }}' # may be required for auth against GHCR
+        if '${{ github.server_url }}' == 'https://github.com':
+          os.environ['GITHUB_TOKEN'] = '${{ inputs.gh-token }}' # may be required for auth against GHCR
 
         image_references = [
           image_reference.strip()
