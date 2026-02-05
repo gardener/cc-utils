@@ -484,7 +484,8 @@ jobs:
         with:
           method: files.uploadV2
           token: ${{ secrets.slack-token || secrets.SLACK_APP_TOKEN_GARDENER_CICD }}
-          payload: ${{ steps.check-slack-release-notes.outputs.slack-payload }}
+          payload: |
+            ${{ steps.check-slack-release-notes.outputs.slack-payload }}
 
       - name: reset-repository-to-release-commit
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
