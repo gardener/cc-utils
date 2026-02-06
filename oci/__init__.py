@@ -230,11 +230,8 @@ def replicate_artifact(
             if manifest_dirty:
                 raw_manifest = json.dumps(manifest.as_dict())
 
-            if not tgt_image_reference.has_tag:
-                digest = f'sha256:{hashlib.sha256(raw_manifest.encode("utf-8")).hexdigest()}'
-                tgt_image_reference = om.OciImageReference(
-                    f'{tgt_image_reference.ref_without_tag}@{digest}',
-                )
+            manifest_digest = hashlib.sha256(raw_manifest.encode('utf-8')).hexdigest()
+            tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
 
             res = client.put_manifest(
                 image_reference=tgt_image_reference,
@@ -284,6 +281,9 @@ def replicate_artifact(
                 manifest_list_bytes = json.dumps(
                     manifest_list.as_dict(),
                 ).encode('utf-8')
+
+                manifest_digest = hashlib.sha256(manifest_list_bytes).hexdigest()
+                tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
 
                 res = oci_client.put_manifest(
                     image_reference=tgt_image_reference,
@@ -412,9 +412,8 @@ def replicate_artifact(
         if manifest_dirty:
             raw_manifest = json.dumps(manifest.as_dict())
 
-    if not tgt_image_reference.has_tag:
-        digest = f'sha256:{hashlib.sha256(raw_manifest.encode("utf-8")).hexdigest()}'
-        tgt_image_reference = f'{tgt_image_reference.ref_without_tag}@{digest}'
+    manifest_digest = hashlib.sha256(raw_manifest.encode('utf-8')).hexdigest()
+    tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
 
     res = client.put_manifest(
         image_reference=tgt_image_reference,
