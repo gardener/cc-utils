@@ -48,7 +48,7 @@ def milestones_cached(
     repo: github3.repos.Repository,
     state: str='all',
 ) -> collections.abc.Iterable[github3.repos.repo.milestone.Milestone]:
-    return repo.milestones(state=state)
+    return set(repo.milestones(state=state)) # resolve github3 iterator
 
 
 def iter_and_create_github_milestones(
