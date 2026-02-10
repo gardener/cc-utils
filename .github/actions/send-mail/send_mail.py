@@ -10,6 +10,7 @@ import os
 import string
 
 import boto3
+import requests
 import yaml
 
 
@@ -22,16 +23,20 @@ def parse_args():
 
     parser.add_argument(
         '--aws-key-id',
-        required=True,
+        required=False,
     )
     parser.add_argument(
         '--aws-key',
-        required=True,
+        required=False,
     )
     parser.add_argument(
         '--aws-region',
         required=False,
         default='eu-central-1',
+    )
+    parser.add_argument(
+        '--aws-role-to-assume',
+        required=False,
     )
     parser.add_argument(
         '--subject',
@@ -92,6 +97,63 @@ def write_to_gha_summary(message: str):
         f.write(f'{message}\n')
 
 
+def authenticate_against_aws(
+    role_to_assume: str,
+    audience: str='sts.amazonaws.com',
+    session_name: str='GitHubActions',
+    lifetime_seconds: int=3600,
+) -> tuple[str, str, str]:
+    '''
+    See https://github.com/aws-actions/configure-aws-credentials for reference.
+    '''
+    try:
+        gh_token = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
+        gh_token_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+    except KeyError:
+        print('ERROR: the following environment-variables are not set:')
+        print('- ACTIONS_ID_TOKEN_REQUEST_TOKEN')
+        print('- ACTIONS_ID_TOKEN_REQUEST_URL')
+        print()
+        print('This typically indicates the job was not run with needed permission:')
+        print('  id-token: write')
+        exit(1)
+
+    session = requests.Session()
+
+    res = session.get(
+        url=f'{gh_token_url}&audience={audience}',
+        headers={
+            'Authorization': f'Bearer {gh_token}',
+        },
+    )
+    gh_oidc_token = res.json()['value']
+
+    res = session.post(
+        url=(
+            f'https://sts.amazonaws.com/'
+            '?Action=AssumeRoleWithWebIdentity'
+            f'&DurationSeconds={lifetime_seconds}'
+            f'&RoleArn={role_to_assume}'
+            f'&RoleSessionName={session_name}'
+            f'&WebIdentityToken={gh_oidc_token}'
+            '&Version=2011-06-15'
+        ),
+        headers={
+            'Accept': 'application/json',
+        },
+    )
+    if not 'AssumeRoleWithWebIdentityResponse' in (res := res.json()):
+        print(f'ERROR: did not find expected "AssumeRoleWithWebIdentityResponse" property in {res=}')
+        exit(1)
+
+    cred = res['AssumeRoleWithWebIdentityResponse']['AssumeRoleWithWebIdentityResult']['Credentials']
+    access_key_id = cred['AccessKeyId']
+    secret_access_key = cred['SecretAccessKey']
+    session_token = cred['SessionToken']
+
+    return access_key_id, secret_access_key, session_token
+
+
 def create_mail(
     subject: str,
     sender: str,
@@ -143,6 +205,7 @@ def create_mail(
 def send_mail(
     aws_key_id: str,
     aws_key: str,
+    aws_session_token: str | None,
     aws_region: str,
     subject: str,
     body: str,
@@ -195,6 +258,7 @@ def send_mail(
         'sesv2',
         aws_access_key_id=aws_key_id,
         aws_secret_access_key=aws_key,
+        aws_session_token=aws_session_token,
         region_name=aws_region,
     )
 
@@ -219,8 +283,15 @@ def send_mail(
 def main():
     parsed_args = parse_args()
 
-    aws_key_id = parsed_args.aws_key_id
-    aws_key = parsed_args.aws_key
+    if not (
+        (aws_key_id := parsed_args.aws_key_id)
+        and (aws_key := parsed_args.aws_key)
+    ):
+        aws_key_id, aws_key, aws_session_token = authenticate_against_aws(
+            role_to_assume=parsed_args.aws_role_to_assume,
+        )
+    else:
+        aws_session_token = None
 
     if not (bool(parsed_args.body) ^ bool(parsed_args.body_file)):
         print('Usage: Exactly one of `--body` and `--body-file` must be passed')
@@ -243,6 +314,7 @@ def main():
     send_mail(
         aws_key_id=aws_key_id,
         aws_key=aws_key,
+        aws_session_token=aws_session_token,
         aws_region=parsed_args.aws_region,
         subject=parsed_args.subject,
         body=body,

@@ -6,14 +6,18 @@ description: |
 inputs:
   aws-key-id:
     type: string
-    required: true
+    required: false
   aws-key:
     type: string
-    required: true
+    required: false
   aws-region:
     type: string
     required: false
     default: eu-central-1
+  aws-role-to-assume:
+    type: string
+    required: false
+    default: arn:aws:iam::220986883970:role/GitHub-Action-AWS-SES-Sender
   subject:
     type: string
     required: true
@@ -74,6 +78,7 @@ runs:
 
         pip3 install \
           boto3 \
+          requests \
           pyyaml
 
         cat <<EOF > /tmp/recipients
@@ -124,6 +129,7 @@ runs:
           --aws-key-id "${{ inputs.aws-key-id }}" \
           --aws-key "${{ inputs.aws-key }}" \
           --aws-region "${{ inputs.aws-region }}" \
+          --aws-role-to-assume "${{ inputs.aws-role-to-assume }}" \
           --subject "${{ inputs.subject }}" \
           --body "${{ inputs.body }}" \
           --body-file "${{ inputs.body-file }}" \
