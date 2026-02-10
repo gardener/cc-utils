@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
-import base64
 import collections.abc
 import email.mime.application
 import email.mime.multipart
 import email.mime.text
 import enum
-import hashlib
-import hmac
 import os
-import smtplib
 import string
 
+import boto3
 import yaml
 
 
@@ -95,34 +92,6 @@ def write_to_gha_summary(message: str):
         f.write(f'{message}\n')
 
 
-def smtp_password_from_aws_key(
-    aws_key: str,
-    aws_region: str,
-) -> str:
-    '''
-    See https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html for reference.
-    '''
-    # These values are required to calculate the credentials for AWS SES. Do not change them.
-    date = '11111111'
-    service = 'ses'
-    terminal = 'aws4_request'
-    message = 'SendRawEmail'
-    version = b'\x04'
-
-    def sign(key: bytes, msg: str) -> bytes:
-        return hmac.new(key, msg.encode(), hashlib.sha256).digest()
-
-    # do not change order or hard-coded values (see linked documentation above)
-    signature = sign(f'AWS4{aws_key}'.encode(), date)
-    signature = sign(signature, aws_region)
-    signature = sign(signature, service)
-    signature = sign(signature, terminal)
-    signature = sign(signature, message)
-    signature_and_version = version + signature
-
-    return base64.b64encode(signature_and_version).decode()
-
-
 def create_mail(
     subject: str,
     sender: str,
@@ -172,12 +141,12 @@ def create_mail(
 
 
 def send_mail(
-    username: str,
-    password: str,
+    aws_key_id: str,
+    aws_key: str,
+    aws_region: str,
     subject: str,
     body: str,
     smtp_headers: dict,
-    smtp_host: str,
     recipients: collections.abc.Iterable[str],
     cc_recipients: collections.abc.Iterable[str] | None=None,
     bcc_recipients: collections.abc.Iterable[str] | None=None,
@@ -197,13 +166,6 @@ def send_mail(
         bcc_recipients = {bcc_recipient.lower() for bcc_recipient in bcc_recipients}
     else:
         bcc_recipients = set()
-
-    smtp_server = smtplib.SMTP_SSL(smtp_host)
-
-    smtp_server.login(
-        user=username,
-        password=password,
-    )
 
     mail = create_mail(
         subject=subject,
@@ -229,11 +191,25 @@ def send_mail(
 
         recipients = recipients[:50]
 
-    # from_addr is taken from header
-    smtp_server.send_message(
-        msg=mail,
-        to_addrs=recipients,
+    client = boto3.client(
+        'sesv2',
+        aws_access_key_id=aws_key_id,
+        aws_secret_access_key=aws_key,
+        region_name=aws_region,
     )
+
+    response = client.send_email(
+        FromEmailAddress=sender,
+        Destination={
+            'ToAddresses': recipients,
+        },
+        Content={
+            'Raw': {
+                'Data': str(mail).encode(),
+            },
+        },
+    )
+    print(response)
 
     msg = f'INFO: Sent email to: {recipients}'
     print(msg)
@@ -243,10 +219,8 @@ def send_mail(
 def main():
     parsed_args = parse_args()
 
-    username, password = parsed_args.aws_key_id, smtp_password_from_aws_key(
-        aws_key=parsed_args.aws_key,
-        aws_region=parsed_args.aws_region,
-    )
+    aws_key_id = parsed_args.aws_key_id
+    aws_key = parsed_args.aws_key
 
     if not (bool(parsed_args.body) ^ bool(parsed_args.body_file)):
         print('Usage: Exactly one of `--body` and `--body-file` must be passed')
@@ -266,15 +240,13 @@ def main():
     else:
         smtp_headers = {}
 
-    smtp_host = f'email-smtp.{parsed_args.aws_region}.amazonaws.com'
-
     send_mail(
-        username=username,
-        password=password,
+        aws_key_id=aws_key_id,
+        aws_key=aws_key,
+        aws_region=parsed_args.aws_region,
         subject=parsed_args.subject,
         body=body,
         smtp_headers=smtp_headers,
-        smtp_host=smtp_host,
         recipients=parsed_args.recipients,
         cc_recipients=parsed_args.cc_recipients,
         bcc_recipients=parsed_args.bcc_recipients,

@@ -72,7 +72,9 @@ runs:
       run: |
         set -euo pipefail
 
-        pip3 install pyyaml
+        pip3 install \
+          boto3 \
+          pyyaml
 
         cat <<EOF > /tmp/recipients
         ${{ inputs.recipients }}
