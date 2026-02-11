@@ -480,7 +480,7 @@ class Client:
                 if retry_after_seconds is None:
                     retry_after_seconds = 60 # fallback to default backoff
 
-                logger.warning('quota was exceeded, will wait a minute and then retry again')
+                logger.warning('quota was exceeded - {retry_after_seconds=}')
                 time.sleep(retry_after_seconds)
                 return self._authenticate(
                     image_reference=image_reference,
