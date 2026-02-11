@@ -664,9 +664,10 @@ def imagevector(parsed):
             component_descriptor_lookup=component_descriptor_lookup,
         ):
             name = image['name']
-            if name in seen_names:
+            target_version = image.get('targetVersion')
+            if (name, target_version) in seen_names:
                 continue
-            seen_names.add(name)
+            seen_names.add((name, target_version))
             images.append(image)
 
     imagevector = ocm.gardener.as_image_vector(
