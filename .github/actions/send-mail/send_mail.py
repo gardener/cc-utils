@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
 import argparse
-import base64
 import collections.abc
 import email.mime.application
 import email.mime.multipart
 import email.mime.text
 import enum
-import hashlib
-import hmac
 import os
-import smtplib
 import string
 
+import boto3
+import requests
 import yaml
 
 
@@ -25,16 +23,20 @@ def parse_args():
 
     parser.add_argument(
         '--aws-key-id',
-        required=True,
+        required=False,
     )
     parser.add_argument(
         '--aws-key',
-        required=True,
+        required=False,
     )
     parser.add_argument(
         '--aws-region',
         required=False,
         default='eu-central-1',
+    )
+    parser.add_argument(
+        '--aws-role-to-assume',
+        required=False,
     )
     parser.add_argument(
         '--subject',
@@ -95,32 +97,61 @@ def write_to_gha_summary(message: str):
         f.write(f'{message}\n')
 
 
-def smtp_password_from_aws_key(
-    aws_key: str,
-    aws_region: str,
-) -> str:
+def authenticate_against_aws(
+    role_to_assume: str,
+    audience: str='sts.amazonaws.com',
+    session_name: str='GitHubActions',
+    lifetime_seconds: int=3600,
+) -> tuple[str, str, str]:
     '''
-    See https://docs.aws.amazon.com/ses/latest/dg/smtp-credentials.html for reference.
+    See https://github.com/aws-actions/configure-aws-credentials for reference.
     '''
-    # These values are required to calculate the credentials for AWS SES. Do not change them.
-    date = '11111111'
-    service = 'ses'
-    terminal = 'aws4_request'
-    message = 'SendRawEmail'
-    version = b'\x04'
+    try:
+        gh_token = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
+        gh_token_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+    except KeyError:
+        print('ERROR: the following environment-variables are not set:')
+        print('- ACTIONS_ID_TOKEN_REQUEST_TOKEN')
+        print('- ACTIONS_ID_TOKEN_REQUEST_URL')
+        print()
+        print('This typically indicates the job was not run with needed permission:')
+        print('  id-token: write')
+        exit(1)
 
-    def sign(key: bytes, msg: str) -> bytes:
-        return hmac.new(key, msg.encode(), hashlib.sha256).digest()
+    session = requests.Session()
 
-    # do not change order or hard-coded values (see linked documentation above)
-    signature = sign(f'AWS4{aws_key}'.encode(), date)
-    signature = sign(signature, aws_region)
-    signature = sign(signature, service)
-    signature = sign(signature, terminal)
-    signature = sign(signature, message)
-    signature_and_version = version + signature
+    res = session.get(
+        url=f'{gh_token_url}&audience={audience}',
+        headers={
+            'Authorization': f'Bearer {gh_token}',
+        },
+    )
+    gh_oidc_token = res.json()['value']
 
-    return base64.b64encode(signature_and_version).decode()
+    res = session.post(
+        url=(
+            f'https://sts.amazonaws.com/'
+            '?Action=AssumeRoleWithWebIdentity'
+            f'&DurationSeconds={lifetime_seconds}'
+            f'&RoleArn={role_to_assume}'
+            f'&RoleSessionName={session_name}'
+            f'&WebIdentityToken={gh_oidc_token}'
+            '&Version=2011-06-15'
+        ),
+        headers={
+            'Accept': 'application/json',
+        },
+    )
+    if not 'AssumeRoleWithWebIdentityResponse' in (res := res.json()):
+        print(f'ERROR: did not find expected "AssumeRoleWithWebIdentityResponse" property in {res=}')
+        exit(1)
+
+    cred = res['AssumeRoleWithWebIdentityResponse']['AssumeRoleWithWebIdentityResult']['Credentials']
+    access_key_id = cred['AccessKeyId']
+    secret_access_key = cred['SecretAccessKey']
+    session_token = cred['SessionToken']
+
+    return access_key_id, secret_access_key, session_token
 
 
 def create_mail(
@@ -172,12 +203,13 @@ def create_mail(
 
 
 def send_mail(
-    username: str,
-    password: str,
+    aws_key_id: str,
+    aws_key: str,
+    aws_session_token: str | None,
+    aws_region: str,
     subject: str,
     body: str,
     smtp_headers: dict,
-    smtp_host: str,
     recipients: collections.abc.Iterable[str],
     cc_recipients: collections.abc.Iterable[str] | None=None,
     bcc_recipients: collections.abc.Iterable[str] | None=None,
@@ -197,13 +229,6 @@ def send_mail(
         bcc_recipients = {bcc_recipient.lower() for bcc_recipient in bcc_recipients}
     else:
         bcc_recipients = set()
-
-    smtp_server = smtplib.SMTP_SSL(smtp_host)
-
-    smtp_server.login(
-        user=username,
-        password=password,
-    )
 
     mail = create_mail(
         subject=subject,
@@ -229,11 +254,26 @@ def send_mail(
 
         recipients = recipients[:50]
 
-    # from_addr is taken from header
-    smtp_server.send_message(
-        msg=mail,
-        to_addrs=recipients,
+    client = boto3.client(
+        'sesv2',
+        aws_access_key_id=aws_key_id,
+        aws_secret_access_key=aws_key,
+        aws_session_token=aws_session_token,
+        region_name=aws_region,
     )
+
+    response = client.send_email(
+        FromEmailAddress=sender,
+        Destination={
+            'ToAddresses': recipients,
+        },
+        Content={
+            'Raw': {
+                'Data': str(mail).encode(),
+            },
+        },
+    )
+    print(response)
 
     msg = f'INFO: Sent email to: {recipients}'
     print(msg)
@@ -243,10 +283,15 @@ def send_mail(
 def main():
     parsed_args = parse_args()
 
-    username, password = parsed_args.aws_key_id, smtp_password_from_aws_key(
-        aws_key=parsed_args.aws_key,
-        aws_region=parsed_args.aws_region,
-    )
+    if not (
+        (aws_key_id := parsed_args.aws_key_id)
+        and (aws_key := parsed_args.aws_key)
+    ):
+        aws_key_id, aws_key, aws_session_token = authenticate_against_aws(
+            role_to_assume=parsed_args.aws_role_to_assume,
+        )
+    else:
+        aws_session_token = None
 
     if not (bool(parsed_args.body) ^ bool(parsed_args.body_file)):
         print('Usage: Exactly one of `--body` and `--body-file` must be passed')
@@ -266,15 +311,14 @@ def main():
     else:
         smtp_headers = {}
 
-    smtp_host = f'email-smtp.{parsed_args.aws_region}.amazonaws.com'
-
     send_mail(
-        username=username,
-        password=password,
+        aws_key_id=aws_key_id,
+        aws_key=aws_key,
+        aws_session_token=aws_session_token,
+        aws_region=parsed_args.aws_region,
         subject=parsed_args.subject,
         body=body,
         smtp_headers=smtp_headers,
-        smtp_host=smtp_host,
         recipients=parsed_args.recipients,
         cc_recipients=parsed_args.cc_recipients,
         bcc_recipients=parsed_args.bcc_recipients,
