@@ -452,6 +452,7 @@ jobs:
           target: ${{ inputs.target }}
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
+          provenance: false
 
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
