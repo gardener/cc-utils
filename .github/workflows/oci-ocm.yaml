@@ -445,7 +445,7 @@ jobs:
         uses: docker/build-push-action@v6.18.0
         id: build
         with:
-          outputs: type=docker
+          outputs: type=docker, oci-mediatypes=true
           tags: ${{ matrix.args.image-reference }}
           context: ${{ inputs.build-directory }}
           platforms: ${{ matrix.args.platform-name }}
