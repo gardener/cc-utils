@@ -442,7 +442,7 @@ jobs:
         run: |
           ${{ inputs.prebuild-hook }}
       - name: 'build ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6.18.0
         id: build
         with:
           outputs: type=docker
