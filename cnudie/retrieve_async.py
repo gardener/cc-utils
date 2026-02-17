@@ -527,7 +527,6 @@ def composite_component_descriptor_lookup(
     async def lookup(
         component_id: cnudie.util.ComponentId,
         /,
-        ocm_repo: ocm.OciOcmRepository | str=None,
         ocm_repository_lookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
