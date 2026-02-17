@@ -190,7 +190,7 @@ class DeliveryServiceClient:
 
         if not self.auth_token_lookup and not self.auth_token:
             logger.info(
-                'DeliverService-Client has no auth-token-lookup or auth-token - '
+                'Delivery-Service-Client has no auth-token-lookup or auth-token - '
                 'attempting anonymous auth'
             )
             return
