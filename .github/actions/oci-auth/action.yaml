@@ -15,36 +15,23 @@ description: |
   `oci-image-reference` (this is especially useful for workflows that should work both for
   repositories below gardener-org, and for forks, where different push-targets are configured).
 
-  parameters specific to GAR are prefixed w/ `gcp-`, whereas parameters specific to GHCR are
-  prefixed w/ `gh-`.
+  parameters specific to GHCR are prefixed w/ `gh-`.
 
 inputs:
-  gcp-service-account:
-    description: The GCP-Service-Account to impersonate
-    required: false
-    default: ci-gcr-operator@gardener-project.iam.gserviceaccount.com
-  gcp-workload-identity-provider:
+  oci-image-reference:
+    type: string
+    required: true
+    default: europe-docker.pkg.dev/gardener-project
     description: |
-       GCP Workload Identity Provider. Default is configured for GitHub-Actions for
-       github.com/gardener organisation.
-    required: false
-    default: projects/694386720375/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions
-  gcp-project:
-    description: |
-      The GCP Project to authenticate against
-    required: false
-    default: gardener-project
+      The OCI-Image-Reference specifying the OCI-Registry to authenticate against.
   gh-token:
+    type: string
+    required: false
     description: |
       The token from GitHub-Action (secrets.GITHUB_TOKEN). Note that it will be only honoured in case
       it has been issued for the public GitHub instance "github.com".
-    required: false
-  oci-image-reference:
-    required: true
-    description: |
-      The OCI-Image-Reference specifying the OCI-Registry to authenticate against.
-    default: europe-docker.pkg.dev/gardener-project
   extra-auths:
+    type: string
     required: false
     description: |
       A JSON-Document containing a mapping of additional auth-cfgs of the following form:
@@ -55,12 +42,6 @@ inputs:
       {"registry-1.docker.io": {"auth": "abcd"}}
       ```
       Passed tokens will be _appended_ to resulting docker-cfg, and thus have precedence.
-  print-summary:
-    default: false
-    type: boolean
-    description: |
-      If set to `true`, the action will print a summary about authentication result, as well as
-      additional output, such as written files.
 
 outputs:
   docker-cfg:
