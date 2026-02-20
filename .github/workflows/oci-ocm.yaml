@@ -363,7 +363,14 @@ jobs:
       matrix:
         args: ${{ fromJSON(needs.preprocess.outputs.args) }}
     steps:
+      - name: Set up Docker # ensure consistent docker tooling version across runners
+        uses: docker/setup-docker-action@v4
+        id: docker-setup
       - uses: docker/setup-buildx-action@v3
+        id: buildx-setup
+        with:
+          endpoint: ${{ steps.docker-setup.outputs.sock }}
+          name: gardener-builder
       - name: inject-authtoken-for-dockerhub
         id: extra-auth
         shell: bash
@@ -441,17 +448,50 @@ jobs:
         if: ${{ inputs.prebuild-hook }}
         run: |
           ${{ inputs.prebuild-hook }}
+
       - name: 'build ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
-        uses: docker/build-push-action@v6
         id: build
-        with:
-          outputs: type=docker
-          tags: ${{ matrix.args.image-reference }}
-          context: ${{ inputs.build-directory }}
-          platforms: ${{ matrix.args.platform-name }}
-          target: ${{ inputs.target }}
-          file: ${{ inputs.dockerfile }}
-          build-args: ${{ inputs.build-args }}
+        run: |
+          IFS=',' read -ra TAGS <<< "${{ matrix.args.image-reference }}"
+          TAG_ARGS=""
+          for tag in "${TAGS[@]}"; do
+            TAG_ARGS="$TAG_ARGS --tag $tag"
+          done
+
+          IFS=',' read -ra BUILD_ARGS_RAW <<< "${{ inputs.build-args }}"
+          BUILD_ARGS=""
+          for build_arg in "${BUILD_ARGS_RAW[@]}"; do
+            BUILD_ARGS="$BUILD_ARGS --build-arg $build_arg"
+          done
+
+          TARGET_ARG=""
+          if [ -n "${{ inputs.target }}" ]; then
+            TARGET_ARG="--target ${{ inputs.target }}"
+          fi
+
+          docker buildx build \
+            --file ${{ inputs.dockerfile }} \
+            --output type=docker \
+            --platform ${{ matrix.args.platform-name }} \
+            --builder ${{ steps.buildx-setup.outputs.name }} \
+            --metadata-file /tmp/metadata.json \
+            --iidfile /tmp/iidfile \
+            $TARGET_ARG \
+            $TAG_ARGS \
+            $BUILD_ARGS \
+            ${{ inputs.build-directory }}
+
+          imageid=$(cat /tmp/iidfile)
+          digest=$(jq -r '."containerimage.digest"' /tmp/metadata.json)
+
+          echo "imageid=$imageid" >> $GITHUB_OUTPUT
+          echo "digest=$digest" >> $GITHUB_OUTPUT
+
+          cat <<OEOF >> $GITHUB_OUTPUT
+          metadata<<EOF
+          $(cat /tmp/metadata.json)
+          EOF
+          OEOF
 
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
