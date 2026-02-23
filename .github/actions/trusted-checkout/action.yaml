@@ -193,23 +193,15 @@ runs:
           token="${{ steps.fed-token.outputs.token }}"
         elif ${{ steps.app-token.outputs.token != '' }}; then
           token="${{ steps.app-token.outputs.token }}"
-        else
+        elif ${{ inputs.token != '' }}; then
           token="${{ inputs.token }}"
+        else
+          token="${{ github.token }}"
         fi
 
         echo "token=${token}" >> ${GITHUB_OUTPUT}
 
     - uses: actions/checkout@v6
-      if: ${{ steps.token.outputs.token == '' }}
-      with:
-        fetch-depth: ${{ inputs.fetch-depth }}
-        path: ${{ inputs.path }}
-        repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
-        ref: ${{ inputs.ref }}
-        github-server-url: ${{ inputs.github-server-url }}
-
-    - uses: actions/checkout@v6
-      if: ${{ steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
