@@ -324,7 +324,7 @@ runs:
       run: |
         import github3.exceptions
         import github
-        gh_api = github.github_api(token='${{ github.token }}')
+        gh_api = github.github_api(token='${{ steps.token.outputs.token }}')
         _, org, repo = github.host_org_and_repo()
         gh_repo = gh_api.repository(org, repo)
 
