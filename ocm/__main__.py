@@ -25,6 +25,7 @@ import ctt.__main__
 import oci.client
 import ocm
 import ocm.gardener
+import ocm.helm
 import ocm.iter
 import ocm.oci
 import ocm.sign
@@ -677,6 +678,39 @@ def imagevector(parsed):
     print(yaml.safe_dump(imagevector))
 
 
+def helm_values(parsed):
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_cfg,
+        ),
+    )
+
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
+        oci_client=oci_client,
+    )
+
+    component = component_descriptor_lookup(parsed.component).component
+
+    resource = parsed.resource
+    if ':' in resource:
+        resource_name, resource_version = resource.split(':')
+    else:
+        resource_name = resource
+        resource_version = None
+
+    values = ocm.helm.localised_helmchart_values(
+        component=component,
+        oci_client=oci_client,
+        resource_name=resource_name,
+        resource_version=resource_version,
+        resource_extra_id=None,
+        component_descriptor_lookup=component_descriptor_lookup,
+    )
+
+    print(yaml.safe_dump(values))
+
+
 def _normalise(parsed) -> tuple[ocm.ComponentDescriptor, str]:
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(
@@ -976,6 +1010,32 @@ def main():
         required=False,
         help='path to dockerd\'s `config.json` file',
     )
+
+    helmvalues_parser = maincmd_parsers.add_parser(
+        'helm-values',
+        aliases=('hv',),
+        help='generates localised helm-values',
+    )
+    helmvalues_parser.add_argument(
+        '--component', '-c',
+        required=True,
+        help='component: <component>:<version>',
+    )
+    helmvalues_parser.add_argument(
+        '--ocm-repository', '-O',
+        required=True,
+    )
+    helmvalues_parser.add_argument(
+        '--resource',
+        required=True,
+        help='identifies the helmchart - either <resource-name> or <resource-name>:<version>',
+    )
+    helmvalues_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
+    )
+    helmvalues_parser.set_defaults(callable=helm_values)
 
     normalise_parser = maincmd_parsers.add_parser(
         'normalise',
