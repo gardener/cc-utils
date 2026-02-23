@@ -28,10 +28,6 @@ jobs:
     permissions:
       contents: write
       id-token: write
-    outputs:
-      docker_version: ${{ steps.get_docker_version.outputs.docker_version }}
-      buildx_version: ${{ steps.get_buildx_version.outputs.buildx_version }}
-      changes_detected: ${{ steps.check_changes.outputs.changes_detected }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -78,10 +74,12 @@ jobs:
           else
             echo "Changes detected, proceeding with commit."
             echo "changes_detected=true" >> $GITHUB_OUTPUT
+            echo "docker_version=${docker_version}" >> $GITHUB_OUTPUT
+            echo "buildx_version=${buildx_version}" >> $GITHUB_OUTPUT
           fi
 
       - uses: gardener/cc-utils/.github/actions/github-auth@master
-        if: ${{ steps.check_changes.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        if: ${{ steps.versions.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -91,24 +89,24 @@ jobs:
             pull-requests: write
 
       - uses: actions/create-github-app-token@v2
-        if: ${{ steps.check_changes.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
+        if: ${{ steps.versions.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
         id: app-token
         with:
           app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
           private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
 
       - name: Commit and Push Changes
-        if: steps.check_changes.outputs.changes_detected == 'true'
+        if: ${{ steps.versions.outputs.changes_detected == 'true' }}
         run: |
           git add Dockerfile.job-image-base
           git commit -m "Update Dockerfile to use Docker \
-          ${{ steps.get_docker_version.outputs.docker_version }} and Buildx \
-          ${{ steps.get_buildx_version.outputs.buildx_version }}"
+          ${{ steps.versions.outputs.docker_version }} and Buildx \
+          ${{ steps.versions.outputs.buildx_version }}"
           git checkout -B $BRANCH
           git push origin $BRANCH --force
 
       - name: Create or Update Pull Request
-        if: steps.check_changes.outputs.changes_detected == 'true'
+        if: ${{ steps.versions.outputs.changes_detected == 'true' }}
         run: |
           # Check if a pull request for the branch already exists
           pr_number=$(gh pr list --head $BRANCH --state open --json number --jq '.[].number')
@@ -117,8 +115,8 @@ jobs:
             gh pr edit "$pr_number" \
               --title "Update Dockerfile with latest Docker and Buildx versions" \
               --body "Updates the Dockerfile to use the latest versions:
-                - Docker: ${{ steps.get_docker_version.outputs.docker_version }}
-                - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
+                - Docker: ${{ steps.versions.outputs.docker_version }}
+                - Buildx: ${{ steps.versions.outputs.buildx_version }}"
           else
             echo "No existing Pull Request found, creating a new one..."
             gh pr create \
@@ -126,8 +124,8 @@ jobs:
               -H $BRANCH \
               --title "Update Dockerfile with latest Docker and Buildx versions" \
               --body "Updates the Dockerfile to use the latest versions:
-                - Docker: ${{ steps.get_docker_version.outputs.docker_version }}
-                - Buildx: ${{ steps.get_buildx_version.outputs.buildx_version }}"
+                - Docker: ${{ steps.versions.outputs.docker_version }}
+                - Buildx: ${{ steps.versions.outputs.buildx_version }}"
           fi
         env:
           GITHUB_TOKEN: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
