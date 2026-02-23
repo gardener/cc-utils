@@ -26,6 +26,8 @@ on:
 jobs:
   prepare:
     uses: ./.github/workflows/prepare.yaml
+    permissions:
+      id-token: write
     with:
       mode: ${{ inputs.mode }}
 
@@ -53,6 +55,8 @@ jobs:
     environment: build
     needs:
       - setuptools-version
+    permissions:
+      contents: read
     steps:
     - name: Install setuptools
       run: |
@@ -146,6 +150,8 @@ jobs:
     needs:
       - package
       - prepare
+    permissions:
+      contents: read
     steps:
     - uses: actions/checkout@v6
     - name: Retrieve Distribution Packages

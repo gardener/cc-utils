@@ -13,6 +13,8 @@ on:
 jobs:
   prepare:
     uses: ./.github/workflows/prepare.yaml
+    permissions:
+      id-token: write
     with:
       mode: ${{ inputs.mode || 'snapshot' }}
       versionfile: ocm/image-version

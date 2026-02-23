@@ -7,8 +7,11 @@ on:
 jobs:
   prepare: # required by oci-ocm-workflow
     uses: ./.github/workflows/prepare.yaml
+    permissions:
+      id-token: write
     with:
       mode: release
+
   version:
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -52,8 +55,9 @@ jobs:
         id: checkout
         with:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
-          auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+          github-auth-token-permissions: |
+            contents: write
+            pull-requests: write
 
       - name: Setup Git Identity
         uses: gardener/cc-utils/.github/actions/setup-git-identity@master

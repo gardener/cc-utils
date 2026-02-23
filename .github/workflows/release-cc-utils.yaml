@@ -23,12 +23,13 @@ defaults:
 jobs:
   build:
     uses: ./.github/workflows/build-and-test.yaml
+    secrets: inherit
     permissions:
       contents: write
       packages: write
       id-token: write
     with:
-      mode: 'release'
+      mode: release
 
   release-to-github-and-bump:
     uses: ./.github/workflows/release.yaml

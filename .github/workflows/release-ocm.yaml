@@ -18,12 +18,13 @@ defaults:
 jobs:
   build:
     uses: ./.github/workflows/build-ocm.yaml
+    secrets: inherit
     permissions:
-      contents: write
+      contents: read
       packages: write
       id-token: write
     with:
-      mode: 'release'
+      mode: release
 
   release-to-github-and-bump:
     uses: ./.github/workflows/release.yaml

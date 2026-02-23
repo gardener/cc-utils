@@ -9,6 +9,8 @@ on:
 jobs:
   repo-metadata:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       fork: ${{ steps.repo-metadata.outputs.fork}}
     steps:
@@ -79,21 +81,14 @@ jobs:
           fi
 
       - uses: gardener/cc-utils/.github/actions/github-auth@master
-        if: ${{ steps.versions.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
-        id: fed-token
+        if: ${{ steps.versions.outputs.changes_detected == 'true' }}
+        id: token
         with:
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           repositories: |
             ${{ github.event.repository.name }}
           permissions: |
             pull-requests: write
-
-      - uses: actions/create-github-app-token@v2
-        if: ${{ steps.versions.outputs.changes_detected == 'true' && vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
-        id: app-token
-        with:
-          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
 
       - name: Commit and Push Changes
         if: ${{ steps.versions.outputs.changes_detected == 'true' }}
@@ -128,4 +123,4 @@ jobs:
                 - Buildx: ${{ steps.versions.outputs.buildx_version }}"
           fi
         env:
-          GITHUB_TOKEN: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.token.outputs.token }}
