@@ -114,9 +114,9 @@ def create(parsed):
         timespec='seconds',
     ).removesuffix('+00:00') + 'Z'
 
-    if parsed.ocm_repo:
+    if parsed.ocm_repository:
         ocm_repos = [
-            ocm.OciOcmRepository(baseUrl=parsed.ocm_repo),
+            ocm.OciOcmRepository(baseUrl=parsed.ocm_repository),
         ]
     else:
         ocm_repos = []
@@ -212,14 +212,15 @@ def upload(parsed):
     )
     component_descriptor = ocm.ComponentDescriptor.from_dict(_parse_yaml_or_json(parsed.file))
     component = component_descriptor.component
-    if parsed.ocm_repo:
+    if parsed.ocm_repository:
         component.repositoryContexts.append(
-            ocm.OciOcmRepository(baseUrl=parsed.ocm_repo),
+            ocm.OciOcmRepository(baseUrl=parsed.ocm_repository),
         )
 
     ocm_tgt_repo = component_descriptor.component.current_ocm_repo
     if not ocm_tgt_repo:
-        print('ERROR: must define ocm-repository either via --ocm-repo, or via component-descriptor')
+        print('ERROR: must define ocm-repository either via --ocm-repository')
+        print('       or via component-descriptor (repositoryContexts)')
         exit(1)
 
     oci_target_ref = component.current_ocm_repo.component_version_oci_ref(component)
@@ -512,7 +513,7 @@ def _traverse(parsed):
     )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
     component = component_descriptor_lookup(parsed.name)
@@ -608,7 +609,7 @@ def imagevector(parsed):
     )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
     root_component = component_descriptor_lookup(parsed.root_name).component
@@ -719,7 +720,7 @@ def _normalise(parsed) -> tuple[ocm.ComponentDescriptor, str]:
     )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo),
+        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
 
@@ -830,7 +831,7 @@ def main():
     create_parser.add_argument('--name', default=None)
     create_parser.add_argument('--version', default=None)
     create_parser.add_argument('--provider', default=None)
-    create_parser.add_argument('--ocm-repo', default=None)
+    create_parser.add_argument('--ocm-repository')
     create_parser.add_argument('--label', dest='labels', action='append', default=[])
     create_parser.add_argument('--out', '-o', default='-')
     create_parser.set_defaults(callable=create)
@@ -870,7 +871,7 @@ def main():
         required=False,
         help='optional path to lookup local-blobs. fnames must equal sha256-hexdigest',
     )
-    upload_parser.add_argument('--ocm-repo', default=None)
+    upload_parser.add_argument('--ocm-repository', default=None)
     upload_parser.add_argument(
         '--on-exist',
         type=ocm.upload.UploadMode,
@@ -943,10 +944,7 @@ def main():
         help='OCM-Component-Name and Version (<name>:<version>)',
         required=True,
     )
-    traverse_parser.add_argument(
-        '--ocm-repo',
-        required=True,
-    )
+    traverse_parser.add_argument('--ocm-repository', required=True)
     traverse_parser.add_argument(
         '--docker-cfg',
         required=False,
@@ -1001,10 +999,7 @@ def main():
         help='OCM-Root-Component-Name and Version (<name>:<version>)',
         required=True,
     )
-    imgvector_cfg_parser.add_argument(
-        '--ocm-repo',
-        required=True,
-    )
+    imgvector_cfg_parser.add_argument('--ocm-repository', required=True)
     imgvector_cfg_parser.add_argument(
         '--docker-cfg',
         required=False,
@@ -1044,7 +1039,7 @@ def main():
     )
     normalise_parser.set_defaults(callable=normalise)
     normalise_parser.add_argument(
-        '--ocm-repo',
+        '--ocm-repository',
         required=True,
     )
     normalise_parser.add_argument(
@@ -1079,7 +1074,7 @@ def main():
     )
     validate_parser.set_defaults(callable=validate)
     validate_parser.add_argument(
-        '--ocm-repo',
+        '--ocm-repository',
         required=True,
     )
     validate_parser.add_argument(
