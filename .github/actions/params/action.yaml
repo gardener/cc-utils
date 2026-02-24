@@ -182,7 +182,7 @@ runs:
               can_push_reason='untrusted fork'
           esac
           if [ '${{ github.event.action }}' == 'labeled' ] && ! $can_push; then
-            trusted_label="${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}"
+            trusted_label="${{ inputs.trusted-label || 'ok-to-test' }}"
             event_label="${{ github.event.label.name }}"
             if [ ${event_label} == ${trusted_label} ]; then
               can_push=true
