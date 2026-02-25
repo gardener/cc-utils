@@ -126,10 +126,10 @@ def find_milestone_for_due_date(
         if not absent_ok:
             raise ValueError(message)
 
-        logger.warning(message)
+        logger.debug(message)
 
         if use_fallback and milestone:
-            logger.warning(f'will use {milestone=} as a fallback')
+            logger.debug(f'will use {milestone=} as a fallback')
             return milestone
 
         return None
