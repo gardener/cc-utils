@@ -5,7 +5,6 @@
 import collections.abc
 import dataclasses
 import os
-import re
 import typing
 
 import github3
@@ -105,23 +104,39 @@ def github_app_api(
 
 
 @dataclasses.dataclass
+class GitHubAppSelector:
+    org: str
+    repos: list[str] | str | None = None
+
+    def __post_init__(self):
+        if isinstance(self.repos, str):
+            self.repos = [self.repos]
+
+
+@dataclasses.dataclass
 class GitHubAppCredentials:
     private_key: str | bytes
     app_id: int
     host: str
-    repo_urls: list[str] | None = None
+    selectors: list[GitHubAppSelector] | GitHubAppSelector | None = None
+
+    def __post_init__(self):
+        if isinstance(self.selectors, GitHubAppSelector):
+            self.selectors = [self.selectors]
 
     def matches(self, repo_url: str) -> bool:
         host, org, repo = host_org_and_repo(repo_url)
 
-        if self.repo_urls is None:
+        if self.selectors is None:
             return self.host == host
 
-        repo_url = '/'.join((host, org, repo))
+        for selector in self.selectors:
+            if selector.org != org:
+                continue
+            if selector.repos is not None and repo not in selector.repos:
+                continue
 
-        for repo_url_regex in self.repo_urls:
-            if re.fullmatch(repo_url_regex, repo_url):
-                return True
+            return True
 
         return False
 
