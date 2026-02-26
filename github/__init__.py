@@ -111,6 +111,13 @@ class GitHubAppCredentials:
     host: str
     repo_urls: list[str] | None = None
 
+    def __post_init__(self):
+        for repo_url in self.repo_urls or []:
+            host, org, _ = host_org_and_repo(repo_url)
+
+            if '*' in f'{host}/{org}':
+                raise ValueError(f'wildcards are not allowed in the host/org part of {repo_url=}')
+
     def matches(self, repo_url: str) -> bool:
         host, org, repo = host_org_and_repo(repo_url)
 
