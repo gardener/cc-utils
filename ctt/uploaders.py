@@ -213,14 +213,35 @@ class TagSuffixUploader(UploaderBase):
 
 class ExtraTagUploader(UploaderBase):
     '''
-    Uploader that will push additional (static) tags to uploaded images. Useful to e.g. add
-    `latest` tag. Extra-Tags will be overwritten as a hardcoded behaviour of this uploader.
+    Uploader that will push additional tags to uploaded images.
+
+    extra_tags: a static list of tags (e.g. "latest"). Will be overwritten if present
+    tag_expressions: a list of tag-expressions that will be evaluated
+
+    tag_expressions are python-expressions and will be evaluated with the following scope:
+
+    ```
+    resource: the OCM-Resource (see ocm package)
+    ```
+
+    As an example, the following expression might be used to restore "symbolic tags" from
+    OCM-metadata, like so:
+    ```
+    uploaders:
+        restore_symbolic_tag:
+            type: ExtraTagUploader
+            kwargs:
+                tag_expressions:
+                    - '{resource.version}'
+    ```
     '''
     def __init__(
         self,
-        extra_tags: collections.abc.Iterable[str],
+        extra_tags: collections.abc.Iterable[str]=(),
+        tag_expressions: collections.abc.Iterable[str]=(),
     ):
         self.extra_tags = list(extra_tags)
+        self.tag_expressions = list(tag_expressions)
 
     def process(
         self,
@@ -229,6 +250,16 @@ class ExtraTagUploader(UploaderBase):
         **kwargs,
     ) -> ctt.model.ReplicationResourceElement:
         replication_resource_element.extra_tags = self.extra_tags
+
+        resource = replication_resource_element.target
+        for expr in self.tag_expressions:
+            res = eval(
+                expr,
+                globals={'resource': resource},
+            )
+            if not isinstance(res, str):
+                raise ValueError(f'{expr=} did not yield str, but {type(res)=}')
+            replication_resource_element.extra_tags.append(res)
 
         return replication_resource_element
 
