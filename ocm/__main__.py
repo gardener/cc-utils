@@ -23,6 +23,7 @@ import cnudie.access
 import cnudie.retrieve
 import ctt.__main__
 import oci.client
+import oci.model
 import ocm
 import ocm.gardener
 import ocm.helm
@@ -672,6 +673,24 @@ def imagevector(parsed):
             seen_names.add((name, target_version))
             images.append(image)
 
+        if parsed.select_images == 'all':
+            for resource in component.resources:
+                if not resource.type is ocm.ArtefactType.OCI_IMAGE:
+                    continue
+                if (name := resource.name) in seen_names:
+                    continue
+
+                seen_names.add(name)
+                image_ref = oci.model.OciImageReference.to_image_ref(
+                    resource.access.imageReference,
+                )
+
+                images.append({
+                    'name': name,
+                    'repository': image_ref.ref_without_tag,
+                    'tag': image_ref.tag,
+                })
+
     imagevector = ocm.gardener.as_image_vector(
         images=images,
     )
@@ -1004,6 +1023,11 @@ def main():
         '--docker-cfg',
         required=False,
         help='path to dockerd\'s `config.json` file',
+    )
+    imgvector_cfg_parser.add_argument(
+        '--select-images',
+        choices=('by-label', 'all',),
+        default='by-label',
     )
 
     helmvalues_parser = maincmd_parsers.add_parser(
