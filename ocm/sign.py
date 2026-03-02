@@ -3,6 +3,7 @@ Functionality for normalising and hashing OCM-Component-Descriptors.
 '''
 
 import collections.abc
+import copy
 import dataclasses
 import datetime
 import hashlib
@@ -244,7 +245,7 @@ def normalise_component_descriptor(
     del component_descriptor_raw['nestedDigests']
 
     component_descriptor_raw['component'] = normalise_component(
-        component=component_descriptor.component,
+        component=copy.deepcopy(component_descriptor.component),
         component_descriptor_lookup=component_descriptor_lookup,
         access_to_digest_lookup=access_to_digest_lookup,
         verify_digests=verify_digests,
