@@ -3,6 +3,7 @@ cachetools
 cryptography
 dacite
 gardener-oci
+jsonpath-ng
 jsonschema
 python-dateutil
 semver
