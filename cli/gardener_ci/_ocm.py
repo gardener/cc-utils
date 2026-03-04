@@ -351,6 +351,7 @@ def traverse(
         component_descriptor_lookup=component_descriptor_lookup,
         print_expr=print_expr,
         filter_expr=filter_expr,
+        output_format='pretty',
     )
 
 
