@@ -528,6 +528,7 @@ def _traverse(parsed):
         output_format=parsed.format,
         print_expr=parsed.print_expr,
         filter_expr=parsed.filter_expr,
+        recursive=parsed.recursive,
     )
 
 
@@ -540,6 +541,7 @@ def traverse(
     output_format: str,
     print_expr: str=None,
     filter_expr: str=None,
+    recursive: bool=False,
 ):
     if output_format == 'pretty':
         print_incrementally = True
@@ -548,11 +550,16 @@ def traverse(
     else:
         raise ValueError(format)
 
+    if recursive is True:
+        recursion_depth = -1
+    else:
+        recursion_depth = 0
 
     def iter_nodes():
         for node in ocm.iter.iter(
             component=component,
             lookup=component_descriptor_lookup,
+            recursion_depth=recursion_depth,
         ):
             is_component_node = isinstance(node, ocm.iter.ComponentNode)
             is_source_node = isinstance(node, ocm.iter.SourceNode)
@@ -1027,6 +1034,19 @@ def main():
     traverse_parser.add_argument(
         '--filter-expr',
         help='a python-expression used to filter nodes (omit node if evaluates to False)'
+    )
+    traverse_parser.add_argument(
+        '--recursive',
+        action='store_true',
+        default=True,
+        help='if set, will process subcomponents recursively',
+    )
+    traverse_parser.add_argument(
+        '--no-recursive',
+        action='store_false',
+        default=True,
+        dest='recursive',
+        help='if set, will not process all subcomponents recursively',
     )
 
     imgvector_cfg_parser = maincmd_parsers.add_parser(
