@@ -144,6 +144,16 @@ runs:
         echo "org=${org}" >> ${GITHUB_OUTPUT}
         echo "repo=${repo}" >> ${GITHUB_OUTPUT}
 
+        if ${{ inputs.token-server != '' }}; then
+          if ${{ inputs.remove-trusted-label == 'true' }}; then
+            # ensure token has permissions to remove labels (accept permission duplicates)
+            permissions="${{ inputs.github-auth-token-permissions }}\npull-requests: write"
+          else
+            permissions="${{ inputs.github-auth-token-permissions }}"
+          fi
+          echo "permissions=${permissions}" >> ${GITHUB_OUTPUT}
+        fi
+
     - name: create-token-via-federated-github-access-token-server
       uses: gardener/cc-utils/.github/actions/github-auth@master
       if: ${{ inputs.token-server != '' }}
@@ -152,7 +162,7 @@ runs:
         token-server: ${{ inputs.token-server }}
         organization: ${{ steps.preprocess.outputs.org }}
         repositories: ${{ steps.preprocess.outputs.repo }}
-        permissions: ${{ inputs.github-auth-token-permissions }}
+        permissions: ${{ steps.preprocess.outputs.permissions }}
         host: ${{ inputs.github-server-url }}
 
     - name: create-token-via-github-app
@@ -193,23 +203,15 @@ runs:
           token="${{ steps.fed-token.outputs.token }}"
         elif ${{ steps.app-token.outputs.token != '' }}; then
           token="${{ steps.app-token.outputs.token }}"
-        else
+        elif ${{ inputs.token != '' }}; then
           token="${{ inputs.token }}"
+        else
+          token="${{ github.token }}"
         fi
 
         echo "token=${token}" >> ${GITHUB_OUTPUT}
 
     - uses: actions/checkout@v6
-      if: ${{ steps.token.outputs.token == '' }}
-      with:
-        fetch-depth: ${{ inputs.fetch-depth }}
-        path: ${{ inputs.path }}
-        repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
-        ref: ${{ inputs.ref }}
-        github-server-url: ${{ inputs.github-server-url }}
-
-    - uses: actions/checkout@v6
-      if: ${{ steps.token.outputs.token != '' }}
       with:
         fetch-depth: ${{ inputs.fetch-depth }}
         path: ${{ inputs.path }}
@@ -332,7 +334,7 @@ runs:
       run: |
         import github3.exceptions
         import github
-        gh_api = github.github_api(token='${{ github.token }}')
+        gh_api = github.github_api(token='${{ steps.token.outputs.token }}')
         _, org, repo = github.host_org_and_repo()
         gh_repo = gh_api.repository(org, repo)
 
