@@ -525,8 +525,10 @@ def _traverse(parsed):
         sources=sources,
         resources=resources,
         component_descriptor_lookup=component_descriptor_lookup,
+        output_format=parsed.format,
         print_expr=parsed.print_expr,
         filter_expr=parsed.filter_expr,
+        recursive=parsed.recursive,
     )
 
 
@@ -536,70 +538,109 @@ def traverse(
     sources: bool,
     resources: bool,
     component_descriptor_lookup,
+    output_format: str,
     print_expr: str=None,
     filter_expr: str=None,
+    recursive: bool=False,
 ):
+    if output_format == 'pretty':
+        print_incrementally = True
+    elif output_format in ('json', 'yaml'):
+        print_incrementally = False
+    else:
+        raise ValueError(format)
 
-    for node in ocm.iter.iter(
-        component=component,
-        lookup=component_descriptor_lookup,
-    ):
-        indent = len(node.path * 2)
+    if recursive is True:
+        recursion_depth = -1
+    else:
+        recursion_depth = 0
 
-        is_component_node = isinstance(node, ocm.iter.ComponentNode)
-        is_source_node = isinstance(node, ocm.iter.SourceNode)
-        is_resource_node = isinstance(node, ocm.iter.ResourceNode)
+    def iter_nodes():
+        for node in ocm.iter.iter(
+            component=component,
+            lookup=component_descriptor_lookup,
+            recursion_depth=recursion_depth,
+        ):
+            is_component_node = isinstance(node, ocm.iter.ComponentNode)
+            is_source_node = isinstance(node, ocm.iter.SourceNode)
+            is_resource_node = isinstance(node, ocm.iter.ResourceNode)
 
-        if is_component_node and not components:
-            continue
-
-        if is_source_node and not sources:
-            continue
-
-        if is_resource_node and not resources:
-            continue
-
-        if filter_expr:
-            if is_component_node:
-                typestr = 'component'
-                artefact = None
-            elif is_source_node:
-                typestr = node.source.type
-                artefact = node.source
-            elif is_resource_node:
-                typestr = node.resource.type
-                artefact = node.resource
-
-            if isinstance(typestr, enum.Enum):
-                typestr = typestr.value
-
-            if not eval(filter_expr, { # nosec B307
-                'node': node,
-                'type': typestr,
-                'artefact': artefact,
-            }):
+            if is_component_node and not components:
                 continue
 
-        if is_component_node:
-            if not print_expr:
-                prefix = 'c'
-                print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
-            else:
-                print(eval(print_expr, {'node': node, 'artefact': None})) # nosec B307
-        if is_resource_node:
-            if not print_expr:
-                prefix = 'r'
-                indent += 1
-                print(f'{prefix}{" " * indent}{node.resource.name}')
-            else:
-                print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
-        if is_source_node:
-            if not print_expr:
-                prefix = 's'
-                indent += 1
-                print(f'{prefix}{" " * indent}{node.source.name}')
-            else:
-                print(eval(print_expr, {'node': node, 'artefact': node.source})) # nosec B307
+            if is_source_node and not sources:
+                continue
+
+            if is_resource_node and not resources:
+                continue
+
+            if filter_expr:
+                if is_component_node:
+                    typestr = 'component'
+                    artefact = None
+                elif is_source_node:
+                    typestr = node.source.type
+                    artefact = node.source
+                elif is_resource_node:
+                    typestr = node.resource.type
+                    artefact = node.resource
+
+                if isinstance(typestr, enum.Enum):
+                    typestr = typestr.value
+
+                if not eval(filter_expr, { # nosec B307
+                    'node': node,
+                    'type': typestr,
+                    'artefact': artefact,
+                }):
+                    continue
+            yield node
+
+    if print_incrementally:
+        for node in iter_nodes():
+            indent = len(node.path * 2)
+
+            is_component_node = isinstance(node, ocm.iter.ComponentNode)
+            is_source_node = isinstance(node, ocm.iter.SourceNode)
+            is_resource_node = isinstance(node, ocm.iter.ResourceNode)
+
+            if is_component_node:
+                if not print_expr:
+                    prefix = 'c'
+                    print(f'{prefix}{" " * indent}{node.component.name}:{node.component.version}')
+                else:
+                    print(eval(print_expr, {'node': node, 'artefact': None})) # nosec B307
+            if is_resource_node:
+                if not print_expr:
+                    prefix = 'r'
+                    indent += 1
+                    print(f'{prefix}{" " * indent}{node.resource.name}')
+                else:
+                    print(eval(print_expr, {'node': node, 'artefact': node.resource})) # nosec B307
+            if is_source_node:
+                if not print_expr:
+                    prefix = 's'
+                    indent += 1
+                    print(f'{prefix}{" " * indent}{node.source.name}')
+                else:
+                    print(eval(print_expr, {'node': node, 'artefact': node.source})) # nosec B307
+        return
+
+    # print single json or yaml document
+    objects = list()
+    for node in iter_nodes():
+        if isinstance(node, ocm.iter.ComponentNode):
+            obj = dataclasses.asdict(node.component)
+        else:
+            obj = dataclasses.asdict(node.artefact)
+        objects.append(obj)
+
+    if output_format == 'json':
+        print(json.dumps(objects, cls=ocm.EnumJSONEncoder))
+    elif output_format == 'yaml':
+        print(yaml.dump(data=objects, Dumper=ocm.EnumValueYamlDumper))
+    else:
+        raise ValueError(output_format)
 
 
 def imagevector(parsed):
@@ -978,12 +1019,34 @@ def main():
             ''',
     )
     traverse_parser.add_argument(
+        '--format',
+        choices=(
+            'pretty',
+            'json',
+            'yaml',
+        ),
+        default='pretty',
+    )
+    traverse_parser.add_argument(
         '--print-expr',
         help='a python-expression that will be used to print nodes',
     )
     traverse_parser.add_argument(
         '--filter-expr',
         help='a python-expression used to filter nodes (omit node if evaluates to False)'
+    )
+    traverse_parser.add_argument(
+        '--recursive',
+        action='store_true',
+        default=True,
+        help='if set, will process subcomponents recursively',
+    )
+    traverse_parser.add_argument(
+        '--no-recursive',
+        action='store_false',
+        default=True,
+        dest='recursive',
+        help='if set, will not process all subcomponents recursively',
     )
 
     imgvector_cfg_parser = maincmd_parsers.add_parser(
