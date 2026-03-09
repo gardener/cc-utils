@@ -249,7 +249,7 @@ class ExtraTagUploader(UploaderBase):
         /,
         **kwargs,
     ) -> ctt.model.ReplicationResourceElement:
-        replication_resource_element.extra_tags = self.extra_tags
+        replication_resource_element.extra_tags = list(self.extra_tags)
 
         resource = replication_resource_element.target
         for expr in self.tag_expressions:
