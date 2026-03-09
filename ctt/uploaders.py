@@ -255,7 +255,7 @@ class ExtraTagUploader(UploaderBase):
         for expr in self.tag_expressions:
             res = eval( # nosec B307
                 expr,
-                globals={'resource': resource},
+                {'resource': resource},
             )
             if not isinstance(res, str):
                 raise ValueError(f'{expr=} did not yield str, but {type(res)=}')
