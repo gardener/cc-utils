@@ -1,4 +1,9 @@
 import argparse
+import logging
+
+import requests
+import requests.adapters
+import urllib3.util
 
 import cnudie.retrieve
 import ctt.process_dependencies
@@ -8,6 +13,15 @@ import oci.client
 '''
 exposes a CLI for "CTT" (fka: CNUDIE Transport Tool)
 '''
+
+
+def _init_logging():
+    '''
+    initialises logging to some hardcoded defaults (default cfg is too taciturn).
+    '''
+    logging.basicConfig(
+        level=logging.INFO,
+    )
 
 
 def configure_parser(parser):
@@ -43,14 +57,38 @@ def configure_parser(parser):
 
 
 def replicate(parsed):
+    _init_logging()
     if not ':' in parsed.ocm_component:
         print(f'{parsed.ocm_component=} does not match expected format (<name>:<version>)')
         exit(1)
+
+    session = requests.Session()
+    retry_cfg = urllib3.util.Retry(
+        total=8, # default from requests lib
+        connect=8,
+        read=8,
+        redirect=2,
+        status=2,
+        other=0,
+        allowed_methods=(
+            'DELETE',
+            'GET',
+            'HEAD',
+            'PATCH',
+            'POST',
+            'PUT',
+        ),
+        backoff_factor=1,
+        backoff_jitter=1,
+        respect_retry_after_header=True,
+    )
+    session.mount('https://', requests.adapters.HTTPAdapter(max_retries=retry_cfg))
 
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(
             docker_cfg=parsed.docker_config,
         ),
+        session=session,
     )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
