@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 import cnudie.retrieve
 import ctt.process_dependencies
@@ -8,6 +9,15 @@ import oci.client
 '''
 exposes a CLI for "CTT" (fka: CNUDIE Transport Tool)
 '''
+
+
+def _init_logging():
+    '''
+    initialises logging to some hardcoded defaults (default cfg is too taciturn).
+    '''
+    logging.basicConfig(
+        level=logging.INFO,
+    )
 
 
 def configure_parser(parser):
@@ -43,6 +53,7 @@ def configure_parser(parser):
 
 
 def replicate(parsed):
+    _init_logging()
     if not ':' in parsed.ocm_component:
         print(f'{parsed.ocm_component=} does not match expected format (<name>:<version>)')
         exit(1)
