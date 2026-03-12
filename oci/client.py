@@ -516,7 +516,8 @@ class Client:
         headers: dict=None,
         raise_for_status=True,
         warn_if_not_ok=True,
-        remaining_retries: int=3,
+        remaining_retries: int=5,
+        sleep_before_retry_seconds: float=1.0,
         **kwargs,
     ):
         if not 'timeout' in kwargs and self.timeout_seconds:
@@ -529,11 +530,14 @@ class Client:
                 image_reference=image_reference,
                 scope=scope,
             )
-        except requests.exceptions.ConnectionError as e:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             if remaining_retries == 0:
                 raise
 
             logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            if sleep_before_retry_seconds > 0:
+                time.sleep(sleep_before_retry_seconds)
+
             return self._request(
                 url=url,
                 image_reference=image_reference,
@@ -543,6 +547,7 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
 
@@ -610,11 +615,14 @@ class Client:
                 timeout=timeout,
                 **kwargs,
             )
-        except requests.exceptions.ConnectionError as e:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             if remaining_retries == 0:
                 raise
 
             logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            if sleep_before_retry_seconds > 0:
+                time.sleep(sleep_before_retry_seconds)
+
             return self._request(
                 url=url,
                 image_reference=image_reference,
@@ -624,6 +632,7 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
 
@@ -633,10 +642,22 @@ class Client:
             )
 
         if res.status_code == 429 and remaining_retries > 0:
+            retry_after_seconds = None
+            try:
+                if (retry_after_seconds := res.headers.get('Retry-After')):
+                    retry_after_seconds = int(retry_after_seconds)
+            except ValueError:
+                pass
+
+            if retry_after_seconds is None:
+                retry_after_seconds = 60 # fallback to default backoff
+
             logger.warning(
-                f'quota was exceeded, will wait a minute and then retry again ({remaining_retries=})'
+                f'quota was exceeded, will {retry_after_seconds=} ({remaining_retries=})'
             )
-            time.sleep(60)
+
+            time.sleep(retry_after_seconds)
+
             return self._request(
                 url=url,
                 image_reference=image_reference,
