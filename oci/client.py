@@ -642,10 +642,22 @@ class Client:
             )
 
         if res.status_code == 429 and remaining_retries > 0:
+            retry_after_seconds = None
+            try:
+                if (retry_after_seconds := res.headers.get('Retry-After')):
+                    retry_after_seconds = int(retry_after_seconds)
+            except ValueError:
+                pass
+
+            if retry_after_seconds is None:
+                retry_after_seconds = 60 # fallback to default backoff
+
             logger.warning(
-                f'quota was exceeded, will wait a minute and then retry again ({remaining_retries=})'
+                f'quota was exceeded, will {retry_after_seconds=} ({remaining_retries=})'
             )
-            time.sleep(60)
+
+            time.sleep(retry_after_seconds)
+
             return self._request(
                 url=url,
                 image_reference=image_reference,
