@@ -516,7 +516,8 @@ class Client:
         headers: dict=None,
         raise_for_status=True,
         warn_if_not_ok=True,
-        remaining_retries: int=3,
+        remaining_retries: int=5,
+        sleep_before_retry_seconds: float=1.0,
         **kwargs,
     ):
         if not 'timeout' in kwargs and self.timeout_seconds:
@@ -534,6 +535,9 @@ class Client:
                 raise
 
             logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            if sleep_before_retry_seconds > 0:
+                time.sleep(sleep_before_retry_seconds)
+
             return self._request(
                 url=url,
                 image_reference=image_reference,
@@ -543,6 +547,7 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
 
@@ -615,6 +620,9 @@ class Client:
                 raise
 
             logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            if sleep_before_retry_seconds > 0:
+                time.sleep(sleep_before_retry_seconds)
+
             return self._request(
                 url=url,
                 image_reference=image_reference,
@@ -624,6 +632,7 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
 
