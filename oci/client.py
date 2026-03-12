@@ -529,7 +529,7 @@ class Client:
                 image_reference=image_reference,
                 scope=scope,
             )
-        except requests.exceptions.ConnectionError as e:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             if remaining_retries == 0:
                 raise
 
@@ -610,7 +610,7 @@ class Client:
                 timeout=timeout,
                 **kwargs,
             )
-        except requests.exceptions.ConnectionError as e:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
             if remaining_retries == 0:
                 raise
 
