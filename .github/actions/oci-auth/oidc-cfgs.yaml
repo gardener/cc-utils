@@ -85,6 +85,7 @@
   github_host: gh-wdf
   github_orgs:
     - kubernetes
+    - kubernetes-cicd
     - kubernetes-private
 
 # ghtools / gdca delivery readonly
