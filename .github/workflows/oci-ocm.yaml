@@ -363,10 +363,12 @@ jobs:
       matrix:
         args: ${{ fromJSON(needs.preprocess.outputs.args) }}
     steps:
-      - name: Set up Docker # ensure consistent docker tooling version across runners
+      - if: ${{ github.server_url == 'https://github.com' }}
+        name: Set up Docker # ensure consistent docker version across runners on public github
         uses: docker/setup-docker-action@v4
         id: docker-setup
-      - uses: docker/setup-buildx-action@v3
+      - if: ${{ github.server_url == 'https://github.com' }}
+        uses: docker/setup-buildx-action@v3
         id: buildx-setup
         with:
           endpoint: ${{ steps.docker-setup.outputs.sock }}
@@ -474,11 +476,16 @@ jobs:
             exit 1
           fi
 
+          builder_arg=''
+          if [ '${{ github.server_url }}' == 'https://github.com' ]; then
+            builder_arg='--builder ${{ steps.buildx-setup.outputs.name }}'
+          fi
+
           docker buildx build \
             --file '${{ inputs.dockerfile }}' \
             --output type=docker \
             --platform '${{ matrix.args.platform-name }}' \
-            --builder '${{ steps.buildx-setup.outputs.name }}' \
+            $builder_arg \
             --metadata-file /tmp/metadata.json \
             --iidfile /tmp/image_id_file \
             $target_arg \
