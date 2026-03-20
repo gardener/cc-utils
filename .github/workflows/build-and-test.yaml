@@ -268,47 +268,9 @@ jobs:
               - name: gardener.cloud/purposes
                 value:
                   - test
-  images:
-    name: Build Job-Image
-    needs:
-      - package # needed indirectly (distribution-packages-artefact)
-      - prepare
-      - setuptools-version
-    secrets: inherit
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-    uses: ./.github/workflows/oci-ocm.yaml
-    with:
-      name: job-image
-      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
-      oci-repository: cicd/job-image
-      oci-platforms: 'linux/amd64,linux/arm64'
-      version: ${{ needs.prepare.outputs.version }}
-      # workaround: we need to use a deviating version for setuptools
-      prebuild-hook: |
-        echo "${{ needs.setuptools-version.outputs.setuptools-version }}" | .ci/write-version
-      build-ctx-artefact: distribution-packages
-      untar-build-ctx-artefact: distribution-packages.tar.gz
-      ocm-labels: |
-        - name: cloud.gardener.cnudie/dso/scanning-hints/package-versions
-          value:
-            - name: containerd
-              version: v1.6.15
-        - name: gardener.cloud/cve-categorisation
-          value:
-            authentication_enforced: true
-            availability_requirement: low
-            confidentiality_requirement: high
-            integrity_requirement: high
-            network_exposure: protected
-            user_interaction: gardener-operator
 
   documentation:
     name: Generate Documentation
-    needs:
-      - images
     runs-on: ubuntu-latest
     environment: build
     permissions:
@@ -319,7 +281,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
     - name: Generate Documentation
       run: |
-        image_ref=${{ needs.images.outputs.oci-reference }}
+        image_ref='europe-docker.pkg.dev/gardener-project/releases/cicd/job-image:1.2745.0'
         mkdir documentation-out.d
         docker run -v$PWD:/src \
           -e GH_PAGES_PATH=/src/documentation-out.d \
