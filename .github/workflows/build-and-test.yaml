@@ -80,7 +80,6 @@ jobs:
           setup.gha.py \
           setup.oci.py \
           setup.ocm.py \
-          setup.whd.py \
         ; do
          echo "building distribution package from ${path}"
          python3 ${path} \
@@ -103,7 +102,6 @@ jobs:
         mkdir ${blobs_dir}
         resources_file=resources.yaml
         for package in \
-          gardener-cicd-whd \
           gardener-cicd-cli \
           gardener-cicd-libs \
           gardener-gha-libs \

@@ -49,8 +49,6 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'cc_directives.trait',
-    'cc_directives.model_element',
 ]
 
 
