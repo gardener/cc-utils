@@ -28,7 +28,6 @@ def modules():
     module_names.remove('setup.gha')
     module_names.remove('setup.oci')
     module_names.remove('setup.ocm')
-    module_names.remove('setup.whd')
 
     # do not include modules already included in `gardener-ocm` to avoid pip to erroneously handle
     # them during package-upgrades
@@ -45,7 +44,6 @@ def packages():
     package_names = setuptools.find_packages()
 
     # remove packages (distributed via separate distribution-packages)
-    package_names.remove('whd')
     package_names.remove('oci')
     package_names.remove('ocm')
     return package_names

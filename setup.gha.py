@@ -85,7 +85,6 @@ def modules():
     # avoid modules that would introduce undesired dependencies
     omit_modules = (
         'ctx',
-        'dockerutil',
         'mailutil',
         'makoutil',
     )
@@ -97,7 +96,6 @@ def modules():
     module_names.remove('setup.gha')
     module_names.remove('setup.oci')
     module_names.remove('setup.ocm')
-    module_names.remove('setup.whd')
     return module_names
 
 
@@ -107,11 +105,9 @@ def packages():
     # avoid packages that would introduce undesired dependencies
     omit_packages = (
         'ccc',
-        'concourse',
         'mail',
         'model',
         'slackclient',
-        'whd',
     )
 
     for package in omit_packages:
