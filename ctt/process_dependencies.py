@@ -50,6 +50,21 @@ class ProcessingMode(enum.Enum):
     DRY_RUN = 'dry_run'
 
 
+class PruningMode(enum.StrEnum):
+    '''
+    Controls tree-pruning behaviour during replication.
+
+    CTT replicates component trees bottom-up: resources (OCI images) first, then the
+    OCM component descriptor as a marker that all resources for that component are present.
+    Tree-pruning exploits this invariant top-down: starting from the root component it skips
+    any subtree whose root descriptor already exists in the target, avoiding redundant work.
+    This optimisation is robust in the common case but may miss partial replications in
+    corner-cases; use REPLICATE_ALL for a full replication at the cost of extra HEAD requests.
+    '''
+    PRUNE_SUBTREES = 'prune-subtrees'  # skip subtrees whose root descriptor exists in target
+    REPLICATE_ALL = 'replicate-all'    # replicate full transitive closure unconditionally
+
+
 @functools.cache
 def create_component_descriptor_lookup_for_ocm_repo(
     ocm_repo_url: str,
@@ -305,15 +320,19 @@ def determine_changed_components(
     tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool]=None,
+    pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
 ) -> collections.abc.Generator[ocm.ComponentDescriptor, None, None]:
     component = component_descriptor.component
 
     if component_filter and component_filter(component):
         return
 
-    if tgt_component_descriptor_lookup(
-        component.identity(),
-        absent_ok=True,
+    if (
+        pruning_mode is PruningMode.PRUNE_SUBTREES
+        and tgt_component_descriptor_lookup(
+            component.identity(),
+            absent_ok=True,
+        )
     ):
         logger.info(
             f'{component.identity()} already exists in {tgt_ocm_repo_url=} '
@@ -334,6 +353,7 @@ def determine_changed_components(
             tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
             component_filter=component_filter,
             reftype_filter=reftype_filter,
+            pruning_mode=pruning_mode,
         )
 
     if not (
@@ -356,6 +376,7 @@ def determine_changed_components(
                 tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
                 component_filter=component_filter,
                 reftype_filter=reftype_filter,
+                pruning_mode=pruning_mode,
             )
 
     yield component_descriptor
@@ -555,6 +576,7 @@ def create_replication_plan_step(
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool] | None=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
     max_workers: int=16,
+    pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
 ) -> ctt.model.ReplicationPlanStep:
     tgt_ocm_repo = ocm.OciOcmRepository(
         baseUrl=ocm_repository,
@@ -567,6 +589,7 @@ def create_replication_plan_step(
         tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
         component_filter=component_filter,
         reftype_filter=reftype_filter,
+        pruning_mode=pruning_mode,
     ))
 
     components = tuple(iter_replication_plan_components(
@@ -607,6 +630,7 @@ def process_images(
     remove_label: collections.abc.Callable[[str], bool]=None,
     max_workers: int=16,
     tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
+    pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -677,6 +701,7 @@ def process_images(
             reftype_filter=reftype_filter,
             remove_label=remove_label,
             max_workers=max_workers,
+            pruning_mode=pruning_mode,
         )
         replication_plan.steps.append(replication_plan_step)
 

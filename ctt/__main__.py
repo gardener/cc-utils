@@ -50,6 +50,19 @@ def configure_parser(parser):
         default=8,
         help='how many replication-tasks should be run in parallel.',
     )
+    parser.add_argument(
+        '--pruning-mode',
+        type=ctt.process_dependencies.PruningMode,
+        choices=ctt.process_dependencies.PruningMode,
+        default=ctt.process_dependencies.PruningMode.PRUNE_SUBTREES,
+        help=(
+            'controls tree-pruning behaviour. '
+            f'"{ctt.process_dependencies.PruningMode.PRUNE_SUBTREES.value}" (default) '
+            'skips subtrees already present in the target. '
+            f'"{ctt.process_dependencies.PruningMode.REPLICATE_ALL.value}" '
+            'replicates the full transitive closure unconditionally.'
+        ),
+    )
 
 
 def replicate(parsed):
@@ -94,6 +107,7 @@ def replicate(parsed):
         oci_client=oci_client,
         processing_mode=processing_mode,
         max_workers=max_workers,
+        pruning_mode=parsed.pruning_mode,
     ):
         pass
 
