@@ -749,6 +749,16 @@ def process_replication_plan_step(
             for extra_tag in extra_tags:
                 push_target = f'{target_repo}:{extra_tag}'
 
+                manifest_blobref = oci_client.head_manifest(
+                    image_reference=push_target,
+                    absent_ok=True,
+                    accept=replication_mode.accept_header(),
+                )
+                if manifest_blobref and manifest_blobref.digest == oci_manifest_digest:
+                    logger.info(
+                      f'skipping {push_target=}: already present {oci_manifest_digest=}'
+                    )
+                    continue
                 oci_client.put_manifest(
                     image_reference=push_target,
                     manifest=manifest_bytes,
