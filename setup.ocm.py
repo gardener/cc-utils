@@ -56,8 +56,8 @@ setuptools.setup(
     install_requires=list(requirements()),
     entry_points={
         'console_scripts': [
-            # avoid conflict w/ "ocm-cli" (github.com/open-component-model/ocm)
-            'gardener-ocm = ocm.__main__:main'
+            'gardener-ocm = ocm.__main__:main', # backwards-compatibility
+            'ocm = ocm.__main__:main',
         ],
     },
 )
