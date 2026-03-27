@@ -345,6 +345,29 @@ def download(parsed):
         outfh = open(parsed.outfile, 'wb')
 
     if (t := parsed.type) in ('component-descriptor', 'c'):
+        if parsed.name:
+            sub_name = parsed.name
+            for cnode in ocm.iter.iter(
+                component=component,
+                lookup=lambda cid, repo=None: _fetch_component_descriptor(
+                    name=cid.name,
+                    version=cid.version,
+                    ocm_repo=(repo or ocm_repo),
+                ),
+                node_filter=ocm.iter.Filter.components,
+                ocm_repo=ocm_repo,
+            ):
+                if cnode.component.name == sub_name:
+                    root_component_descriptor = _fetch_component_descriptor(
+                        name=cnode.component.name,
+                        version=cnode.component.version,
+                        ocm_repo=ocm_repo,
+                    )
+                    break
+            else:
+                print(f'Error: did not find {sub_name=} in component-tree of {cname}:{cversion}')
+                exit(1)
+
         yaml.dump(
             data=dataclasses.asdict(root_component_descriptor),
             stream=outfh,
