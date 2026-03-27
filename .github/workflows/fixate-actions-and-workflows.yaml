@@ -30,12 +30,12 @@ jobs:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
+      id-token: write  # required for OIDC federated token exchange
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           fetch-depth: 0  # full history required for git worktree operations
-          auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           init-git-identity: true
 
       - name: fixate-actions-and-workflows
