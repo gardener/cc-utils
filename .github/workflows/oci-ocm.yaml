@@ -365,7 +365,7 @@ jobs:
     steps:
       - if: ${{ github.server_url == 'https://github.com' }}
         name: Set up Docker # ensure consistent docker version across runners on public github
-        uses: docker/setup-docker-action@v5
+        uses: docker/setup-docker-action@v4
         id: docker-setup
       - if: ${{ github.server_url == 'https://github.com' }}
         uses: docker/setup-buildx-action@v3
