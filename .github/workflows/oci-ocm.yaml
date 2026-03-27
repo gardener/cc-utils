@@ -363,14 +363,7 @@ jobs:
       matrix:
         args: ${{ fromJSON(needs.preprocess.outputs.args) }}
     steps:
-      - name: Set up Docker # ensure consistent docker tooling version across runners
-        uses: docker/setup-docker-action@v4
-        id: docker-setup
       - uses: docker/setup-buildx-action@v3
-        id: buildx-setup
-        with:
-          endpoint: ${{ steps.docker-setup.outputs.sock }}
-          name: gardener-builder
       - name: inject-authtoken-for-dockerhub
         id: extra-auth
         shell: bash
@@ -448,55 +441,17 @@ jobs:
         if: ${{ inputs.prebuild-hook }}
         run: |
           ${{ inputs.prebuild-hook }}
-
       - name: 'build ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
+        uses: docker/build-push-action@v6
         id: build
-        run: |
-          IFS=',' read -ra tags <<< '${{ matrix.args.image-reference }}'
-          tag_args=''
-          for tag in "${tags[@]}"; do
-            tag_args="$tag_args --tag $tag"
-          done
-
-          IFS=',' read -ra build_args_raw <<< '${{ inputs.build-args }}'
-          build_args=''
-          for build_arg in "${build_args_raw[@]}"; do
-            build_args="$build_args --build-arg $build_arg"
-          done
-
-          target_arg=''
-          if [ -n '${{ inputs.target }}' ]; then
-            target_arg='--target ${{ inputs.target }}'
-          fi
-
-          if ! [ -d "${{ inputs.build-directory }}" ]; then
-            echo "error: build directory does not exist."
-            exit 1
-          fi
-
-          docker buildx build \
-            --file '${{ inputs.dockerfile }}' \
-            --output type=docker \
-            --platform '${{ matrix.args.platform-name }}' \
-            --builder '${{ steps.buildx-setup.outputs.name }}' \
-            --metadata-file /tmp/metadata.json \
-            --iidfile /tmp/image_id_file \
-            $target_arg \
-            $tag_args \
-            $build_args \
-            '${{ inputs.build-directory }}'
-
-          imageid=$(cat /tmp/image_id_file)
-          digest=$(jq -r '."containerimage.digest"' /tmp/metadata.json)
-
-          echo "imageid=$imageid" >> $GITHUB_OUTPUT
-          echo "digest=$digest" >> $GITHUB_OUTPUT
-
-          cat <<OEOF >> $GITHUB_OUTPUT
-          metadata<<EOF
-          $(cat /tmp/metadata.json)
-          EOF
-          OEOF
+        with:
+          outputs: type=docker
+          tags: ${{ matrix.args.image-reference }}
+          context: ${{ inputs.build-directory }}
+          platforms: ${{ matrix.args.platform-name }}
+          target: ${{ inputs.target }}
+          file: ${{ inputs.dockerfile }}
+          build-args: ${{ inputs.build-args }}
 
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
