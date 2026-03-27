@@ -1,0 +1,93 @@
+name: Fixate Actions and Workflows
+description: |
+  Generates a snapshot of this repository's GitHub Actions and reusable workflows
+  on a separate target branch (default: `v1`), where all cross-references between
+  actions and workflows are pinned by commit digest rather than by branch name.
+
+  Consumers may reference the target branch for a rolling latest-fixated pointer,
+  or any specific commit digest it ever pointed to for full immutability.
+
+  See README.md in this action's directory for full rationale and usage guidance.
+
+inputs:
+  own-branch:
+    type: string
+    default: master
+    description: |
+      Branch to read from. Fixated commits are derived from the HEAD of this branch.
+  target-branch:
+    type: string
+    default: v1
+    description: |
+      Branch to push fixated commits to. Will be force-pushed. Consumers may
+      reference this branch (for a rolling latest-fixated pointer) or any specific
+      commit digest it ever pointed to (for full immutability).
+  own-org:
+    type: string
+    default: ''
+    description: |
+      GitHub organisation owning this repository (e.g. `gardener`). Used to
+      identify own `uses:` references that need to be rewritten. Defaults to the
+      organisation derived from `github.repository`.
+  own-repo:
+    type: string
+    default: ''
+    description: |
+      GitHub repository name (e.g. `cc-utils`). Used together with `own-org` to
+      identify own `uses:` references that need to be rewritten. Defaults to the
+      repository name derived from `github.repository`.
+  git-user-name:
+    type: string
+    default: github-actions[bot]
+    description: |
+      Git author name used for fixating commits.
+  git-user-email:
+    type: string
+    default: github-actions[bot]@users.noreply.github.com
+    description: |
+      Git author email used for fixating commits.
+
+runs:
+  using: composite
+  steps:
+    - name: install-dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        pip install --quiet gitpython ruamel.yaml
+
+    - name: configure-git-identity
+      shell: bash
+      run: |
+        set -euo pipefail
+        git config --global user.name '${{ inputs.git-user-name }}'
+        git config --global user.email '${{ inputs.git-user-email }}'
+
+    - name: fixate
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # derive org/repo from github.repository if not explicitly provided
+        own_org='${{ inputs.own-org }}'
+        own_repo='${{ inputs.own-repo }}'
+        if [ -z "${own_org}" ]; then
+          own_org='${{ github.repository_owner }}'
+        fi
+        if [ -z "${own_repo}" ]; then
+          own_repo='${{ github.event.repository.name }}'
+        fi
+
+        '${{ github.action_path }}/fixate.py' \
+          --repo-root '${{ github.workspace }}' \
+          --own-branch '${{ inputs.own-branch }}' \
+          --target-branch '${{ inputs.target-branch }}' \
+          --own-org "${own_org}" \
+          --own-repo "${own_repo}"
+
+    - name: push
+      shell: bash
+      run: |
+        set -euo pipefail
+        git push --force origin 'refs/heads/${{ inputs.target-branch }}'
+        git push origin "refs/fixated/$(git rev-parse '${{ inputs.own-branch }}')"

@@ -1,0 +1,47 @@
+name: Fixate Actions and Workflows
+
+on:
+  workflow_call:
+    inputs:
+      own-branch:
+        type: string
+        default: master
+        description: |
+          Branch to read from. Defaults to `master`.
+      target-branch:
+        type: string
+        default: v1
+        description: |
+          Branch to push fixated commits to. Will be force-pushed. Defaults to `v1`.
+      own-org:
+        type: string
+        default: ''
+        description: |
+          GitHub organisation owning this repository. Defaults to the calling
+          repository's organisation.
+      own-repo:
+        type: string
+        default: ''
+        description: |
+          GitHub repository name. Defaults to the calling repository's name.
+
+jobs:
+  fixate:
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: write  # required to push the target branch and preservation refs
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          fetch-depth: 0  # full history required for git worktree operations
+          auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
+          auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
+          init-git-identity: true
+
+      - name: fixate-actions-and-workflows
+        uses: gardener/cc-utils/.github/actions/fixate-actions-and-workflows@master
+        with:
+          own-branch: ${{ inputs.own-branch }}
+          target-branch: ${{ inputs.target-branch }}
+          own-org: ${{ inputs.own-org }}
+          own-repo: ${{ inputs.own-repo }}
