@@ -39,16 +39,16 @@ jobs:
     outputs:
       setuptools-version: ${{ steps.version-setuptools.outputs.setuptools-version }}
     steps:
-    - name: version-setuptools
-      id: version-setuptools
-      run: |
-        set -eu
-        version=${{ needs.prepare.outputs.version }}
-        if [[ "${version}" == *-* ]]; then
-          # version was non-final - add suffix compliant w/ pep-440
-          version="${version%%-*}-dev0"
-        fi
-        echo "setuptools-version=${version}" >> ${GITHUB_OUTPUT}
+      - name: version-setuptools
+        id: version-setuptools
+        run: |
+          set -eu
+          version=${{ needs.prepare.outputs.version }}
+          if [[ "${version}" == *-* ]]; then
+            # version was non-final - add suffix compliant w/ pep-440
+            version="${version%%-*}-dev0"
+          fi
+          echo "setuptools-version=${version}" >> ${GITHUB_OUTPUT}
 
   package:
     runs-on: ubuntu-latest
@@ -58,90 +58,90 @@ jobs:
     permissions:
       contents: read
     steps:
-    - name: Install setuptools
-      run: |
-        pip3 install --root-user-action ignore \
-          setuptools \
-          pyyaml
-    - uses: actions/checkout@v6
-    - name: create distribution package
-      id: package
-      run: |
-        set -eu
-        version=${{ needs.setuptools-version.outputs.setuptools-version }}
-        echo "version: ${version}"
-        echo "${version}" | .ci/write-version
-        pkg_dir=dist
-        mkdir -p ${pkg_dir}
-        pkg_dir="$(readlink -f dist)"
-        echo "pkgdir: ${pkg_dir}"
-        for path in \
-          setup.py \
-          setup.gha.py \
-          setup.oci.py \
-          setup.ocm.py \
-        ; do
-         echo "building distribution package from ${path}"
-         python3 ${path} \
-            bdist_wheel \
-            --dist-dir ${pkg_dir}
-         rm -rf build
-        done
-
-        # special-case: cli-package (need to chdir in order to not confuse setuptools)
-        (
-          cd cli
-          python3 setup.py \
-            bdist_wheel \
-            --dist-dir ${pkg_dir}
-        )
-
-        echo "Built packages"
-        ls "${pkg_dir}"
-        blobs_dir="${pkg_dir}/blobs.d"
-        mkdir ${blobs_dir}
-        resources_file=resources.yaml
-        for package in \
-          gardener-cicd-cli \
-          gardener-cicd-libs \
-          gardener-gha-libs \
-          gardener-oci \
-          gardener-ocm \
+      - name: Install setuptools
+        run: |
+          pip3 install --root-user-action ignore \
+            setuptools \
+            pyyaml
+      - uses: actions/checkout@v6
+      - name: create distribution package
+        id: package
+        run: |
+          set -eu
+          version=${{ needs.setuptools-version.outputs.setuptools-version }}
+          echo "version: ${version}"
+          echo "${version}" | .ci/write-version
+          pkg_dir=dist
+          mkdir -p ${pkg_dir}
+          pkg_dir="$(readlink -f dist)"
+          echo "pkgdir: ${pkg_dir}"
+          for path in \
+            setup.py \
+            setup.gha.py \
+            setup.oci.py \
+            setup.ocm.py \
           ; do
-          path="$(echo $package | tr - _)-*"
-          prefix=dist
-          access_type='localBlob'
-          outf="${pkg_dir}/${package}.tar.gz"
-          tar cJf ${outf} -C ${pkg_dir} $(cd ${pkg_dir}; ls ${path})
-          mimetype=$(file -i ${outf} | cut -d: -f2 | cut -d' ' -f2- | cut -d';' -f1)
-          leng=$(stat -c"%s" ${outf})
-          digest="$(sha256sum ${outf} | cut -d' ' -f1)"
-          echo "\
-        - name: ${package}
-          version: ${version}
-          type: ${mimetype}
-          relation: local
-          access:
-            type: localBlob
-            localReference: sha256:${digest}
-            size: ${leng}
-            mediaType: ${mimetype}" \
-          >> ${resources_file}
-          mv ${outf} ${blobs_dir}/${digest}
-        done
-        cp "${resources_file}" dist/ocm_resources.yaml
-        echo "ocm_resources=dist/ocm_resources.yaml" >> "${GITHUB_OUTPUT}"
-        find "${pkg_dir}"
-        tar czf distribution-packages.tar.gz dist
-    - name: export-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
-      with:
-        ocm-resources-file: dist/ocm_resources.yaml
-        blobs-directory: dist/blobs.d
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
-      with:
-        name: distribution-packages
-        path: distribution-packages.tar.gz
+           echo "building distribution package from ${path}"
+           python3 ${path} \
+              bdist_wheel \
+              --dist-dir ${pkg_dir}
+           rm -rf build
+          done
+
+          # special-case: cli-package (need to chdir in order to not confuse setuptools)
+          (
+            cd cli
+            python3 setup.py \
+              bdist_wheel \
+              --dist-dir ${pkg_dir}
+          )
+
+          echo "Built packages"
+          ls "${pkg_dir}"
+          blobs_dir="${pkg_dir}/blobs.d"
+          mkdir ${blobs_dir}
+          resources_file=resources.yaml
+          for package in \
+            gardener-cicd-cli \
+            gardener-cicd-libs \
+            gardener-gha-libs \
+            gardener-oci \
+            gardener-ocm \
+            ; do
+            path="$(echo $package | tr - _)-*"
+            prefix=dist
+            access_type='localBlob'
+            outf="${pkg_dir}/${package}.tar.gz"
+            tar cJf ${outf} -C ${pkg_dir} $(cd ${pkg_dir}; ls ${path})
+            mimetype=$(file -i ${outf} | cut -d: -f2 | cut -d' ' -f2- | cut -d';' -f1)
+            leng=$(stat -c"%s" ${outf})
+            digest="$(sha256sum ${outf} | cut -d' ' -f1)"
+            echo "\
+          - name: ${package}
+            version: ${version}
+            type: ${mimetype}
+            relation: local
+            access:
+              type: localBlob
+              localReference: sha256:${digest}
+              size: ${leng}
+              mediaType: ${mimetype}" \
+            >> ${resources_file}
+            mv ${outf} ${blobs_dir}/${digest}
+          done
+          cp "${resources_file}" dist/ocm_resources.yaml
+          echo "ocm_resources=dist/ocm_resources.yaml" >> "${GITHUB_OUTPUT}"
+          find "${pkg_dir}"
+          tar czf distribution-packages.tar.gz dist
+      - name: export-ocm-fragments
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          ocm-resources-file: dist/ocm_resources.yaml
+          blobs-directory: dist/blobs.d
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+        with:
+          name: distribution-packages
+          path: distribution-packages.tar.gz
 
   lint:
     runs-on: ubuntu-latest
@@ -151,64 +151,64 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v6
-    - name: Retrieve Distribution Packages
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
-      with:
-        name: distribution-packages
-    - name: lint
-      run: |
-        tar xf distribution-packages.tar.gz -C /tmp
-        echo "installing linters"
-        export CFLAGS='-Wno-int-conversion'
-        if ! pip3 install --pre --upgrade --break-system-packages \
-          --find-links /tmp/dist \
-          gardener-cicd-libs \
-          gardener-cicd-cli \
-          'gardener-oci[async]' \
-          gardener-ocm \
-          bandit \
-          flake8 \
-          jq \
-          setuptools \
-          pylama \
-          pylint \
-          > /tmp/pip3-install.log; then
-          echo "error while trying to install packages:"
-          cat /tmp/pip3-install.log
-        fi
+      - uses: actions/checkout@v6
+      - name: Retrieve Distribution Packages
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        with:
+          name: distribution-packages
+      - name: lint
+        run: |
+          tar xf distribution-packages.tar.gz -C /tmp
+          echo "installing linters"
+          export CFLAGS='-Wno-int-conversion'
+          if ! pip3 install --pre --upgrade --break-system-packages \
+            --find-links /tmp/dist \
+            gardener-cicd-libs \
+            gardener-cicd-cli \
+            'gardener-oci[async]' \
+            gardener-ocm \
+            bandit \
+            flake8 \
+            jq \
+            setuptools \
+            pylama \
+            pylint \
+            > /tmp/pip3-install.log; then
+            echo "error while trying to install packages:"
+            cat /tmp/pip3-install.log
+          fi
 
-        echo "running linters"
-        blobs_dir=blobs.d
-        mkdir $blobs_dir
-        bandit_logfile=bandit.log
-        bandit_evidence="${blobs_dir}/bandit.tar.gz"
+          echo "running linters"
+          blobs_dir=blobs.d
+          mkdir $blobs_dir
+          bandit_logfile=bandit.log
+          bandit_evidence="${blobs_dir}/bandit.tar.gz"
 
-        bandit_extra_args="-f txt -o ${bandit_logfile}" \
-          .ci/lint
+          bandit_extra_args="-f txt -o ${bandit_logfile}" \
+            .ci/lint
 
-        # pass bandit.log + used cfg (pyproject.toml) as evidence
-        tar czf $bandit_evidence $bandit_logfile pyproject.toml
+          # pass bandit.log + used cfg (pyproject.toml) as evidence
+          tar czf $bandit_evidence $bandit_logfile pyproject.toml
 
-    - uses: ./.github/actions/export-ocm-fragments
-      with:
-        ocm-resources: |
-          name: sast-linting-evidence
-          relation: local
-          access:
-            type: localBlob
-            localReference: bandit.tar.gz
-          labels:
-            - name: gardener.cloud/purposes
-              value:
-                - lint
-                - sast
-                - pybandit
-            - name: gardener.cloud/comment
-              value: |
-                we use bandit (linter) for SAST-Scans.
-                See: https://bandit.readthedocs.io/en/latest/
-        blobs-directory: blobs.d
+      - uses: ./.github/actions/export-ocm-fragments
+        with:
+          ocm-resources: |
+            name: sast-linting-evidence
+            relation: local
+            access:
+              type: localBlob
+              localReference: bandit.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - pybandit
+              - name: gardener.cloud/comment
+                value: |
+                  we use bandit (linter) for SAST-Scans.
+                  See: https://bandit.readthedocs.io/en/latest/
+          blobs-directory: blobs.d
 
   unittests:
     needs:
@@ -217,55 +217,55 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - name: Retrieve Distribution Packages
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
-      with:
-        name: distribution-packages
-    - name: run-tests
-      run: |
-        set -euo pipefail
-        echo "install dependencies for python-packages"
-        echo "install packages"
-        tar xf distribution-packages.tar.gz -C /tmp
-        export CFLAGS='-Wno-int-conversion'
-        if ! pip3 install --pre --break-system-packages \
-          --find-links /tmp/dist \
-          gardener-cicd-libs \
-          gardener-cicd-cli \
-          gardener-oci \
-          gardener-ocm \
-          pytest \
-          setuptools \
-            > /tmp/pip3-install.log; then
-          echo "error while trying to install packages:"
-          cat /tmp/pip3-install.log
-        fi
+      - uses: actions/checkout@v6
+      - name: Retrieve Distribution Packages
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        with:
+          name: distribution-packages
+      - name: run-tests
+        run: |
+          set -euo pipefail
+          echo "install dependencies for python-packages"
+          echo "install packages"
+          tar xf distribution-packages.tar.gz -C /tmp
+          export CFLAGS='-Wno-int-conversion'
+          if ! pip3 install --pre --break-system-packages \
+            --find-links /tmp/dist \
+            gardener-cicd-libs \
+            gardener-cicd-cli \
+            gardener-oci \
+            gardener-ocm \
+            pytest \
+            setuptools \
+              > /tmp/pip3-install.log; then
+            echo "error while trying to install packages:"
+            cat /tmp/pip3-install.log
+          fi
 
-        echo "running tests"
-        mkdir /tmp/fake-cfg.d
-        touch /tmp/fake-cfg.d/config_types.yaml
-        export CC_CONFIG_DIR=/tmp/fake-cfg.d
+          echo "running tests"
+          mkdir /tmp/fake-cfg.d
+          touch /tmp/fake-cfg.d/config_types.yaml
+          export CC_CONFIG_DIR=/tmp/fake-cfg.d
 
-        mkdir /tmp/blobs.d
+          mkdir /tmp/blobs.d
 
-        .ci/test 2>&1 | tee /tmp/blobs.d/test-log.txt
+          .ci/test 2>&1 | tee /tmp/blobs.d/test-log.txt
 
-        tar czf /tmp/blobs.d/test-log.tar.gz -C/tmp/blobs.d test-log.txt
-    - name: add-unittests-results-to-component-descriptor
-      uses: ./.github/actions/export-ocm-fragments
-      with:
-        blobs-directory: /tmp/blobs.d
-        ocm-resources: |
-          - name: test-results
-            relation: local
-            access:
-              type: localBlob
-              localReference: test-log.tar.gz
-            labels:
-              - name: gardener.cloud/purposes
-                value:
-                  - test
+          tar czf /tmp/blobs.d/test-log.tar.gz -C/tmp/blobs.d test-log.txt
+      - name: add-unittests-results-to-component-descriptor
+        uses: ./.github/actions/export-ocm-fragments
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            - name: test-results
+              relation: local
+              access:
+                type: localBlob
+                localReference: test-log.tar.gz
+              labels:
+                - name: gardener.cloud/purposes
+                  value:
+                    - test
 
   documentation:
     name: Generate Documentation
@@ -274,22 +274,22 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v6
-    - name: Setup Docker-Buildx
-      uses: docker/setup-buildx-action@v3
-    - name: Generate Documentation
-      run: |
-        image_ref='europe-docker.pkg.dev/gardener-project/releases/cicd/job-image:1.2745.0'
-        mkdir documentation-out.d
-        docker run -v$PWD:/src \
-          -e GH_PAGES_PATH=/src/documentation-out.d \
-          ${image_ref} \
-          /src/.ci/generate_documentation
-        ls documentation-out.d
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
-      with:
-        name: documentation
-        path: documentation-out.d
+      - uses: actions/checkout@v6
+      - name: Setup Docker-Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Generate Documentation
+        run: |
+          image_ref='europe-docker.pkg.dev/gardener-project/releases/cicd/job-image:1.2745.0'
+          mkdir documentation-out.d
+          docker run -v$PWD:/src \
+            -e GH_PAGES_PATH=/src/documentation-out.d \
+            ${image_ref} \
+            /src/.ci/generate_documentation
+          ls documentation-out.d
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+        with:
+          name: documentation
+          path: documentation-out.d
 
   publish-documentation:
     if: >-
