@@ -87,8 +87,8 @@ on:
         required: false
       build-args:
         description: |
-           build-args, passed to `actions/build-push-action`. newline-separated values of form
-           NAME=VALUE
+          build-args, passed to `actions/build-push-action`. newline-separated values of form
+          NAME=VALUE
         type: string
         required: false
       prebuild-hook:
@@ -235,7 +235,7 @@ jobs:
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@a660e480d9bc844b14ced3238f406225fee22c40
         with:
           name: prepare-workflow-values
       - name: check-params
@@ -410,24 +410,24 @@ jobs:
             cat /tmp/config.json >> "${GITHUB_OUTPUT}"
           fi
           echo EOF >> "${GITHUB_OUTPUT}"
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@a1b22fce6906b8cb6077498e71196aa958f55335
         continue-on-error: true # successful auth might not be required
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@38e6f58808e56a48df2b086f3a6b231029a5c0ea
         with:
           remove-trusted-label: false
       - name: import-release-commit
         if: ${{ inputs.commit-objects-artefact != '' }}
-        uses: gardener/cc-utils/.github/actions/import-commit@master
+        uses: gardener/cc-utils/.github/actions/import-commit@9882ec5addb41c8e8868bfabacd778f92a1cb260
         with:
           commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
           after-import: rebase
       - name: retrieve build-ctx-artefact
         if: ${{ matrix.args.build-artefact != '' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@a660e480d9bc844b14ced3238f406225fee22c40
         with:
           name: ${{ matrix.args.build-artefact }}
           merge-multiple: true
@@ -453,7 +453,7 @@ jobs:
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
 
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@a1b22fce6906b8cb6077498e71196aa958f55335
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
@@ -482,7 +482,7 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a660e480d9bc844b14ced3238f406225fee22c40
       - name: inject-authtoken
         id: extra-auth
         shell: bash
@@ -495,7 +495,7 @@ jobs:
           hostname=$(echo ${{ needs.preprocess.outputs.target-image-ref }} | cut -d/ -f1 )
           echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" \
             >> $GITHUB_OUTPUT
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@a1b22fce6906b8cb6077498e71196aa958f55335
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
@@ -606,7 +606,7 @@ jobs:
             ```
             '''))
       - name: export-ocm-fragments
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ee0ddb6e992e9c7262e47c1f2352b20e726bf15e
         with:
           ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
           ctx: ${{ inputs.ctx }}
