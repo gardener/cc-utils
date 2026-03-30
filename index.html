@@ -90,6 +90,29 @@
 OCM, ..) are extracted into re-usable actions and workflows in
 <code class="code docutils literal notranslate"><span class="pre">cc-config</span> <span class="pre">&lt;https://github.com/gardener/cc-config</span></code> repository.</p>
 </section>
+<section id="reuse-and-branching-model">
+<h2>Reuse and Branching Model<a class="headerlink" href="#reuse-and-branching-model" title="Link to this heading"></a></h2>
+<p>Many Actions and reusable workflows are  maintained in <code class="code docutils literal notranslate"><span class="pre">cc-utils</span></code> mono-repository. Hence, some
+special handling is put into place to allow for both convenient developing and testing, as well
+as downstream users to be served with pinpointed vectors of Actions and workflows.</p>
+<p>Development continues on the <code class="docutils literal notranslate"><span class="pre">master</span></code> branch. After prequalification, the <code class="docutils literal notranslate"><span class="pre">v1</span></code> branch is
+updated to a consistent, fully fixated snapshot (all internal cross-references pinned by commit
+digest). See the
+<a class="reference external" href="https://github.com/gardener/cc-utils/tree/master/.github/actions/fixate-actions-and-workflows">fixate-actions-and-workflows</a>
+action for technical details.</p>
+<p>Downstream users should choose one of the following reference strategies:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&#64;v1</span></code> (rolling, prequalified)</dt><dd><p>Recommended for most users. Always points to the latest prequalified snapshot with all
+cross-references digest-pinned.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">&#64;&lt;commit-digest&gt;</span></code> (fully immutable)</dt><dd><p>Pin to a specific commit digest that <code class="docutils literal notranslate"><span class="pre">v1</span></code> pointed (or points) to, for full
+reproducibility. Previous digests remain resolvable.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">&#64;master</span></code> (development head)</dt><dd><p>Continues to work as before. Users are encouraged to switch to <code class="docutils literal notranslate"><span class="pre">&#64;v1</span></code> or a specific
+commit digest to benefit from prequalification and consistent cross-reference pinning.</p>
+</dd>
+</dl>
+</section>
 <section id="indices-and-tables">
 <h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h2>
 <ul class="simple">
