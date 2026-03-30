@@ -122,6 +122,6 @@ Example:
    # release workflow local to repository to be released
    jobs:
     release-to-github-and-bump:
-      uses: gardener/cc-utils/.github/workflows/release.yaml@master
+      uses: gardener/cc-utils/.github/workflows/release.yaml@v1
       with:
         slack-channel-id: C0123ABCDEFG # replace this
