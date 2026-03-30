@@ -59,7 +59,7 @@ privileges. If using `pull_request` as pipeline-trigger, corresponding workflow-
 readonly-access to target-repository. This prevents such runs to push build artefacts, such as
 OCI-Images or Helmcharts (to OCI-Registries).
 
-As an alternative, there is the `pull_request_target` trigger, which does not have this limitation.
+As an alternative, there is the ``pull_request_target`` trigger, which does not have this limitation.
 However, by default, thus-triggered runs will be based on the pull-request's target repository,
 i.e. the actual changes proposed by a Pull-Request will not be visible to the pipeline-run.
 
@@ -71,11 +71,11 @@ pullrequests. Pullrequests are considered to be trusted, if
 - the fork's owner is the same as the target-repository (i.e. a fork within the same organisation)
 OR
 - the pullrequest-author is either of:
-  - `COLLABORATOR`
-  - `CONTRIBUTOR`
-  - `MEMBER` (org-member)
-  - `OWNER` (repository-owner)
-- the pullrequest has a certain label (default: `ok-to-test`) set
+  - ``COLLABORATOR``
+  - ``CONTRIBUTOR``
+  - ``MEMBER`` (org-member)
+  - ``OWNER`` (repository-owner)
+- the pullrequest has a certain label (default: ``ok-to-test``) set
 
 The preferred approach (because it will also work for first-time contributors) is using
 "label-based trust".
@@ -89,7 +89,7 @@ The preferred approach (because it will also work for first-time contributors) i
 
 
 .. note::
-   There are the following "autor-associations" a pullrequest author can have:
+   There are the following "author-associations" a pullrequest author can have:
 
    ======================= ===============================================================
    association             explanation
@@ -107,12 +107,12 @@ The preferred approach (because it will also work for first-time contributors) i
 When to use what
 ----------------
 
-If a workflow does not need to publish changes from pullrequests, use `on.pull_request`.
-Otherwise, use `on.pull_request_target`. In this case, consistently use `trusted-checkout` instead
-of `actions/checkout`.
+If a workflow does not need to publish changes from pullrequests, use ``on.pull_request``.
+Otherwise, use ``on.pull_request_target``. In this case, consistently use ``trusted-checkout`` instead
+of ``actions/checkout``.
 
 .. warning::
-   If using `pull_request_target`, special care needs to be done to catch malicious changes,
+   If using ``pull_request_target``, special care needs to be done to catch malicious changes,
    especially such changes that are done in buildscripts.
 
 Example configuration for label-based trust
@@ -166,11 +166,11 @@ The following workflow can be added for convenience:
 Caveats
 -------
 
-Regardless which of `on.pull_request` or `on.pull_request_target` is used, workflow-runs will
+Regardless which of ``on.pull_request`` or ``on.pull_request_target`` is used, workflow-runs will
 always be based on target-repository's local workflow- and actions-definitions.
 
 .. note::
-   Be sure to grant `pull-requests: write`-permission to all workflows called from
+   Be sure to grant ``pull-requests: write``-permission to all workflows called from
    pull_request_target-event (this is needed so trusted-checkout action is able to remove
    trusted-label).
 
