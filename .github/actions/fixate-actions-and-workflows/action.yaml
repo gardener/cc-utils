@@ -105,4 +105,7 @@ runs:
       run: |
         set -euo pipefail
         git push --force origin 'refs/heads/${{ inputs.target-branch }}'
-        git push origin "refs/fixated/$(git rev-parse '${{ inputs.own-ref }}')"
+        # GitHub only permits pushing to refs/heads/* and refs/tags/* — arbitrary namespaces
+        # (e.g. refs/fixated/*) result in a 403 regardless of token type or App permissions.
+        # As a workaround, preservation refs are stored under refs/heads/fixated/<digest>.
+        git push origin "refs/heads/fixated/$(git rev-parse '${{ inputs.own-ref }}')"

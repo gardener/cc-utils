@@ -366,7 +366,10 @@ def create_fixated_branch(
             logger.info('Updated local ref refs/heads/%s -> %s', target_branch, tip_digest)
 
             # preservation ref — keeps tip alive after future force-pushes to remote
-            preservation_ref = f'refs/fixated/{own_digest}'
+            # note: GitHub only permits pushing to refs/heads/* and refs/tags/* via the API;
+            # arbitrary namespaces (e.g. refs/fixated/*) result in a 403. As a workaround,
+            # preservation refs are stored under refs/heads/fixated/<own-digest>.
+            preservation_ref = f'refs/heads/fixated/{own_digest}'
             repo.git.update_ref(preservation_ref, tip_digest)
             logger.info('Created preservation ref %s -> %s', preservation_ref, tip_digest)
 
