@@ -43,6 +43,9 @@ jobs:
           fetch-depth: 0  # full history required for git worktree operations
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           init-git-identity: true
+          github-auth-token-permissions: |
+            contents: write
+            workflows: write
 
       - name: fixate-actions-and-workflows
         uses: gardener/cc-utils/.github/actions/fixate-actions-and-workflows@master
