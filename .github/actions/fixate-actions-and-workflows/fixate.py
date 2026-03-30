@@ -366,7 +366,7 @@ def create_fixated_branch(
             logger.info('Updated local ref refs/heads/%s -> %s', target_branch, tip_digest)
 
             # preservation ref — keeps tip alive after future force-pushes to remote
-            preservation_ref = f'refs/fixated/{own_digest}'
+            preservation_ref = f'refs/tags/fixated/{own_digest}'
             repo.git.update_ref(preservation_ref, tip_digest)
             logger.info('Created preservation ref %s -> %s', preservation_ref, tip_digest)
 

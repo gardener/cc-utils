@@ -105,4 +105,4 @@ runs:
       run: |
         set -euo pipefail
         git push --force origin 'refs/heads/${{ inputs.target-branch }}'
-        git push origin "refs/fixated/$(git rev-parse '${{ inputs.own-ref }}')"
+        git push origin "refs/tags/fixated/$(git rev-parse '${{ inputs.own-ref }}')"

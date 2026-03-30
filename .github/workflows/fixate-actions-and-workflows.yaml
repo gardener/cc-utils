@@ -36,14 +36,12 @@ jobs:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
-      workflows: write  # required to push commits that modify workflow files
+      id-token: write  # required for OIDC federated token exchange
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           fetch-depth: 0  # full history required for git worktree operations
-          # intentionally not using federated token: GITHUB_TOKEN is used instead,
-          # as GitHub App tokens cannot push to refs outside refs/heads/* and refs/tags/*
-          token-server: ''
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
           init-git-identity: true
 
       - name: fixate-actions-and-workflows
