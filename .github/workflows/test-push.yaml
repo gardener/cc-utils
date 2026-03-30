@@ -10,10 +10,7 @@ jobs:
   test-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: gardener/cc-config
-
+      - uses: actions/checkout@v6
       - name: Push to refs/test/foo
         run: |
           git push origin HEAD:refs/test/foo
