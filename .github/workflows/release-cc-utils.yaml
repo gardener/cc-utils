@@ -38,7 +38,6 @@ jobs:
     secrets: inherit
     permissions:
       contents: write
-      id-token: write
     with:
       own-ref: refs/capture-commit
       release-commit-objects-artefact: release-commit-objects
