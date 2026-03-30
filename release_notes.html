@@ -168,19 +168,6 @@ preferred as once you have pushed your changes to the remote repository
 it cannot easily be changed anymore so you have to be very cautious.</p>
 </section>
 </section>
-<section id="draft-release">
-<h3>Draft Release<a class="headerlink" href="#draft-release" title="Link to this heading"></a></h3>
-<p>In order to see how the release notes would look like, draft releases
-are created/updated - usually on every head update.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Only users with write access to the repository can view drafts of releases</p>
-</div>
-<p>To enable draft releases, add the
-<a class="reference external" href="https://github.com/gardener/dashboard/blob/51fc9792af32da137d3c1b3e69635b2093dbbfd7/.ci/pipeline_definitions#L28">draft_release</a>
-trait to your job that has (or inherits) the <em>version</em> trait.
-Usually you would add it to the <em>head-update</em> job.</p>
-</section>
 <section id="transporting-release-notes">
 <h3>Transporting Release Notes<a class="headerlink" href="#transporting-release-notes" title="Link to this heading"></a></h3>
 <p>A component can depend upon other components. When releasing a
@@ -204,7 +191,7 @@ enable release-notes to be conveyed to configured slack-channel.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># release workflow local to repository to be released</span>
 <span class="nt">jobs</span><span class="p">:</span>
 <span class="w"> </span><span class="nt">release-to-github-and-bump</span><span class="p">:</span>
-<span class="w">   </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardener/cc-utils/.github/workflows/release.yaml@master</span>
+<span class="w">   </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gardener/cc-utils/.github/workflows/release.yaml@v1</span>
 <span class="w">   </span><span class="nt">with</span><span class="p">:</span>
 <span class="w">     </span><span class="nt">slack-channel-id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">C0123ABCDEFG</span><span class="w"> </span><span class="c1"># replace this</span>
 </pre></div>
