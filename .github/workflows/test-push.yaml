@@ -1,0 +1,18 @@
+name: Test Push
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: gardener/cc-config
+
+      - name: Push to refs/test/foo
+        run: |
+          git push origin HEAD:refs/test/foo
