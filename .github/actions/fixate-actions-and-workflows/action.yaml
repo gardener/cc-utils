@@ -10,11 +10,12 @@ description: |
   See README.md in this action's directory for full rationale and usage guidance.
 
 inputs:
-  own-branch:
+  own-ref:
     type: string
     default: master
     description: |
-      Branch to read from. Fixated commits are derived from the HEAD of this branch.
+      Ref (branch name or commit digest) to read from. Fixated commits are derived
+      from the commit this ref resolves to.
   target-branch:
     type: string
     default: v1
@@ -80,7 +81,7 @@ runs:
 
         '${{ github.action_path }}/fixate.py' \
           --repo-root '${{ github.workspace }}' \
-          --own-branch '${{ inputs.own-branch }}' \
+          --own-ref '${{ inputs.own-ref }}' \
           --target-branch '${{ inputs.target-branch }}' \
           --own-org "${own_org}" \
           --own-repo "${own_repo}"
@@ -90,4 +91,4 @@ runs:
       run: |
         set -euo pipefail
         git push --force origin 'refs/heads/${{ inputs.target-branch }}'
-        git push origin "refs/fixated/$(git rev-parse '${{ inputs.own-branch }}')"
+        git push origin "refs/fixated/$(git rev-parse '${{ inputs.own-ref }}')"

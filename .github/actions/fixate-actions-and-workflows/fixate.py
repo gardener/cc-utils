@@ -277,7 +277,7 @@ def _org_and_repo_from_remote(repo: gitpython.Repo) -> tuple[str, str]:
 def create_fixated_branch(
     *,
     repo_root: str,
-    own_branch: str,
+    own_ref: str,
     target_branch: str,
     own_org: str | None,
     own_repo: str | None,
@@ -296,9 +296,9 @@ def create_fixated_branch(
         own_repo = own_repo or derived_repo
         logger.info('Derived own org/repo from remote: %s/%s', own_org, own_repo)
 
-    own_commit = repo.commit(own_branch)
+    own_commit = repo.commit(own_ref)
     own_digest = own_commit.hexsha
-    logger.info('Own branch %s at commit digest %s', own_branch, own_digest)
+    logger.info('Own ref %s at commit digest %s', own_ref, own_digest)
 
     dep_graph, prefix_to_blob = _build_dependency_graph(
         own_commit,
@@ -349,7 +349,7 @@ def create_fixated_branch(
                 worktree_repo.index.commit(
                     f'fixate: pin references in {blob.path}\n\n'
                     f'own-commit: {own_digest}\n'
-                    f'own-branch: {own_branch}'
+                    f'own-ref: {own_ref}'
                 )
                 current_digest = worktree_repo.head.commit.hexsha
                 prefix_to_digest[prefix] = current_digest
@@ -387,9 +387,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help='Path to git repository root (default: derived from script location)',
     )
     parser.add_argument(
-        '--own-branch',
+        '--own-ref',
         default='master',
-        help='Branch to read from (default: master)',
+        help='Ref (branch name or commit digest) to read from (default: master)',
     )
     parser.add_argument(
         '--target-branch',
@@ -423,7 +423,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     create_fixated_branch(
         repo_root=args.repo_root,
-        own_branch=args.own_branch,
+        own_ref=args.own_ref,
         target_branch=args.target_branch,
         own_org=args.own_org,
         own_repo=args.own_repo,

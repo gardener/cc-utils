@@ -3,11 +3,11 @@ name: Fixate Actions and Workflows
 on:
   workflow_call:
     inputs:
-      own-branch:
+      own-ref:
         type: string
         default: master
         description: |
-          Branch to read from. Defaults to `master`.
+          Ref (branch name or commit digest) to read from. Defaults to `master`.
       target-branch:
         type: string
         default: v1
@@ -41,7 +41,7 @@ jobs:
       - name: fixate-actions-and-workflows
         uses: gardener/cc-utils/.github/actions/fixate-actions-and-workflows@master
         with:
-          own-branch: ${{ inputs.own-branch }}
+          own-ref: ${{ inputs.own-ref }}
           target-branch: ${{ inputs.target-branch }}
           own-org: ${{ inputs.own-org }}
           own-repo: ${{ inputs.own-repo }}
