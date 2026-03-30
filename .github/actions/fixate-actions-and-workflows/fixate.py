@@ -54,7 +54,7 @@ GARBAGE COLLECTION
 ------------------
 Force-pushing the target branch makes previous tip commits unreachable. To prevent
 git GC from collecting them (so that old pinned commit digests remain resolvable),
-this tool creates a preservation ref at `refs/fixated/<own-commit-digest>` for every
+this tool creates a preservation ref at `refs/tags/fixated/<own-commit-digest>` for every
 processed own commit. These refs are outside `refs/heads/` and do not clutter the
 branch list, but keep the commit objects alive indefinitely.
 

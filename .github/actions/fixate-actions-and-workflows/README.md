@@ -23,7 +23,7 @@ Design decisions:
   - own-org and own-repo default to values derived from the origin remote URL,
     so callers typically do not need to specify them explicitly
   - Fixated commits are pushed to a separate target branch (default: v1) via
-    force-push; previous tips are preserved via refs/fixated/<own-commit-digest>
+    force-push; previous tips are preserved via refs/tags/fixated/<own-commit-digest>
   - fixate.py has a full CLI for local testing (--dry-run, --verbose)
 LLM-CONTEXT-END -->
 
@@ -60,7 +60,7 @@ runs `fixate.py`, which:
 3. For each file whose cross-references need rewriting, creates a minimal commit
    containing only that file's change.
 4. Force-pushes the resulting commit chain to the target branch (`v1`).
-5. Creates a preservation ref at `refs/fixated/<own-commit-digest>` to prevent the
+5. Creates a preservation ref at `refs/tags/fixated/<own-commit-digest>` to prevent the
    tip commit from being garbage-collected after future force-pushes.
 
 ## Usage
@@ -119,7 +119,7 @@ work as before. Migration to `@v1` or a specific commit digest is purely opt-in.
 
 Force-pushing `v1` makes previous tip commits unreachable from branch heads. To
 ensure old commit digests remain resolvable (so consumers pinned to them are not
-broken), a preservation ref is created at `refs/fixated/<own-commit-digest>` for
+broken), a preservation ref is created at `refs/tags/fixated/<own-commit-digest>` for
 every processed own commit. These refs live outside `refs/heads/` and do not appear
 in the branch list, but prevent git GC from collecting the referenced objects.
 
