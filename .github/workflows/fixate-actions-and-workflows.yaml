@@ -24,6 +24,12 @@ on:
         default: ''
         description: |
           GitHub repository name. Defaults to the calling repository's name.
+      release-commit-objects-artefact:
+        type: string
+        default: ''
+        description: |
+          Optional name of an artifact produced by `capture-commit`. If set, the artifact
+          is imported before fixation so the captured commit is reachable as `own-ref`.
 
 jobs:
   fixate:
@@ -45,3 +51,4 @@ jobs:
           target-branch: ${{ inputs.target-branch }}
           own-org: ${{ inputs.own-org }}
           own-repo: ${{ inputs.own-repo }}
+          release-commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
