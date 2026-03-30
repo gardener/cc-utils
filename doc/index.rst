@@ -32,6 +32,34 @@ OCM, ..) are extracted into re-usable actions and workflows in
 `cc-config <https://github.com/gardener/cc-config` repository.
 
 
+Reuse and Branching Model
+=========================
+
+Many Actions and reusable workflows are  maintained in `cc-utils` mono-repository. Hence, some
+special handling is put into place to allow for both convenient developing and testing, as well
+as downstream users to be served with pinpointed vectors of Actions and workflows.
+
+Development continues on the ``master`` branch. After prequalification, the ``v1`` branch is
+updated to a consistent, fully fixated snapshot (all internal cross-references pinned by commit
+digest). See the
+`fixate-actions-and-workflows <https://github.com/gardener/cc-utils/tree/master/.github/actions/fixate-actions-and-workflows>`_
+action for technical details.
+
+Downstream users should choose one of the following reference strategies:
+
+``@v1`` (rolling, prequalified)
+    Recommended for most users. Always points to the latest prequalified snapshot with all
+    cross-references digest-pinned.
+
+``@<commit-digest>`` (fully immutable)
+    Pin to a specific commit digest that ``v1`` pointed (or points) to, for full
+    reproducibility. Previous digests remain resolvable.
+
+``@master`` (development head)
+    Continues to work as before. Users are encouraged to switch to ``@v1`` or a specific
+    commit digest to benefit from prequalification and consistent cross-reference pinning.
+
+
 Indices and tables
 ==================
 
