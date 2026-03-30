@@ -85,14 +85,6 @@ jobs:
           permissions: |
             pull-requests: write
 
-      - name: Create GitHub App Token
-        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
-        id: app-token
-        uses: actions/create-github-app-token@v2.1.1
-        with:
-          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
-
       - name: Setup Git Identity
         uses: gardener/cc-utils/.github/actions/setup-git-identity@master
 
@@ -120,7 +112,7 @@ jobs:
       - name: Create or Update Pull Request
         if: steps.check_changes.outputs.changes_detected == 'true'
         env:
-          GITHUB_TOKEN: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.fed-token.outputs.token }}
         run: |
           pr_number=$(gh pr list --head ${{ inputs.branch-name }} --state open --json number --jq '.[].number')
 
