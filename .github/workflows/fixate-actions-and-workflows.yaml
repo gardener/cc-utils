@@ -36,6 +36,7 @@ jobs:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
+      workflows: write  # required to push commits that modify workflow files
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
