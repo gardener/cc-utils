@@ -31,10 +31,23 @@ jobs:
     with:
       mode: release
 
+  fixate:
+    uses: ./.github/workflows/fixate-actions-and-workflows.yaml
+    needs:
+      - build
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      own-ref: refs/capture-commit
+      release-commit-objects-artefact: release-commit-objects
+
   release-to-github-and-bump:
     uses: ./.github/workflows/release.yaml
     needs:
       - build
+      - fixate
     secrets: inherit
     permissions:
       contents: write

@@ -47,6 +47,13 @@ inputs:
     default: github-actions[bot]@users.noreply.github.com
     description: |
       Git author email used for fixating commits.
+  release-commit-objects-artefact:
+    type: string
+    default: ''
+    description: |
+      Optional name of an artifact produced by `capture-commit` (e.g. `release-commit-objects`).
+      If set, the artifact is imported before fixation so that the commit it contains is
+      reachable and can be passed as `own-ref`.
 
 runs:
   using: composite
@@ -63,6 +70,13 @@ runs:
         set -euo pipefail
         git config --global user.name '${{ inputs.git-user-name }}'
         git config --global user.email '${{ inputs.git-user-email }}'
+
+    - name: import-release-commit
+      if: ${{ inputs.release-commit-objects-artefact != '' }}
+      uses: gardener/cc-utils/.github/actions/import-commit@master
+      with:
+        commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
+        after-import: noop
 
     - name: fixate
       shell: bash
