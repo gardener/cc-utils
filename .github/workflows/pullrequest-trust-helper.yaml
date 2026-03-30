@@ -24,14 +24,6 @@ name: Pull-Request-Trust Helper
 
 on:
   workflow_call:
-    secrets:
-      github-app-secret-key:
-        required: false
-        description: |
-          The secret-key for the `Gardener-GitHub-App` (`vars.GARDENER_GITHUB_ACTIONS_APP_ID`)
-          If not passed (in which case calling workflows need to set `secrets: inherit`), defaults
-          to `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
-
     inputs:
       trusted-label:
         description: |
@@ -67,9 +59,8 @@ on:
 jobs:
   pullrequest-trust-helper:
     runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
-    # XXX uncomment once callers set required permission and FGATS-variable is defined
-    # permissions: # permissions are configured via fed-/app-token
-    #   id-token: write # will be required for fed-token
+    permissions:
+      id-token: write
     environment: ${{ inputs.github-environment }}
     steps:
       - uses: gardener/cc-utils/.github/actions/github-auth@master
@@ -82,15 +73,9 @@ jobs:
           permissions: |
             pull-requests: write
             members: read
-      - uses: actions/create-github-app-token@v2
-        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
-        id: app-token
-        with:
-          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@master
         with:
           trusted-label: ${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
           needs-trusted-label: ${{ inputs.needs-trusted-label || vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
           trusted-teams: ${{ inputs.trusted-teams }}
-          github-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
+          github-token: ${{ steps.fed-token.outputs.token }}

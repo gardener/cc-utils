@@ -12,19 +12,10 @@ name: Release
 #   for "git-push"), in addition to declared privileges for GitHub-Action-Token. Said application is
 #   also required to be added to `bypassers` for any configured branch-protection-rules (or, to be
 #   more precise: rulesets, as "classic" branch-protections do not allow this).
-#
-#   The GitHub-App's ID is read from `vars.GARDENER_GITHUB_ACTIONS_APP_ID` (org-variable), and its
-#   private-key needs to be passed in as secret from `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`).
 
 on:
   workflow_call:
     secrets:
-      github-app-secret-key:
-        required: false
-        description: |
-          The secret-key for the `Gardener-GitHub-App` (`vars.GARDENER_GITHUB_ACTIONS_APP_ID`)
-          If not passed (in which case calling workflows need to set `secrets: inherit`), defaults
-          to `secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY`.
       slack-token:
         required: false
         description: |
@@ -394,18 +385,12 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
           permissions: ${{ inputs.github-auth-token-permissions }}
-      - uses: actions/create-github-app-token@v2
-        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER == '' }}
-        id: app-token
-        with:
-          app-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          private-key: ${{ secrets.github-app-secret-key || secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/release-notes@master
         id: release-notes
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
-          github-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
+          github-token: ${{ steps.fed-token.outputs.token }}
           draft: false
           include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
           release-notes-variants: |
@@ -437,7 +422,7 @@ jobs:
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           on-validation-errors: ${{ inputs.on-validation-errors }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          git-push-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
+          git-push-token: ${{ steps.fed-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
           github-tag-template: ${{ inputs.github-tag-template }}
           github-additional-tag-templates: ${{ inputs.github-additional-tag-templates }}
@@ -553,4 +538,4 @@ jobs:
         uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
         with:
           version: ${{ steps.component-descriptor.outputs.version }}
-          github-token: ${{ steps.fed-token.outputs.token || steps.app-token.outputs.token }}
+          github-token: ${{ steps.fed-token.outputs.token }}

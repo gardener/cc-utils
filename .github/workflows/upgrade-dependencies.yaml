@@ -147,8 +147,6 @@ jobs:
           github-auth-token-permissions: |
             contents: write
             pull-requests: write
-          auth-app-client-id: ${{ vars.GARDENER_GITHUB_ACTIONS_APP_ID }}
-          auth-app-private-key: ${{ secrets.GARDENER_GITHUB_ACTIONS_PRIVATE_KEY }}
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
         with:
           component-descriptor: |
