@@ -94,19 +94,6 @@ code-block like above to your commit message. This option is not
 preferred as once you have pushed your changes to the remote repository
 it cannot easily be changed anymore so you have to be very cautious.
 
-Draft Release
-^^^^^^^^^^^^^
-
-In order to see how the release notes would look like, draft releases
-are created/updated - usually on every head update.
-
-.. note:: Only users with write access to the repository can view drafts of releases
-
-To enable draft releases, add the
-`draft\_release <https://github.com/gardener/dashboard/blob/51fc9792af32da137d3c1b3e69635b2093dbbfd7/.ci/pipeline_definitions#L28>`__
-trait to your job that has (or inherits) the *version* trait.
-Usually you would add it to the *head-update* job.
-
 Transporting Release Notes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
