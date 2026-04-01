@@ -1,7 +1,5 @@
 # Install with: pip(3) install -r requirements.txt --upgrade
 GitPython
-Sphinx
-awesomeversion
 cachecontrol<1
 cachetools
 cryptography
@@ -9,7 +7,6 @@ dacite
 deepmerge
 deprecated
 dockerfile-parse>=1.2
-docutils
 ensure
 flake8
 gardener-oci
@@ -24,7 +21,6 @@ pylama
 pylint
 pytest
 python-dateutil
-python-gitlab
 python-magic
 pytimeparse
 pyyaml
@@ -32,8 +28,6 @@ requests
 ruamel.yaml==0.17.21
 semver
 slack-sdk
-sphinx_rtd_theme
-sseclient-py
 tabulate
 termcolor
 urllib3
