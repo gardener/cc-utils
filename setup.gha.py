@@ -27,7 +27,6 @@ def requirements():
 
     # omit packages not needed for minimal subset of cc-utils / gardener-cicd-libs
     omit_package_names = (
-        'Mako',
         'Sphinx',
         'aliyun-python-sdk-core',
         'aliyun-python-sdk-ecs',
@@ -86,7 +85,6 @@ def modules():
     omit_modules = (
         'ctx',
         'mailutil',
-        'makoutil',
     )
     for name in omit_modules:
         module_names.remove(name)
