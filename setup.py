@@ -64,13 +64,7 @@ setuptools.setup(
     py_modules=modules(),
     packages=packages(),
     package_data={
-        '':['*.mako'],
         'ci': ['VERSION'],
-        'concourse':[
-            'resources/LAST_RELEASED_TAG',
-            'resources/*.mako',
-            '*.mako',
-        ],
         'ocm':[
             'ocm-component-descriptor-schema.yaml',
         ],
