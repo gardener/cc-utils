@@ -1,3 +1,4 @@
+import copy
 import dataclasses
 import functools
 import json
@@ -189,6 +190,7 @@ class ConfigFactory:
         cfg_dir: str,
         cfg_types_file='config_types.yaml',
         disable_cfg_element_lookup=False,
+        vault_client=None,
     ):
         if not cfg_dir:
             raise ValueError('cfg dir must not be None')
@@ -213,6 +215,7 @@ class ConfigFactory:
             cfg_src_types=None, # all
             lookup_cfg_factory=bootstrap_cfg_factory,
             disable_cfg_element_lookup=disable_cfg_element_lookup,
+            vault_client=vault_client,
         )
 
     @staticmethod
@@ -222,6 +225,7 @@ class ConfigFactory:
         cfg_types_file='config_types.yaml',
         cfg_src_types=None,
         lookup_cfg_factory=None,
+        vault_client=None,
     ):
         cfg_dir = existing_dir(os.path.abspath(cfg_dir))
         cfg_types_dict = parse_yaml_file(os.path.join(cfg_dir, cfg_types_file))
@@ -262,23 +266,56 @@ class ConfigFactory:
         return ConfigFactory(
             raw_dict=raw,
             retrieve_cfg=retrieve_cfg,
+            vault_client=vault_client,
         )
 
     @staticmethod
-    def from_dict(raw_dict: dict):
+    def from_dict(
+        raw_dict: dict,
+        vault_client=None,
+    ):
         raw = not_none(raw_dict)
 
-        return ConfigFactory(raw_dict=raw)
+        return ConfigFactory(
+            raw_dict=raw,
+            vault_client=vault_client,
+        )
 
     def __init__(
         self,
         raw_dict: dict,
         retrieve_cfg: typing.Callable[[ConfigType], dict]=None,
+        vault_client=None,
     ):
         self.raw = not_none(raw_dict)
         if self.CFG_TYPES not in self.raw:
             raise ValueError(f'missing required attribute: {self.CFG_TYPES}')
         self.retrieve_cfg = retrieve_cfg
+        self.vault_client = vault_client
+
+    def _hydrate_raw_cfg_if_necessary(self, raw_cfg: dict) -> dict:
+        import vault.util as cfgv
+
+        raw_cfg = copy.deepcopy(raw_cfg)
+
+        # no secret block -> nothing to do
+        if 'secret' not in raw_cfg:
+            return raw_cfg
+
+        if not cfgv.uses_vault_backend_raw(raw_cfg):
+            raise RuntimeError(
+                'only vault-backed secret configuration is supported'
+            )
+
+        if not self.vault_client:
+            raise RuntimeError(
+                'vault-backed cfg-element requested, but ConfigFactory has no vault_client'
+            )
+
+        return cfgv.hydrate_raw_cfg_from_vault(
+            raw_cfg=raw_cfg,
+            vault_client=self.vault_client,
+        )
 
     def _retrieve_cfg_elements(self, cfg_type_name: str):
         if not cfg_type_name in self.raw:
@@ -387,7 +424,12 @@ class ConfigFactory:
                 f'cfg-factory: no such cfg-element: {cfg_name=} {cfg_type.cfg_type_name()=} '
                 f'{known_cfg_names=}'
             )
-        kwargs = {'raw_dict': configs[cfg_name]}
+        raw_cfg = copy.deepcopy(configs[cfg_name])
+
+        if element_type != ConfigurationSet:
+            raw_cfg = self._hydrate_raw_cfg_if_necessary(raw_cfg)
+
+        kwargs = {'raw_dict': raw_cfg}
 
         if element_type == ConfigurationSet:
             kwargs.update({'cfg_name': cfg_name, 'cfg_factory': self})
@@ -537,8 +579,13 @@ class ConfigSetSerialiser:
             elem_cfgs = {}
 
             for cfg_name in cfg_names:
+                import vault.util as cfgv
+
                 element = self.cfg_factory._cfg_element(cfg_type.cfg_type_name(), cfg_name)
-                elem_cfgs[element.name()] = element.raw
+                elem_cfgs[element.name()] = cfgv.clone_cfg_element_with_raw(
+                    cfg_element=element,
+                    raw_dict=cfgv.strip_secret_data(element.raw),
+                ).raw
 
             return (cfg_type.cfg_type_name(), elem_cfgs)
 

@@ -214,7 +214,16 @@ def _cfg_factory_from_dir():
     cfg_dir = existing_dir(cfg_dir)
 
     from model import ConfigFactory
-    factory = ConfigFactory.from_cfg_dir(cfg_dir=cfg_dir)
+
+    vault_client = None
+    if os.environ.get('VAULT_ADDR'):
+        from vault.client import VaultClient
+        vault_client = VaultClient.from_env()
+
+    factory = ConfigFactory.from_cfg_dir(
+        cfg_dir=cfg_dir,
+        vault_client=vault_client,
+    )
     return factory
 
 
