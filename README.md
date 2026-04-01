@@ -28,32 +28,14 @@ Run `.ci/install_git_hooks` to register recommended git hooks.
 
 ### Install using pip
 
-`pip install gardener-cicd-libs` - install libraries (no CLI)
+`pip install gardener-cicd-libs`
 
-`pip install gardener-cicd-cli` - install CLI
-
-
-### Consume from Container Image
-
-A copy of cc-utils is contained in the default container image in which gardener
-CI/CD jobs are run (`europe-docker.pkg.dev/gardener-project/releases/cicd/job-image`):
-
-- `gardener-ci` is available from PATH
 
 ## Runtime environment requirements
 
 ### Python Runtime
 
-`Python 3.11` or greater is required as a runtime (see requirements.txt for additional
-runtime dependencies).
+`Python 3.12` or greater is required as a runtime
 
 As a general rule, contained sources are always qualified using the python3-version from
 [alpine](https://endoflife.date/alpine)'s greatest release version.
-
-In addition to the Python API, some functions are exposed via a command line interface
-(`./cli.py`).
-
-## Special Modules
-
-* `cli/gardener_ci/*.py`: all defined functions are exposed via
-gardener-ci <module_name> <function_name>
