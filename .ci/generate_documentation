@@ -2,13 +2,6 @@
 
 set -eu
 
-if [ -z "${CC_ROOT_DIR:-}" ]; then
-  echo "CC_ROOT_DIR not set - will assume local run (+ omit creation of git-commit)"
-  export running_on_ci=false
-else
-  export running_on_ci=true
-fi
-
 if [ -z "${SOURCE_PATH:-}" ]; then
   export repo_dir="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
 else
@@ -44,19 +37,3 @@ touch "${out_dir}/.nojekyll"
 
 # cp custom css
 cp -r "${SOURCE_DIR}/css" "${out_dir}/_static/"
-
-if ! ${running_on_ci}; then
-  echo "Not running on CICD - will skip creation of commits"
-  exit 0
-fi
-
-export GIT_DIR="${out_dir}/.git"
-export GIT_WORK_TREE="${out_dir}"
-
-if [ -z "$(git status --porcelain=v1)" ]; then
-  echo "nothing has changed - won't create a commit"
-  exit 0
-fi
-
-git add .
-git commit -m "update documentation"

@@ -264,16 +264,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      - name: Setup Docker-Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Install Sphinx
+        run: pip3 install --break-system-packages sphinx sphinx-rtd-theme
       - name: Generate Documentation
         run: |
-          image_ref='europe-docker.pkg.dev/gardener-project/releases/cicd/job-image:1.2745.0'
           mkdir documentation-out.d
-          docker run -v$PWD:/src \
-            -e GH_PAGES_PATH=/src/documentation-out.d \
-            ${image_ref} \
-            /src/.ci/generate_documentation
+          GH_PAGES_PATH=$PWD/documentation-out.d .ci/generate_documentation
           ls documentation-out.d
       - uses: gardener/cc-utils/.github/actions/upload-artifact@master
         with:
