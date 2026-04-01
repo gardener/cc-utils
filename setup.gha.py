@@ -84,7 +84,6 @@ def modules():
     # avoid modules that would introduce undesired dependencies
     omit_modules = (
         'ctx',
-        'mailutil',
     )
     for name in omit_modules:
         module_names.remove(name)
@@ -103,13 +102,11 @@ def packages():
     # avoid packages that would introduce undesired dependencies
     omit_packages = (
         'ccc',
-        'mail',
         'model',
         'slackclient',
     )
 
-    for package in omit_packages:
-        package_names.remove(package)
+    package_names = [p for p in package_names if p not in omit_packages]
 
     # skip packages installed by other distribution-packages
     package_names.remove('oci')
