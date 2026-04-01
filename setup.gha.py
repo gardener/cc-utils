@@ -103,7 +103,6 @@ def packages():
     omit_packages = (
         'ccc',
         'model',
-        'slackclient',
     )
 
     package_names = [p for p in package_names if p not in omit_packages]
