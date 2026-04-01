@@ -27,14 +27,12 @@ def requirements():
 
     # omit packages not needed for minimal subset of cc-utils / gardener-cicd-libs
     omit_package_names = (
-        'Sphinx',
         'aliyun-python-sdk-core',
         'aliyun-python-sdk-ecs',
         'aliyun-python-sdk-ram',
         'brypt',
         'boto3',
         'dockerfile-parse',
-        'docutils',
         'google-api-core',
         'google-api-python-client',
         'google-auth',
@@ -46,11 +44,8 @@ def requirements():
         'oss2',
         'pylama',
         'pylint',
-        'python-gitlab',
         'pytimeparse',
         'slack-sdk',
-        'sphinx_rtd_theme',
-        'sseclient-py',
         'urllib3',
     )
 
