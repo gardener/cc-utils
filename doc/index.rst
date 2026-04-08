@@ -29,7 +29,7 @@ Gardener-Project makes use of GitHub-Actions for Build- and Release-Pipelines.
 
 Common patterns (for example authenticating against OCI-Registries, describing deliverables with
 OCM, ..) are extracted into re-usable actions and workflows in
-`cc-config <https://github.com/gardener/cc-config>`_ repository.
+`cc-utils <https://github.com/gardener/cc-utils>`_ repository.
 
 
 Reuse and Branching Model
