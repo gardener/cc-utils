@@ -1,4 +1,4 @@
-name: Fixate Actions and Workflows
+name: Pin Actions and Workflows
 
 on:
   workflow_call:
@@ -12,7 +12,7 @@ on:
         type: string
         default: v1
         description: |
-          Branch to push fixated commits to. Will be force-pushed. Defaults to `v1`.
+          Branch to push pinned commits to. Will be force-pushed. Defaults to `v1`.
       own-org:
         type: string
         default: ''
@@ -29,10 +29,10 @@ on:
         default: ''
         description: |
           Optional name of an artifact produced by `capture-commit`. If set, the artifact
-          is imported before fixation so the captured commit is reachable as `own-ref`.
+          is imported before pinning so the captured commit is reachable as `own-ref`.
 
 jobs:
-  fixate:
+  pin:
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
@@ -47,8 +47,8 @@ jobs:
             contents: write
             workflows: write
 
-      - name: fixate-actions-and-workflows
-        uses: gardener/cc-utils/.github/actions/fixate-actions-and-workflows@master
+      - name: pin-actions-and-workflows
+        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
         with:
           own-ref: ${{ inputs.own-ref }}
           target-branch: ${{ inputs.target-branch }}

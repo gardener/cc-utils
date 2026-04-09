@@ -31,8 +31,8 @@ jobs:
     with:
       mode: release
 
-  fixate:
-    uses: ./.github/workflows/fixate-actions-and-workflows.yaml
+  pin:
+    uses: ./.github/workflows/pin-actions-and-workflows.yaml
     needs:
       - build
     secrets: inherit
@@ -47,7 +47,7 @@ jobs:
     uses: ./.github/workflows/release.yaml
     needs:
       - build
-      - fixate
+      - pin
     secrets: inherit
     permissions:
       contents: write

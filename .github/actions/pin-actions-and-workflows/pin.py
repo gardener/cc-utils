@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-fixate-actions-and-workflows: recursive action/workflow reference pinning tool
+pin-actions-and-workflows: recursive action/workflow reference pinning tool
 
 PURPOSE
 -------
@@ -10,7 +10,7 @@ commit touching an action or workflow immediately affects all in-flight and futu
 workflow runs that reference it — there is no way to pin to a specific, immutable
 version of a co-located action or workflow.
 
-This tool solves that by producing a *fixated* view of the repository on a separate
+This tool solves that by producing a *pinned* view of the repository on a separate
 target branch (default: `v1`). On that branch, every `uses:` reference to an action
 or workflow in this repository is rewritten from `@<branch>` to `@<sha>`, working
 recursively from leaves to roots so that the entire dependency tree is consistently
@@ -24,13 +24,13 @@ tool, which:
 
   1. Resolves the full dependency graph of all actions and workflows.
   2. Rewrites references leaf-first (topological order), so that when a parent is
-     rewritten, all files it references already point at fixated commits.
+     rewritten, all files it references already point at pinned commits.
   3. For each file that needs rewriting, creates a minimal git commit containing
      only that file's change, recording the own commit digest in the commit message.
   4. Force-pushes the resulting chain of commits to the target branch.
 
 Consumers may reference:
-  - `@<target-branch>` — always tracks the latest fixated state (equivalent to
+  - `@<target-branch>` — always tracks the latest pinned state (equivalent to
     currently tracking `@master`, but with consistent transitive pinning)
   - `@<commit-digest>` — fully immutable; the entire transitive closure is frozen
 
@@ -60,7 +60,7 @@ branch list, but keep the commit objects alive indefinitely.
 
 CLI USAGE (for local testing)
 ------------------------------
-  ./fixate.py \\
+  ./pin.py \\
       [--repo-root /path/to/repo]   # defaults to repo root relative to script
       [--own-branch master]         # defaults to master
       [--target-branch v1]          # defaults to v1
@@ -253,7 +253,7 @@ def _rewrite_parsed(
             continue
         digest = prefix_to_digest.get(dep_prefix)
         if digest is None:
-            logger.warning('No fixated digest found for %s — leaving unchanged', dep_prefix)
+            logger.warning('No pinned digest found for %s — leaving unchanged', dep_prefix)
             continue
         step[key] = f'{own_prefix}{dep_prefix}@{digest}'
         changed = True
@@ -274,7 +274,7 @@ def _org_and_repo_from_remote(repo: gitpython.Repo) -> tuple[str, str]:
     return parts[-2], parts[-1]
 
 
-def create_fixated_branch(
+def create_pinned_branch(
     *,
     repo_root: str,
     own_ref: str,
@@ -283,7 +283,7 @@ def create_fixated_branch(
     own_repo: str | None,
 ) -> None:
     '''
-    Build fixated commits locally and update the target branch ref in the local
+    Build pinned commits locally and update the target branch ref in the local
     repository. Pushing to the remote is intentionally left to the caller (action
     or workflow), so this function is safe to run locally without side-effects on
     the remote.
@@ -311,7 +311,7 @@ def create_fixated_branch(
     # TopologicalSorter yields leaves (no deps) first — exactly what we need
     ordered_prefixes = graphlib.TopologicalSorter(dep_graph).static_order()
 
-    with tempfile.TemporaryDirectory(prefix='fixate-') as tmpdir:
+    with tempfile.TemporaryDirectory(prefix='pin-') as tmpdir:
         worktree_path = os.path.join(tmpdir, 'worktree')
         repo.git.worktree('add', '--detach', worktree_path, own_digest)
         worktree_repo = gitpython.Repo(worktree_path)
@@ -347,13 +347,13 @@ def create_fixated_branch(
 
                 worktree_repo.index.add([blob.path])
                 worktree_repo.index.commit(
-                    f'fixate: pin references in {blob.path}\n\n'
+                    f'pin: rewrite references in {blob.path}\n\n'
                     f'own-commit: {own_digest}\n'
                     f'own-ref: {own_ref}'
                 )
                 current_digest = worktree_repo.head.commit.hexsha
                 prefix_to_digest[prefix] = current_digest
-                logger.info('Created fixating commit %s for %s', current_digest, blob.path)
+                logger.info('Created pinning commit %s for %s', current_digest, blob.path)
 
             tip_digest = worktree_repo.head.commit.hexsha
 
@@ -370,7 +370,7 @@ def create_fixated_branch(
             repo.git.update_ref(preservation_ref, tip_digest)
             logger.info('Created preservation ref %s -> %s', preservation_ref, tip_digest)
 
-            logger.info('Done. Fixated tip: %s', tip_digest)
+            logger.info('Done. Pinned tip: %s', tip_digest)
 
         finally:
             repo.git.worktree('remove', '--force', worktree_path)
@@ -394,7 +394,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         '--target-branch',
         default='v1',
-        help='Branch to push fixated commits to (default: v1)',
+        help='Branch to push pinned commits to (default: v1)',
     )
     parser.add_argument(
         '--own-org',
@@ -421,7 +421,7 @@ def main(argv: list[str] | None = None) -> None:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(levelname)s %(message)s',
     )
-    create_fixated_branch(
+    create_pinned_branch(
         repo_root=args.repo_root,
         own_ref=args.own_ref,
         target_branch=args.target_branch,

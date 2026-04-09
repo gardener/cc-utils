@@ -40,9 +40,9 @@ special handling is put into place to allow for both convenient developing and t
 as downstream users to be served with pinpointed vectors of Actions and workflows.
 
 Development continues on the ``master`` branch. After prequalification, the ``v1`` branch is
-updated to a consistent, fully fixated snapshot (all internal cross-references pinned by commit
+updated to a consistent, fully pinned snapshot (all internal cross-references pinned by commit
 digest). See the
-`fixate-actions-and-workflows <https://github.com/gardener/cc-utils/tree/master/.github/actions/fixate-actions-and-workflows>`_
+`pin-actions-and-workflows <https://github.com/gardener/cc-utils/tree/master/.github/actions/pin-actions-and-workflows>`_
 action for technical details.
 
 Downstream users should choose one of the following reference strategies:
