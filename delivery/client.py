@@ -690,7 +690,7 @@ class DeliveryServiceClient:
         digest: str,
         size: int,
         mime_type: str,
-    ) -> requests.sessions.Response:
+    ) -> requests.Response:
         headers = {
             'Digest': digest,
             'Content-Length': str(size),
@@ -710,7 +710,7 @@ class DeliveryServiceClient:
     def blob_metadata(
         self,
         digest: str,
-    ) -> requests.sessions.Response:
+    ) -> requests.Response:
         res = self.request(
             url=self._routes.blob(),
             method='HEAD',
