@@ -112,6 +112,12 @@ class DeliveryServiceRoutes:
             'backlog-items',
         )
 
+    def blob(self):
+        return ci.util.urljoin(
+            self._base_url,
+            'blob',
+        )
+
 
 Url: typing.TypeAlias = str
 AuthToken: typing.TypeAlias = str
@@ -676,6 +682,74 @@ class DeliveryServiceClient:
             data=data,
             params=params,
         )
+        res.raise_for_status()
+
+    def upload_blob(
+        self,
+        data: bytes | collections.abc.Iterable[bytes],
+        digest: str,
+        size: int,
+        mime_type: str,
+    ) -> requests.sessions.Response:
+        headers = {
+            'Digest': digest,
+            'Content-Length': str(size),
+            'Content-Type': mime_type,
+        }
+
+        res = self.request(
+            url=self._routes.blob(),
+            method='POST',
+            headers=headers,
+            data=data,
+        )
+
+        res.raise_for_status()
+        return res
+
+    def blob_metadata(
+        self,
+        digest: str,
+    ) -> requests.sessions.Response:
+        res = self.request(
+            url=self._routes.blob(),
+            method='HEAD',
+            params={
+                'digest': digest,
+            },
+        )
+
+        res.raise_for_status()
+        return res
+
+    def get_blob(
+        self,
+        digest: str,
+        chunk_size: int=8192,
+    ) -> collections.abc.Generator[bytes, None, None]:
+        res = self.request(
+            url=self._routes.blob(),
+            params={
+                'digest': digest,
+            },
+            stream=True,
+        )
+
+        res.raise_for_status()
+        return res.iter_content(chunk_size=chunk_size)
+
+    def delete_blob(
+        self,
+        digest: str,
+    ):
+        res = self.request(
+            url=self._routes.blob(),
+            method='DELETE',
+            params={
+                'digest': digest,
+            },
+        )
+
         res.raise_for_status()
 
 
