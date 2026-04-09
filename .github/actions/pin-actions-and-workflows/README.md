@@ -58,7 +58,9 @@ runs `pin.py`, which:
 2. Processes files in topological order (leaves first), so that when a file is
    rewritten, all files it references have already been assigned a pinned digest.
 3. For each file whose cross-references need rewriting, creates a minimal commit
-   containing only that file's change.
+   containing only that file's change. This covers both `uses:` references to
+   own actions/workflows and `ref:` fields in `actions/checkout` steps that check
+   out the own repository (e.g. `install-gardener-gha-libs`).
 4. Force-pushes the resulting commit chain to the target branch (`v1`).
 5. Creates a preservation ref at `refs/tags/fixated/<own-commit-digest>` to prevent the
    tip commit from being garbage-collected after future force-pushes.

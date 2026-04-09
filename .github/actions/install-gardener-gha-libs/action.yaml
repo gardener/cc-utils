@@ -2,8 +2,8 @@ name: Install Gardener-GHA-Libs
 description: |
   Install Python3 and gardener-gha-libs
 
-  As GitHub-Actions in https://github.com/gardener/cc-utils still sees frequent development,
-  install from sources (checking out head of `master`), rather than from PYPI.
+  Sources are installed from the `v1` branch of cc-utils (pinned to a specific
+  commit digest on the pinned branch by the pin-actions-and-workflows action).
 
 runs:
   using: composite
@@ -19,6 +19,7 @@ runs:
       if: ${{ ! steps.check.outputs.already-installed && github.server_url == 'https://github.com' }}
       with:
         repository: gardener/cc-utils
+        ref: v1
         path: cc-utils
     - name: setup-python-on-ghe
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
@@ -39,7 +40,7 @@ runs:
       run: |
         set -euo pipefail
         # fallback if running on GHE
-        git clone https://github.com/gardener/cc-utils
+        git clone --branch v1 https://github.com/gardener/cc-utils
     - name: install-gardener-gha-libs
       if: ${{ ! steps.check.outputs.already-installed }}
       shell: bash
