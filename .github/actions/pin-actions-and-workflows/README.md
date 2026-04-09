@@ -1,16 +1,16 @@
-# fixate-actions-and-workflows
+# pin-actions-and-workflows
 
 <!-- LLM-CONTEXT-START
 This document describes a GitHub Actions composite action and reusable workflow for
 pinning cross-references between co-located actions and workflows in a single
 repository by commit digest. Key files:
   - action.yaml         — composite action definition (inputs, steps)
-  - fixate.py           — implementation script (Python, GitPython, ruamel.yaml)
-  - ../../../.github/workflows/fixate-actions-and-workflows.yaml — reusable workflow
+  - pin.py              — implementation script (Python, GitPython, ruamel.yaml)
+  - ../../../.github/workflows/pin-actions-and-workflows.yaml — reusable workflow
 
 Terminology:
   - "own" org/repo/branch — the repository containing the actions/workflows being
-    fixated (as opposed to third-party actions from other repositories)
+    pinned (as opposed to third-party actions from other repositories)
   - "commit digest" — a full git commit SHA used as an immutable reference
 
 Design decisions:
@@ -22,9 +22,9 @@ Design decisions:
     SHAs (full or abbreviated) are considered pinned; stale SHAs return False
   - own-org and own-repo default to values derived from the origin remote URL,
     so callers typically do not need to specify them explicitly
-  - Fixated commits are pushed to a separate target branch (default: v1) via
+  - Pinned commits are pushed to a separate target branch (default: v1) via
     force-push; previous tips are preserved via refs/tags/fixated/<own-commit-digest>
-  - fixate.py has a full CLI for local testing (--dry-run, --verbose)
+  - pin.py has a full CLI for local testing (--dry-run, --verbose)
 LLM-CONTEXT-END -->
 
 ## Motivation
@@ -43,7 +43,7 @@ This action solves the problem by generating a snapshot of the repository on a
 separate target branch (default: `v1`), where all cross-references between actions
 and workflows are pinned by commit digest. Consumers can reference:
 
-- `@v1` — a rolling pointer to the latest fixated snapshot, equivalent in
+- `@v1` — a rolling pointer to the latest pinned snapshot, equivalent in
   convenience to `@master` but with consistent transitive pinning
 - `@<commit-digest>` — a fully immutable reference; the entire transitive closure
   of actions and workflows is frozen at that digest
@@ -51,12 +51,12 @@ and workflows are pinned by commit digest. Consumers can reference:
 ## How it works
 
 After every push to the own branch (`master`), the
-[`fixate-actions-and-workflows` workflow](../../../.github/workflows/fixate-actions-and-workflows.yaml)
-runs `fixate.py`, which:
+[`pin-actions-and-workflows` workflow](../../../.github/workflows/pin-actions-and-workflows.yaml)
+runs `pin.py`, which:
 
 1. Builds the dependency graph of all actions and workflows in the repository.
 2. Processes files in topological order (leaves first), so that when a file is
-   rewritten, all files it references have already been assigned a fixated digest.
+   rewritten, all files it references have already been assigned a pinned digest.
 3. For each file whose cross-references need rewriting, creates a minimal commit
    containing only that file's change.
 4. Force-pushes the resulting commit chain to the target branch (`v1`).
@@ -69,8 +69,8 @@ runs `fixate.py`, which:
 
 ```yaml
 jobs:
-  fixate:
-    uses: gardener/cc-utils/.github/workflows/fixate-actions-and-workflows.yaml@master
+  pin:
+    uses: gardener/cc-utils/.github/workflows/pin-actions-and-workflows.yaml@master
     secrets: inherit
     permissions:
       contents: write
@@ -82,7 +82,7 @@ and typically do not need to be specified.
 ### As a standalone action (in a custom workflow)
 
 ```yaml
-- uses: gardener/cc-utils/.github/actions/fixate-actions-and-workflows@master
+- uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
   with:
     target-branch: v1      # default
     own-branch: master     # default
@@ -94,7 +94,7 @@ and typically do not need to be specified.
 ```bash
 pip install gitpython ruamel.yaml
 
-.github/actions/fixate-actions-and-workflows/fixate.py \
+.github/actions/pin-actions-and-workflows/pin.py \
   --verbose
   # --own-org and --own-repo derived from origin remote by default
 ```
@@ -104,11 +104,11 @@ pip install gitpython ruamel.yaml
 | Input | Default | Description |
 |---|---|---|
 | `own-branch` | `master` | Branch to read from |
-| `target-branch` | `v1` | Branch to push fixated commits to (force-pushed) |
+| `target-branch` | `v1` | Branch to push pinned commits to (force-pushed) |
 | `own-org` | *(from remote)* | GitHub organisation (e.g. `gardener`) |
 | `own-repo` | *(from remote)* | GitHub repository name (e.g. `cc-utils`) |
-| `git-user-name` | `github-actions[bot]` | Author name for fixating commits |
-| `git-user-email` | `github-actions[bot]@...` | Author email for fixating commits |
+| `git-user-name` | `github-actions[bot]` | Author name for pinning commits |
+| `git-user-email` | `github-actions[bot]@...` | Author email for pinning commits |
 
 ## Backwards compatibility
 

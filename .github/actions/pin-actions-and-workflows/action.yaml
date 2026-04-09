@@ -1,10 +1,10 @@
-name: Fixate Actions and Workflows
+name: Pin Actions and Workflows
 description: |
   Generates a snapshot of this repository's GitHub Actions and reusable workflows
   on a separate target branch (default: `v1`), where all cross-references between
   actions and workflows are pinned by commit digest rather than by branch name.
 
-  Consumers may reference the target branch for a rolling latest-fixated pointer,
+  Consumers may reference the target branch for a rolling latest-pinned pointer,
   or any specific commit digest it ever pointed to for full immutability.
 
   See README.md in this action's directory for full rationale and usage guidance.
@@ -14,14 +14,14 @@ inputs:
     type: string
     default: master
     description: |
-      Ref (branch name or commit digest) to read from. Fixated commits are derived
+      Ref (branch name or commit digest) to read from. Pinned commits are derived
       from the commit this ref resolves to.
   target-branch:
     type: string
     default: v1
     description: |
-      Branch to push fixated commits to. Will be force-pushed. Consumers may
-      reference this branch (for a rolling latest-fixated pointer) or any specific
+      Branch to push pinned commits to. Will be force-pushed. Consumers may
+      reference this branch (for a rolling latest-pinned pointer) or any specific
       commit digest it ever pointed to (for full immutability).
   own-org:
     type: string
@@ -41,18 +41,18 @@ inputs:
     type: string
     default: github-actions[bot]
     description: |
-      Git author name used for fixating commits.
+      Git author name used for pinning commits.
   git-user-email:
     type: string
     default: github-actions[bot]@users.noreply.github.com
     description: |
-      Git author email used for fixating commits.
+      Git author email used for pinning commits.
   release-commit-objects-artefact:
     type: string
     default: ''
     description: |
       Optional name of an artifact produced by `capture-commit` (e.g. `release-commit-objects`).
-      If set, the artifact is imported before fixation so that the commit it contains is
+      If set, the artifact is imported before pinning so that the commit it contains is
       reachable and can be passed as `own-ref`.
 
 runs:
@@ -78,7 +78,7 @@ runs:
         commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         after-import: noop
 
-    - name: fixate
+    - name: pin
       shell: bash
       run: |
         set -euo pipefail
@@ -93,7 +93,7 @@ runs:
           own_repo='${{ github.event.repository.name }}'
         fi
 
-        '${{ github.action_path }}/fixate.py' \
+        '${{ github.action_path }}/pin.py' \
           --repo-root '${{ github.workspace }}' \
           --own-ref '${{ inputs.own-ref }}' \
           --target-branch '${{ inputs.target-branch }}' \
