@@ -167,6 +167,23 @@ def _iter_step_uses(parsed: dict):
                     yield step, 'uses'
 
 
+def _iter_steps(parsed: dict):
+    '''Yield all step dicts from composite actions and workflows.'''
+    runs = parsed.get('runs')
+    if isinstance(runs, dict):
+        for step in (runs.get('steps') or []):
+            if isinstance(step, dict):
+                yield step
+    jobs = parsed.get('jobs')
+    if isinstance(jobs, dict):
+        for job in jobs.values():
+            if not isinstance(job, dict):
+                continue
+            for step in (job.get('steps') or []):
+                if isinstance(step, dict):
+                    yield step
+
+
 def _extract_internal_deps(
     parsed: dict,
     *,
@@ -231,11 +248,13 @@ def _rewrite_parsed(
     *,
     own_org: str,
     own_repo: str,
+    own_digest: str,
     prefix_to_digest: dict[str, str],
     repo: gitpython.Repo,
 ) -> bool:
     '''
     Rewrite all own `uses:` values in-place from @<branch> to @<commit-digest>.
+    Also rewrites `ref:` in `actions/checkout` steps that check out own repo.
     Returns True if any changes were made.
     '''
     own_prefix = f'{own_org}/{own_repo}/'
@@ -256,6 +275,22 @@ def _rewrite_parsed(
             logger.warning('No pinned digest found for %s — leaving unchanged', dep_prefix)
             continue
         step[key] = f'{own_prefix}{dep_prefix}@{digest}'
+        changed = True
+
+    # also pin `ref:` in actions/checkout steps that check out own repo
+    for step in _iter_steps(parsed):
+        uses = step.get('uses', '')
+        if not isinstance(uses, str) or not uses.startswith('actions/checkout@'):
+            continue
+        with_block = step.get('with')
+        if not isinstance(with_block, dict):
+            continue
+        if with_block.get('repository') != f'{own_org}/{own_repo}':
+            continue
+        ref = with_block.get('ref', '')
+        if not isinstance(ref, str) or _is_pinned(ref, repo):
+            continue
+        with_block['ref'] = own_digest
         changed = True
 
     return changed
@@ -331,6 +366,7 @@ def create_pinned_branch(
                     parsed,
                     own_org=own_org,
                     own_repo=own_repo,
+                    own_digest=own_digest,
                     prefix_to_digest=prefix_to_digest,
                     repo=repo,
                 )
