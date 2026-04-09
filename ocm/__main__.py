@@ -700,6 +700,18 @@ def imagevector(parsed):
                   f'Error: did not find version for {component_name=} in {root_component.name=}'
                 )
                 exit(1)
+
+        if parsed.subcomponent_ref_name:
+            ref_name = parsed.subcomponent_ref_name
+            parent = component.component
+            for cref in parent.componentReferences:
+                if ref_name in (cref.name, cref.componentName):
+                    component = component_descriptor_lookup(cref).component
+                    break
+            else:
+                print(f'Error: componentReference {ref_name!r} not found in {parent.name}')
+                exit(1)
+
         components = (component,)
     else:
         def filter_expr(node):
@@ -755,11 +767,20 @@ def imagevector(parsed):
                     'tag': image_ref.tag,
                 })
 
-    imagevector = ocm.gardener.as_image_vector(
-        images=images,
-    )
-
-    print(yaml.safe_dump(imagevector))
+    if parsed.subcomponent_ref_name:
+        subcomponent_overwrite = ocm.gardener.as_image_vector(images=images)
+        result = {
+            'components': [
+                {
+                    'name': parsed.subcomponent_ref_name,
+                    'imageVectorOverwrite': yaml.dump(subcomponent_overwrite),
+                }
+            ]
+        }
+        print(yaml.safe_dump(result))
+    else:
+        imagevector = ocm.gardener.as_image_vector(images=images)
+        print(yaml.safe_dump(imagevector))
 
 
 def helm_values(parsed):
@@ -1114,6 +1135,12 @@ def main():
         '--select-images',
         choices=('by-label', 'all'),
         default='by-label',
+    )
+    imgvector_cfg_parser.add_argument(
+        '--subcomponent-ref-name',
+        required=False,
+        default=None,
+        help='if set, resolve the named componentReference and wrap output as component overwrite',
     )
 
     helmvalues_parser = maincmd_parsers.add_parser(
