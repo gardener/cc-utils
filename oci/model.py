@@ -349,6 +349,10 @@ class OciImageManifest:
     mediaType: str = OCI_MANIFEST_SCHEMA_V2_MIME
     schemaVersion: int = 2
     annotations: dict = dataclasses.field(default_factory=dict)
+    # OCI 1.1: identifies the image this manifest refers to (used for referrers / attached artefacts)
+    subject: 'OciBlobRef | None' = None
+    # OCI 1.1: media-type of the artefact described by this manifest (e.g. 'application/spdx+json')
+    artifactType: str | None = None
 
     def as_dict(self) -> dict:
         def layer_to_dict(layer):
@@ -357,13 +361,18 @@ class OciImageManifest:
             else:
                 return layer.as_dict()
 
-        return {
+        raw = {
             'config': self.config.as_dict(),
             'layers': [layer_to_dict(layer) for layer in self.layers],
             'mediaType': self.mediaType,
             'schemaVersion': self.schemaVersion,
             'annotations': self.annotations,
         }
+        if self.subject is not None:
+            raw['subject'] = self.subject.as_dict()
+        if self.artifactType is not None:
+            raw['artifactType'] = self.artifactType
+        return raw
 
     def blobs(self) -> collections.abc.Generator[OciBlobRef, None, None]:
         yield self.config

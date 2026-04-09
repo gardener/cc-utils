@@ -192,6 +192,13 @@ on:
         type: string
         description: |
           The runner to use for executing the workflow. If not set, default values are being used.
+      generate-sbom:
+        type: boolean
+        default: true
+        required: false
+        description: |
+          Whether to generate an SPDX SBOM for each built image and push it as an OCI referrer
+          manifest alongside the image. Requires the image to have been pushed (`push != never`).
     secrets:
       auth-token:
         required: false
@@ -467,6 +474,41 @@ jobs:
         run: |
           set -eu
           docker push ${{ matrix.args.image-reference }}
+
+      - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ matrix.args.image-reference }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+
+      - name: 'push SBOM referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import oci.auth
+          import oci.client
+          import oci.sbom
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+
+          referrer_digest = oci.sbom.push_sbom_referrer(
+              sbom_path='sbom.spdx.json',
+              image_reference='${{ matrix.args.image-reference }}',
+              oci_client=oci_client,
+          )
+
+          print(f'SBOM referrer pushed: {referrer_digest}')
 
   collect-images:
     needs:
