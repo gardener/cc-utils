@@ -589,11 +589,14 @@ class Client:
 
         return f'{prefix}@sha256:{manifest_hash_digest}'
 
-    async def tags(self, image_reference: str):
-        scope = oci.client._scope(image_reference=image_reference, action='pull')
-
+    async def _tags_single_request(
+        self,
+        url: str,
+        image_reference: str,
+        scope: str,
+    ) -> tuple[list[str], str | None]:
         res = await self._request(
-            url=self.routes.ls_tags_url(image_reference=image_reference),
+            url=url,
             image_reference=image_reference,
             scope=scope,
             method='GET'
@@ -614,13 +617,41 @@ class Client:
 
             raise jde
 
-        if self.tag_postprocessing_callback:
-            tags = [
-                self.tag_postprocessing_callback(tag)
-                for tag in tags
-            ]
+        next_url = oci.client._next_paginated_url(
+            url=url,
+            headers=res.headers,
+        )
 
-        return tags
+        return tags, next_url
+
+    async def iter_tags(
+        self,
+        image_reference: str,
+    ) -> collections.abc.AsyncGenerator[str, None, None]:
+        scope = oci.client._scope(image_reference=image_reference, action='pull')
+
+        url = self.routes.ls_tags_url(image_reference=image_reference)
+
+        while url:
+            tags, url = await self._tags_single_request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+            )
+
+            for tag in tags:
+                if self.tag_postprocessing_callback:
+                    tag = self.tag_postprocessing_callback(tag)
+
+                yield tag
+
+    async def tags(self, image_reference: str) -> list[str]:
+        all_tags = []
+
+        async for tag in self.iter_tags(image_reference=image_reference):
+            all_tags.append(tag)
+
+        return all_tags
 
     async def has_multiarch(self, image_reference: str) -> bool:
         res = await self.head_manifest(
