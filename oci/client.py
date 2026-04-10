@@ -230,6 +230,26 @@ def _scope(image_reference: str | om.OciImageReference, action: str):
     return scope
 
 
+def _next_paginated_url(
+    url: str,
+    headers: dict,
+) -> str | None:
+    # follow pagination as per OCI Distribution Spec
+    # Link header format: <url>; rel="next"
+    if 'rel="next"' in (link_header := headers.get('Link', '')):
+        next_url = link_header.split(';')[0].strip().strip('<>')
+        # resolve relative URLs against the base API url
+        if next_url.startswith('/'):
+            parsed = urllib.parse.urlparse(url)
+            url = f'{parsed.scheme}://{parsed.netloc}{next_url}'
+        else:
+            url = next_url
+    else:
+        url = None
+
+    return url
+
+
 def initialise_repository_if_required(func):
     '''
     Some OCI registries require separate repositories for each OCI artefact (e.g. AWS ECR), which
@@ -890,11 +910,14 @@ class Client:
 
         return f'{prefix}@sha256:{manifest_hash_digest}'
 
-    def tags(self, image_reference: str):
-        scope = _scope(image_reference=image_reference, action='pull')
-
+    def _tags_single_request(
+        self,
+        url: str,
+        image_reference: str,
+        scope: str,
+    ) -> tuple[list[str], str | None]:
         res = self._request(
-            url=self.routes.ls_tags_url(image_reference=image_reference),
+            url=url,
             image_reference=image_reference,
             scope=scope,
             method='GET'
@@ -914,13 +937,33 @@ class Client:
 
             raise jde
 
-        if self.tag_postprocessing_callback:
-            tags = [
-                self.tag_postprocessing_callback(tag)
-                for tag in tags
-            ]
+        next_url = _next_paginated_url(
+            url=url,
+            headers=res.headers,
+        )
 
-        return tags
+        return tags, next_url
+
+    def iter_tags(self, image_reference: str) -> collections.abc.Iterable[str]:
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        url = self.routes.ls_tags_url(image_reference=image_reference)
+
+        while url:
+            tags, url = self._tags_single_request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+            )
+
+            for tag in tags:
+                if self.tag_postprocessing_callback:
+                    tag = self.tag_postprocessing_callback(tag)
+
+                yield tag
+
+    def tags(self, image_reference: str) -> list[str]:
+        return list(self.iter_tags(image_reference=image_reference))
 
     def has_multiarch(self, image_reference: str) -> bool:
         res = self.head_manifest(
