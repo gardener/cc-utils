@@ -38,7 +38,7 @@ runs:
           echo 'no-bundle=true' >> "${GITHUB_OUTPUT}"
           exit 0
         fi
-        pip install "${bundle_dir}"/*/
+        pip install -q "${bundle_dir}"/*/
     # steps below are only reached when no bundle is available (master path);
     # on pinned branches they are removed by pin-actions-and-workflows.
     # cc-utils' own pipelines always reference this action from master, even
@@ -61,7 +61,7 @@ runs:
       shell: bash
       run: |
         set -eu
-        pip install setuptools certifi
+        pip install -q setuptools certifi
         # import runner's trust-bundle (might differ from python's default bundle)
         ln -sf /etc/ssl/certs/ca-certificates.crt "$(python -m certifi)"
     # removed on pinned branches (GHE path)
@@ -83,8 +83,6 @@ runs:
         tmpdir="$(mktemp -d)"
         mv cc-utils ${tmpdir}
         cd "${tmpdir}/cc-utils"
-
-        python3 --version
 
         pip=pip
         if not which pip &>/dev/null; then
@@ -116,12 +114,9 @@ runs:
             exit 1
           fi
         }
-        echo 'building gardener-gha-libs'
         build_package setup.gha.py
         build_package setup.oci.py
         build_package setup.ocm.py
-
-        echo "building w/ effective version ${version}"
 
         if ! pip install --find-links dist \
           gardener-oci=="${version}" \
