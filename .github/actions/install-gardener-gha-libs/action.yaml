@@ -1,9 +1,10 @@
 name: Install Gardener-GHA-Libs
 description: |
-  Install Python3 and gardener-gha-libs
+  Install Python3 and gardener-gha-libs.
 
-  As GitHub-Actions in https://github.com/gardener/cc-utils still sees frequent development,
-  install from sources (checking out head of `master`), rather than from PYPI.
+  On the pinned branch (v1) the sources are bundled into _bundle/ by the
+  pin-actions-and-workflows pipeline; no network clone is required.
+  On master the sources are checked out from github.com at runtime.
 
 runs:
   using: composite

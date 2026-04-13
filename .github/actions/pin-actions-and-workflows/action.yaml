@@ -98,7 +98,10 @@ runs:
           --own-ref '${{ inputs.own-ref }}' \
           --target-branch '${{ inputs.target-branch }}' \
           --own-org "${own_org}" \
-          --own-repo "${own_repo}"
+          --own-repo "${own_repo}" \
+          --bundle-setup-file setup.gha.py \
+          --bundle-setup-file setup.oci.py \
+          --bundle-setup-file setup.ocm.py
 
     - name: push
       shell: bash
