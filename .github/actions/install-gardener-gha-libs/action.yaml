@@ -2,7 +2,7 @@ name: Install Gardener-GHA-Libs
 description: |
   Install Python3 and gardener-gha-libs.
 
-  On the pinned branch (v1) the sources are bundled into _bundle/ by the
+  On pinned branches the sources are bundled into _bundle/ by the
   pin-actions-and-workflows pipeline; no network clone is required.
   On master the sources are checked out from github.com at runtime.
 
@@ -16,16 +16,24 @@ runs:
         if pip show gardener-gha-libs &>/dev/null; then
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
+    # steps below (up to and including install-gardener-gha-libs) are only
+    # reached when running from master; on pinned branches they are removed by
+    # pin-actions-and-workflows and replaced with a bundle-based install step.
+    # cc-utils' own pipelines always reference this action from master, even
+    # when running on non-master branches.
+    # removed on pinned branches (github.com path)
     - uses: actions/checkout@v6
       if: ${{ ! steps.check.outputs.already-installed && github.server_url == 'https://github.com' }}
       with:
         repository: gardener/cc-utils
         path: cc-utils
+    # removed on pinned branches (GHE path)
     - name: setup-python-on-ghe
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
+    # removed on pinned branches (GHE path)
     - name: install-prerequisites-on-ghe
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       shell: bash
@@ -34,6 +42,7 @@ runs:
         pip install setuptools certifi
         # import runner's trust-bundle (might differ from python's default bundle)
         ln -sf /etc/ssl/certs/ca-certificates.crt "$(python -m certifi)"
+    # removed on pinned branches (GHE path)
     - name: checkout-fallback
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       shell: bash
@@ -41,6 +50,7 @@ runs:
         set -euo pipefail
         # fallback if running on GHE
         git clone https://github.com/gardener/cc-utils
+    # rewritten on pinned branches (bundle-based install replaces this step's run script)
     - name: install-gardener-gha-libs
       if: ${{ ! steps.check.outputs.already-installed }}
       shell: bash
