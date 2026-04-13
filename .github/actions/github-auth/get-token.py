@@ -40,22 +40,60 @@ _opener = urllib.request.build_opener(
 )
 
 
+def _open_with_retry(
+    req: urllib.request.Request,
+    timeout_seconds: int = 30,
+    retries: int = 4,
+    backoff_base: float = 2.0,
+) -> dict:
+    '''Open a request, retrying on transient errors with exponential backoff.
+
+    4xx responses are treated as systematic failures and are not retried.
+    '''
+    url = req.full_url
+    for attempt in range(retries + 1):
+        try:
+            with _opener.open(req, timeout=timeout_seconds) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()
+            if e.code < 500 and e.code not in (408, 429):
+                # 4xx (except 408/429): systematic – retrying won't help
+                print(f'ERROR: HTTP {e.code} from {url}:\n{body}', file=sys.stderr)
+                sys.exit(1)
+            if attempt == retries:
+                print(
+                    f'ERROR: HTTP {e.code} from {url} (gave up after {retries} retries):\n{body}',
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            delay = backoff_base ** attempt
+            print(
+                f'WARNING: HTTP {e.code} from {url}, '
+                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+        except urllib.error.URLError as e:
+            if attempt == retries:
+                print(f'ERROR: Request to {url} failed: {e.reason}', file=sys.stderr)
+                sys.exit(1)
+            delay = backoff_base ** attempt
+            print(
+                f'WARNING: Request to {url} failed: {e.reason}, '
+                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+
+
 def http_get(
     url: str,
     headers: dict | None = None,
     timeout_seconds: int = 30,
 ) -> dict:
     req = urllib.request.Request(url, headers=headers or {})
-    try:
-        with _opener.open(req, timeout=timeout_seconds) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        print(f'ERROR: HTTP {e.code} from {url}:\n{body}', file=sys.stderr)
-        sys.exit(1)
-    except urllib.error.URLError as e:
-        print(f'ERROR: Request to {url} failed: {e.reason}', file=sys.stderr)
-        sys.exit(1)
+    return _open_with_retry(req, timeout_seconds)
 
 
 def http_post(
@@ -69,16 +107,7 @@ def http_post(
         data=data,
         headers={'Content-Type': 'application/json'},
     )
-    try:
-        with _opener.open(req, timeout=timeout_seconds) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        print(f'ERROR: HTTP {e.code} from {url}:\n{body}', file=sys.stderr)
-        sys.exit(1)
-    except urllib.error.URLError as e:
-        print(f'ERROR: Request to {url} failed: {e.reason}', file=sys.stderr)
-        sys.exit(1)
+    return _open_with_retry(req, timeout_seconds)
 
 
 def get_oidc_token(
