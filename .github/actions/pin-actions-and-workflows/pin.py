@@ -73,6 +73,9 @@ import argparse
 import graphlib
 import logging
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 
 import git as gitpython
@@ -192,6 +195,116 @@ def _extract_internal_deps(
             yield dep_prefix
 
 
+def _bundle_own_sources(
+    repo_root: str,
+    setup_files: list[str],
+    bundle_dir: str,
+) -> list[str]:
+    '''
+    For each setup file, use `pip install --no-deps --target` to populate a
+    per-dist subdirectory of bundle_dir with the package's runtime source files.
+    The dist name is derived from the .dist-info directory pip creates (which is
+    then excluded from the bundle — only source files are committed to git).
+    The setup file is copied in as setup.py so the subdir is pip-installable
+    at runtime without a build step.  Returns subdir names in setup_files order.
+    '''
+    subdirs: list[str] = []
+    for setup_file in setup_files:
+        with tempfile.TemporaryDirectory(prefix='pip-target-') as tmp:
+            subprocess.check_call(
+                [
+                    sys.executable, '-m', 'pip', 'install',
+                    '--no-deps',
+                    '--no-build-isolation',
+                    '--target', tmp,
+                    os.path.join(repo_root, setup_file),
+                ],
+                cwd=repo_root,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            dist_infos = [d for d in os.listdir(tmp) if d.endswith('.dist-info')]
+            if not dist_infos:
+                raise RuntimeError(f'pip install --target produced no .dist-info for {setup_file}')
+            # dist-info dirname: <dist_name>-<version>.dist-info
+            dist_name = dist_infos[0].rsplit('-', 1)[0]
+            sub = os.path.join(bundle_dir, dist_name)
+            shutil.copytree(tmp, sub, ignore=shutil.ignore_patterns('*.dist-info'))
+        shutil.copy2(os.path.join(repo_root, setup_file), os.path.join(sub, 'setup.py'))
+        subdirs.append(dist_name)
+        logger.info('Bundled %s -> %s', dist_name, sub)
+    return subdirs
+
+
+def _rewrite_for_bundle(
+    parsed: dict,
+    *,
+    own_org: str,
+    own_repo: str,
+    bundle_rel_path: str,
+    bundle_subdirs: list[str],
+) -> bool:
+    '''
+    Rewrite a composite action's steps in-place to install from bundled sources
+    instead of cloning.  Specifically:
+      - Remove any actions/checkout step that checks out own_org/own_repo.
+      - Remove setup-python-on-ghe, install-prerequisites-on-ghe, checkout-fallback
+        steps (only present to support the clone path on GHE).
+      - Replace the install step's run script with a pip install from the bundle.
+    Returns True if any changes were made.
+    '''
+    runs = parsed.get('runs')
+    if not isinstance(runs, dict):
+        return False
+    steps = runs.get('steps')
+    if not isinstance(steps, list):
+        return False
+
+    own_repo_full = f'{own_org}/{own_repo}'
+    # step names that only exist to support the clone path
+    clone_only_names = {
+        'setup-python-on-ghe',
+        'install-prerequisites-on-ghe',
+        'checkout-fallback',
+    }
+
+    def _is_own_checkout(step: dict) -> bool:
+        uses = step.get('uses', '')
+        if not isinstance(uses, str) or not uses.startswith('actions/checkout@'):
+            return False
+        with_block = step.get('with')
+        return isinstance(with_block, dict) and with_block.get('repository') == own_repo_full
+
+    def _is_clone_only(step: dict) -> bool:
+        return step.get('name') in clone_only_names
+
+    steps_to_remove = [s for s in steps if _is_own_checkout(s) or _is_clone_only(s)]
+    if not steps_to_remove:
+        return False  # nothing to rewrite — not the expected action shape
+
+    for step in steps_to_remove:
+        steps.remove(step)
+
+    # build replacement install step run script; each dist is in its own
+    # subdirectory containing setup.py (renamed from setup.<dist>.py)
+    action_path = '${{ github.action_path }}'
+    install_args = ' \\\n  '.join(
+        f'"{action_path}/{bundle_rel_path}/{d}"'
+        for d in bundle_subdirs
+    )
+    bundle_install_script = f'set -euo pipefail\npip install \\\n  {install_args}\n'
+
+    # rewrite the install step
+    for step in steps:
+        if step.get('name') == 'install-gardener-gha-libs':
+            step['run'] = bundle_install_script
+            # drop the `if:` guard — bundle is always present on v1
+            step.pop('if', None)
+            break
+
+    return True
+
+
 def _build_dependency_graph(
     commit: gitpython.Commit,
     *,
@@ -281,12 +394,19 @@ def create_pinned_branch(
     target_branch: str,
     own_org: str | None,
     own_repo: str | None,
+    bundle_setup_files: list[str] | None = None,
+    bundle_action_prefix: str = '.github/actions/install-gardener-gha-libs',
 ) -> None:
     '''
     Build pinned commits locally and update the target branch ref in the local
     repository. Pushing to the remote is intentionally left to the caller (action
     or workflow), so this function is safe to run locally without side-effects on
     the remote.
+
+    If bundle_setup_files is given, the declared sources of each setup file are
+    collected via `egg_info` and copied into <bundle_action_prefix>/_bundle/ in
+    the worktree.  The action YAML at that prefix is also rewritten to install
+    from the bundle instead of cloning at runtime.
     '''
     repo = gitpython.Repo(repo_root)
 
@@ -320,6 +440,26 @@ def create_pinned_branch(
             prefix_to_digest: dict[str, str] = {}
             current_digest = own_digest
 
+            # --- bundling pass (before YAML rewriting) ---
+            bundle_rel = '_bundle'
+            bundle_subdirs: list[str] = []
+            if bundle_setup_files:
+                bundle_dir = os.path.join(worktree_path, bundle_action_prefix, bundle_rel)
+                bundle_subdirs = _bundle_own_sources(repo_root, bundle_setup_files, bundle_dir)
+                bundle_files = [
+                    os.path.relpath(os.path.join(dirpath, fname), worktree_path)
+                    for dirpath, _, fnames in os.walk(bundle_dir)
+                    for fname in fnames
+                ]
+                worktree_repo.index.add(bundle_files)
+                worktree_repo.index.commit(
+                    f'pin: bundle own sources into {bundle_action_prefix}/{bundle_rel}\n\n'
+                    f'own-commit: {own_digest}\n'
+                    f'own-ref: {own_ref}'
+                )
+                current_digest = worktree_repo.head.commit.hexsha
+                logger.info('Created bundle commit %s', current_digest)
+
             for prefix in ordered_prefixes:
                 blob = prefix_to_blob.get(prefix)
                 if blob is None:
@@ -334,6 +474,15 @@ def create_pinned_branch(
                     prefix_to_digest=prefix_to_digest,
                     repo=repo,
                 )
+
+                if bundle_setup_files and prefix == bundle_action_prefix:
+                    changed |= _rewrite_for_bundle(
+                        parsed,
+                        own_org=own_org,
+                        own_repo=own_repo,
+                        bundle_rel_path=bundle_rel,
+                        bundle_subdirs=bundle_subdirs,
+                    )
 
                 if not changed:
                     logger.debug('No changes needed for %s', blob.path)
@@ -412,6 +561,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=False,
         help='Enable verbose (DEBUG) logging',
     )
+    parser.add_argument(
+        '--bundle-setup-file',
+        dest='bundle_setup_files',
+        metavar='SETUP_FILE',
+        action='append',
+        default=None,
+        help=(
+            'Path to a setup.*.py file whose declared sources should be bundled '
+            'into the install-gardener-gha-libs action directory.  May be repeated. '
+            'When given, the action YAML is also rewritten to install from the bundle '
+            'instead of cloning at runtime.'
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -427,6 +589,7 @@ def main(argv: list[str] | None = None) -> None:
         target_branch=args.target_branch,
         own_org=args.own_org,
         own_repo=args.own_repo,
+        bundle_setup_files=args.bundle_setup_files,
     )
 
 
