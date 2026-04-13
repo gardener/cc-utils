@@ -81,13 +81,13 @@ def modules():
         'ctx',
     )
     for name in omit_modules:
-        module_names.remove(name)
+        if name in module_names:
+            module_names.remove(name)
 
     # avoid including other setup-scripts
-    module_names.remove('setup')
-    module_names.remove('setup.gha')
-    module_names.remove('setup.oci')
-    module_names.remove('setup.ocm')
+    for name in ('setup', 'setup.gha', 'setup.oci', 'setup.ocm'):
+        if name in module_names:
+            module_names.remove(name)
     return module_names
 
 

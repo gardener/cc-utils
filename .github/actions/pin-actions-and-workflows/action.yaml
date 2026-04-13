@@ -78,6 +78,9 @@ runs:
         commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         after-import: noop
 
+    - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
+      id: bundle
+
     - name: pin
       shell: bash
       run: |
@@ -99,9 +102,7 @@ runs:
           --target-branch '${{ inputs.target-branch }}' \
           --own-org "${own_org}" \
           --own-repo "${own_repo}" \
-          --bundle-setup-file setup.gha.py \
-          --bundle-setup-file setup.oci.py \
-          --bundle-setup-file setup.ocm.py
+          --bundle-dir '${{ steps.bundle.outputs.bundle-dir }}'
 
     - name: push
       shell: bash

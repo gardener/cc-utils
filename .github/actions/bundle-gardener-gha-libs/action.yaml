@@ -1,0 +1,48 @@
+name: Bundle Gardener-GHA-Libs
+description: |
+  Bundle gardener-gha-libs, gardener-oci, and gardener-ocm from source into
+  a local directory for use on pinned branches.
+
+  Each package is placed in its own subdirectory (named after the dist, e.g.
+  gardener_gha_libs) alongside a setup.py, making it directly pip-installable
+  at runtime without any network access or build step.
+
+  NOTE: this action is internal to gardener/cc-utils and not intended for use
+  in other repositories.
+
+inputs:
+  bundle-dir:
+    type: string
+    default: /tmp/gardener-gha-libs-bundle
+    description: |
+      Directory to write the bundle into.
+
+outputs:
+  bundle-dir:
+    description: Path to the populated bundle directory.
+    value: ${{ steps.bundle.outputs.bundle-dir }}
+  subdirs:
+    description: Space-separated list of per-dist subdirectory names.
+    value: ${{ steps.bundle.outputs.subdirs }}
+
+runs:
+  using: composite
+  steps:
+    - name: install-prerequisites
+      shell: bash
+      run: |
+        set -euo pipefail
+        pip install --quiet setuptools
+    - name: bundle
+      id: bundle
+      shell: bash
+      run: |
+        set -euo pipefail
+        bundle_dir='${{ inputs.bundle-dir }}'
+        subdirs="$(
+          '${{ github.action_path }}/bundle.py' \
+            --repo-root '${{ github.workspace }}' \
+            --bundle-dir "${bundle_dir}"
+        )"
+        echo "bundle-dir=${bundle_dir}" >> "${GITHUB_OUTPUT}"
+        echo "subdirs=${subdirs}" >> "${GITHUB_OUTPUT}"

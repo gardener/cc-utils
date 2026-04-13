@@ -31,6 +31,38 @@ jobs:
     with:
       mode: ${{ inputs.mode }}
 
+  test-bundling:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/bundle-gardener-gha-libs
+        id: bundle
+      - uses: ./.github/actions/install-gardener-gha-libs
+        with:
+          bundle-dir: ${{ steps.bundle.outputs.bundle-dir }}
+      - name: smoketest
+        shell: python
+        run: |
+          import oci.model
+          import oci.auth
+          import ocm
+          import cnudie.util
+          import github.util
+          import version
+
+          # oci
+          ref = oci.model.OciImageReference('example.com/org/repo:tag')
+          assert ref.tag == 'tag', ref
+
+          # ocm
+          assert ocm.AccessType.OCI_REGISTRY in list(ocm.AccessType)
+
+          # gha-libs
+          v = version.parse_to_semver('1.2.3')
+          assert v.major == 1 and v.minor == 2 and v.patch == 3, v
+
   setuptools-version:
     runs-on: ubuntu-latest
     permissions: {}
