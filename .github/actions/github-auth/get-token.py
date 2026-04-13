@@ -142,7 +142,7 @@ def main():
 
     token_server = args.token_server
     if '://' not in token_server:
-        token_server = f'http://{token_server}'
+        token_server = f'https://{token_server}'
 
     id_token = get_oidc_token(request_url, request_token, args.audience)
     token = exchange_token(
