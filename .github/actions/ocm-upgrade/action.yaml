@@ -102,11 +102,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@e9827c5bb98b55df1956b7401d52ae448213ddd8
     - uses: actions/checkout@v6
       with:
         token: ${{ inputs.github-token }}
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@9d836c7b6b038637d5eca2feca2877684e46687d
     - name: write-component-descriptor
       shell: bash
       run: |
@@ -131,7 +131,7 @@ runs:
       if: ${{ inputs.prepare-action-path != '' }}
       uses: ./../prepare-action
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@3c938b0878737d8505c9b50c496ac3491d7d128a
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
         gh-token: ${{ github.server_url == 'https://github.com' && inputs.github-token || '' }} # only try to authenticate for gh-com
