@@ -26,6 +26,14 @@ runs:
         if pip show gardener-gha-libs &>/dev/null; then
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
+    # on GHE runners Python may not be pre-installed; set it up unconditionally
+    # so that pip is available for the bundle path as well as the fallback path.
+    # this step is intentionally NOT removed on pinned branches.
+    - name: setup-python
+      if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
     - name: install-from-bundle
       id: bundle
       if: ${{ ! steps.check.outputs.already-installed }}
@@ -49,12 +57,6 @@ runs:
       with:
         repository: gardener/cc-utils
         path: cc-utils
-    # removed on pinned branches (GHE path)
-    - name: setup-python-on-ghe
-      if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' && github.server_url != 'https://github.com' }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
     # removed on pinned branches (GHE path)
     - name: install-prerequisites-on-ghe
       if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' && github.server_url != 'https://github.com' }}
