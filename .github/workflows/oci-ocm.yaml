@@ -192,6 +192,11 @@ on:
         type: string
         description: |
           The runner to use for executing the workflow. If not set, default values are being used.
+      omit-ocm-fragment:
+        type: boolean
+        default: false
+        description: |
+          Set to true to suppress emission of an OCM-Resource fragment via export-ocm-fragments.
     secrets:
       auth-token:
         required: false
@@ -606,6 +611,7 @@ jobs:
             ```
             '''))
       - name: export-ocm-fragments
+        if: ${{ !inputs.omit-ocm-fragment }}
         uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
         with:
           ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
