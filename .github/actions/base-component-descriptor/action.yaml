@@ -86,7 +86,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@c0b44c1c00c36e4c2f7f19fb47c0a12fd865f7e7
     - name: base-component-descriptor
       id: base-component-descriptor
       shell: python
@@ -252,7 +252,7 @@ runs:
             ```
             </details>
           '''))
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@625aebfc2e8c4d9489d68d782550f274ceba3dfa
       with:
         name: base-component-descriptor
         path: component-descriptor.tar.gz
