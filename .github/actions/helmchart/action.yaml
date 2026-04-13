@@ -95,7 +95,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@c0b44c1c00c36e4c2f7f19fb47c0a12fd865f7e7
     - uses: azure/setup-helm@v4
     - name: preprocess-inputs
       shell: bash
@@ -108,7 +108,7 @@ runs:
         EOF
     - name: authenticate
       if: ${{ inputs.push == 'true' }}
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@d2736153d4ecdcef834867fcf4bb27ed6d8a4126
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
         gh-token: ${{ inputs.gh-token }}
@@ -270,7 +270,7 @@ runs:
           )
 
     - name: export-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@46aa9c541394b5063fb337cbcb07a1dd4d8af789
       with:
         ocm-resources-file: ocm-resources.yaml
         blobs-directory: blobs.d
