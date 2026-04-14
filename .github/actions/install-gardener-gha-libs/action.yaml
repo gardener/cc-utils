@@ -57,7 +57,6 @@ runs:
       with:
         repository: gardener/cc-utils
         path: cc-utils
-    # removed on pinned branches (GHE path)
     - name: install-prerequisites-on-ghe
       if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' && github.server_url != 'https://github.com' }}
       shell: bash

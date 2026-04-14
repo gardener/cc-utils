@@ -214,7 +214,6 @@ def _rewrite_for_bundle(
 
     own_repo_full = f'{own_org}/{own_repo}'
     clone_only_names = {
-        'install-prerequisites-on-ghe',
         'checkout-fallback',
         'install-gardener-gha-libs',
     }
