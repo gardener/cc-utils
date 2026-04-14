@@ -55,6 +55,21 @@ inputs:
   audience:
     type: string
     default: github-oidc-federation
+  retries:
+    type: number
+    default: 6
+    description: |
+      Number of retry attempts on transient errors (5xx, 408, 429, network failures).
+  backoff-base:
+    type: number
+    default: 3.0
+    description: |
+      Base for exponential backoff (delay = min(base^attempt, backoff-cap)).
+  backoff-cap:
+    type: number
+    default: 60
+    description: |
+      Maximum delay in seconds between retries.
 
 outputs:
   token:
@@ -112,4 +127,7 @@ runs:
           --host "${{ steps.preprocess.outputs.host }}" \
           --organization "${{ steps.preprocess.outputs.organization }}" \
           --repositories '${{ steps.preprocess.outputs.repositories }}' \
-          --permissions '${{ steps.preprocess.outputs.permissions }}'
+          --permissions '${{ steps.preprocess.outputs.permissions }}' \
+          --retries '${{ inputs.retries }}' \
+          --backoff-base '${{ inputs.backoff-base }}' \
+          --backoff-cap '${{ inputs.backoff-cap }}'

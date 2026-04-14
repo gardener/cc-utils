@@ -43,8 +43,9 @@ _opener = urllib.request.build_opener(
 def _open_with_retry(
     req: urllib.request.Request,
     timeout_seconds: int = 30,
-    retries: int = 4,
-    backoff_base: float = 2.0,
+    retries: int = 6,
+    backoff_base: float = 3.0,
+    backoff_cap: float = 60.0,
 ) -> dict:
     '''Open a request, retrying on transient errors with exponential backoff.
 
@@ -67,7 +68,7 @@ def _open_with_retry(
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            delay = backoff_base ** attempt
+            delay = min(backoff_base ** attempt, backoff_cap)
             print(
                 f'WARNING: HTTP {e.code} from {url}, '
                 f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
@@ -78,7 +79,7 @@ def _open_with_retry(
             if attempt == retries:
                 print(f'ERROR: Request to {url} failed: {e.reason}', file=sys.stderr)
                 sys.exit(1)
-            delay = backoff_base ** attempt
+            delay = min(backoff_base ** attempt, backoff_cap)
             print(
                 f'WARNING: Request to {url} failed: {e.reason}, '
                 f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
@@ -91,15 +92,21 @@ def http_get(
     url: str,
     headers: dict | None = None,
     timeout_seconds: int = 30,
+    retries: int = 6,
+    backoff_base: float = 3.0,
+    backoff_cap: float = 60.0,
 ) -> dict:
     req = urllib.request.Request(url, headers=headers or {})
-    return _open_with_retry(req, timeout_seconds)
+    return _open_with_retry(req, timeout_seconds, retries, backoff_base, backoff_cap)
 
 
 def http_post(
     url: str,
     payload: dict,
     timeout_seconds: int = 30,
+    retries: int = 6,
+    backoff_base: float = 3.0,
+    backoff_cap: float = 60.0,
 ) -> dict:
     data = json.dumps(payload).encode()
     req = urllib.request.Request(
@@ -107,16 +114,25 @@ def http_post(
         data=data,
         headers={'Content-Type': 'application/json'},
     )
-    return _open_with_retry(req, timeout_seconds)
+    return _open_with_retry(req, timeout_seconds, retries, backoff_base, backoff_cap)
 
 
 def get_oidc_token(
     request_url: str,
     request_token: str,
     audience: str,
+    retries: int = 6,
+    backoff_base: float = 3.0,
+    backoff_cap: float = 60.0,
 ) -> str:
     url = f'{request_url}&audience={audience}'
-    data = http_get(url, headers={'Authorization': f'Bearer {request_token}'})
+    data = http_get(
+        url,
+        headers={'Authorization': f'Bearer {request_token}'},
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_cap=backoff_cap,
+    )
     return data['value']
 
 
@@ -127,6 +143,9 @@ def exchange_token(
     id_token: str,
     repositories: str,
     permissions: str,
+    retries: int = 6,
+    backoff_base: float = 3.0,
+    backoff_cap: float = 60.0,
 ) -> str:
     time.sleep(1)  # ensure token's iat is not in the future
     payload = {
@@ -137,7 +156,13 @@ def exchange_token(
         'permissions': json.loads(permissions),
     }
     print(f'Payload: {json.dumps(payload)}')
-    data = http_post(f'{token_server}/token-exchange', payload)
+    data = http_post(
+        f'{token_server}/token-exchange',
+        payload,
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_cap=backoff_cap,
+    )
     return data['token']
 
 
@@ -163,6 +188,9 @@ def main():
     parser.add_argument('--organization', required=True)
     parser.add_argument('--repositories', required=True)
     parser.add_argument('--permissions', required=True)
+    parser.add_argument('--retries', type=int, default=6)
+    parser.add_argument('--backoff-base', type=float, default=3.0)
+    parser.add_argument('--backoff-cap', type=float, default=60.0)
     args = parser.parse_args()
 
     oidc_hint = 'That typically means this workflow was not run with `id-token: write`-permission'
@@ -173,7 +201,13 @@ def main():
     if '://' not in token_server:
         token_server = f'https://{token_server}'
 
-    id_token = get_oidc_token(request_url, request_token, args.audience)
+    retry_kwargs = {
+        'retries': args.retries,
+        'backoff_base': args.backoff_base,
+        'backoff_cap': args.backoff_cap,
+    }
+
+    id_token = get_oidc_token(request_url, request_token, args.audience, **retry_kwargs)
     token = exchange_token(
         token_server,
         args.host,
@@ -181,6 +215,7 @@ def main():
         id_token,
         args.repositories,
         args.permissions,
+        **retry_kwargs,
     )
 
     github_output = os.environ.get('GITHUB_OUTPUT', '')
