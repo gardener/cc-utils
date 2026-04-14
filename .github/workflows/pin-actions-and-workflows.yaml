@@ -1,6 +1,18 @@
 name: Pin Actions and Workflows
 
 on:
+  workflow_dispatch:
+    inputs:
+      own-ref:
+        type: string
+        default: master
+        description: |
+          Ref (branch name or commit digest) to read from. Defaults to `master`.
+      target-branch:
+        type: string
+        default: preview
+        description: |
+          Branch to push pinned commits to. Will be force-pushed. Defaults to `preview`.
   workflow_call:
     inputs:
       own-ref:
