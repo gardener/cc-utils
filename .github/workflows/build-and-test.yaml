@@ -59,6 +59,12 @@ jobs:
           # ocm
           assert ocm.AccessType.OCI_REGISTRY in list(ocm.AccessType)
 
+          # ocm schema file must be present (regression: was missing from bundle)
+          import ocm.validate
+          import importlib.resources
+          schema = importlib.resources.files('ocm').joinpath('ocm-component-descriptor-schema.yaml')
+          assert schema.is_file(), f'schema file missing: {schema}'
+
           # gha-libs
           v = version.parse_to_semver('1.2.3')
           assert v.major == 1 and v.minor == 2 and v.patch == 3, v
