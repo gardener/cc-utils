@@ -38,7 +38,7 @@ jobs:
       contents: write  # required to push the target branch and preservation refs
       id-token: write  # required for OIDC federated token exchange
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@dcba50e1a3495d2349535ade609a324cc2965d94
         with:
           fetch-depth: 0  # full history required for git worktree operations
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -48,7 +48,7 @@ jobs:
             workflows: write
 
       - name: pin-actions-and-workflows
-        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
+        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@a947de483386922bb4a193877140e4df0da35b37
         with:
           own-ref: ${{ inputs.own-ref }}
           target-branch: ${{ inputs.target-branch }}
