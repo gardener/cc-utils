@@ -69,7 +69,7 @@ jobs:
       id-token: write
     steps:
       - name: Retrieve Distribution Packages
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@673f52fbf260211a30484281240389071f2c64aa
         with:
           name: distribution-packages
           path: /tmp/dist
