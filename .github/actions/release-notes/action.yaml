@@ -61,15 +61,15 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@1df7d9908d96472f731ac05debc23edccb0751cf
     - name: checkout
       uses: actions/checkout@v6
       with:
         fetch-depth: 0 # release-notes code needs full commit-history and tags
         fetch-tags: 0
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@45765bc64e26843ed1c6fed2ae1be47c45fe0a97
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@84350b3ef93851f2ddbdcea60f4dbd4d95d09991
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
 
@@ -139,7 +139,7 @@ runs:
         echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
         cat local-release-notes.md >> ${GITHUB_STEP_SUMMARY}
 
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@45765bc64e26843ed1c6fed2ae1be47c45fe0a97
       with:
         name: release-notes
         path: release-notes.tar
