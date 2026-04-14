@@ -57,7 +57,33 @@ def _parse_dist_metadata(dist_info_dir: str) -> tuple[str, str, list[str]]:
     return name, version, requires
 
 
-def _gen_setup_py(name: str, version: str, install_requires: list[str]) -> str:
+def _collect_package_data(target_dir: str) -> dict[str, list[str]]:
+    '''
+    Collect non-Python data files for each Python package found under target_dir.
+    Only directories containing __init__.py are considered packages.
+    Returns a mapping suitable for setuptools package_data.
+    '''
+    result: dict[str, list[str]] = {}
+    for entry in os.scandir(target_dir):
+        if not entry.is_dir():
+            continue
+        if not os.path.isfile(os.path.join(entry.path, '__init__.py')):
+            continue
+        data_files = [
+            f.name for f in os.scandir(entry.path)
+            if f.is_file() and not f.name.endswith('.py') and not f.name.endswith('.pyc')
+        ]
+        if data_files:
+            result[entry.name] = data_files
+    return result
+
+
+def _gen_setup_py(
+    name: str,
+    version: str,
+    install_requires: list[str],
+    package_data: dict[str, list[str]],
+) -> str:
     '''
     Generate a minimal self-contained setup.py for a bundle subdirectory.
     Packages and py_modules are auto-discovered at install time from the
@@ -76,6 +102,7 @@ def _gen_setup_py(name: str, version: str, install_requires: list[str]) -> str:
         f'        os.path.splitext(f)[0] for f in os.listdir(_d)\n'
         f'        if f.endswith(".py") and f != "setup.py"\n'
         f'    ],\n'
+        f'    package_data={package_data!r},\n'
         f'    install_requires={install_requires!r},\n'
         f')\n'
     )
@@ -123,8 +150,9 @@ def bundle(repo_root: str, bundle_dir: str) -> list[str]:
                 sub = os.path.join(bundle_dir, dist_name)
                 shutil.copytree(tmp, sub, ignore=shutil.ignore_patterns('*.dist-info'))
 
+        package_data = _collect_package_data(sub)
         with open(os.path.join(sub, 'setup.py'), 'w') as f:
-            f.write(_gen_setup_py(name, version, requires))
+            f.write(_gen_setup_py(name, version, requires, package_data))
         subdirs.append(dist_name)
         logger.info('bundled %s -> %s', setup_file, sub)
 
