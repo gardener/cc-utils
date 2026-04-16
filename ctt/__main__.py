@@ -51,6 +51,18 @@ def configure_parser(parser):
         help='how many replication-tasks should be run in parallel.',
     )
     parser.add_argument(
+        '--retries',
+        type=int,
+        default=5,
+        help='how many times to retry a failed OCI request',
+    )
+    parser.add_argument(
+        '--retry-backoff-seconds',
+        type=float,
+        default=1.0,
+        help='initial sleep before first retry; doubles on each subsequent attempt',
+    )
+    parser.add_argument(
         '--pruning-mode',
         type=ctt.process_dependencies.PruningMode,
         choices=ctt.process_dependencies.PruningMode,
@@ -75,6 +87,8 @@ def replicate(parsed):
         credentials_lookup=oci.auth.docker_credentials_lookup(
             docker_cfg=parsed.docker_config,
         ),
+        max_retries=parsed.retries,
+        default_backoff_base_seconds=parsed.retry_backoff_seconds,
     )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
