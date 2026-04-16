@@ -220,6 +220,15 @@ class OciRoutes:
         )
 
 
+def _retry_after_seconds(res: requests.models.Response, fallback: float) -> float:
+    try:
+        if (value := res.headers.get('Retry-After')):
+            return int(value)
+    except ValueError:
+        pass
+    return fallback
+
+
 def _scope(image_reference: str | om.OciImageReference, action: str):
     image_reference = om.OciImageReference.to_image_ref(image_reference)
 
@@ -334,6 +343,8 @@ class Client:
         session: requests.Session=None,
         tag_preprocessing_callback: collections.abc.Callable[[str], str]=None,
         tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
+        max_retries: int=5,
+        default_backoff_base_seconds: float=1.0,
     ):
         '''
         :param Callable credentials_lookup:
@@ -348,6 +359,10 @@ class Client:
         :param Callable tag_postprocessing_callback:
             callback which is instrumented _after_ interacting with the OCI registry, i.e. useful to
             revert required sanitisation of `tag_preprocessing_callback`
+        :param int max_retries:
+            how many times to retry a failed request (connection errors, 429, 5xx)
+        :param float default_backoff_base_seconds:
+            initial sleep before first retry; doubles on each subsequent attempt
         '''
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
@@ -359,6 +374,8 @@ class Client:
         self.disable_tls_validation = disable_tls_validation
         self.tag_preprocessing_callback = tag_preprocessing_callback
         self.tag_postprocessing_callback = tag_postprocessing_callback
+        self.max_retries = max_retries
+        self.default_backoff_base_seconds = default_backoff_base_seconds
 
         if timeout_seconds:
             timeout_seconds = int(timeout_seconds)
@@ -490,15 +507,8 @@ class Client:
             )
 
             if res.status_code == 429 and remaining_retries > 0:
-                retry_after_seconds = None
-                try:
-                    if (retry_after_seconds := res.headers.get('Retry-After')):
-                        retry_after_seconds = int(retry_after_seconds)
-                except ValueError:
-                    pass
-
-                if retry_after_seconds is None:
-                    retry_after_seconds = 60 # fallback to default backoff
+                # _authenticate has no default_backoff_base
+                retry_after_seconds = _retry_after_seconds(res=res, fallback=60)
 
                 logger.warning('quota was exceeded - {retry_after_seconds=}')
                 time.sleep(retry_after_seconds)
@@ -536,10 +546,15 @@ class Client:
         headers: dict=None,
         raise_for_status=True,
         warn_if_not_ok=True,
-        remaining_retries: int=5,
-        sleep_before_retry_seconds: float=1.0,
+        remaining_retries: int=None,
+        sleep_before_retry_seconds: float=None,
         **kwargs,
     ):
+        if remaining_retries is None:
+            remaining_retries = self.max_retries
+        if sleep_before_retry_seconds is None:
+            sleep_before_retry_seconds = self.default_backoff_base_seconds
+
         if not 'timeout' in kwargs and self.timeout_seconds:
             kwargs['timeout'] = self.timeout_seconds
 
@@ -662,15 +677,7 @@ class Client:
             )
 
         if res.status_code == 429 and remaining_retries > 0:
-            retry_after_seconds = None
-            try:
-                if (retry_after_seconds := res.headers.get('Retry-After')):
-                    retry_after_seconds = int(retry_after_seconds)
-            except ValueError:
-                pass
-
-            if retry_after_seconds is None:
-                retry_after_seconds = 60 # fallback to default backoff
+            retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
 
             logger.warning(
                 f'quota was exceeded, will {retry_after_seconds=} ({remaining_retries=})'
@@ -687,6 +694,29 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
+                **kwargs,
+            )
+
+        if res.status_code >= 500 and remaining_retries > 0:
+            retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
+
+            logger.warning(
+                f'got {res.status_code=}, will retry after {retry_after_seconds=}s '
+                f'({remaining_retries=})'
+            )
+
+            time.sleep(retry_after_seconds)
+
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
 
