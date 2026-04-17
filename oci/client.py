@@ -385,8 +385,14 @@ class Client:
         self,
         image_reference: str | om.OciImageReference,
         scope: str,
-        remaining_retries: int=3,
+        remaining_retries: int=None,
+        sleep_before_retry_seconds: float=None,
     ):
+        if remaining_retries is None:
+            remaining_retries = self.max_retries
+        if sleep_before_retry_seconds is None:
+            sleep_before_retry_seconds = self.default_backoff_base_seconds
+
         if isinstance(image_reference, om.OciImageReference):
             image_reference = str(image_reference)
 
@@ -507,15 +513,20 @@ class Client:
             )
 
             if (res.status_code == 429 or res.status_code >= 500) and remaining_retries > 0:
-                # _authenticate has no default_backoff_base
-                retry_after_seconds = _retry_after_seconds(res=res, fallback=60)
+                retry_after_seconds = _retry_after_seconds(
+                    res=res,
+                    fallback=sleep_before_retry_seconds,
+                )
 
-                logger.warning('quota was exceeded - {retry_after_seconds=}')
+                logger.warning(
+                    f'auth rq failed with {res.status_code}, retrying after {retry_after_seconds=}s'
+                )
                 time.sleep(retry_after_seconds)
                 return self._authenticate(
                     image_reference=image_reference,
                     scope=scope,
                     remaining_retries=remaining_retries - 1,
+                    sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 )
 
         res.raise_for_status()
