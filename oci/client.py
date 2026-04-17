@@ -506,7 +506,7 @@ class Client:
                 f'rq against {realm=} failed: {res.status_code=} {res.reason=} {res.content=}'
             )
 
-            if res.status_code == 429 and remaining_retries > 0:
+            if (res.status_code == 429 or res.status_code >= 500) and remaining_retries > 0:
                 # _authenticate has no default_backoff_base
                 retry_after_seconds = _retry_after_seconds(res=res, fallback=60)
 
