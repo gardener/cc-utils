@@ -440,6 +440,7 @@ def commit_and_push_to_tmp_branch(
         raise
 
     git_helper.repo.git.checkout('.')
+    git_helper.repo.git.clean('-fd')
 
     try:
         yield new_branch_name
