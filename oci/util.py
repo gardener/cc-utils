@@ -2,7 +2,13 @@ import collections.abc
 import contextlib
 import io
 import queue
+import re
 import threading
+
+# OCI Image Reference Spec; leading `/` is additionally permitted as a local/relative ref
+_OCI_IMAGE_REF_RE = re.compile(
+    r'^(?!.*://)[^:?#][^?#]*(?:/[^?#]*)*(?::[^:/@][^@]*)?(?:@[a-zA-Z][a-zA-Z0-9]*:[a-fA-F0-9]+)?$'
+)
 
 
 def normalise_image_reference(image_reference: str):
@@ -10,8 +16,10 @@ def normalise_image_reference(image_reference: str):
         raise ValueError(image_reference)
 
     if image_reference.startswith('/'):
-        # keep relative reference as is
         return image_reference
+
+    if not _OCI_IMAGE_REF_RE.match(image_reference):
+        raise ValueError(f'not a valid OCI image reference: {image_reference!r}')
 
     parts = image_reference.split('/')
 
