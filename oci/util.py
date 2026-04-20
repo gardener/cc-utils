@@ -9,8 +9,8 @@ def normalise_image_reference(image_reference: str):
     if not isinstance(image_reference, str):
         raise ValueError(image_reference)
 
-    if image_reference.startswith('/'):
-        # keep relative reference as is
+    if image_reference.startswith('/') or '://' in image_reference:
+        # keep relative reference and reference with scheme as is
         return image_reference
 
     parts = image_reference.split('/')
