@@ -495,25 +495,100 @@ jobs:
 
       - name: 'push SBOM referrer / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: sbom-push
         shell: python
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
+          import os
+
           import oci.auth
           import oci.client
+          import oci.model
           import oci.sbom
 
           oci_client = oci.client.Client(
               credentials_lookup=oci.auth.docker_credentials_lookup(),
           )
 
+          image_ref = oci.model.OciImageReference.to_image_ref(
+              '${{ matrix.args.image-reference }}',
+          )
+
           referrer_digest = oci.sbom.push_sbom_referrer(
               sbom_path='sbom.spdx.json',
-              image_reference='${{ matrix.args.image-reference }}',
+              image_reference=image_ref,
               oci_client=oci_client,
           )
 
-          print(f'SBOM referrer pushed: {referrer_digest}')
+          referrer_ref = f'{image_ref.ref_without_tag}@{referrer_digest}'
+          print(f'SBOM referrer pushed: {referrer_ref}')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'referrer-ref={referrer_ref}\n')
+
+      - name: 'build SBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import dataclasses
+          import os
+
+          import yaml
+
+          import ocm
+
+          platform = '${{ matrix.args.platform-name }}'  # e.g. linux/amd64
+          os_name, architecture = platform.split('/', 1)
+          name = '${{ inputs.name }}'
+          extra_identity = {
+              'version': '${{ inputs.version }}',
+              'os': os_name,
+              'architecture': architecture,
+          }
+
+          inline_resource = ocm.Resource(
+              name=f'{name}-ocm',
+              version='${{ inputs.version }}',
+              type='application/spdx+json',
+              extraIdentity=extra_identity,
+              access=ocm.LocalBlobAccess(
+                  localReference='sbom.spdx.json',
+                  mediaType='application/spdx+json',
+              ),
+              relation=ocm.ResourceRelation.LOCAL,
+          )
+
+          ref_resource = ocm.Resource(
+              name=f'{name}-spdx-ref',
+              version='${{ inputs.version }}',
+              type='application/spdx+json',
+              extraIdentity=extra_identity,
+              access=ocm.OciAccess(
+                  imageReference='${{ steps.sbom-push.outputs.referrer-ref }}',
+              ),
+              relation=ocm.ResourceRelation.LOCAL,
+          )
+
+          with open('sbom-ocm-resources.yaml', 'w') as f:
+              yaml.dump_all(
+                  [dataclasses.asdict(r) for r in (inline_resource, ref_resource)],
+                  stream=f,
+                  Dumper=ocm.EnumValueYamlDumper,
+              )
+
+          os.makedirs('blobs.d', exist_ok=True)
+          os.link('sbom.spdx.json', 'blobs.d/sbom.spdx.json')
+
+      - name: 'export SBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          ocm-resources-file: sbom-ocm-resources.yaml
+          blobs-directory: blobs.d
+          ctx: ${{ inputs.ctx }}
 
   collect-images:
     needs:
