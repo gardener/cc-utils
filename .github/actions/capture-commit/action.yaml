@@ -136,7 +136,7 @@ runs:
 
         gzip ${objects_out}
       shell: bash
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@8b8241207094d139cb8a07786b0a1e09a8dc7706
       if: ${{ inputs.to-artefact != '' }}
       with:
         name: ${{ inputs.to-artefact }}
