@@ -283,6 +283,7 @@ definitions:
         enum: ['ociRegistry']
       imageReference:
         type: 'string'
+        pattern: '^(?!.*://)[^:?#][^?#]*(?:/[^?#]*)*(?::[^:/@][^@]*)?(?:@[a-zA-Z][a-zA-Z0-9]*:[a-fA-F0-9]+)?$'
 
   ociBlobAccess:
     type: 'object'
@@ -296,6 +297,7 @@ definitions:
       ref:
         description: 'A oci reference to the manifest'
         type: 'string'
+        pattern: '^(?!.*://)[^:?#][^?#]*(?:/[^?#]*)*(?::[^:/@][^@]*)?(?:@[a-zA-Z][a-zA-Z0-9]*:[a-fA-F0-9]+)?$'
       mediaType:
         description: 'The media type of the object this access refers to'
         type: 'string'
