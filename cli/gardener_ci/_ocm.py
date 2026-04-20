@@ -1,19 +1,13 @@
 import dataclasses
 import functools
-import hashlib
-import io
 import json
 import jsonschema
 import logging
 import os
 import pprint
-import subprocess
 import sys
-import tarfile
-import tempfile
 import zlib
 
-import dacite
 import yaml
 
 import ocm
@@ -26,8 +20,6 @@ import ccc.oci
 import ci.util
 import cnudie.retrieve
 import ctx
-import tarutil
-import oci
 
 own_dir = os.path.dirname(__file__)
 repo_root = os.path.join(own_dir, '../..')
@@ -37,125 +29,6 @@ __cmd_name__ = 'ocm'
 _cfg = ctx.cfg
 
 logger = logging.getLogger(__name__)
-
-
-def edit(
-    name: str,
-    ocm_repo: str=None,
-    editor: str='vim',
-):
-    if not ocm_repo:
-        ocm_repo_lookup = ctx.cfg.ctx.ocm_repository_lookup
-        ocm_repo = next(ocm_repo_lookup(name))
-        if isinstance(ocm_repo, str):
-            ocm_repo = ocm.OciOcmRepository(
-                baseUrl=ocm_repo,
-            )
-
-    oci_client = ccc.oci.oci_client()
-
-    oci_ref = cnudie.util.oci_ref(
-        component=name,
-        repository=ocm_repo,
-    )
-
-    logger.info(f'retrieving {oci_ref} oci--manifest')
-    manifest = oci_client.manifest(oci_ref)
-
-    oci_cfg: ocm.oci.ComponentDescriptorOciCfg = dacite.from_dict(
-        data_class=ocm.oci.ComponentDescriptorOciCfg,
-        data=json.loads(
-            oci_client.blob(oci_ref, manifest.config.digest).text,
-        )
-    )
-
-    logger.info(f'retrieving component-descriptor-blob {oci_cfg.componentDescriptorLayer.digest=}')
-    component_descriptor_blob = oci_client.blob(
-        oci_ref,
-        oci_cfg.componentDescriptorLayer.digest,
-    )
-
-    tar = tarfile.open(
-        fileobj=tarutil.FilelikeProxy(
-            component_descriptor_blob.iter_content(chunk_size=tarfile.BLOCKSIZE)
-        ),
-        mode='r|*',
-    )
-
-    # component-descriptor must be first entry in tarfile
-    component_descriptor_info = tar.next()
-
-    with tempfile.NamedTemporaryFile(delete=False) as tf:
-        reader = tar.extractfile(component_descriptor_info)
-        digest = hashlib.sha256()
-
-        while chunk := reader.read(tarfile.BLOCKSIZE):
-            tf.write(chunk)
-            digest.update(chunk)
-
-        tar.close()
-        tf.flush()
-
-        old_content_digest = digest.hexdigest()
-
-        subprocess.run((editor, tf.name))
-
-    # vi (re)creates files on write (with default backup/write settings), -> (re)open filehandle
-    with open(tf.name, 'rb') as tf:
-        raw = tf.read()
-        if (content_digest := hashlib.sha256(raw).hexdigest()) == old_content_digest:
-            print('no changes - early-exiting')
-            exit(0)
-
-    os.unlink(tf.name)
-
-    logger.info(f'uploading changed component-descriptor {content_digest=}')
-
-    # we need to know the digest before uploading - since tarheader does not add much overhead,
-    # do this in-memory
-    buf = io.BytesIO()
-    tar = tarfile.open(fileobj=buf, mode='w')
-
-    info = tarfile.TarInfo(name='component-descriptor.yaml')
-    info.size = len(raw)
-    tar.addfile(info, io.BytesIO(raw))
-    tf_len = buf.tell()
-    buf.seek(0)
-
-    # prefix w/ algorithm, as expected by oci-registry
-    content_digest = f'sha256:{hashlib.sha256(buf.read()).hexdigest()}'
-    buf.seek(0)
-
-    oci_client.put_blob(oci_ref, content_digest, tf_len, buf)
-
-    # replace old layer w/ updated one
-    manifest.layers = [
-        l for l in manifest.layers
-        if not l.digest == oci_cfg.componentDescriptorLayer.digest
-    ] + [oci.model.OciBlobRef(
-        digest=content_digest,
-        mediaType=ocm.oci.component_descriptor_mimetype,
-        size=tf_len,
-    )]
-
-    oci_cfg.componentDescriptorLayer.digest = content_digest
-    oci_cfg_raw = json.dumps(dataclasses.asdict(oci_cfg)).encode('utf-8')
-    oci_cfg_dig = f'sha256:{hashlib.sha256(oci_cfg_raw).hexdigest()}'
-    oci_cfg_len = len(oci_cfg_raw)
-    manifest.config = dataclasses.replace(
-        manifest.config,
-        digest=oci_cfg_dig,
-        size=oci_cfg_len,
-    )
-
-    logger.info(f'uploading patched cfg-blob {oci_cfg_dig=}')
-    oci_client.put_blob(oci_ref, oci_cfg_dig, len(oci_cfg_raw), oci_cfg_raw)
-
-    # finally, finish upload by pushing patched manifest
-    oci_client.put_manifest(
-        oci_ref,
-        manifest=json.dumps(manifest.as_dict())
-    )
 
 
 def retrieve(

@@ -9,7 +9,10 @@ import hashlib
 import io
 import json
 import os
+import subprocess
 import sys
+import tarfile
+import tempfile
 import textwrap
 
 import cryptography.exceptions
@@ -920,6 +923,119 @@ def generate_config(parsed):
     os.execv(simple_cfg_script_path, sys.argv[1:])
 
 
+def edit(parsed):
+    if not _have_oci:
+        print('ERROR: `oci`-package is not available - cannot edit')
+        exit(1)
+
+    cname, cversion = parsed.component.split(':')
+    oci_client = oci.client.Client(
+        credentials_lookup=oci.auth.docker_credentials_lookup(
+            docker_cfg=parsed.docker_cfg,
+        ),
+    )
+
+    ocm_repo = ocm.OciOcmRepository(baseUrl=parsed.ocm_repository)
+    oci_ref = ocm_repo.component_version_oci_ref(name=cname, version=cversion)
+
+    manifest = oci_client.manifest(image_reference=oci_ref)
+
+    cfg_blob = oci_client.blob(
+        image_reference=oci_ref,
+        digest=manifest.config.digest,
+    )
+    oci_cfg: ocm.oci.ComponentDescriptorOciCfg = dacite.from_dict(
+        data_class=ocm.oci.ComponentDescriptorOciCfg,
+        data=json.loads(cfg_blob.text),
+    )
+
+    cd_blob = oci_client.blob(
+        image_reference=oci_ref,
+        digest=oci_cfg.componentDescriptorLayer.digest,
+    )
+
+    tar = tarfile.open(
+        fileobj=io.BytesIO(cd_blob.content),
+        mode='r:*',
+    )
+    # component-descriptor must be first entry in tarfile
+    cd_info = tar.next()
+    reader = tar.extractfile(cd_info)
+
+    with tempfile.NamedTemporaryFile(suffix='.yaml', delete=False) as tf:
+        tmp_path = tf.name
+        digest = hashlib.sha256()
+        while chunk := reader.read(tarfile.BLOCKSIZE):
+            tf.write(chunk)
+            digest.update(chunk)
+        tar.close()
+        tf.flush()
+        old_digest = digest.hexdigest()
+
+    subprocess.run((parsed.editor, tmp_path), check=True)
+
+    # vi (re)creates files on write -> re-open filehandle
+    with open(tmp_path, 'rb') as f:
+        raw = f.read()
+
+    os.unlink(tmp_path)
+
+    new_digest = hashlib.sha256(raw).hexdigest()
+    if new_digest == old_digest:
+        print('no changes - exiting')
+        exit(0)
+
+    # build updated tar in-memory to know digest before uploading
+    buf = io.BytesIO()
+    out_tar = tarfile.open(fileobj=buf, mode='w')
+    info = tarfile.TarInfo(name='component-descriptor.yaml')
+    info.size = len(raw)
+    out_tar.addfile(info, io.BytesIO(raw))
+    out_tar.close()
+    tar_len = buf.tell()
+    buf.seek(0)
+    tar_digest = f'sha256:{hashlib.sha256(buf.read()).hexdigest()}'
+    buf.seek(0)
+
+    oci_client.put_blob(
+        image_reference=oci_ref,
+        digest=tar_digest,
+        octets_count=tar_len,
+        data=buf,
+    )
+
+    old_layer_digest = oci_cfg.componentDescriptorLayer.digest
+    manifest.layers = [
+        layer for layer in manifest.layers
+        if layer.digest != old_layer_digest
+    ] + [oci.model.OciBlobRef(
+        digest=tar_digest,
+        mediaType=ocm.oci.component_descriptor_mimetype,
+        size=tar_len,
+    )]
+
+    oci_cfg.componentDescriptorLayer.digest = tar_digest
+    oci_cfg_raw = json.dumps(dataclasses.asdict(oci_cfg)).encode('utf-8')
+    oci_cfg_digest = f'sha256:{hashlib.sha256(oci_cfg_raw).hexdigest()}'
+    manifest.config = dataclasses.replace(
+        manifest.config,
+        digest=oci_cfg_digest,
+        size=len(oci_cfg_raw),
+    )
+
+    oci_client.put_blob(
+        image_reference=oci_ref,
+        digest=oci_cfg_digest,
+        octets_count=len(oci_cfg_raw),
+        data=io.BytesIO(oci_cfg_raw),
+    )
+
+    oci_client.put_manifest(
+        image_reference=oci_ref,
+        manifest=json.dumps(manifest.as_dict()),
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     maincmd_parsers = parser.add_subparsers(
@@ -1244,6 +1360,32 @@ def main():
         '--ca-file',
         required=True,
         help='path to certificate(s) to trust (expected in PEM-format)',
+    )
+
+    edit_parser = maincmd_parsers.add_parser(
+        'edit',
+        aliases=('e',),
+        help='interactively edit a component-descriptor stored in an OCI registry',
+    )
+    edit_parser.set_defaults(callable=edit)
+    edit_parser.add_argument(
+        '--component', '-c',
+        required=True,
+        help='component: <component-name>:<version>',
+    )
+    edit_parser.add_argument(
+        '--ocm-repository', '-O',
+        required=True,
+    )
+    edit_parser.add_argument(
+        '--editor',
+        default='vim',
+        help='editor command to invoke (default: vim)',
+    )
+    edit_parser.add_argument(
+        '--docker-cfg',
+        required=False,
+        help='path to dockerd\'s `config.json` file',
     )
 
     if len(sys.argv) < 2:
