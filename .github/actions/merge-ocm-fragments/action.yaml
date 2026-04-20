@@ -94,7 +94,7 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@6e6cb5268bc1718f266b7529ed9fadf7a349ccb0
     - name: preprocess
       id: preprocess
       shell: bash
@@ -116,7 +116,7 @@ runs:
         EOF
     - name: import-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@8b8241207094d139cb8a07786b0a1e09a8dc7706
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-component-descriptor-artefact
@@ -151,7 +151,7 @@ runs:
            --out "${component_descriptor}"
         fi
     - name: import-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@8b8241207094d139cb8a07786b0a1e09a8dc7706
       with:
         pattern: ${{ steps.preprocess.outputs.artefact-name }}
         path: ${{ inputs.outdir }}
@@ -242,7 +242,7 @@ runs:
           f.write(f'component-version={name}:{version}\n')
 
     - name: checkout-for-postprocessing
-      uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      uses: gardener/cc-utils/.github/actions/trusted-checkout@f723f5f3e60845b67208695712f0b7a7f9ec2b4f
       if: ${{ inputs.post-process == 'component-cli' }}
       with:
         path: repo.d # avoid conflicts w/ component-descriptor
