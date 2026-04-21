@@ -808,26 +808,32 @@ def process_replication_plan_step(
                 ).local_ref,
             )
 
-        if not replication_resource_element.reference_by_digest:
-            return replication_resource_element
+        if replication_resource_element.reference_by_digest:
+            tgt_ref = replication_resource_element.tgt_ref
 
-        tgt_ref = replication_resource_element.tgt_ref
+            if (
+                replication_resource_element.retain_symbolic_tag
+                and (tgt_ref.has_symbolical_tag or tgt_ref.has_mixed_tag)
+            ):
+                tgt_ref = f'{tgt_ref.with_symbolical_tag}@{oci_manifest_digest}'
+            else:
+                tgt_ref = f'{tgt_ref.ref_without_tag}@{oci_manifest_digest}'
 
-        if (
-            replication_resource_element.retain_symbolic_tag
-            and (tgt_ref.has_symbolical_tag or tgt_ref.has_mixed_tag)
-        ):
-            tgt_ref = f'{tgt_ref.with_symbolical_tag}@{oci_manifest_digest}'
-        else:
-            tgt_ref = f'{tgt_ref.ref_without_tag}@{oci_manifest_digest}'
+            access_type = replication_resource_element.target.access.type
+            if access_type is ocm.AccessType.OCI_REGISTRY:
+                replication_resource_element.target.access.imageReference = tgt_ref
+            elif access_type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
+                replication_resource_element.target.access.reference = tgt_ref
+            else:
+                raise ValueError(access_type)
 
-        access_type = replication_resource_element.target.access.type
-        if access_type is ocm.AccessType.OCI_REGISTRY:
-            replication_resource_element.target.access.imageReference = tgt_ref
-        elif access_type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
-            replication_resource_element.target.access.reference = tgt_ref
-        else:
-            raise ValueError(access_type)
+        if descriptor_ref := replication_resource_element.descriptor_ref_override:
+            # overwrite the ref written into the component-descriptor, independently of where
+            # the artifact was actually pushed; the access-type is always OCI_REGISTRY here,
+            # since descriptor_ref_override is an absolute reference
+            replication_resource_element.target.access = ocm.OciAccess(
+                imageReference=descriptor_ref,
+            )
 
         return replication_resource_element
 

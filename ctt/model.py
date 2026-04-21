@@ -12,6 +12,8 @@ class ReplicationResourceOptions:
     reference_by_digest: bool = False
     retain_symbolic_tag: bool = False
     convert_to_relative_ref: bool = False
+    # if set, this ref is written into the component-descriptor instead of the actual push target
+    descriptor_ref_override: str | None = None
 
 
 @dataclasses.dataclass(kw_only=True)
