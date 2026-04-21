@@ -73,3 +73,106 @@ CTT's `replicate`-command will recursively replicate any referenced sub-componen
 default parallelise replication using multithreading, and will early-exit replication of
 OCI-Artefacts, if already present in replication-target. It is designed to be safe (and
 resource-efficient) to be rerun against the same replication-target multiple times.
+
+Uploaders
+---------
+
+Uploaders control how OCI-Artefacts are pushed to the target registry and how their references are
+recorded in the replicated component-descriptors.  Multiple uploaders may be chained in the
+`upload` list of an `image_processing_cfg` entry; they are applied in order, each receiving the
+result of the previous one.
+
+### PrependTargetUploader
+
+The most common uploader.  It derives the target image-reference by prepending the target
+OCI-Registry to the (mangled) source image-reference path.
+
+Example: replicate everything from `registry.example.com` into `registry.acme.org`:
+
+```yaml
+targets:
+  acme:
+    type: RegistriesTarget
+    kwargs:
+      registries:
+        - registry.acme.org
+      ocm_repository: registry.acme.org
+
+processors:
+  no-op:
+    type: NoOpProcessor
+
+uploaders:
+  prepend_target:
+    type: PrependTargetUploader
+    kwargs:
+      remove_prefixes:
+        - registry.example.com/
+
+image_processing_cfg:
+  - name: default
+    filter:
+      - type: MatchAllFilter
+    processor: no-op
+    target: acme
+    upload:
+      - prepend_target
+```
+
+`remove_prefixes` strips the given prefix before prepending the target registry, so
+`registry.example.com/myorg/myimage:1.0` is pushed to (and recorded as)
+`registry.acme.org/myorg/myimage:1.0` rather than
+`registry.acme.org/registry_example_com/myorg/myimage:1.0`.
+
+### DescriptorRefRewriteUploader
+
+Use this when the registry the artefacts are _pushed to_ differs from the registry _clients should
+pull from_.  A typical case is a primary regional registry that feeds into a global CDN or
+geo-routing endpoint: artefacts are uploaded once to the primary region, but all consumers should
+reference the global endpoint so they are served from the closest replica automatically.
+
+`DescriptorRefRewriteUploader` replaces a prefix in the computed target reference and stores the
+result as the `imageReference` written into the component-descriptor, without affecting the actual
+push destination.  It must be placed _after_ the uploader that sets the push target (e.g.
+`PrependTargetUploader`).
+
+Example: push to `registry-primary.example.com` but record `registry-global.example.com`
+references in the component-descriptor:
+
+```yaml
+targets:
+  primary:
+    type: RegistriesTarget
+    kwargs:
+      registries:
+        - registry-primary.example.com
+      ocm_repository: registry-primary.example.com
+
+processors:
+  no-op:
+    type: NoOpProcessor
+
+uploaders:
+  push_to_primary:
+    type: PrependTargetUploader
+    kwargs: {}
+  rewrite_for_global:
+    type: DescriptorRefRewriteUploader
+    kwargs:
+      src_prefix: registry-primary.example.com/
+      tgt_prefix: registry-global.example.com/
+
+image_processing_cfg:
+  - name: default
+    filter:
+      - type: MatchAllFilter
+    processor: no-op
+    target: primary
+    upload:
+      - push_to_primary
+      - rewrite_for_global
+```
+
+With this configuration, an image `src.example.com/myorg/myimage:1.0` is pushed to
+`registry-primary.example.com/src_example_com/myorg/myimage:1.0`, while the component-descriptor
+records `registry-global.example.com/src_example_com/myorg/myimage:1.0`.

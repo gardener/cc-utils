@@ -287,3 +287,56 @@ class DigestUploader(UploaderBase):
         replication_resource_element.retain_symbolic_tag = self._retain_symbolic_tag
 
         return replication_resource_element
+
+
+class DescriptorRefRewriteUploader(UploaderBase):
+    '''
+    Rewrites the image-reference written into the component-descriptor without changing the actual
+    push target.  This is useful when the OCI registry the artifacts are pushed to differs from
+    the one clients are supposed to pull from (e.g. a primary region registry vs. a global CDN
+    endpoint that geo-routes to regional replicas).
+
+    `src_prefix` is matched against the beginning of the target ref (as computed by any preceding
+    uploaders) and replaced by `tgt_prefix`.  Both values are compared/applied on the full
+    image-reference string including the host.
+
+    Example cfg:
+    ```yaml
+    uploaders:
+      rewrite_for_global:
+        type: DescriptorRefRewriteUploader
+        kwargs:
+          src_prefix: keppel.eu-de-1.cloud.sap/
+          tgt_prefix: keppel.global.cloud.sap/
+    ```
+    '''
+    def __init__(
+        self,
+        src_prefix: str,
+        tgt_prefix: str,
+    ):
+        self._src_prefix = src_prefix
+        self._tgt_prefix = tgt_prefix
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        target_as_source: bool=False,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        if not target_as_source:
+            ref = str(replication_resource_element.src_ref)
+        else:
+            ref = str(replication_resource_element.tgt_ref)
+
+        if not ref.startswith(self._src_prefix):
+            raise ValueError(
+                f'{ref!r} does not start with {self._src_prefix!r}; '
+                'check DescriptorRefRewriteUploader configuration'
+            )
+
+        descriptor_ref = self._tgt_prefix + ref.removeprefix(self._src_prefix)
+        replication_resource_element.descriptor_ref_override = descriptor_ref
+
+        return replication_resource_element
