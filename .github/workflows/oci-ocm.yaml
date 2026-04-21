@@ -490,6 +490,15 @@ jobs:
           upload-artifact: false
           upload-release-assets: false
 
+      - name: 'get syft version / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: syft-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(syft version --output json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
 
@@ -515,10 +524,13 @@ jobs:
               '${{ matrix.args.image-reference }}',
           )
 
+          syft_version = '${{ steps.syft-version.outputs.version }}' or None
+
           referrer_digest = oci.sbom.push_sbom_referrer(
               sbom_path='sbom.spdx.json',
               image_reference=image_ref,
               oci_client=oci_client,
+              syft_version=syft_version,
           )
 
           referrer_ref = f'{image_ref.ref_without_tag}@{referrer_digest}'
@@ -549,6 +561,16 @@ jobs:
               'architecture': architecture,
           }
 
+          syft_version = '${{ steps.syft-version.outputs.version }}' or None
+          syft_label = ocm.Label(
+              name='gardener.cloud/sbom/syft',
+              value={
+                  'version': syft_version,
+                  'format': 'spdx-json',
+              },
+          ) if syft_version else None
+          labels = [syft_label] if syft_label else []
+
           inline_resource = ocm.Resource(
               name=f'{name}-ocm',
               version='${{ inputs.version }}',
@@ -559,6 +581,7 @@ jobs:
                   mediaType='application/spdx+json',
               ),
               relation=ocm.ResourceRelation.LOCAL,
+              labels=labels,
           )
 
           ref_resource = ocm.Resource(
@@ -570,6 +593,7 @@ jobs:
                   imageReference='${{ steps.sbom-push.outputs.referrer-ref }}',
               ),
               relation=ocm.ResourceRelation.LOCAL,
+              labels=labels,
           )
 
           with open('sbom-ocm-resources.yaml', 'w') as f:
