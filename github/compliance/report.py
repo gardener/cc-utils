@@ -12,14 +12,14 @@ import github3
 import github3.issues
 import github3.issues.issue
 import github3.repos
+import odg_client
+import odg_client.model
 
 import ocm
 import ocm.util
 import requests
 
 import ci.util
-import delivery.client
-import delivery.model
 import github
 import github.codeowners
 import github.compliance.issue
@@ -257,10 +257,10 @@ def _scanned_element_repository(
 
 def _scanned_element_assignees(
     scanned_element: gcm.Target,
-    delivery_svc_client: delivery.client.DeliveryServiceClient | None,
+    delivery_svc_client: odg_client.DeliveryServiceClient | None,
     repository: github3.repos.repo.Repository,
     gh_api: github3.GitHub | github3.GitHubEnterprise,
-) -> tuple[set[str], set[delivery.model.Status]]:
+) -> tuple[set[str], set[odg_client.model.Status]]:
     '''
     Determines assignees for scanned-element based on its type.
         ocm-node:
@@ -297,7 +297,7 @@ def _scanned_element_assignees(
         yield from unique_usernames
 
     assignees: set[str] = set()
-    statuses: set[delivery.model.Status] = set()
+    statuses: set[odg_client.model.Status] = set()
 
     if gcm.is_ocm_artefact_node(scanned_element):
         if not delivery_svc_client:
@@ -311,7 +311,7 @@ def _scanned_element_assignees(
             )
             statuses = set(statuses)
 
-            gh_usernames = delivery.client.github_usernames_from_responsibles(
+            gh_usernames = odg_client.github_usernames_from_responsibles(
                 responsibles=responsibles,
                 github_url=repository.url,
             )
@@ -401,7 +401,7 @@ def create_or_update_github_issues(
     overwrite_repository: github3.repos.Repository=None,
     preserve_labels_regexes: typing.Iterable[str]=(),
     github_issue_template_cfgs: list[github.issue.GithubIssueTemplateCfg]=None,
-    delivery_svc_client: delivery.client.DeliveryServiceClient=None,
+    delivery_svc_client: odg_client.DeliveryServiceClient=None,
     delivery_svc_endpoints: model.delivery.DeliveryEndpointsCfg=None,
     gh_quota_minimum: int = 2000, # skip issue updates if remaining quota falls below this threshold
     job_url_callback: typing.Callable[[], str]=None,
