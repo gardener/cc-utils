@@ -72,7 +72,10 @@ def configure_parser(parser):
             f'"{ctt.process_dependencies.PruningMode.PRUNE_SUBTREES.value}" (default) '
             'skips subtrees already present in the target. '
             f'"{ctt.process_dependencies.PruningMode.REPLICATE_ALL.value}" '
-            'replicates the full transitive closure unconditionally.'
+            'replicates the full transitive closure unconditionally. '
+            f'"{ctt.process_dependencies.PruningMode.FORCE_OVERWRITE_DESCRIPTORS.value}" '
+            'replicates the full transitive closure and overwrites existing component-descriptors; '
+            'OCI artefacts are still skipped when already present.'
         ),
     )
 

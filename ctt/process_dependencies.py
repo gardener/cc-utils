@@ -60,9 +60,15 @@ class PruningMode(enum.StrEnum):
     any subtree whose root descriptor already exists in the target, avoiding redundant work.
     This optimisation is robust in the common case but may miss partial replications in
     corner-cases; use REPLICATE_ALL for a full replication at the cost of extra HEAD requests.
+
+    FORCE_OVERWRITE_DESCRIPTORS behaves like REPLICATE_ALL for tree-traversal but additionally
+    overwrites component-descriptors even when they already exist in the target.  OCI artefacts
+    are still skipped when already present.  Useful when descriptor content must be refreshed
+    (e.g. after a reference-rewrite rule change) without re-pushing all images.
     '''
     PRUNE_SUBTREES = 'prune-subtrees'  # skip subtrees whose root descriptor exists in target
     REPLICATE_ALL = 'replicate-all'    # replicate full transitive closure unconditionally
+    FORCE_OVERWRITE_DESCRIPTORS = 'force-overwrite-descriptors'  # overwrite descriptors, skip images
 
 
 @functools.cache
@@ -727,6 +733,7 @@ def process_images(
             reftype_filter=reftype_filter,
             skip_cd_validation=skip_cd_validation,
             skip_component_upload=skip_component_upload,
+            overwrite_descriptors=pruning_mode is PruningMode.FORCE_OVERWRITE_DESCRIPTORS,
             max_workers=max_workers,
         )
 
@@ -744,6 +751,7 @@ def process_replication_plan_step(
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool] | None=None,
     skip_cd_validation: bool=False,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool] | None=None,
+    overwrite_descriptors: bool=False,
     max_workers: int=16,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     def process_replication_resource_element(
@@ -940,6 +948,7 @@ def process_replication_plan_step(
             patched_component_descriptor=replication_plan_component.target,
             src_ocm_repo=orig_ocm_repo,
             oci_client=oci_client,
+            overwrite=overwrite_descriptors,
         )
 
     if processing_mode is ProcessingMode.DRY_RUN:
