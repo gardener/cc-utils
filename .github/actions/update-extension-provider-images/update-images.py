@@ -36,7 +36,7 @@ Comment Directives (one per line, placed above image entries):
 
 Comments not recognized as directives are preserved in the output.
 
-Manual k8s Constraints:
+Explicit K8s Constraints:
 Images with targetVersion like '>= 1.34' that don't correlate with the image version
 (e.g., csi-provisioner v6.x with '>= 1.34') are detected automatically. These entries
 are updated to the latest available version while preserving the original targetVersion.
@@ -52,11 +52,13 @@ are no longer supported.
 """
 
 import argparse
+import math
 import re
 import sys
 import traceback
 from collections import defaultdict
 from dataclasses import dataclass, asdict, replace
+from io import StringIO
 from typing import Optional, Any
 
 import dacite
@@ -67,6 +69,65 @@ from ruamel.yaml import YAMLError
 from oci import client as oci_client
 from ocm import Label as OcmLabel
 from version import parse_to_semver, is_final, iter_upgrade_path
+
+
+# Type alias for directives map: (name, repository, tag) -> directives dict
+DirectivesMap = dict[tuple[str, str, str], dict[str, Any]]
+
+
+def _directive_key(entry: 'ImageEntry') -> tuple[str, str, str]:
+    """Create a unique key for an image entry in the directives map."""
+    return (entry.name, entry.repository, entry.tag)
+
+
+def is_frozen(entry: 'ImageEntry', directives: DirectivesMap) -> bool:
+    """Check if an image entry is frozen (should skip all updates)."""
+    return directives.get(_directive_key(entry), {}).get('freeze', False)
+
+
+def should_skip_minor_update(entry: 'ImageEntry', directives: DirectivesMap) -> bool:
+    """Check if an image entry should skip minor/major updates (max-supported-k8s)."""
+    return directives.get(_directive_key(entry), {}).get('max_supported_k8s', False)
+
+
+def has_version_mapping(entry: 'ImageEntry', directives: DirectivesMap) -> bool:
+    """Check if an image entry has version-mapping directive (GCP CCM)."""
+    return directives.get(_directive_key(entry), {}).get('version_mapping', False)
+
+
+def has_explicit_k8s_constraint(entry: 'ImageEntry', directives: DirectivesMap) -> bool:
+    """
+    Check if this entry has an explicit k8s version constraint.
+
+    Returns True if:
+    - Entry has a targetVersion starting with '>='
+    - The constraint version doesn't match the image version
+    - No version-mapping directive is present
+
+    Example: image v6.2.0 with targetVersion '>= 1.34' is an explicit constraint
+    because 6.2 != 1.34 and there's no version-mapping.
+    """
+    if not entry.targetVersion or has_version_mapping(entry, directives):
+        return False
+
+    if not entry.targetVersion.startswith('>='):
+        return False
+
+    try:
+        target_version_str = entry.targetVersion.replace('>=', '').strip()
+        target_version = parse_to_semver(target_version_str)
+        image_version = parse_to_semver(entry.tag)
+
+        # If target version doesn't match image version, it's an explicit constraint
+        return (target_version.major, target_version.minor) != \
+               (image_version.major, image_version.minor)
+    except ValueError:
+        return False
+
+
+def get_entry_directives(entry: 'ImageEntry', directives: DirectivesMap) -> dict[str, Any]:
+    """Get the directives dict for an image entry."""
+    return directives.get(_directive_key(entry), {})
 
 
 # --- Data Classes ---
@@ -84,7 +145,6 @@ class ImageEntry:
     labels: list[OcmLabel]
     targetVersion: Optional[str] = None
     resourceId: Optional[ResourceId] = None
-    _directives: Optional[dict[str, Any]] = None  # Internal field for directives
 
     def has_target_version(self) -> bool:
         return self.targetVersion is not None
@@ -100,58 +160,11 @@ class ImageEntry:
             new_tag: str,
             new_target_version: str,
     ) -> 'ImageEntry':
-        # Only keep version_mapping
-        filtered_directives = {}
-        if self._directives and self._directives.get('version_mapping'):
-            filtered_directives['version_mapping'] = True
-
         return replace(
                 self,
                 tag=new_tag,
                 targetVersion=new_target_version,
-                _directives=filtered_directives if filtered_directives else None
         )
-
-    def is_frozen(self) -> bool:
-        return bool(self._directives and self._directives.get('freeze', False))
-
-    def should_skip_minor_update(self) -> bool:
-        return bool(self._directives and self._directives.get('max_supported_k8s', False))
-
-    def has_version_mapping(self) -> bool:
-        return bool(self._directives and self._directives.get('version_mapping', False))
-
-    def has_manual_k8s_constraint(self) -> bool:
-        """
-        Check if this entry has a manual k8s version constraint.
-
-        Returns True if:
-        - Entry has a targetVersion starting with '>='
-        - The constraint version doesn't match the image version
-        - No version-mapping directive is present
-
-        Example: image v6.2.0 with targetVersion '>= 1.34' is a manual constraint
-        because 6.2 != 1.34 and there's no version-mapping.
-        """
-        if not self.targetVersion or self.has_version_mapping():
-            return False
-
-        if not self.targetVersion.startswith('>='):
-            return False
-
-        try:
-            target_version_str = self.targetVersion.replace('>=', '').strip()
-            target_version = parse_to_semver(target_version_str)
-            image_version = parse_to_semver(self.tag)
-
-            # If target version doesn't match image version, it's a manual constraint
-            return (target_version.major, target_version.minor) != \
-                   (image_version.major, image_version.minor)
-        except ValueError:
-            return False
-
-    def set_directives(self, directives: dict[str, Any]) -> None:
-        self._directives = directives or {}
 
 
 @dataclass
@@ -182,8 +195,6 @@ class ImagesData:
         result = {'images': []}
         for image in self.images:
             image_dict = asdict(image)
-            # Remove internal fields that shouldn't end up in the new yaml
-            image_dict.pop('_directives', None)
             result['images'].append(image_dict)
 
         return self._remove_none_values(result)
@@ -211,29 +222,30 @@ class ImageUpdate:
 
 
 # --- Helper Functions ---
-def load_and_validate_images_data(images_yaml_path: str) -> tuple[ImagesData, Any]:
+def load_and_validate_images_data(yaml_content: str) -> ImagesData:
     """
     Load and validate images.yaml data using dacite.
 
     Args:
-        images_yaml_path: Path to the images.yaml file
+        yaml_content: Raw YAML content as string
 
     Returns:
-        Tuple of (Validated ImagesData object, raw YAML data for comment parsing)
+        Validated ImagesData object
 
     Raises:
-        ValueError: If the file cannot be read, parsed, or validated
+        ValueError: If the content cannot be parsed or validated
     """
     yaml = YAML()
     yaml.preserve_quotes = True
-    yaml.width = 4096
+    yaml.width = math.inf
 
-    with open(images_yaml_path, "r") as f:
-        raw_yaml_data = yaml.load(f)
-        raw_yaml_data['images']
+    raw_yaml_data = yaml.load(StringIO(yaml_content))
+
+    if 'images' not in raw_yaml_data:
+        raise ValueError("Missing required 'images' key in YAML content")
 
     try:
-        validated_data = dacite.from_dict(
+        return dacite.from_dict(
             data_class=ImagesData,
             data=dict(raw_yaml_data),  # Convert to regular dict for dacite
             config=dacite.Config(
@@ -241,12 +253,11 @@ def load_and_validate_images_data(images_yaml_path: str) -> tuple[ImagesData, An
                 check_types=True,
             ),
         )
-        return validated_data, raw_yaml_data
     except dacite.DaciteError as e:
-        raise ValueError(f"Invalid images.yaml structure in {images_yaml_path}: {e}")
+        raise ValueError(f"Invalid images.yaml structure: {e}")
 
 
-def parse_image_comments(yaml_content: str) -> dict[str, dict[str, Any]]:
+def parse_image_comments(yaml_content: str) -> dict[int, dict[str, Any]]:
     """
     Parse comments above image entries to extract directives.
 
@@ -332,7 +343,7 @@ def parse_comment_directives(comment_lines: list[str]) -> dict[str, Any]:
 def create_image_directive_map(
     yaml_content: str,
     images_data: ImagesData
-) -> dict[str, dict[str, Any]]:
+) -> DirectivesMap:
     """
     Create a mapping from image entries to their comment directives.
 
@@ -345,14 +356,14 @@ def create_image_directive_map(
         images_data: Parsed and validated ImagesData object
 
     Returns:
-        Dictionary mapping unique image keys (name:repository:tag) to their
+        DirectivesMap mapping (name, repository, tag) tuples to their
         comment directives
     """
     comment_directives = parse_image_comments(yaml_content)
 
     # Convert line-based mapping to image-based mapping
     lines = yaml_content.split('\n')
-    image_directives = {}
+    image_directives: DirectivesMap = {}
 
     for line_num, directive_info in comment_directives.items():
         # Find the corresponding image entry by matching name and position
@@ -360,7 +371,7 @@ def create_image_directive_map(
 
         # Count which occurrence of this image name this is
         occurrence = 0
-        for i in range(int(line_num)):
+        for i in range(line_num):
             if re.search(rf'- name:\s*{re.escape(image_name)}', lines[i]):
                 occurrence += 1
 
@@ -369,7 +380,7 @@ def create_image_directive_map(
         if occurrence < len(matching_images):
             # Create a unique key for this specific image entry
             img_entry = matching_images[occurrence]
-            key = f"{img_entry.name}:{img_entry.repository}:{img_entry.tag}"
+            key = _directive_key(img_entry)
             image_directives[key] = directive_info['directives']
 
     return image_directives
@@ -378,7 +389,7 @@ def create_image_directive_map(
 # --- Core Logic Functions ---
 def find_greater_versions(
     current_tags: list[str],
-    available_tags: list[str],
+    available_tags: list[str]
 ) -> dict[str, list[str]]:
     """
     Compare current tags with available tags to find greater patch and minor/major versions.
@@ -452,8 +463,9 @@ def find_greater_versions(
 def update_singleton_image(
     image_list: list[ImageEntry],
     all_greater_tags: list[str],
-    name: str
-) -> list[ImageUpdate]:
+    name: str,
+    directives: DirectivesMap
+) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Handle updates for images without targetVersion (singleton components).
 
@@ -464,15 +476,18 @@ def update_singleton_image(
         image_list: List of image entries for this component (should contain exactly 1 item)
         all_greater_tags: All available newer tags (combination of patch and minor updates)
         name: Image name for logging and update tracking
+        directives: Map of image entries to their directives
 
     Returns:
-        List containing zero or one ImageUpdate object
+        Tuple of:
+        - List containing zero or one ImageUpdate object
+        - Updated DirectivesMap with keys updated for changed tags
 
     Raises:
         SystemExit: If multiple entries found for singleton image (configuration error)
     """
     if not all_greater_tags:
-        return []
+        return [], {}
 
     if len(image_list) != 1:
         print(
@@ -483,31 +498,40 @@ def update_singleton_image(
         sys.exit(1)
 
     # Check if this singleton image should be kept
-    if image_list[0].is_frozen():
+    if is_frozen(image_list[0], directives):
         print(f"Skipping update for singleton {name} due to 'freeze' directive", file=sys.stderr)
-        return []
+        return [], {}
 
     latest_tag = max(all_greater_tags, key=parse_to_semver)
+    old_key = _directive_key(image_list[0])
     old_tag = image_list[0].tag
 
     if old_tag != latest_tag:
         image_list[0].update_tag(latest_tag)
+        new_key = _directive_key(image_list[0])
+
+        # Migrate directives to new key if entry had directives
+        updated_directives: DirectivesMap = {}
+        if old_key in directives:
+            updated_directives[new_key] = directives[old_key]
+
         return [ImageUpdate(
             image_name=name,
             old_tag=old_tag,
             new_tag=latest_tag,
             update_type="singleton",
             repository=image_list[0].repository,
-        )]
+        )], updated_directives
 
-    return []
+    return [], {}
 
 
 def apply_patch_updates(
     image_list: list[ImageEntry],
     patch_tags: list[str],
-    name: str
-) -> list[ImageUpdate]:
+    name: str,
+    directives: DirectivesMap
+) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Apply patch version updates to existing image entries.
     Only creates one update record per major.minor showing the final patch version jump.
@@ -519,11 +543,15 @@ def apply_patch_updates(
         image_list: List of image entries for this component
         patch_tags: List of patch version tags to apply
         name: Image name for logging and update tracking
+        directives: Map of image entries to their directives
 
     Returns:
-        List of ImageUpdate objects representing the applied patch updates
+        Tuple of:
+        - List of ImageUpdate objects representing the applied patch updates
+        - Updated DirectivesMap with keys updated for changed tags
     """
     updates: list[ImageUpdate] = []
+    updated_directives: DirectivesMap = {}
 
     # Group patch tags by major.minor version
     tags_by_version: dict[tuple[int, int], list[str]] = defaultdict(list)
@@ -545,7 +573,7 @@ def apply_patch_updates(
                 img_version = parse_to_semver(img_entry.tag)
                 if (img_version.major, img_version.minor) == (major, minor):
                     # Check if this specific image should skip patch updates
-                    if img_entry.is_frozen():
+                    if is_frozen(img_entry, directives):
                         print(
                             f"Skipping patch update for {name} tag {img_entry.tag} "
                             "due to 'freeze' directive",
@@ -553,8 +581,15 @@ def apply_patch_updates(
                         )
                         continue
 
+                    old_key = _directive_key(img_entry)
                     old_tag = img_entry.tag
                     img_entry.update_tag(highest_patch_tag)
+                    new_key = _directive_key(img_entry)
+
+                    # Migrate directives to new key if entry had directives
+                    if old_key in directives:
+                        updated_directives[new_key] = directives[old_key]
+
                     updates.append(ImageUpdate(
                         image_name=name,
                         old_tag=old_tag,
@@ -566,14 +601,15 @@ def apply_patch_updates(
             except ValueError:
                 continue
 
-    return updates
+    return updates, updated_directives
 
 
 def create_minor_version_entries(
     image_list: list[ImageEntry],
     minor_tags: list[str],
-    name: str
-) -> tuple[list[ImageUpdate], list[ImageEntry]]:
+    name: str,
+    directives: DirectivesMap
+) -> tuple[list[ImageUpdate], list[ImageEntry], DirectivesMap]:
     """
     Create new image entries for minor/major version updates.
     Only creates one entry per major.minor (the highest patch version).
@@ -585,27 +621,33 @@ def create_minor_version_entries(
         image_list: List of existing image entries for this component
         minor_tags: List of minor/major version tags to add
         name: Image name for logging and update tracking
+        directives: Map of image entries to their directives
 
     Returns:
         Tuple containing:
         - List of ImageUpdate objects for minor version additions
         - List of new ImageEntry objects to be added to the main data structure
+        - Updated DirectivesMap with directives for new entries (if version_mapping)
     """
     updates: list[ImageUpdate] = []
     new_entries: list[ImageEntry] = []
+    new_directives: DirectivesMap = {}
 
     # Check if the highest version entry (which controls minor updates) should be kept
     try:
         highest_existing = max(image_list, key=lambda img: parse_to_semver(img.tag))
-        if highest_existing.should_skip_minor_update():
+        if should_skip_minor_update(highest_existing, directives):
             print(
                 f"Skipping minor/major updates for {name} due to "
                 "'max-supported-k8s' directive on highest version",
                 file=sys.stderr,
             )
-            return updates, new_entries
+            return updates, new_entries, new_directives
     except ValueError:
         pass  # If we can't parse versions, proceed with updates
+
+    # Check if we need to propagate version_mapping to new entries
+    uses_version_mapping = has_version_mapping(image_list[0], directives)
 
     # Group minor tags by major.minor version
     tags_by_version: dict[tuple[int, int], list[str]] = defaultdict(list)
@@ -622,13 +664,17 @@ def create_minor_version_entries(
         highest_tag = max(tags, key=parse_to_semver)
 
         # Create new entry for the highest patch version only
-        if image_list[0].has_version_mapping():
+        if uses_version_mapping:
             target_version = f"1.{major}.x"  # For k8s-ccm mapping
         else:
             target_version = f"{major}.{minor}.x"
 
         new_entry = image_list[-1].copy_as_template(highest_tag, target_version)
         new_entries.append(new_entry)
+
+        # Propagate version_mapping directive to new entries
+        if uses_version_mapping:
+            new_directives[_directive_key(new_entry)] = {'version_mapping': True}
 
         # Find the previous highest version for the update record
         all_tags = [img.tag for img in image_list] + [entry.tag for entry in new_entries]
@@ -650,12 +696,13 @@ def create_minor_version_entries(
             repository=new_entry.repository,
         ))
 
-    return updates, new_entries
+    return updates, new_entries, new_directives
 
 
 def update_target_versions(
     existing_entries: list[ImageEntry],
-    new_entries: list[ImageEntry]
+    new_entries: list[ImageEntry],
+    directives: DirectivesMap
 ) -> None:
     """
     Update targetVersion fields when new entries are added.
@@ -667,6 +714,7 @@ def update_target_versions(
     Args:
         existing_entries: The original image entries for this component
         new_entries: The newly created image entries
+        directives: Map of image entries to their directives
     """
     if not new_entries:
         return
@@ -701,7 +749,7 @@ def update_target_versions(
 
     # Update the previously highest version from ">= X.Y" to "X.Y.x"
     prev_version = parse_to_semver(previously_highest.tag)
-    if previously_highest.has_version_mapping():
+    if has_version_mapping(previously_highest, directives):
         previously_highest.update_target_version(f"1.{prev_version.major}.x")
     else:
         previously_highest.update_target_version(f"{prev_version.major}.{prev_version.minor}.x")
@@ -709,27 +757,28 @@ def update_target_versions(
     # Set all new entries to "X.Y.x" format
     for entry in parseable_new:
         version = parse_to_semver(entry.tag)
-        if entry.has_version_mapping():
+        if has_version_mapping(entry, directives):
             entry.update_target_version(f"1.{version.major}.x")
         else:
             entry.update_target_version(f"{version.major}.{version.minor}.x")
 
     # Set the new highest entry to ">= X.Y" format
     new_highest_version = parse_to_semver(new_highest.tag)
-    if new_highest.has_version_mapping():
+    if has_version_mapping(new_highest, directives):
         new_highest.update_target_version(f">= 1.{new_highest_version.major}")
     else:
         major_minor = f"{new_highest_version.major}.{new_highest_version.minor}"
         new_highest.update_target_version(f">= {major_minor}")
 
 
-def update_manual_constraint_images(
+def update_explicit_constraint_images(
     image_list: list[ImageEntry],
     all_greater_tags: list[str],
-    name: str
-) -> list[ImageUpdate]:
+    name: str,
+    directives: DirectivesMap
+) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
-    Handle updates for images with manual k8s version constraints.
+    Handle updates for images with explicit k8s version constraints.
 
     These are images where the targetVersion (e.g., '>= 1.34') doesn't correlate
     with the image version (e.g., v6.2.0). In this case:
@@ -741,20 +790,24 @@ def update_manual_constraint_images(
         image_list: List of image entries for this component
         all_greater_tags: All available newer tags (patch + minor combined)
         name: Image name for logging and update tracking
+        directives: Map of image entries to their directives
 
     Returns:
-        List of ImageUpdate objects representing the applied updates
+        Tuple of:
+        - List of ImageUpdate objects representing the applied updates
+        - Updated DirectivesMap with keys updated for changed tags
     """
     if not all_greater_tags:
-        return []
+        return [], {}
 
     updates: list[ImageUpdate] = []
+    updated_directives: DirectivesMap = {}
 
-    # Find the entry with the manual constraint (the '>= X.Y' one)
+    # Find the entry with the explicit constraint (the '>= X.Y' one)
     constraint_entry = None
     other_entries = []
     for entry in image_list:
-        if entry.has_manual_k8s_constraint():
+        if has_explicit_k8s_constraint(entry, directives):
             constraint_entry = entry
         else:
             other_entries.append(entry)
@@ -762,10 +815,17 @@ def update_manual_constraint_images(
     # Update the constraint entry to the latest available version
     if constraint_entry:
         latest_tag = max(all_greater_tags, key=parse_to_semver)
+        old_key = _directive_key(constraint_entry)
         old_tag = constraint_entry.tag
 
         if old_tag != latest_tag:
             constraint_entry.update_tag(latest_tag)
+            new_key = _directive_key(constraint_entry)
+
+            # Migrate directives to new key if entry had directives
+            if old_key in directives:
+                updated_directives[new_key] = directives[old_key]
+
             updates.append(ImageUpdate(
                 image_name=name,
                 old_tag=old_tag,
@@ -774,7 +834,7 @@ def update_manual_constraint_images(
                 repository=constraint_entry.repository,
             ))
             print(
-                f"Updated {name} with manual k8s constraint: {old_tag} -> {latest_tag} "
+                f"Updated {name} with explicit k8s constraint: {old_tag} -> {latest_tag} "
                 f"(keeping targetVersion: {constraint_entry.targetVersion})",
                 file=sys.stderr,
             )
@@ -792,7 +852,7 @@ def update_manual_constraint_images(
                 continue
 
         for entry in other_entries:
-            if entry.is_frozen():
+            if is_frozen(entry, directives):
                 continue
             try:
                 entry_version = parse_to_semver(entry.tag)
@@ -800,8 +860,15 @@ def update_manual_constraint_images(
                 if key in tags_by_version:
                     highest_patch = max(tags_by_version[key], key=parse_to_semver)
                     if entry.tag != highest_patch:
+                        old_key = _directive_key(entry)
                         old_tag = entry.tag
                         entry.update_tag(highest_patch)
+                        new_key = _directive_key(entry)
+
+                        # Migrate directives to new key if entry had directives
+                        if old_key in directives:
+                            updated_directives[new_key] = directives[old_key]
+
                         updates.append(ImageUpdate(
                             image_name=name,
                             old_tag=old_tag,
@@ -812,14 +879,15 @@ def update_manual_constraint_images(
             except ValueError:
                 continue
 
-    return updates
+    return updates, updated_directives
 
 
 def update_versioned_images(
     image_list: list[ImageEntry],
     greater: dict[str, list[str]],
-    name: str
-) -> tuple[list[ImageUpdate], list[ImageEntry]]:
+    name: str,
+    directives: DirectivesMap
+) -> tuple[list[ImageUpdate], list[ImageEntry], DirectivesMap]:
     """
     Handle updates for images with targetVersion (versioned components).
 
@@ -831,33 +899,48 @@ def update_versioned_images(
         image_list: List of image entries for this component
         greater: Dictionary with 'patch' and 'minor' version lists
         name: Image name for logging and update tracking
+        directives: Map of image entries to their directives
 
     Returns:
         Tuple containing:
         - List of ImageUpdate objects for all updates (patch + minor)
         - List of new ImageEntry objects to be added
+        - Updated DirectivesMap with directives for new entries
     """
     all_updates: list[ImageUpdate] = []
+    new_directives: DirectivesMap = {}
 
     # Apply patch updates to existing entries
-    patch_updates = apply_patch_updates(image_list, greater["patch"], name)
+    patch_updates, patch_directives = apply_patch_updates(
+        image_list, greater["patch"], name, directives
+    )
     all_updates.extend(patch_updates)
+    new_directives.update(patch_directives)
+
+    # Merge patch directives into working directives for minor version checks
+    working_directives = {**directives, **new_directives}
 
     # Create new entries for minor/major versions
-    minor_updates, new_entries = create_minor_version_entries(image_list, greater["minor"], name)
+    minor_updates, new_entries, entry_directives = create_minor_version_entries(
+        image_list, greater["minor"], name, working_directives
+    )
     all_updates.extend(minor_updates)
+    new_directives.update(entry_directives)
+
+    # Merge all new directives for update_target_versions
+    merged_directives = {**directives, **new_directives}
 
     # Update targetVersion fields
-    update_target_versions(image_list, new_entries)
+    update_target_versions(image_list, new_entries, merged_directives)
 
-    return all_updates, new_entries
+    return all_updates, new_entries, new_directives
 
 
 def update_images_data(
     images_data: ImagesData,
     new_versions_by_name_repo: dict[tuple[str, str], dict[str, list[str]]],
-    image_directives: dict[str, dict[str, Any]]
-) -> list[ImageUpdate]:
+    directives: DirectivesMap
+) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Update the ImagesData structure with new versions and return structured update info.
 
@@ -871,20 +954,18 @@ def update_images_data(
 
     Args:
         images_data: The ImagesData object loaded from images.yaml
-        new_versions_by_name: Maps (image_name, repository) to its new 'patch' and 'minor' versions
-        image_directives: Maps image entries to their comment directives
+        new_versions_by_name_repo: Maps (image_name, repository) to its new 'patch' and 'minor'
+            versions
+        directives: Map of image entries to their directives
 
     Returns:
-        List of structured ImageUpdate objects detailing each update performed
+        Tuple containing:
+        - List of structured ImageUpdate objects detailing each update performed
+        - Updated DirectivesMap including directives for newly created entries
     """
     all_updates: list[ImageUpdate] = []
     all_new_entries: list[ImageEntry] = []
-
-    # Apply directives to image entries
-    for image in images_data.images:
-        key = f"{image.name}:{image.repository}:{image.tag}"
-        if key in image_directives:
-            image.set_directives(image_directives[key])
+    updated_directives = dict(directives)  # Copy to avoid modifying original
 
     # Group images by (name, repository) for processing
     images_by_name_repo = defaultdict(list)
@@ -899,8 +980,8 @@ def update_images_data(
         greater = new_versions_by_name_repo[(name, repository)]
 
         # Separate frozen entries from active entries
-        frozen_entries = [img for img in image_list if img.is_frozen()]
-        active_entries = [img for img in image_list if not img.is_frozen()]
+        frozen_entries = [img for img in image_list if is_frozen(img, directives)]
+        active_entries = [img for img in image_list if not is_frozen(img, directives)]
 
         # Log frozen entries
         for img in frozen_entries:
@@ -911,34 +992,45 @@ def update_images_data(
             continue
 
         has_target_version = any(img.has_target_version() for img in active_entries)
-        has_manual_constraint = any(img.has_manual_k8s_constraint() for img in active_entries)
+        has_explicit_constraint = any(
+            has_explicit_k8s_constraint(img, directives) for img in active_entries
+        )
 
         if not has_target_version:
             # Handle singleton images (no targetVersion)
             all_greater_tags = greater["patch"] + greater["minor"]
-            updates = update_singleton_image(active_entries, all_greater_tags, name)
+            updates, new_directives = update_singleton_image(
+                active_entries, all_greater_tags, name, updated_directives,
+            )
             all_updates.extend(updates)
-        elif has_manual_constraint:
-            # Handle images with manual k8s constraints (e.g., '>= 1.34' with v6.x image)
+            updated_directives.update(new_directives)
+        elif has_explicit_constraint:
+            # Handle images with explicit k8s constraints (e.g., '>= 1.34' with v6.x image)
             all_greater_tags = greater["patch"] + greater["minor"]
-            updates = update_manual_constraint_images(active_entries, all_greater_tags, name)
+            updates, new_directives = update_explicit_constraint_images(
+                active_entries, all_greater_tags, name, updated_directives,
+            )
             all_updates.extend(updates)
+            updated_directives.update(new_directives)
         else:
             # Handle versioned images (with targetVersion)
-            updates, new_entries = update_versioned_images(active_entries, greater, name)
+            updates, new_entries, new_directives = update_versioned_images(
+                active_entries, greater, name, updated_directives,
+            )
             all_updates.extend(updates)
             all_new_entries.extend(new_entries)
+            updated_directives.update(new_directives)
 
     # Add all new entries to the main data structure
     images_data.add_images(all_new_entries)
-    return all_updates
+    return all_updates, updated_directives
 
 
 # --- I/O and Formatting Functions ---
 def write_yaml_file(
         data: ImagesData,
         filename: str,
-        original_yaml_data: Any
+        directives: DirectivesMap
 ) -> None:
     """
     Write the ImagesData and comments to a YAML file.
@@ -946,11 +1038,11 @@ def write_yaml_file(
     Args:
         data: The ImagesData object to be written
         filename: The path to the output YAML file
-        original_yaml_data: The original YAML data structure with comments
+        directives: Map of image entries to their directives for comment reconstruction
     """
     yaml = YAML()
     yaml.preserve_quotes = True
-    yaml.width = 4096
+    yaml.width = math.inf
 
     # Create completely new structure
     new_data = yaml.load("images: []\n")
@@ -958,26 +1050,26 @@ def write_yaml_file(
 
     # Add each image with comment preservation
     for i, img_data in enumerate(updated_data['images']):
-        clean_img = {k: v for k, v in img_data.items() if k != '_directives'}
-        new_data['images'].append(clean_img)
+        new_data['images'].append(img_data)
 
-        # Reconstruct comments from the original ImageEntry's directives
+        # Reconstruct comments from the directives map
         image_entry = data.images[i]
+        entry_directives = get_entry_directives(image_entry, directives)
 
-        if image_entry._directives:
+        if entry_directives:
             comment_lines = []
 
             # Add directive comments
-            if image_entry._directives.get('freeze'):
+            if entry_directives.get('freeze'):
                 comment_lines.append("freeze")
-            if image_entry._directives.get('max_supported_k8s'):
+            if entry_directives.get('max_supported_k8s'):
                 comment_lines.append("max-supported-k8s")
-            if image_entry._directives.get('version_mapping'):
+            if entry_directives.get('version_mapping'):
                 comment_lines.append("version-mapping")
 
             # Add additional comments (non-directive comments)
-            if image_entry._directives.get('additional_comments'):
-                comment_lines.extend(image_entry._directives['additional_comments'])
+            if entry_directives.get('additional_comments'):
+                comment_lines.extend(entry_directives['additional_comments'])
 
             # Apply all comments
             if comment_lines:
@@ -996,7 +1088,7 @@ def create_release_notes(
     updates: list[ImageUpdate],
     images_data: ImagesData,
     all_available_tags: dict[tuple[str, str], list[str]],
-    filename: str,
+    filename: str
 ) -> None:
     """
     Create a markdown file with links to release notes of all added or changed releases.
@@ -1128,13 +1220,13 @@ def main() -> None:
     try:
         with open(args.images_yaml_path, 'r') as f:
             yaml_content = f.read()
-        images_data, original_yaml_data = load_and_validate_images_data(args.images_yaml_path)
+        images_data = load_and_validate_images_data(yaml_content)
     except (FileNotFoundError, YAMLError, ValueError) as e:
         print(f"Error loading images data: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Parse comment directives
-    image_directives = create_image_directive_map(yaml_content, images_data)
+    directives = create_image_directive_map(yaml_content, images_data)
 
     oci_api = oci_client.client_with_dockerauth()
 
@@ -1179,11 +1271,13 @@ def main() -> None:
             all_new_versions[(name, repository)] = greater_versions
 
     if all_new_versions:
-        updates = update_images_data(images_data, all_new_versions, image_directives)
+        updates, updated_directives = update_images_data(
+            images_data, all_new_versions, directives
+        )
 
         if updates:
             images_data.sort_images()
-            write_yaml_file(images_data, args.images_yaml_path, original_yaml_data)
+            write_yaml_file(images_data, args.images_yaml_path, updated_directives)
             print(f"\nUpdated {args.images_yaml_path} with {len(updates)} changes.", file=sys.stderr)
 
         create_release_notes(updates, images_data, all_available_tags, args.release_notes_path)
