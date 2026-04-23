@@ -62,19 +62,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: validate-inputs
-      shell: bash
-      run: |
-        if [ -z "${{ inputs.commit-objects }}" ] && [ -z "${{ inputs.commit-objects-artefact }}" ]; then
-          echo "error: either commit-objects or commit-objects-artefact must be provided"
-          exit 1
-        fi
     - name: import-commit-objects-from-input
       if: ${{ inputs.commit-objects != '' }}
       shell: bash
       run: |
         set -eu
-        echo "${{ inputs.commit-objects }}" | base64 -d | tar x -C "${GITHUB_WORKSPACE}"
+        echo "${{ inputs.commit-objects }}" | base64 -d | tar x
     - name: import-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@master
@@ -85,7 +78,7 @@ runs:
       shell: bash
       run: |
         set -eu
-        tar xf commit-objects.tar.gz -C "${GITHUB_WORKSPACE}"
+        tar xf commit-objects.tar.gz
         unlink commit-objects.tar.gz
     - name: import-commit
       shell: bash

@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eu
 
 # usage:
 # export GIT_DIR
 # $1: path to target-archive
 # $2: path to ref-file (must be older than commit)
 # $3: path to output-file for commit-digest (defaults to commit-digest)
-
-# darwin/macOS is not supported. differences that would need addressing:
-# - `find -newermt` (GNU) -> `-newer` (BSD find; compares mtime, but no XY-syntax)
-if [ "$(uname -s)" = 'Darwin' ]; then
-  echo "error: darwin/macOS is not supported"
-  exit 1
-fi
 
 if [ -z "${GIT_DIR:-}" ]; then
   echo "must set GIT_DIR"
@@ -43,12 +36,12 @@ fi
 commit_digest="$(git rev-parse @)"
 echo "${commit_digest}" > "${GIT_DIR}/refs/capture-commit"
 
-mapfile -t object_paths < <(
+object_paths=$(
   cd "$(dirname "$GIT_DIR")"
-  find .git/objects -type f -newermt "${ref}" | grep -v pack
+  find .git/objects -type f -neweraa "${ref}" | grep -v pack
 )
 object_paths+=('.git/refs/capture-commit')
 
 # objects are already gzipped - there is no point in compressing them again
-tar cf "${archive}" -b1 -C "$(dirname "${GIT_DIR}")" "${object_paths[@]}"
+tar cf "${archive}" -b1 -C $(dirname "${GIT_DIR}") ${object_paths[*]}
 echo "${commit_digest}" > ${commit_digest_out}
