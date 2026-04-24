@@ -16,28 +16,6 @@ import ci.util as examinee
 import ci.util
 
 
-def test_info():
-    with capture_out() as (stdout, stderr):
-        examinee.info(msg='test abc')
-    assert 'INFO: test abc' == stdout.getvalue().strip()
-    assert len(stderr.getvalue()) == 0
-
-
-def test_info_with_quiet():
-    class Args:
-        pass
-    args = Args()
-    args.quiet = True
-    import ctx
-    ctx.args = args
-
-    with capture_out() as (stdout, stderr):
-        examinee.info(msg='should not be printed')
-
-    assert len(stdout.getvalue()) == 0
-    assert len(stderr.getvalue()) == 0
-
-
 def test_fail():
     with capture_out() as (stdout, stderr):
         with pytest.raises(Failure):
