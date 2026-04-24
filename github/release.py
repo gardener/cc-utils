@@ -41,6 +41,17 @@ def body_or_replacement(
     ), False
 
 
+def _iter_releases(
+    repository: github3.repos.Repository,
+    number: int = -1,
+) -> typehints.Generator[github3.repos.release.Release, None, None]:
+    url = repository._build_url('releases', base_url=repository._api)
+    for raw in repository._iter(number, url, dict):
+        if raw.get('author') is None:
+            raw['author'] = {}  # github3 crashes on null author (deleted accounts)
+        yield github3.repos.release.Release(raw, repository)
+
+
 def find_draft_release(
     repository: github3.repos.Repository,
     name: str,
@@ -54,17 +65,11 @@ def find_draft_release(
     # are uncommon), this should be okay to hardcode. Todo: check whether this limit is still
     # valid.
     max_releases = 1020
-    try:
-        for release in repository.releases(number=max_releases):
-            if not release.draft:
-                continue
-            if release.name == name:
-                return release
-    except TypeError:
-        # `github3.py` raises if one of the release authors is unknown (i.e. a deleted account)
-        import traceback
-        traceback.print_exc()
-        logger.info('ignoring error and continuing with already found releases')
+    for release in _iter_releases(repository, number=max_releases):
+        if not release.draft:
+            continue
+        if release.name == name:
+            return release
 
 
 def delete_outdated_draft_releases(
@@ -85,14 +90,7 @@ def delete_outdated_draft_releases(
             with the same major and minor version
     '''
 
-    try:
-        releases = [release for release in repository.releases(number=20)]
-    except TypeError:
-        # `github3.py` raises if one of the release authors is unknown (i.e. a deleted account)
-        import traceback
-        traceback.print_exc()
-        logger.info('ignoring error and continuing with empty releases')
-        releases = []
+    releases = list(_iter_releases(repository, number=20))
 
     non_draft_releases = [release for release in releases if not release.draft]
     draft_releases = [release for release in releases if release.draft]
