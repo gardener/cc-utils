@@ -168,17 +168,7 @@ runs:
 
         if imagevector_file:
           prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
-          for prefix in prefixes:
-            # hack: in some (/all?) cases, images in imagevectors use `public` oci-registry,
-            #       which is a virtual oci-registry including both snapshots and releases
-            #       add to prefixes so ocm-component-references are correctly being detected
-            prefix = prefix.rstrip('/')
-            if prefix.endswith('snapshots/gardener'):
-              prefixes.append(f'{prefix.removesuffix("snapshots/gardener")}public/gardener')
-            elif prefix.endswith('releases/gardener'):
-              prefixes.append(f'{prefix.removesuffix("releases/gardener")}public/gardener')
-
-          prefixes = set(prefixes) # deduplicate
+          prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
 
           logger.info(f'{prefixes=}')
 
