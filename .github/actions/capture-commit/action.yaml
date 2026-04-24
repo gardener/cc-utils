@@ -72,6 +72,14 @@ runs:
     - name: capture-commit
       id: capture
       run: |
+        # darwin/macOS is not supported. differences that would need addressing:
+        # - `stat --format=%s` (GNU) -> `stat -f %z` (BSD)
+        # - `base64 -w0` (GNU) -> `base64 | tr -d '\n'` (BSD)
+        if [ "$(uname -s)" = 'Darwin' ]; then
+          echo 'error: darwin/macOS is not supported'
+          exit 1
+        fi
+
         ts_ref=${{ inputs.timestamp-reference }}
         if [ ! -f ${ts_ref} ]; then
           echo "no timestamp-reference-file at expected path: ${ts_ref}"
