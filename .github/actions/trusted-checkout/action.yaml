@@ -64,11 +64,6 @@ inputs:
 
       For security-reasons, this action will remove the label, such that it will have to be
       added again (adding the label will work as trigger).
-  needs-trusted-label:
-    type: string
-    required: false
-    description: |
-      a label that is added as a marker in order to notify lack of "trusted-label"
   remove-trusted-label:
     type: boolean
     default: true
@@ -336,7 +331,7 @@ runs:
         )
     - if: ${{ steps.calc.outputs.remove-label }}
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - name: remove-trusted-and-add-needs-label
+    - name: remove-trusted-label
       if: ${{ steps.calc.outputs.remove-label != '' && inputs.remove-trusted-label == 'true' }}
       shell: python
       run: |
@@ -363,8 +358,6 @@ runs:
           # trusted-checkout typically runs multiple times, so the label already being absent
           # is an expected, and of course, acceptable case
           exit(0)
-
-        pull_request.add_labels('${{ inputs.needs-trusted-label || 'needs-ok-to-test' }}')
     - if: ${{ inputs.init-git-identity == 'true' }}
       uses: gardener/cc-utils/.github/actions/setup-git-identity@master
       with:

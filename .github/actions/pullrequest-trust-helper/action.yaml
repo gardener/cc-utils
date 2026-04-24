@@ -6,15 +6,11 @@ description: |
   of privileged pipeline-runs is restricted to presence of a certain label - default
   being `ok-to-test`).
 
-  If "trust-label" is absent, it will be conveyed to users that it needs to be set (by
-  adding a "trust-label needed" label). If pullrequest-author is trusted, this action will
-  add said label.
+  If "trust-label" is absent, it will be conveyed to users that it needs to be set.
+  If pullrequest-author is trusted, this action will add said label.
 
 inputs:
   trusted-label:
-    type: string
-    required: false
-  needs-trusted-label:
     type: string
     required: false
   trusted-teams:
@@ -90,16 +86,11 @@ runs:
         pull_request =  repository.issue(${{ github.event.number }})
 
         trusted_label = "${{ inputs.trusted-label || 'ok-to-test' }}"
-        needs_trusted_label = "${{ inputs.needs-trusted-label || 'needs-ok-to-test' }}"
-
-        has_needs_trusted_label = False
 
         for label in pull_request.labels():
           if label.name == trusted_label:
             print(f'{trusted_label=} already present - exiting')
             exit(0)
-          if label.name == needs_trusted_label:
-            has_needs_trusted_label = True
 
         author_association = '${{ github.event.pull_request.author_association }}'
         allowed_author_associations = (
@@ -129,5 +120,7 @@ runs:
 
         if okay_to_add_trusted_label:
           pull_request.add_labels(trusted_label)
-        elif not has_needs_trusted_label:
-          pull_request.add_labels(needs_trusted_label)
+        else:
+          pull_request.create_comment(
+            body=f'The PR needs to be labeled with {trusted_label} by a maintainer to trigger the automated validation of the change',
+          )
