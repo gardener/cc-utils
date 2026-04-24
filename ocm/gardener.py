@@ -75,6 +75,25 @@ class VersionTemplate:
         )
 
 
+def expand_ocm_component_prefixes(prefixes: list[str]) -> set[str]:
+    '''
+    Expands the given OCM component prefixes by also adding the `public/gardener`
+    virtual registry variant for any prefix ending in `snapshots/gardener` or
+    `releases/gardener`. The `public` registry mirrors both and is used by some
+    imagevectors, so without this expansion component-references from those vectors
+    would not be recognised as local.
+    '''
+    result = set()
+    for prefix in prefixes:
+        prefix = prefix.rstrip('/')
+        result.add(prefix)
+        for variant in ('snapshots/gardener', 'releases/gardener'):
+            if prefix.endswith(variant):
+                result.add(f'{prefix.removesuffix(variant)}public/gardener')
+                break
+    return result
+
+
 def find_upgrade_vector(
     component_id: ocm.ComponentIdentity,
     version_lookup: ocm.VersionLookup,

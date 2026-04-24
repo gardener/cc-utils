@@ -77,20 +77,20 @@ runs:
       id: prep-releaes-notes-variants-cfg
       shell: python
       run: |
+        import os
+        import sys
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+
         import yaml
+        import release_notes_variants
 
         release_notes_variant_cfg = '''\
         ${{ inputs.release-notes-variants }}
         '''
         release_notes_variant_cfg = yaml.safe_load(release_notes_variant_cfg)
-
-        for variant in release_notes_variant_cfg:
-          for key in ('audiences', 'categories'):
-            if (value := variant.get(key, None)):
-              variant[key] = value.split(',')
-              continue
-
-            del variant[key] # use dataclass default
+        release_notes_variant_cfg = release_notes_variants.normalise_variant_cfg(
+            release_notes_variant_cfg,
+        )
 
         with open('release-notes-variants-cfg.yaml', 'w') as f:
           yaml.dump(release_notes_variant_cfg, f)
