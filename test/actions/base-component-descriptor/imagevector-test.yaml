@@ -1,0 +1,25 @@
+# an imagevector containing:
+# - a reference to a local resource (-> should be ignored during import)
+# - a reference to an external resource (-> should be honoured)
+# - a reference to another ocm-component (-> should be honoured)
+images:
+  # local resource (should be ignored)
+  - name: gardener-apiserver
+    sourceRepository: github.com/gardener/gardener
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
+    resourceId:
+      name: apiserver
+  # external resource (should be honoured)
+  - name: pause-container
+    sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+    repository: registry.k8s.io/pause
+    tag: "3.10"
+    labels:
+      - name: example-label
+        value: example-label-value
+
+  # component-reference
+  - name: gardener-dashboard
+    sourceRepository: github.com/gardener/dashboard
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/dashboard
+    tag: "1.80.2"

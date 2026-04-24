@@ -1,9 +1,19 @@
+# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
 import os
 import sys
 
-own_dir = os.path.dirname(__file__)
-repo_root = os.path.join(own_dir, '../../..')
-sys.path.insert(1, repo_root)
+# test/__init__.py already adds repo_root to sys.path;
+# add the action directory so base_component_descriptor is importable
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', '..', '.github', 'actions',
+                     'base-component-descriptor')
+    ),
+)
 
 import datetime
 import dataclasses
@@ -14,6 +24,8 @@ import ocm.base_component
 
 
 BaseComponent = ocm.base_component.BaseComponent
+
+_own_dir = os.path.dirname(__file__)
 
 
 def test_fill_in_defaults():
@@ -145,7 +157,7 @@ def test_add_resources_from_imagevector():
     assert component.resources == []
 
     component = bcd.add_resources_from_imagevector(
-        imagevector_file=os.path.join(own_dir, 'imagevector-test.yaml'),
+        imagevector_file=os.path.join(_own_dir, 'imagevector-test.yaml'),
         component=component,
         component_prefixes=[
             'europe-docker.pkg.dev/gardener-project/releases',

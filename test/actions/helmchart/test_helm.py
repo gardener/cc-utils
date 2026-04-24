@@ -1,3 +1,20 @@
+# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import os
+import sys
+
+# test/__init__.py already adds repo_root to sys.path;
+# add the action directory so helm is importable
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', '..', '.github', 'actions',
+                     'helmchart')
+    ),
+)
+
 import helm
 
 
