@@ -4,6 +4,11 @@
 
 import os
 import sys
+import tempfile
+import unittest.mock
+
+import pytest
+import yaml
 
 # test/__init__.py already adds repo_root to sys.path;
 # add the action directory so helm is importable
@@ -15,7 +20,69 @@ sys.path.insert(
     ),
 )
 
+import ocm
+import ocm.helm
+
 import helm
+
+
+def test_patch_values_yaml():
+    resource = ocm.Resource(
+        name='myimage',
+        version='1.0',
+        type=ocm.ArtefactType.OCI_IMAGE,
+        access=ocm.OciAccess(
+            imageReference='my.registry/repo/img:2.0',
+        ),
+    )
+    component = ocm.Component(
+        name='example.com/comp',
+        version='1.0',
+        repositoryContexts=[],
+        provider='acme',
+        resources=[resource],
+        sources=[],
+        componentReferences=[],
+    )
+    mapping = helm.HelmchartValueMapping(
+        ref='ocm-resource:myimage.repository',
+        attribute='image.repository',
+    )
+
+    tmpdir = tempfile.mkdtemp()
+    values_path = os.path.join(tmpdir, 'values.yaml')
+    with open(values_path, 'w') as f:
+        f.write('image:\n  repository: original\n')
+
+    with unittest.mock.patch('ocm.helm.find_resource', return_value=resource):
+        helm.patch_values_yaml(
+            component=component,
+            values_yaml_path=values_path,
+            mappings=[mapping],
+        )
+
+    with open(values_path) as f:
+        patched = yaml.safe_load(f)
+
+    assert patched['image']['repository'] == 'my.registry/repo/img'
+
+
+def test_patch_values_yaml_missing_file():
+    component = ocm.Component(
+        name='example.com/comp',
+        version='1.0',
+        repositoryContexts=[],
+        provider='acme',
+        resources=[],
+        sources=[],
+        componentReferences=[],
+    )
+    with pytest.raises(FileNotFoundError):
+        helm.patch_values_yaml(
+            component=component,
+            values_yaml_path='/nonexistent/path/values.yaml',
+            mappings=[],
+        )
 
 
 def test_to_ocm_mapping():
