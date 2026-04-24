@@ -2,8 +2,8 @@ name: Pull-Request-Trust Helper
 
 # description: |
 #   An opinionated re-usable workflow to help with trusting Pull-Requests. Depending on the
-#   trustedness of a pullrequest's author, the workflow will either add an indication (via
-#   a "needs-review"-label) that a label needs to be added, or automatically add a "trusted-label".
+#   trustedness of a pullrequest's author, the workflow will either add an indication
+#   that a label needs to be added, or automatically add a "trusted-label".
 #
 #   A user is considered trusted, if:
 #     - he is member of the pullrequest-target-repository's organisation
@@ -28,12 +28,6 @@ on:
       trusted-label:
         description: |
           the label to set in order to trigger pipeline-runs trusting that label
-          needs to exist for the target-repository
-        type: string
-        required: false
-      needs-trusted-label:
-        description: |
-          the label used to indicate the `trusted-label` needs to be set
           needs to exist for the target-repository
         type: string
         required: false
@@ -76,6 +70,5 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@master
         with:
           trusted-label: ${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
-          needs-trusted-label: ${{ inputs.needs-trusted-label || vars.DEFAULT_LABEL_NEEDS_OK_TO_TEST || 'needs-ok-to-test' }}
           trusted-teams: ${{ inputs.trusted-teams }}
           github-token: ${{ steps.fed-token.outputs.token }}
