@@ -185,55 +185,28 @@ runs:
       run: |
         import os
         import pprint
+        import sys
 
         import yaml
+
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import merge_ocm
 
         out_dir = '${{ inputs.outdir }}'
         with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
           component_descriptor = yaml.safe_load(f)
 
-        component = component_descriptor['component']
-        if not 'sources' in component:
-          component['sources'] = []
-        if not 'resources' in component:
-          component['resources'] = []
-
-        # TODO: might extend `ocm/__main__.py` to deduplicate; also, we should improve validation
-        for fname in os.listdir(out_dir):
-          path = os.path.join(out_dir, fname)
-          if not os.path.isfile(path):
-            continue
-          if not fname.endswith('.ocm-artefacts'):
-            continue
-
-          print(f'adding artefacts from {path}')
-          with open(path) as f:
-            artefacts = yaml.safe_load(f)
-
-          if ( resources := artefacts.get('resources')):
-            component['resources'].extend(resources)
-
-          if ( sources := artefacts.get('sources')):
-            component['sources'].extend(sources)
-
-          os.unlink(path)
-
-        # preprocess: patch-in versions for local artefacts
-        cversion = component.get('version')
-        for artefact in component['sources'] + component['resources']:
-          if not cversion:
-            continue
-          if artefact.get('version'):
-            continue # existing data has precedence
-          if artefact.get('relation') != 'local':
-            continue # we only patch-in version for local artefacts
-          artefact['version'] = cversion
+        merge_ocm.merge_fragments(
+            component_descriptor=component_descriptor,
+            fragments_dir=out_dir,
+        )
 
         pprint.pprint(component_descriptor)
 
         with open(component_descriptor_path, 'w') as f:
           yaml.safe_dump(component_descriptor, f)
 
+        component = component_descriptor['component']
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           name = component['name']
           version = component['version']
