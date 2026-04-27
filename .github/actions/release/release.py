@@ -1,12 +1,14 @@
 import collections.abc
 import dataclasses
 import enum
+import hashlib
 import os
 
 import dacite
 import yaml
 
 import ocm
+import release_notes.ocm as rn_ocm
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -112,3 +114,92 @@ def find_blob(
         exit(1)
 
     return path, access
+
+
+def attach_release_notes(
+    component: ocm.Component,
+    release_notes_markdown: str,
+    tar_bytes: bytes,
+    oci_client,
+) -> None:
+    '''
+    Upload release-notes blobs to the component's OCI repository and append
+    the corresponding Resources to the component.
+    '''
+    tgt_oci_ref = component.current_ocm_repo.component_version_oci_ref(
+        name=component.name,
+        version=component.version,
+    )
+
+    if release_notes_markdown:
+        octets = release_notes_markdown.encode('utf-8')
+        digest = f'sha256:{hashlib.sha256(octets).hexdigest()}'
+        oci_client.put_blob(
+            image_reference=tgt_oci_ref,
+            digest=digest,
+            octets_count=len(octets),
+            data=octets,
+        )
+        component.resources.append(
+            ocm.Resource(
+                name=rn_ocm.release_notes_resource_name_old,
+                version=component.version,
+                type='text/markdown.release-notes',
+                access=ocm.LocalBlobAccess(
+                    localReference=digest,
+                    size=len(octets),
+                    mediaType='text/markdown.release-notes',
+                ),
+            ),
+        )
+
+    tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
+    oci_client.put_blob(
+        image_reference=tgt_oci_ref,
+        digest=tar_digest,
+        octets_count=len(tar_bytes),
+        data=tar_bytes,
+    )
+    component.resources.append(
+        ocm.Resource(
+            name=rn_ocm.release_notes_resource_name,
+            version=component.version,
+            type='application/tar.release-notes',
+            access=ocm.LocalBlobAccess(
+                localReference=tar_digest,
+                size=len(tar_bytes),
+                mediaType='application/tar.release-notes',
+            ),
+        ),
+    )
+
+
+def attach_branch_info(
+    component: ocm.Component,
+    branch_info_bytes: bytes,
+    oci_client,
+) -> None:
+    '''
+    Upload the branch-info YAML blob and append the corresponding Resource to
+    the component.
+    '''
+    tgt_oci_ref = component.current_ocm_repo.component_version_oci_ref(component)
+    digest = f'sha256:{hashlib.sha256(branch_info_bytes).hexdigest()}'
+    oci_client.put_blob(
+        image_reference=tgt_oci_ref,
+        digest=digest,
+        octets_count=len(branch_info_bytes),
+        data=branch_info_bytes,
+    )
+    component.resources.append(
+        ocm.Resource(
+            name='branch-info',
+            version=component.version,
+            type='application/vnd.gardener.cloud.branch-info+yaml',
+            access=ocm.LocalBlobAccess(
+                localReference=digest,
+                size=len(branch_info_bytes),
+                mediaType='application/vnd.gardener.cloud.branch-info+yaml',
+            ),
+        ),
+    )
