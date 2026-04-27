@@ -102,6 +102,21 @@ on:
           The value will _not_ be quoted, so any valid bash-script can be passed.
         type: string
         required: false
+      postbuild-callback-action-path:
+        required: false
+        type: string
+        description: |
+          the path to a local action (relative to repository-root) that will be called
+          _after_ docker-build, but _before_ pushing the built image.
+
+          The action will receive the following inputs:
+            - `image-reference`: the image-reference of the just-built image
+
+          The action is expected to overwrite the image under the same tag (i.e. the tag
+          must remain unchanged after the action completes).
+
+          This can be useful, e.g. to run `unbase_oci` or other image-slimming tools on
+          the built image before it is pushed.
       build-ctx-artefact:
         description: |
           Specifies GitHub-Actions-Artifact to download.
@@ -464,6 +479,18 @@ jobs:
           target: ${{ inputs.target }}
           file: ${{ inputs.dockerfile }}
           build-args: ${{ inputs.build-args }}
+
+      - name: prepare-postbuild-callback-action
+        if: ${{ inputs.postbuild-callback-action-path != '' }}
+        shell: bash
+        run: |
+          set -eu
+          cp -r "${{ inputs.postbuild-callback-action-path }}" ../postbuild-callback-action
+      - name: postbuild-callback-action
+        if: ${{ inputs.postbuild-callback-action-path != '' }}
+        uses: ./../postbuild-callback-action
+        with:
+          image-reference: ${{ matrix.args.image-reference }}
 
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         if: ${{ needs.preprocess.outputs.push == 'true' }}
