@@ -12,9 +12,9 @@ import github3.issues.comment
 import github3.issues.issue
 import github3.issues.milestone
 import github3.repos
+import odg_client.model
 
 import ci.log
-import delivery.model
 import github.compliance.model as gcm
 import github.retry
 import github.util
@@ -154,7 +154,7 @@ def _create_issue(
     scanned_element: gcm.Target=None,
     extra_labels: typing.Iterable[str]=(),
     assignees: typing.Iterable[str]=(),
-    assignees_statuses: set[delivery.model.Status] = set(),
+    assignees_statuses: set[odg_client.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
     due_date: datetime.date|datetime.datetime=None,
 ) -> github3.issues.issue.ShortIssue:
@@ -280,7 +280,7 @@ def create_or_update_issue(
     known_issues: typing.Iterable[github3.issues.issue.ShortIssue],
     title: str,
     assignees: typing.Iterable[str]=(),
-    assignees_statuses: set[delivery.model.Status] = set(),
+    assignees_statuses: set[odg_client.model.Status] = set(),
     milestone: github3.issues.milestone.Milestone=None,
     due_date: datetime.date=None,
     extra_labels: typing.Iterable[str]=None,

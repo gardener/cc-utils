@@ -5,9 +5,8 @@ import functools
 import logging
 
 import github3.repos
-
-import delivery.client
-import delivery.model as dm
+import odg_client
+import odg_client.model as om
 
 
 logger = logging.getLogger(__name__)
@@ -15,15 +14,15 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass(frozen=True)
 class MilestoneConfiguration:
-    title_callback: collections.abc.Callable[[dm.Sprint], str] = lambda sprint: sprint.name
+    title_callback: collections.abc.Callable[[om.Sprint], str] = lambda sprint: sprint.name
     title_prefix: str | None = 'sprint-'
     title_suffix: str | None = None
-    due_date_callback: collections.abc.Callable[[dm.Sprint], datetime.datetime] \
+    due_date_callback: collections.abc.Callable[[om.Sprint], datetime.datetime] \
         = lambda sprint: sprint.find_sprint_date('release_decision').value
 
 
 def _milestone_title(
-    sprint: dm.Sprint,
+    sprint: om.Sprint,
     milestone_cfg: MilestoneConfiguration=None,
 ) -> str:
     if not milestone_cfg:
@@ -38,8 +37,8 @@ def _milestone_title(
 
 @functools.cache
 def sprints_cached(
-    delivery_svc_client: delivery.client.DeliveryServiceClient,
-) -> list[dm.Sprint]:
+    delivery_svc_client: odg_client.DeliveryServiceClient,
+) -> list[om.Sprint]:
     return delivery_svc_client.sprints()
 
 
@@ -52,7 +51,7 @@ def milestones_cached(
 
 
 def iter_and_create_github_milestones(
-    sprints: collections.abc.Iterable[dm.Sprint],
+    sprints: collections.abc.Iterable[om.Sprint],
     repo: github3.repos.Repository,
     milestone_cfg: MilestoneConfiguration | None=None,
     state: str='open',

@@ -1,10 +1,10 @@
 import logging
 
+import odg_client
+
 import ccc.github
-import ci.log
 import ci.util
 import ctx
-import delivery.client
 import model
 import model.base
 
@@ -25,11 +25,11 @@ def _current_cfg_set(
 
 def create_auth_token_lookup(
     cfg_factory: model.ConfigFactory=None,
-) -> delivery.client.AuthTokenLookup:
+) -> odg_client.AuthTokenLookup:
 
     def auth_token_lookup(api_url: str, /):
         '''
-        an implementation of delivery.client.AuthTokenLookup
+        an implementation of odg_client.AuthTokenLookup
         '''
         try:
             github_cfg = ccc.github.github_cfg_for_repo_url(
@@ -45,7 +45,7 @@ def create_auth_token_lookup(
 
 def default_client_if_available(
     cfg_factory=None,
-) -> delivery.client.DeliveryServiceClient:
+) -> odg_client.DeliveryServiceClient:
     if not cfg_factory:
         try:
             cfg_factory = ctx.cfg_factory()
@@ -75,10 +75,10 @@ def default_client_if_available(
     if not delivery_endpoints:
         return None
 
-    routes = delivery.client.DeliveryServiceRoutes(
+    routes = odg_client.DeliveryServiceRoutes(
         base_url=delivery_endpoints.base_url(),
     )
-    return delivery.client.DeliveryServiceClient(
+    return odg_client.DeliveryServiceClient(
         routes=routes,
         auth_token_lookup=create_auth_token_lookup(
             cfg_factory=cfg_factory,
@@ -89,7 +89,7 @@ def default_client_if_available(
 def client(
     cfg_name: str=None,
     cfg_factory=None,
-) -> delivery.client.DeliveryServiceClient:
+) -> odg_client.DeliveryServiceClient:
     if not cfg_factory:
         cfg_factory = ctx.cfg_factory()
 
@@ -99,11 +99,11 @@ def client(
         raise ValueError('no (default) delivery-client could be determined - pass cfg_name')
 
     delivery_endpoints = cfg_factory.delivery_endpoints(cfg_name)
-    routes = delivery.client.DeliveryServiceRoutes(
+    routes = odg_client.DeliveryServiceRoutes(
         base_url=delivery_endpoints.base_url(),
     )
 
-    return delivery.client.DeliveryServiceClient(
+    return odg_client.DeliveryServiceClient(
         routes=routes,
         auth_token_lookup=create_auth_token_lookup(
             cfg_factory=cfg_factory,
