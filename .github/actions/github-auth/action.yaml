@@ -82,39 +82,25 @@ runs:
   steps:
     - name: Preprocess Inputs
       id: preprocess
-      shell: bash
+      shell: python
       run: |
-        set -euo pipefail
+        import os
+        import sys
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import preprocess
 
-        if ${{ inputs.host != '' }}; then
-          host="${{ inputs.host }}"
-        else
-          host="${{ github.server_url }}"
-        fi
-        host="${host#*://}"
+        result = preprocess.preprocess(
+            host='${{ inputs.host }}',
+            organization='${{ inputs.organization }}',
+            repositories_raw='''${{ inputs.repositories }}''',
+            permissions_raw='''${{ inputs.permissions }}''',
+            default_host='${{ github.server_url }}',
+            default_organization='${{ github.repository_owner }}',
+        )
 
-        if ${{ inputs.organization != '' }}; then
-          organization="${{ inputs.organization }}"
-        else
-          organization="${{ github.repository_owner }}"
-        fi
-
-        cat <<EOF > /tmp/repositories
-        ${{ inputs.repositories }}
-        EOF
-
-        cat <<EOF > /tmp/permissions
-        ${{ inputs.permissions }}
-        EOF
-
-        # store input as single line JSON string
-        repositories="$(jq -Rsc 'split("\n") | map(select(length > 0))' /tmp/repositories)"
-        permissions="$(yq -o json /tmp/permissions | jq -c)"
-
-        echo "host=${host}" >> "$GITHUB_OUTPUT"
-        echo "organization=${organization}" >> "$GITHUB_OUTPUT"
-        echo "repositories=${repositories}" >> "$GITHUB_OUTPUT"
-        echo "permissions=${permissions}" >> "$GITHUB_OUTPUT"
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            for key, value in result.items():
+                f.write(f'{key}={value}\n')
 
     - name: Retrieve GitHub access token
       id: token
