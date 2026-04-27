@@ -1,0 +1,25 @@
+name: test-ocm-validate-valid
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - id: validate
+        uses: gardener/cc-utils/.github/actions/ocm-validate@master
+        with:
+          component-descriptor-path: component-descriptor.yaml
+          validation-cfg: |
+            schema: fail
+            access: skip
+            artefact-uniqueness: fail
+          on-validation-errors: fail
+      - name: assert
+        shell: bash
+        run: |
+          ok='${{ steps.validate.outputs.ok }}'
+          if [ "${ok}" != 'true' ]; then
+            echo "Expected ok=true, got: ${ok}"
+            exit 1
+          fi
+          echo "ok=${ok} OK"

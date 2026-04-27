@@ -1,0 +1,10 @@
+meta:
+  schemaVersion: v2
+component:
+  name: example.com/test-invalid
+  version: not-a-valid-semver!!!
+  provider: acme
+  repositoryContexts: []
+  resources: []
+  sources: []
+  componentReferences: []
