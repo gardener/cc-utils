@@ -84,6 +84,7 @@ runs:
         cc_utils="${tmpdir}/cc-utils"
         pip install -q setuptools
         version=$(CC_UTILS_ROOT="${cc_utils}" python3 "${{ github.action_path }}/normalise_version.py")
+        cd "${cc_utils}"
         for setup_file in setup.gha.py setup.oci.py setup.ocm.py; do
           python3 "${cc_utils}/${setup_file}" bdist_wheel --dist-dir "${cc_utils}/dist"
         done
