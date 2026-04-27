@@ -112,118 +112,56 @@ runs:
         gh-token: ${{ inputs.gh-token }}
     - name: params
       id: params
-      shell: bash
+      shell: python
       run: |
-        set -eu
+        import os
+        import sys
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import params
 
-        is_fork=${{ steps.repo-metadata.outputs.fork }}
-        echo "repo is a fork: ${is_fork}"
+        is_fork = '${{ steps.repo-metadata.outputs.fork }}'
+        print(f'repo is a fork: {is_fork}')
 
-        repo_prefix='${{ inputs.oci-registry-prefix }}'
+        urls = params.compute_registry_urls(
+            mode='${{ inputs.mode }}',
+            prefix='${{ inputs.oci-registry-prefix }}',
+            snapshots_suffix='${{ inputs.snapshots-suffix }}',
+            releases_suffix='${{ inputs.releases-suffix }}',
+            ocm_repositories='${{ inputs.ocm-repositories }}',
+        )
 
-        ocm_releases_repository=${repo_prefix}/${{ inputs.releases-suffix }}
+        can_push, is_pr_from_fork = params.determine_can_push(
+            event_name='${{ github.event_name }}',
+            repo_owner='${{ github.repository_owner }}',
+            head_owner='${{ github.event.pull_request.head.repo.owner.login }}',
+            author_association='${{ github.event.pull_request_target.author_association }}',
+            event_action='${{ github.event.action }}',
+            trusted_label='${{ inputs.trusted-label || ''ok-to-test'' }}',
+            event_label='${{ github.event.label.name }}',
+            ref='${{ github.ref }}',
+        )
 
-        ocm_repositories='${{ inputs.ocm-repositories }}'
-        if [[ ${ocm_repositories} == '' ]]; then
-          ocm_repositories="${ocm_releases_repository}"
-        elif [[ ${ocm_repositories} != *"${ocm_releases_repository}"* ]]; then
-          ocm_repositories="${ocm_repositories},${ocm_releases_repository}"
-        fi
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'oci-registry={urls.oci_registry}\n')
+            f.write(f'ocm-repository={urls.ocm_repository}\n')
+            f.write(f'ocm-releases-repository={urls.ocm_releases_repository}\n')
+            f.write(f'ocm-repositories={urls.ocm_repositories}\n')
+            f.write(f'is-fork={is_fork}\n')
+            f.write(f'is-pr-from-fork={str(is_pr_from_fork).lower()}\n')
+            f.write(f'can-push={str(can_push.value).lower()}\n')
+            f.write(f'can-push-reason={can_push.reason}\n')
 
-        case "${{ inputs.mode }}" in
-          snapshot)
-            ocm_repository="${repo_prefix}/${{ inputs.snapshots-suffix }}"
-            oci_registry="${repo_prefix}/${{ inputs.snapshots-suffix }}"
-            ;;
-          release)
-            ocm_repository="${ocm_releases_repository}"
-            oci_registry="${repo_prefix}/${{ inputs.releases-suffix }}"
-            ;;
-          *)
-            echo "Error: unknown mode: ${{ inputs.mode }}"
-            ;;
-        esac
-
-        can_push_reason='unknown'
-        is_pr_from_fork=false
-        event_name='${{ github.event_name }}'
-        if [ ${event_name} == 'pull_request' ]; then
-          repo_owner='${{ github.repository_owner }}'
-          head_owner='${{ github.event.pull_request.head.repo.owner.login }}'
-          if [ ${repo_owner} != ${head_owner} ]; then
-            is_pr_from_fork=true
-            can_push=false
-            can_push_reason='untrusted fork'
-          else
-            is_pr_from_fork=false
-            can_push=true
-            can_push_reason='pullrequest from local branch'
-          fi
-        elif [ ${event_name} == 'pull_request_target' ]; then
-          case '${{ github.event.pull_request_target.author_association }}' in
-            COLLABORATOR)
-              can_push=true
-              can_push_reason='trusted fork'
-              ;;
-            MEMBER)
-              can_push=true
-              can_push_reason='trusted fork'
-              ;;
-            OWNER)
-              can_push=true
-              can_push_reason='trusted fork'
-              ;;
-            CONTRIBUTOR)
-              can_push=false
-              can_push_reason='untrusted fork'
-              ;;
-            *)
-              can_push=false
-              can_push_reason='untrusted fork'
-          esac
-          if [ '${{ github.event.action }}' == 'labeled' ] && ! $can_push; then
-            trusted_label="${{ inputs.trusted-label || 'ok-to-test' }}"
-            event_label="${{ github.event.label.name }}"
-            if [ ${event_label} == ${trusted_label} ]; then
-              can_push=true
-              can_push_reason="label ${trusted_label} present"
-            fi
-          fi
-        elif [ ${event_name} == 'workflow_dispatch' ]; then
-          can_push=true
-          can_push_reason='run was triggered manually'
-        else
-          is_pr_from_fork=false
-          can_push=true
-          can_push_reason='unknown'
-        fi
-        ref='${{ github.ref }}'
-        ref_leng=${#ref}
-        if [ $ref_leng -gt 50 ]; then
-          can_push=false # workaround: https://issuetracker.google.com/issues/264362370?pli=1
-          can_push_reason='ref exceeds allowed length of 50 chars'
-        fi
-
-        echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
-        echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
-        echo "ocm-releases-repository=${ocm_releases_repository}" >> ${GITHUB_OUTPUT}
-        echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
-        echo "is-fork=${is_fork}" >> ${GITHUB_OUTPUT}
-        echo "is-pr-from-fork=${is_pr_from_fork}" >> ${GITHUB_OUTPUT}
-        echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
-        echo "can-push-reason=${can_push_reason}" >> ${GITHUB_OUTPUT}
-
-        cat << EOF > ${GITHUB_STEP_SUMMARY}
-        ## Pipeline-Params-Summary
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
+            f.write(f'''## Pipeline-Params-Summary
 
         <table> <tbody>
           <tr> <td>mode</td>            <td>${{ inputs.mode }}</td> </tr>
-          <tr> <td>oci-registry</td>    <td>${oci_registry}</td> </tr>
-          <tr> <td>ocm-repository</td>  <td>${ocm_repository}</td> </tr>
-          <tr> <td>ocm-repositories</td><td>${ocm_repositories}</td> </tr>
-          <tr> <td>is-fork</td>         <td>${is_fork}</td> </tr>
-          <tr> <td>is-pr-from-fork</td> <td>${is_pr_from_fork}</td> </tr>
-          <tr> <td>can-push</td>        <td>${can_push}</td> </tr>
-          <tr> <td>can-push-reason</td> <td>${can_push_reason}</td> </tr>
+          <tr> <td>oci-registry</td>    <td>{urls.oci_registry}</td> </tr>
+          <tr> <td>ocm-repository</td>  <td>{urls.ocm_repository}</td> </tr>
+          <tr> <td>ocm-repositories</td><td>{urls.ocm_repositories}</td> </tr>
+          <tr> <td>is-fork</td>         <td>{is_fork}</td> </tr>
+          <tr> <td>is-pr-from-fork</td> <td>{str(is_pr_from_fork).lower()}</td> </tr>
+          <tr> <td>can-push</td>        <td>{str(can_push.value).lower()}</td> </tr>
+          <tr> <td>can-push-reason</td> <td>{can_push.reason}</td> </tr>
         </tbody> </table>
-        EOF
+        ''')
