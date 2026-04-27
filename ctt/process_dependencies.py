@@ -16,7 +16,6 @@ import jsonschema
 import logging
 import os
 import threading
-import typing
 
 import dacite
 import yaml
@@ -75,13 +74,10 @@ class PruningMode(enum.StrEnum):
 def create_component_descriptor_lookup_for_ocm_repo(
     ocm_repo_url: str,
     oci_client: oci.client.Client | None=None,
-    delivery_service_client: typing.Union['delivery.client.DeliveryServiceClient', None]=None,
 ) -> cnudie.retrieve.ComponentDescriptorLookupById:
     return cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo_url),
         oci_client=oci_client,
-        delivery_client=delivery_service_client,
-        fallback_to_service_mapping=False,
     )
 
 
@@ -631,12 +627,12 @@ def process_images(
     skip_cd_validation: bool=False,
     platform_filter: collections.abc.Callable[[om.OciPlatform], bool]=None,
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool]=None,
-    delivery_service_client: typing.Union['delivery.client.DeliveryServiceClient', None]=None,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     remove_label: collections.abc.Callable[[str], bool]=None,
     max_workers: int=16,
     tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
     pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
+    delivery_service_client=None, # unused, drop eventually once callers have been adjusted
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -691,7 +687,6 @@ def process_images(
         tgt_component_descriptor_lookup = create_component_descriptor_lookup_for_ocm_repo(
             ocm_repo_url=ocm_repository,
             oci_client=oci_client,
-            delivery_service_client=delivery_service_client,
         )
 
         replication_plan_step = create_replication_plan_step(
@@ -717,7 +712,6 @@ def process_images(
         tgt_component_descriptor_lookup = create_component_descriptor_lookup_for_ocm_repo(
             ocm_repo_url=replication_plan_step.target_ocm_repository,
             oci_client=oci_client,
-            delivery_service_client=delivery_service_client,
         )
 
         yield from process_replication_plan_step(
