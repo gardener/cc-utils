@@ -256,84 +256,34 @@ runs:
       shell: python
       run: |
         import dataclasses
-        import hashlib
-        import json
-        import tarfile
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import release_notes.ocm
-        import oci.client
         import oci.auth
+        import oci.client
         import ocm
+        import release
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
-            yaml.safe_load(f.read())
-          )
-        component = component_descriptor.component
-        tgt_ocm_repo = component.current_ocm_repo
-        tgt_oci_ref = tgt_ocm_repo.component_version_oci_ref(
-          name=component.name,
-          version=component.version,
-        )
-
-        oci_client = oci.client.Client(
-          credentials_lookup=oci.auth.docker_credentials_lookup(),
-        )
+          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
 
         with open('/tmp/release-notes/legacy-release-notes.md') as f:
           release_notes_markdown = f.read()
-
-        if release_notes_markdown:
-          release_notes_octets = release_notes_markdown.encode('utf-8')
-          release_notes_digest = f'sha256:{hashlib.sha256(release_notes_octets).hexdigest()}'
-
-          oci_client.put_blob(
-            image_reference=tgt_oci_ref,
-            digest=release_notes_digest,
-            octets_count=len(release_notes_octets),
-            data=release_notes_octets,
-          )
-
-          component.resources.append(
-            ocm.Resource(
-              name=release_notes.ocm.release_notes_resource_name_old,
-              version=component.version,
-              type='text/markdown.release-notes',
-              access=ocm.LocalBlobAccess(
-                localReference=release_notes_digest,
-                size=len(release_notes_octets),
-                mediaType='text/markdown.release-notes',
-              ),
-            ),
-          )
-
         with open('/tmp/release-notes/release-notes-archive.tar', 'rb') as f:
           tar_bytes = f.read()
-        tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
 
-        oci_client.put_blob(
-          image_reference=tgt_oci_ref,
-          digest=tar_digest,
-          octets_count=len(tar_bytes),
-          data=tar_bytes,
+        oci_client = oci.client.Client(credentials_lookup=oci.auth.docker_credentials_lookup())
+
+        release.attach_release_notes(
+          component=component_descriptor.component,
+          release_notes_markdown=release_notes_markdown,
+          tar_bytes=tar_bytes,
+          oci_client=oci_client,
         )
 
-        component.resources.append(
-          ocm.Resource(
-            name=release_notes.ocm.release_notes_resource_name,
-            version=component.version,
-            type='application/tar.release-notes',
-            access=ocm.LocalBlobAccess(
-              localReference=tar_digest,
-              size=len(tar_bytes),
-              mediaType='application/tar.release-notes',
-            ),
-          ),
-        )
-
-        # pass modified component-descriptor to subsequent steps
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
             data=dataclasses.asdict(component_descriptor),
@@ -345,62 +295,41 @@ runs:
       shell: python
       run: |
         import dataclasses
-        import hashlib
         import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
         import oci.client
         import ocm
-
+        import release
 
         if not os.path.isfile(branch_info_filename := '.ocm/branch-info.yaml'):
           print(f'file "{branch_info_filename}" does not exist - will not attach to component descriptor')
           exit(0)
 
-        print(f'found "{branch_info_filename}" file - will attach contents to component descriptor')
+        print(f'found "{branch_info_filename}" - will attach contents to component descriptor')
 
-        with open('/tmp/component-descriptor.yaml') as file:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
-            component_descriptor_dict=yaml.safe_load(file.read()),
-          )
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
 
-        component = component_descriptor.component
-        tgt_oci_ref = component.current_ocm_repo.component_version_oci_ref(component)
+        with open(branch_info_filename, 'rb') as f:
+          branch_info_bytes = f.read()
 
         oci_client = oci.client.client_with_dockerauth()
 
-        with open(branch_info_filename, 'rb') as file:
-          branch_info_bytes = file.read()
-
-        branch_info_digest = f'sha256:{hashlib.sha256(branch_info_bytes).hexdigest()}'
-
-        oci_client.put_blob(
-          image_reference=tgt_oci_ref,
-          digest=branch_info_digest,
-          octets_count=len(branch_info_bytes),
-          data=branch_info_bytes,
+        release.attach_branch_info(
+          component=component_descriptor.component,
+          branch_info_bytes=branch_info_bytes,
+          oci_client=oci_client,
         )
 
-        component.resources.append(
-          ocm.Resource(
-            name='branch-info',
-            version=component.version,
-            type='application/vnd.gardener.cloud.branch-info+yaml',
-            access=ocm.LocalBlobAccess(
-              localReference=branch_info_digest,
-              size=len(branch_info_bytes),
-              mediaType='application/vnd.gardener.cloud.branch-info+yaml',
-            ),
-          ),
-        )
-
-        # pass modified component-descriptor to subsequent steps
-        with open('/tmp/component-descriptor.yaml', 'w') as file:
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
             data=dataclasses.asdict(component_descriptor),
             Dumper=ocm.EnumValueYamlDumper,
-            stream=file,
+            stream=f,
           )
     - name: validate OCM Component-Descriptor
       uses: gardener/cc-utils/.github/actions/ocm-validate@master
