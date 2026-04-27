@@ -1,0 +1,57 @@
+name: test-capture-import-round-trip
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: make-timestamp-reference
+        shell: bash
+        run: touch /tmp/ts-ref
+      - name: make-commit
+        shell: bash
+        run: |
+          echo 'extra content' >> hello.txt
+          git add hello.txt
+          git commit -m 'extra commit'
+      - id: capture
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref
+      - name: assert-capture
+        shell: bash
+        run: |
+          digest='${{ steps.capture.outputs.commit-digest }}'
+          if ! echo "${digest}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "Expected 40-char hex commit-digest, got: ${digest}"
+            exit 1
+          fi
+          objects='${{ steps.capture.outputs.commit-objects }}'
+          if [ -z "${objects}" ]; then
+            echo "Expected non-empty commit-objects"
+            exit 1
+          fi
+          echo "capture: digest=${digest} OK"
+      - name: reset-to-parent
+        shell: bash
+        run: git reset --hard HEAD~1
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture.outputs.commit-digest }}
+          after-import: rebase
+      - name: assert-import
+        shell: bash
+        run: |
+          head="$(git rev-parse HEAD)"
+          expected='${{ steps.capture.outputs.commit-digest }}'
+          if [ "${head}" != "${expected}" ]; then
+            echo "Expected HEAD=${expected}, got: ${head}"
+            exit 1
+          fi
+          echo "import round-trip: HEAD=${head} OK"

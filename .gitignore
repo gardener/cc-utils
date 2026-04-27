@@ -7,3 +7,4 @@ __pycache__/
 build/
 dist/
 tmp/
+.github/actions/install-gardener-gha-libs/_bundle/

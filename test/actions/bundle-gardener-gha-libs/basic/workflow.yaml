@@ -1,0 +1,25 @@
+name: test-bundle-gardener-gha-libs
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - id: bundle
+        uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
+      - name: assert
+        shell: bash
+        run: |
+          bundle_dir='${{ steps.bundle.outputs.bundle-dir }}'
+          subdirs='${{ steps.bundle.outputs.subdirs }}'
+          if [ -z "${subdirs}" ]; then
+            echo "Expected non-empty subdirs output"
+            exit 1
+          fi
+          for subdir in ${subdirs}; do
+            if [ ! -d "${bundle_dir}/${subdir}" ]; then
+              echo "Expected directory ${bundle_dir}/${subdir} to exist"
+              exit 1
+            fi
+          done
+          echo "bundle-dir=${bundle_dir} subdirs=${subdirs} OK"

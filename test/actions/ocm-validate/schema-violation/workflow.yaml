@@ -1,0 +1,31 @@
+name: test-ocm-validate-schema-violation
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - id: validate
+        uses: gardener/cc-utils/.github/actions/ocm-validate@master
+        with:
+          component-descriptor-path: component-descriptor.yaml
+          validation-cfg: |
+            schema: fail
+            access: skip
+            artefact-uniqueness: skip
+          on-validation-errors: continue
+      - name: assert
+        shell: bash
+        env:
+          RESULT_OK: ${{ steps.validate.outputs.ok }}
+          RESULT_DESC: ${{ steps.validate.outputs.result-description }}
+        run: |
+          if [ "${RESULT_OK}" != 'false' ]; then
+            echo "Expected ok=false for schema violation, got: ${RESULT_OK}"
+            exit 1
+          fi
+          if [ -z "${RESULT_DESC}" ]; then
+            echo "Expected non-empty result-description"
+            exit 1
+          fi
+          echo "ok=${RESULT_OK} result-description=${RESULT_DESC} OK"
