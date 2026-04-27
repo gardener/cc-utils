@@ -1,0 +1,19 @@
+name: test-install-gardener-gha-libs-basic
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - name: assert
+        shell: python
+        run: |
+          import importlib.util
+          # ocm + oci are from gardener-ocm / gardener-oci;
+          # release_notes is from gardener-gha-libs
+          for mod in ('ocm', 'oci', 'release_notes'):
+              spec = importlib.util.find_spec(mod)
+              if spec is None:
+                  raise AssertionError(f'expected module {mod!r} to be importable after install')
+              print(f'{mod}: OK ({spec.origin})')
