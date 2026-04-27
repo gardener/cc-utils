@@ -294,6 +294,23 @@ jobs:
                   value:
                     - test
 
+  test-actions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          remove-trusted-label: false
+      - name: install-act
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh \
+            | sudo bash -s -- -b /usr/local/bin
+      - name: run-act-tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: test/actions/run-act-tests.sh
+
   documentation:
     name: Generate Documentation
     runs-on: ubuntu-latest
