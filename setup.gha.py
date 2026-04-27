@@ -103,8 +103,9 @@ def packages():
     package_names = [p for p in package_names if p not in omit_packages]
 
     # skip packages installed by other distribution-packages
-    package_names.remove('oci')
-    package_names.remove('ocm')
+    for pkg in ('oci', 'ocm'):
+        if pkg in package_names:
+            package_names.remove(pkg)
     return package_names
 
 
