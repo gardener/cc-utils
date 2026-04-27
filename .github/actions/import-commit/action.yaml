@@ -77,7 +77,7 @@ runs:
         echo "${{ inputs.commit-objects }}" | base64 -d | tar x -C "${GITHUB_WORKSPACE}"
     - name: import-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@25bd703b81b3d5c3d85ec7d533defa4c654834d4
       with:
         name: ${{ inputs.commit-objects-artefact }}
     - name: extract-commit-objects-from-artefact
