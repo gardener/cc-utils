@@ -49,6 +49,7 @@ def _iter_releases(
     for raw in repository._iter(number, url, dict):
         if raw.get('author') is None:
             raw['author'] = {}  # github3 crashes on null author (deleted accounts)
+        raw['author'].setdefault('avatar_url', None)  # GHES may omit this field
         yield github3.repos.release.Release(raw, repository)
 
 
