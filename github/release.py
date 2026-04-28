@@ -50,7 +50,11 @@ def _iter_releases(
         if raw.get('author') is None:
             raw['author'] = {}  # github3 crashes on null author (deleted accounts)
         raw['author'].setdefault('avatar_url', None)  # GHES may omit this field
-        yield github3.repos.release.Release(raw, repository)
+        try:
+            yield github3.repos.release.Release(raw, repository)
+        except Exception as e:
+            logger.warning(f'failed to parse release {raw.get("name") or raw.get("tag_name")}: {e}')
+            continue
 
 
 def find_draft_release(
