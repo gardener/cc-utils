@@ -184,18 +184,18 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@edf32c9095cc6738d6115405c36040e33bb2a937
     - uses: actions/checkout@v6
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
     - name: import-release-commit
-      uses: gardener/cc-utils/.github/actions/import-commit@master
+      uses: gardener/cc-utils/.github/actions/import-commit@4017d8c3971484d3cc43cb043dc600ece7924d44
       with:
         commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         commit-objects: ${{ inputs.release-commit-objects }}
         commit-digest: ${{ inputs.release-commit-digest }}
         after-import: rebase
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@3fe7a1cb30f239afb35bee3d96acdd7936a1bf0e
     - name: preprocess
       id: preprocess
       shell: bash
@@ -221,7 +221,7 @@ runs:
         EOF
 
     - name: fetch-prepare-values
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@3fe7a1cb30f239afb35bee3d96acdd7936a1bf0e
       with:
         name: prepare-workflow-values
 
@@ -235,13 +235,13 @@ runs:
         echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@9c6ff0ef9588b4950e9b1ff0907b8d75a572efd6
       with:
         oci-image-reference: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
         gh-token: ${{ inputs.github-token }}
 
     - name: fetch-release-notes
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@3fe7a1cb30f239afb35bee3d96acdd7936a1bf0e
       with:
         name: release-notes
         path: /tmp
@@ -332,7 +332,7 @@ runs:
             stream=f,
           )
     - name: validate OCM Component-Descriptor
-      uses: gardener/cc-utils/.github/actions/ocm-validate@master
+      uses: gardener/cc-utils/.github/actions/ocm-validate@0d56fa7f413c3896f27c3d7519d78a8a1e562f62
       with:
         component-descriptor-path: /tmp/component-descriptor.yaml
         on-validation-errors: ${{ inputs.on-validation-errors }}
@@ -356,7 +356,7 @@ runs:
         echo EOF >> "${GITHUB_OUTPUT}"
 
     - name: upload OCM Component-Descriptor as artifact
-      uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      uses: gardener/cc-utils/.github/actions/upload-artifact@3fe7a1cb30f239afb35bee3d96acdd7936a1bf0e
       with:
         path: /tmp/component-descriptor.tar.gz
         name: component-descriptor
@@ -551,7 +551,7 @@ runs:
 
     - name: create-bump-commit
       id: bump
-      uses: gardener/cc-utils/.github/actions/version@master
+      uses: gardener/cc-utils/.github/actions/version@a476d852fc8e1fad1c1dfea8f7440e32d4b8fa41
       # must be kept in sync with version action called in release workflow (except "version-operation")
       with:
         versionfile: ${{ inputs.version-versionfile }}
