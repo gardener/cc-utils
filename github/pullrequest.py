@@ -439,6 +439,7 @@ def commit_and_push_to_tmp_branch(
         repository.ref(f'heads/{new_branch_name}').delete()
         raise
 
+    git_helper.repo.git.reset('HEAD')  # also resets submodule gitlinks in index
     git_helper.repo.git.checkout('.')
     git_helper.repo.git.clean('-fd')
 
