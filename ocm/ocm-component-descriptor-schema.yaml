@@ -61,6 +61,7 @@ definitions:
   identityAttribute:
     type: 'object'
     propertyNames: { $ref: '#/definitions/identityAttributeKey' }
+    additionalProperties: { type: 'string' }
 
   repositoryContext:
     type: 'object'
