@@ -129,6 +129,40 @@ def find_oidc_cfg(
     exit(1)
 
 
+def _fail_if_sts_subject_too_long(res: requests.Response, url: str):
+    '''
+    Google STS rejects token exchanges where the mapped `google.subject` attribute exceeds 127
+    bytes. This is typically caused by an overly long branch name. Detect this specific error and
+    exit with a human-readable message + job-summary warning rather than retrying pointlessly.
+    '''
+    if res.status_code != 400:
+        return
+    if url != 'https://sts.googleapis.com/v1/token':
+        return
+    if b'exceeds the 127 bytes limit' not in res.content:
+        return
+
+    msg = (
+        'ERROR: Google STS rejected the token exchange because the mapped attribute '
+        '"google.subject" exceeds 127 bytes. This is typically caused by a branch name '
+        'that is too long. Please shorten the branch name and retry.'
+    )
+    print(msg)
+    step_summary = os.environ.get('GITHUB_STEP_SUMMARY')
+    if step_summary:
+        with open(step_summary, 'a') as f:
+            f.write(
+                '> [!WARNING]\n'
+                '> **OCI auth failed: branch name too long**\n'
+                '>\n'
+                '> Google STS rejected the OIDC token exchange because the mapped attribute '
+                '`google.subject` exceeds the 127-byte limit.\n'
+                '> This is typically caused by a branch name that is too long.\n'
+                '> **Workaround:** shorten the branch name and re-run the workflow.\n'
+            )
+    exit(1)
+
+
 def _fetch_with_retries(
     url: str,
     session: requests.Session,
@@ -148,6 +182,8 @@ def _fetch_with_retries(
 
     if not res.ok:
         print(f'WARNING: rq against {url=} failed: {res.status_code=} {res.reason=} {res.content=}')
+
+        _fail_if_sts_subject_too_long(res=res, url=url)
 
         if remaining_retries > 0:
             print(f'Retrying... ({remaining_retries=})')
