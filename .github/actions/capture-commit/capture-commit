@@ -7,6 +7,7 @@ set -euo pipefail
 # $1: path to target-archive
 # $2: path to ref-file (must be older than commit)
 # $3: path to output-file for commit-digest (defaults to commit-digest)
+# $4: commit to capture (defaults to HEAD)
 
 # darwin/macOS is not supported. differences that would need addressing:
 # - `find -newermt` (GNU) -> `-newer` (BSD find; compares mtime, but no XY-syntax)
@@ -40,7 +41,11 @@ else
   commit_digest_out=${3}
 fi
 
-commit_digest="$(git rev-parse @)"
+if [ -z "${4:-}" ]; then
+  commit_digest="$(git rev-parse HEAD)"
+else
+  commit_digest="$(git rev-parse ${4})"
+fi
 echo "${commit_digest}" > "${GIT_DIR}/refs/capture-commit"
 
 object_paths=$(

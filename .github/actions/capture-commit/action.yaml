@@ -35,6 +35,10 @@ inputs:
     required: true
     description: |
       a filepath pointing to a file that was created before the head-commit
+  commit:
+    required: false
+    description: |
+      the commit to capture. Defaults to HEAD if not specified.
   to-artefact:
     required: false
     description: |
@@ -91,7 +95,8 @@ runs:
           ${GITHUB_ACTION_PATH}/capture-commit \
             ${objects_out} \
             ${ts_ref} \
-            ${commit_out}
+            ${commit_out} \
+            ${{ inputs.commit }}
 
         tar tf ${objects_out}
         objects_size=$(stat --format=%s ${objects_out})
