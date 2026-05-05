@@ -112,6 +112,10 @@ function app_token() {
     --github-org $org
 }
 
+if [ -n "${TOKEN_SERVER:-}" ] && [ "${TOKEN_SERVER#*://}" = "${TOKEN_SERVER}" ]; then
+  TOKEN_SERVER="https://${TOKEN_SERVER}"
+fi
+
 git submodule status | while read -r s; do
   path=$(echo $s | cut -d' ' -f2-)
   cdig=$(echo $s | cut -d' ' -f1 | cut -d- -f2)
