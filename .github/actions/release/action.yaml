@@ -455,6 +455,11 @@ runs:
     - name: create github-release
       if: ${{ inputs.release-on-github == 'true' }}
       shell: python
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_API_URL: ${{ github.api_url }}
       run: |
         import os
         import sys
@@ -521,16 +526,22 @@ runs:
           )
 
         for asset in release.iter_assets(path='/tmp/assets.yaml'):
-          path, access = release.find_blob(
-            blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
-            asset=asset,
-            component=component_descriptor.component,
-          )
-
-          if asset.mime_type:
-            mime_type = asset.mime_type
+          if asset.type == 'github-artifact':
+            path = release.find_github_artifact(
+              asset=asset,
+              run_id=os.environ['GITHUB_RUN_ID'],
+              api_url=os.environ['GITHUB_API_URL'],
+              repository=os.environ['GITHUB_REPOSITORY'],
+              token=os.environ['GITHUB_TOKEN'],
+            )
+            mime_type = asset.mime_type or 'application/octet-stream'
           else:
-            mime_type = access.mediaType
+            path, access = release.find_blob(
+              blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
+              asset=asset,
+              component=component_descriptor.component,
+            )
+            mime_type = asset.mime_type or access.mediaType
 
           print(f'Uploading {asset=} as github-release-asset')
           fh = open(path, 'rb')

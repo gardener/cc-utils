@@ -179,17 +179,29 @@ on:
           ```
           name: <name, as it should be set for the release-asset>, required
           mime-type: # optional (will be determined using libmagic, if absent)
-          type: ocm-resource # mandatory; only `ocm-resource` is supported; for future extensions
+          type: ocm-resource | github-artifact # mandatory
+          id: # contents depend on type (see below)
+          ```
+
+          For `type: ocm-resource`:
+          ```
           id:
             name: <ocm-resource-name>, required
             type: <ocm-resource-type>, optional
             <extra-id-attr>: <value> # optional - any attributes from extraIdentity
           ```
-
           `id` must be specified such that a resource is identified unambiguously. Only resources
           that are stored as a localBlob (access-type) are supported.
 
-          Example (assuming pipeline builds `helm` for multiple platforms):
+          For `type: github-artifact`:
+          ```
+          id:
+            name: <artifact-name>  # required - the GHA artifact name from the current run
+            file: <filename>       # optional - extract a specific file from the artifact zip;
+                                   # if absent the whole zip is uploaded
+          ```
+
+          Example (ocm-resource, assuming pipeline builds `helm` for multiple platforms):
           ```
           assets: |
            - name: helm-linux-x86-64
@@ -199,6 +211,20 @@ on:
               name: helm
               os: linux
               arch: x86_64
+          ```
+
+          Example (github-artifact):
+          ```
+          assets: |
+           - name: testresults.zip
+             type: github-artifact
+             id:
+               name: testrunner-results
+           - name: overview.json
+             type: github-artifact
+             id:
+               name: testrunner-results
+               file: overview.json
           ```
       version-read-callback:
         type: string

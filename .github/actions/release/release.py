@@ -2,7 +2,11 @@ import collections.abc
 import dataclasses
 import enum
 import hashlib
+import io
+import json
 import os
+import urllib.request
+import zipfile
 
 import dacite
 import yaml
@@ -38,8 +42,8 @@ class Asset:
         return True
 
     def __post_init__(self):
-        # basic validation: id.name must be present and non-empty
-        if not self.id.get('name'):
+        # basic validation: id.name must be present and non-empty for ocm-resource assets
+        if self.type == 'ocm-resource' and not self.id.get('name'):
             print('Error: asset.id.name must not be empty:')
             print(self)
             exit(1)
@@ -114,6 +118,55 @@ def find_blob(
         exit(1)
 
     return path, access
+
+
+def find_github_artifact(
+    asset: Asset,
+    run_id: str,
+    api_url: str,
+    repository: str,
+    token: str,
+) -> str:
+    '''
+    Downloads a GHA artifact from the current workflow run and returns a local file path.
+
+    asset.id['name'] is the artifact name. asset.id.get('file') optionally names a specific
+    file to extract from within the artifact zip; if absent the artifact zip itself is returned.
+    '''
+    artifact_name = asset.id['name']
+    file_in_artifact = asset.id.get('file')
+
+    headers = {
+        'Authorization': f'token {token}',
+        'Accept': 'application/vnd.github.v3+json',
+    }
+
+    url = f'{api_url}/repos/{repository}/actions/runs/{run_id}/artifacts'
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        artifacts = json.loads(resp.read())['artifacts']
+
+    artifact = next((a for a in artifacts if a['name'] == artifact_name), None)
+    if artifact is None:
+        print(f'Error: GHA artifact "{artifact_name}" not found in run {run_id}')
+        exit(1)
+
+    req = urllib.request.Request(artifact['archive_download_url'], headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        zip_data = resp.read()
+
+    tmp_dir = '/tmp/gha-artifacts'
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    if file_in_artifact:
+        with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
+            zf.extract(file_in_artifact, tmp_dir)
+        return os.path.join(tmp_dir, file_in_artifact)
+    else:
+        path = os.path.join(tmp_dir, f'{artifact_name}.zip')
+        with open(path, 'wb') as f:
+            f.write(zip_data)
+        return path
 
 
 def attach_release_notes(
