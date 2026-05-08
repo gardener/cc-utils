@@ -134,7 +134,7 @@ runs:
             event_name='${{ github.event_name }}',
             repo_owner='${{ github.repository_owner }}',
             head_owner='${{ github.event.pull_request.head.repo.owner.login }}',
-            author_association='${{ github.event.pull_request_target.author_association }}',
+            author_association='${{ github.event.pull_request.author_association }}',
             event_action='${{ github.event.action }}',
             trusted_label="${{ inputs.trusted-label || 'ok-to-test' }}",
             event_label='${{ github.event.label.name }}',
