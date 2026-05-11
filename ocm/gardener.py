@@ -176,6 +176,25 @@ def iter_greatest_component_references(
     yield from greatest_crefs.values()
 
 
+def greatest_component_reference_version(
+    references: collections.abc.Iterable[ocm.ComponentReference],
+    component_name: str,
+) -> str | None:
+    '''
+    Returns the greatest version among all component-references whose
+    componentName matches the given name, or None if there is no match.
+    '''
+    greatest: str | None = None
+    for ref in references:
+        if ref.componentName != component_name:
+            continue
+        if greatest is None or (
+            version.parse_to_semver(ref.version) > version.parse_to_semver(greatest)
+        ):
+            greatest = ref.version
+    return greatest
+
+
 def find_imagevector_file(
     repo_root: str=None,
 ) -> str | None:
