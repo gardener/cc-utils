@@ -421,15 +421,10 @@ def create_upgrade_pullrequests(
                     version=upstream_version,
                 )
             )
-            upstream_target_version = None
-            for uref in upstream_cd.component.componentReferences or ():
-                if uref.componentName != cref.componentName:
-                    continue
-                if upstream_target_version is None or (
-                    version.parse_to_semver(uref.version)
-                    > version.parse_to_semver(upstream_target_version)
-                ):
-                    upstream_target_version = uref.version
+            upstream_target_version = ocm.gardener.greatest_component_reference_version(
+                references=upstream_cd.component.componentReferences or (),
+                component_name=cref.componentName,
+            )
             if upstream_target_version is None:
                 logger.info(f'upstream has no reference for {cref.componentName}')
                 continue
