@@ -203,6 +203,7 @@ def replicate_artifact(
                     src_image_reference=src_reference,
                     tgt_image_reference=tgt_reference,
                     oci_client=client,
+                    mode=mode,
                     annotations=annotations,
                 )
 
