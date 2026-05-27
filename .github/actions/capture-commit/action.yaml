@@ -154,3 +154,11 @@ runs:
       with:
         name: ${{ inputs.to-artefact }}
         path: commit-objects.tar.gz
+
+    - name: clean-up-capture-commit-archive
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # archive was uploaded already, avoid local collisions in filesystem
+        unlink commit-objects.tar.gz
