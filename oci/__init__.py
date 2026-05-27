@@ -204,6 +204,7 @@ def replicate_artifact(
                     tgt_image_reference=tgt_reference,
                     oci_client=client,
                     mode=mode,
+                    platform_filter=platform_filter,
                     annotations=annotations,
                 )
 
