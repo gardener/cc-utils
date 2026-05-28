@@ -199,12 +199,17 @@ def replicate_artifact(
 
                 logger.info(f'replicating to {tgt_reference=}')
 
+                # only propagate PREFER_MULTIARCH (preserves nested indices); never pass
+                # NORMALISE_TO_MULTIARCH as it would wrap sub-manifests in spurious index layers
+                recursive_mode = ReplicationMode.REGISTRY_DEFAULTS
+                if mode is ReplicationMode.PREFER_MULTIARCH:
+                    recursive_mode = ReplicationMode.PREFER_MULTIARCH
+
                 res, ref, submanifest_bytes = replicate_artifact(
                     src_image_reference=src_reference,
                     tgt_image_reference=tgt_reference,
                     oci_client=client,
-                    mode=mode,
-                    platform_filter=platform_filter,
+                    mode=recursive_mode,
                     annotations=annotations,
                 )
 
