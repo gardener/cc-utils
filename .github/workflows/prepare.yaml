@@ -213,7 +213,7 @@ jobs:
     steps:
       - name: params
         id: params
-        uses: gardener/cc-utils/.github/actions/params@master
+        uses: gardener/cc-utils/.github/actions/params@282bf81566c8e7a048f674a427253fd436f53961
         with:
           mode: ${{ inputs.mode }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
@@ -221,7 +221,7 @@ jobs:
           snapshots-suffix: ${{ inputs.snapshots-suffix }}
           releases-suffix: ${{ inputs.releases-suffix }}
           ocm-repositories: ${{ inputs.ocm-repositories }}
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@1142ff80421aca1d4dd49bc4fb3e6ead4504b71d
         with:
           fetch-depth: ${{ inputs.checkout-fetch-depth }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -245,7 +245,7 @@ jobs:
           fi
           echo "prerelease=${prerelease}" >> ${GITHUB_OUTPUT}
           echo "commit-message=${commit_msg}" >> ${GITHUB_OUTPUT}
-      - uses: gardener/cc-utils/.github/actions/version@master
+      - uses: gardener/cc-utils/.github/actions/version@bb5d9eed03202460d524c8beafa7e37ffd2670b2
         id: version
         name: create-release-commit
         with:
@@ -268,7 +268,7 @@ jobs:
           versionfile: ${{ inputs.versionfile }}
           version-operation: ${{ inputs.version-operation }}
           commit-kind: ${{ inputs.mode == 'release' && 'release' || 'build' }}
-      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
+      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@65cd54b3a957cb84b7e6bfec61cbe8ee9ab3cb86
         id: component-descriptor
         with:
           base-component: ${{ inputs.base-component-file }}
@@ -302,7 +302,7 @@ jobs:
           tar cf "${{ inputs.output-artefact-filename }}" $p
           tar tf "${{ inputs.output-artefact-filename }}" # debug
 
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@e67f95d65f1ab8c20a25cee2bc263e36f45e33aa
         with:
           name: ${{ inputs.output-artefact }}
           path: ${{ inputs.output-artefact-filename }}
