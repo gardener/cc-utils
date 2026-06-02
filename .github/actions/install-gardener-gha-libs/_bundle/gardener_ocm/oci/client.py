@@ -1,0 +1,1433 @@
+import base64
+import collections
+import collections.abc
+import dataclasses
+import datetime
+import enum
+import hashlib
+import io
+import json
+import logging
+import tempfile
+import threading
+import time
+import urllib.parse
+
+import dacite
+import dateutil.parser
+import requests
+import requests.adapters
+import requests.auth
+import www_authenticate
+
+import oci.auth as oa
+import oci.aws
+import oci.model as om
+import oci.util
+
+urljoin = oci.util.urljoin
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+oci_request_logger = logging.getLogger('oci.client.request_logger')
+
+
+def _append_b64_padding_if_missing(b64_str: str):
+    if b64_str[-1] == '=':
+        return b64_str
+
+    if (mod4 := len(b64_str) % 4) == 2:
+        return b64_str + '=' * 2
+    elif mod4 == 3:
+        return b64_str + '='
+    elif mod4 == 0:
+        return b64_str
+    else:
+        raise ValueError('this is a bug')
+
+
+class AuthMethod(enum.Enum):
+    AWS_BASIC = 'aws_basic'
+    BEARER = 'bearer'
+    BASIC = 'basic'
+
+
+@dataclasses.dataclass
+class OauthToken:
+    token: str
+    scope: str
+    expires_in: int = None
+    issued_at: str = None
+
+    def valid(self):
+        issued_at = dateutil.parser.isoparse(self.issued_at)
+        # pessimistically deduct 30s, to be on the safe side
+        expiry_date = issued_at + datetime.timedelta(seconds=self.expires_in - 30)
+
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        return now < expiry_date
+
+    def __post_init__(self):
+        if not self.issued_at:
+            self.issued_at = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+        if not self.expires_in:
+            # check if format seems to be jwt
+            if self.token.count('.') >= 2:
+                payload = self.token.split('.')[1]
+                # add padding (JWT by convention has unpadded base64)
+                payload = _append_b64_padding_if_missing(b64_str=payload)
+
+                if (mod3 := len(payload) % 3) == 0:
+                    pass
+                elif mod3 == 1:
+                    payload += '=='
+                elif mod3 == 2:
+                    payload += '='
+
+                parsed = json.loads(base64.b64decode(payload.encode('utf-8')))
+
+                exp = parsed['exp']
+                iat = parsed['iat']
+
+                self.expires_in = exp - iat
+                self.issued_at = datetime.datetime.fromtimestamp(iat, tz=datetime.timezone.utc)\
+                    .isoformat()
+            else:
+                # hard-code a value in the future since it is not given
+                self.expires_in = datetime.timedelta(minutes=10).seconds
+
+
+class OauthTokenCache:
+    def __init__(self):
+        self.tokens = collections.defaultdict(dict) # {netloc: {scope: token}}
+        self.auth_methods = {} # {netloc: method}
+        self._token_access_lock = threading.Lock()
+
+    def token(self, image_reference: str, scope: str):
+        netloc = om.OciImageReference(image_reference).netloc
+
+        with self._token_access_lock:
+            # purge expired tokens
+            self.tokens[netloc] = {s:t for s,t in self.tokens.get(netloc, {}).items() if t.valid()}
+
+            return self.tokens.get(netloc, {}).get(scope)
+
+    def set_token(self, image_reference: str, token: OauthToken):
+        if not token.valid():
+            raise ValueError(f'token expired: {token=}')
+        # TODO: we might compare remaining validity, and only replace existing tokens
+        # if the new one has a later expiry date
+
+        netloc = om.OciImageReference(image_reference).netloc
+
+        with self._token_access_lock:
+            self.tokens[netloc][token.scope] = token
+
+    def set_auth_method(self, image_reference: str, auth_method: AuthMethod):
+        netloc = om.OciImageReference(image_reference).netloc
+
+        self.auth_methods[netloc] = auth_method
+
+    def auth_method(self, image_reference: str) -> AuthMethod | None:
+        netloc = om.OciImageReference(image_reference).netloc
+
+        return self.auth_methods.get(netloc)
+
+
+def base_api_url(
+    image_reference: str | om.OciImageReference,
+) -> str:
+    image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+    base_url = f'https://{image_reference.netloc}'
+
+    return urljoin(base_url, 'v2') + '/'
+
+
+class OciRoutes:
+    def __init__(
+        self,
+        base_api_url_lookup: collections.abc.Callable[[str], str]=base_api_url,
+    ):
+        self.base_api_url_lookup = base_api_url_lookup
+
+    def artifact_base_url(
+        self,
+        image_reference: str | om.OciImageReference,
+    ) -> str:
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+        return urljoin(
+            self.base_api_url_lookup(image_reference=str(image_reference)),
+            image_reference.name,
+        )
+
+    def _blobs_url(self, image_reference: str) -> str:
+        return urljoin(
+            self.artifact_base_url(image_reference),
+            'blobs',
+        )
+
+    def ls_tags_url(self, image_reference: str) -> str:
+        return urljoin(
+            self.artifact_base_url(image_reference),
+            'tags',
+            'list',
+        )
+
+    def uploads_url(self, image_reference: str) -> str:
+        return urljoin(
+            self._blobs_url(image_reference),
+            'uploads',
+        ) + '/'
+
+    def single_post_blob_url(self, image_reference: str, digest: str) -> str:
+        '''
+        used for "single-post" monolithic upload (not supported e.g. by registry-1.docker.io)
+        '''
+        query = urllib.parse.urlencode({
+            'digest': digest,
+        })
+        return self.uploads_url(image_reference=image_reference) + '?' + query
+
+    def blob_url(self, image_reference: str | om.OciImageReference, digest: str):
+        if isinstance(image_reference, om.OciImageReference):
+            image_reference = str(image_reference)
+
+        return urljoin(
+            self._blobs_url(image_reference=image_reference),
+            digest
+        )
+
+    def manifest_url(
+        self,
+        image_reference: str | om.OciImageReference,
+        tag_preprocessing_callback: collections.abc.Callable[[str], str]=None,
+    ) -> str:
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+        if not (tag := image_reference.tag):
+            raise ValueError(f'{image_reference=} does not seem to contain a tag')
+
+        if tag_preprocessing_callback:
+            tag = tag_preprocessing_callback(tag)
+
+        return urljoin(
+            self.artifact_base_url(image_reference=image_reference),
+            'manifests',
+            tag,
+        )
+
+
+def _retry_after_seconds(res: requests.models.Response, fallback: float) -> float:
+    try:
+        if (value := res.headers.get('Retry-After')):
+            return int(value)
+    except ValueError:
+        pass
+    return fallback
+
+
+def _scope(image_reference: str | om.OciImageReference, action: str):
+    image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+    image_name = image_reference.name
+    # action = 'pull' # | pull,push | catalog
+    scope = f'repository:{image_name}:{action}'
+
+    return scope
+
+
+def _next_paginated_url(
+    url: str,
+    headers: dict,
+) -> str | None:
+    # follow pagination as per OCI Distribution Spec
+    # Link header format: <url>; rel="next"
+    if 'rel="next"' in (link_header := headers.get('Link', '')):
+        next_url = link_header.split(';')[0].strip().strip('<>')
+        # resolve relative URLs against the base API url
+        if next_url.startswith('/'):
+            parsed = urllib.parse.urlparse(url)
+            url = f'{parsed.scheme}://{parsed.netloc}{next_url}'
+        else:
+            url = next_url
+    else:
+        url = None
+
+    return url
+
+
+def initialise_repository_if_required(func):
+    '''
+    Some OCI registries require separate repositories for each OCI artefact (e.g. AWS ECR), which
+    have to be initialised prior to uploading any artefacts. This wrapper will handle HTTP 404 errors
+    (which are raised if the repository does not exist) by trying to create the repository and
+    afterwards re-uploading the artefacts.
+    '''
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code != 404:
+                raise
+
+            if not (image_reference := kwargs.get('image_reference')):
+                raise
+
+            image_reference = om.OciImageReference(image_reference)
+            oci_client = args[0]
+
+            if image_reference.registry_type is om.OciRegistryType.AWS:
+                credentials = oci_client.credentials_lookup(
+                    image_reference=str(image_reference),
+                    privileges=oa.Privileges.ADMIN,
+                    absent_ok=False,
+                )
+
+                oci.aws.create_repository(
+                    image_reference=image_reference,
+                    credentials=credentials,
+                    session=oci_client.session,
+                )
+
+                return func(*args, **kwargs)
+
+            raise
+
+    return wrapper
+
+
+def no_credentials_lookup(*args, **kwargs) -> None:
+    '''
+    a lookup that never returns credentials, regardless of passed arguments.
+
+    Concenience-Shorthand for cases where no credentials are available.
+    '''
+    return None
+
+
+def client_with_dockerauth(
+    http_connection_pool_size: int=10,
+) -> 'Client':
+    '''
+    convenience function creating an oci.client.Client which will use default docker-cfg
+    to lookup credentials. If no such cfg is available, the returned client will use
+    anonymous authentication.
+
+    Use `Client`-initialiser if more control over client-creation is needed.
+    '''
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=http_connection_pool_size,
+        pool_maxsize=http_connection_pool_size,
+    )
+    session.mount('https://', adapter)
+
+    return Client(
+        credentials_lookup=oa.docker_credentials_lookup(
+            absent_ok=True,
+        ),
+        session=session,
+    )
+
+
+class Client:
+    def __init__(
+        self,
+        credentials_lookup: collections.abc.Callable=no_credentials_lookup,
+        routes: OciRoutes=OciRoutes(),
+        disable_tls_validation: bool=False,
+        timeout_seconds: int=None,
+        session: requests.Session=None,
+        tag_preprocessing_callback: collections.abc.Callable[[str], str]=None,
+        tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
+        max_retries: int=5,
+        default_backoff_base_seconds: float=1.0,
+    ):
+        '''
+        :param Callable credentials_lookup:
+            defaults to no credentials, leading to anonymous-auth attempt
+        :param OciRoutes routes:
+        :param bool disable_tls_validation:
+        :param int timeout_seconds:
+        :param Session session:
+        :param Callable tag_preprocessing_callback:
+            callback which is instrumented _prior_ to interacting with the OCI registry, i.e. useful
+            in case the tag has to be sanitised so it is accepted by the OCI registry
+        :param Callable tag_postprocessing_callback:
+            callback which is instrumented _after_ interacting with the OCI registry, i.e. useful to
+            revert required sanitisation of `tag_preprocessing_callback`
+        :param int max_retries:
+            how many times to retry a failed request (connection errors, 429, 5xx)
+        :param float default_backoff_base_seconds:
+            initial sleep before first retry; doubles on each subsequent attempt
+        '''
+        self.credentials_lookup = credentials_lookup
+        self.token_cache = OauthTokenCache()
+        if not session:
+            self.session = requests.Session()
+        else:
+            self.session = session
+        self.routes = routes
+        self.disable_tls_validation = disable_tls_validation
+        self.tag_preprocessing_callback = tag_preprocessing_callback
+        self.tag_postprocessing_callback = tag_postprocessing_callback
+        self.max_retries = max_retries
+        self.default_backoff_base_seconds = default_backoff_base_seconds
+
+        if timeout_seconds:
+            timeout_seconds = int(timeout_seconds)
+        self.timeout_seconds = timeout_seconds
+
+    def _authenticate(
+        self,
+        image_reference: str | om.OciImageReference,
+        scope: str,
+        remaining_retries: int=None,
+        sleep_before_retry_seconds: float=None,
+    ):
+        if remaining_retries is None:
+            remaining_retries = self.max_retries
+        if sleep_before_retry_seconds is None:
+            sleep_before_retry_seconds = self.default_backoff_base_seconds
+
+        if isinstance(image_reference, om.OciImageReference):
+            image_reference = str(image_reference)
+
+        cached_auth_method = self.token_cache.auth_method(image_reference=image_reference)
+        if cached_auth_method is AuthMethod.BASIC:
+            return # basic-auth does not require any additional preliminary steps
+        if (
+            cached_auth_method in (AuthMethod.BEARER, AuthMethod.AWS_BASIC)
+            and self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            )
+        ):
+            return # no re-auth required, yet
+
+        if 'push' in scope:
+            privileges = oa.Privileges.READWRITE
+        elif 'pull' in scope:
+            privileges = oa.Privileges.READONLY
+        else:
+            privileges = None
+
+        oci_creds = self.credentials_lookup(
+            image_reference=image_reference,
+            privileges=privileges,
+            absent_ok=True,
+        )
+
+        if (
+            om.OciImageReference(image_reference).registry_type is om.OciRegistryType.AWS
+            and oci_creds
+        ):
+            user, password = oci.aws.basic_auth_credentials(
+                image_reference=image_reference,
+                credentials=oci_creds,
+                session=self.session,
+            )
+
+            if oci.aws.is_public_registry(image_reference):
+                # we have to use the just created authentication token as basic auth credential for
+                # the following bearer auth
+                oci_creds = oa.OciBasicAuthCredentials(
+                    username=user,
+                    password=password,
+                )
+            else:
+                token = OauthToken(
+                    token=password,
+                    scope=scope,
+                    expires_in=datetime.timedelta(hours=12).seconds,
+                )
+                self.token_cache.set_token(
+                    image_reference=image_reference,
+                    token=token,
+                )
+                self.token_cache.set_auth_method(
+                    image_reference=image_reference,
+                    auth_method=AuthMethod.AWS_BASIC,
+                )
+                return
+
+        if not oci_creds:
+            logger.debug(f'no credentials for {image_reference=} - attempting anonymous-auth')
+
+        url = base_api_url(
+            image_reference=str(image_reference),
+        )
+
+        res = self.session.get(
+            url=url,
+            verify=not self.disable_tls_validation,
+            timeout=(31, 121),
+        )
+
+        auth_challenge = www_authenticate.parse(res.headers.get('www-authenticate'))
+
+        # XXX HACK HACK: fallback to basic-auth if endpoints does not state what it wants
+        if 'basic' in auth_challenge or not auth_challenge:
+            self.token_cache.set_auth_method(
+                image_reference=image_reference,
+                auth_method=AuthMethod.BASIC,
+            )
+            return # no additional preliminary steps required for basic-auth
+        elif 'bearer' in auth_challenge:
+            bearer = auth_challenge['bearer']
+            service = bearer.get('service')
+            self.token_cache.set_auth_method(
+                image_reference=image_reference,
+                auth_method=AuthMethod.BEARER,
+            )
+        else:
+            logger.warning(f'did not understand {auth_challenge=} - pbly a bug')
+
+        bearer_dict = {'scope': scope}
+        if service:
+            bearer_dict['service'] = service
+
+        realm = bearer['realm'] + '?' + urllib.parse.urlencode(bearer_dict)
+
+        if oci_creds:
+            auth = requests.auth.HTTPBasicAuth(
+              username=oci_creds.username,
+              password=oci_creds.password,
+            )
+        else:
+            auth = None
+
+        res = self.session.get(
+            url=realm,
+            verify=not self.disable_tls_validation,
+            auth=auth,
+            timeout=(31, 121),
+        )
+
+        if not res.ok:
+            logger.warning(
+                f'rq against {realm=} failed: {res.status_code=} {res.reason=} {res.content=}'
+            )
+
+            if (res.status_code == 429 or res.status_code >= 500) and remaining_retries > 0:
+                retry_after_seconds = _retry_after_seconds(
+                    res=res,
+                    fallback=sleep_before_retry_seconds,
+                )
+
+                logger.warning(
+                    f'auth rq failed with {res.status_code}, retrying after {retry_after_seconds=}s'
+                )
+                time.sleep(retry_after_seconds)
+                return self._authenticate(
+                    image_reference=image_reference,
+                    scope=scope,
+                    remaining_retries=remaining_retries - 1,
+                    sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                )
+
+        res.raise_for_status()
+
+        token_dict = res.json()
+        token_dict['scope'] = scope
+
+        if not 'token' in token_dict and 'access_token' in token_dict:
+            # this is the case for Azure
+            token_dict['token'] = token_dict['access_token']
+
+        token = dacite.from_dict(
+            data=token_dict,
+            data_class=OauthToken,
+        )
+
+        self.token_cache.set_token(
+            image_reference=image_reference,
+            token=token,
+        )
+
+    def _request(
+        self,
+        url: str,
+        image_reference: str | om.OciImageReference,
+        scope: str,
+        method: str='GET',
+        headers: dict=None,
+        raise_for_status=True,
+        warn_if_not_ok=True,
+        remaining_retries: int=None,
+        sleep_before_retry_seconds: float=None,
+        **kwargs,
+    ):
+        if remaining_retries is None:
+            remaining_retries = self.max_retries
+        if sleep_before_retry_seconds is None:
+            sleep_before_retry_seconds = self.default_backoff_base_seconds
+
+        if not 'timeout' in kwargs and self.timeout_seconds:
+            kwargs['timeout'] = self.timeout_seconds
+
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+        try:
+            self._authenticate(
+                image_reference=image_reference,
+                scope=scope,
+            )
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            if remaining_retries == 0:
+                raise
+
+            logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            if sleep_before_retry_seconds > 0:
+                time.sleep(sleep_before_retry_seconds)
+
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                **kwargs,
+            )
+
+        headers = headers or {}
+        headers['User-Agent'] = 'gardener-oci (python3; github.com/gardener/cc-utils)'
+        auth_method = self.token_cache.auth_method(image_reference=image_reference)
+        auth = None
+
+        if auth_method is AuthMethod.BASIC:
+            actions = scope.split(':')[-1]
+            if 'push' in actions:
+                privileges = oa.Privileges.READWRITE
+            else:
+                privileges = oa.Privileges.READONLY
+
+            if oci_creds := self.credentials_lookup(
+                image_reference=image_reference.original_image_reference,
+                privileges=privileges,
+                absent_ok=True,
+            ):
+                auth = oci_creds.username, oci_creds.password
+            else:
+                logger.debug(f'did not find any matching credentials for {image_reference=}')
+        elif auth_method is AuthMethod.AWS_BASIC:
+            password = self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            ).token
+            auth = 'AWS', password
+        else:
+            token = self.token_cache.token(
+                image_reference=image_reference,
+                scope=scope,
+            ).token
+            headers = {
+              'Authorization': f'Bearer {token}',
+              **headers,
+            }
+
+        if self.disable_tls_validation and 'verify' in kwargs:
+            kwargs['verify'] = False
+
+        oci_request_logger.debug(
+            msg=f'oci request sent {method=} {url=}',
+            extra={
+                'method': method,
+                'url': url,
+                'auth': auth,
+                'headers': headers,
+                **kwargs,
+            },
+        )
+
+        try:
+            timeout = kwargs.pop('timeout')
+        except KeyError:
+            timeout = (31, 121)
+
+        try:
+            res = self.session.request(
+                method=method,
+                url=url,
+                auth=auth,
+                headers=headers,
+                timeout=timeout,
+                **kwargs,
+            )
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            if remaining_retries == 0:
+                raise
+
+            logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            if sleep_before_retry_seconds > 0:
+                time.sleep(sleep_before_retry_seconds)
+
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                **kwargs,
+            )
+
+        if not res.ok and warn_if_not_ok:
+            logger.warning(
+                f'rq against {url=} failed {res.status_code=} {res.reason=} {method=} {res.content}'
+            )
+
+        if res.status_code == 429 and remaining_retries > 0:
+            retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
+
+            logger.warning(
+                f'quota was exceeded, will {retry_after_seconds=} ({remaining_retries=})'
+            )
+
+            time.sleep(retry_after_seconds)
+
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                **kwargs,
+            )
+
+        if res.status_code >= 500 and remaining_retries > 0:
+            retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
+
+            logger.warning(
+                f'got {res.status_code=}, will retry after {retry_after_seconds=}s '
+                f'({remaining_retries=})'
+            )
+
+            time.sleep(retry_after_seconds)
+
+            return self._request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+                method=method,
+                headers=headers,
+                raise_for_status=raise_for_status,
+                warn_if_not_ok=warn_if_not_ok,
+                remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                **kwargs,
+            )
+
+        if raise_for_status:
+            if res.status_code != 404 and not res.ok:
+                logger.debug(f'{url=} {res.content=} {res.headers=}')
+            res.raise_for_status()
+
+        return res
+
+    def manifest_raw(
+        self,
+        image_reference: str | om.OciImageReference,
+        absent_ok: bool=False,
+        accept: str=None,
+    ):
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        # be backards-compatible, and also accept (legacy) docker-mimetype
+        if not accept:
+            accept = f'{om.OCI_MANIFEST_SCHEMA_V2_MIME}, {om.DOCKER_MANIFEST_SCHEMA_V2_MIME}'
+
+        try:
+            res = self._request(
+                url=self.routes.manifest_url(
+                    image_reference=image_reference,
+                    tag_preprocessing_callback=self.tag_preprocessing_callback,
+                ),
+                image_reference=image_reference,
+                scope=scope,
+                warn_if_not_ok=not absent_ok,
+                headers={
+                    'Accept': accept,
+                },
+            )
+        except requests.exceptions.HTTPError as he:
+            if he.response.status_code == 404:
+                if absent_ok:
+                    return None
+                raise om.OciImageNotFoundException(he) from he
+            raise he
+
+        return res
+
+    def manifest(
+        self,
+        image_reference: str | om.OciImageReference,
+        absent_ok: bool=False,
+        accept: str=None,
+    ) -> om.OciImageManifest | om.OciImageManifestList:
+        '''
+        returns the parsed OCI Manifest for the given image reference. If the optional `accept`
+        argument is passed, the given value will be set as `Accept` HTTP Header when retrieving
+        the manifest (defaults to
+            application/vnd.oci.image.manifest.v1+json
+            application/vnd.docker.distribution.manifest.v2+json
+        , which requests a single Oci Image manifest, with a preference for the mimetype defined
+        by OCI, and accepting docker's mimetype as a fallback)
+
+        The following mimetype is also well-known:
+
+            application/vnd.oci.image.manifest.v1+json
+
+        If set, and the underlying OCI Artifact is a "multi-arch" artifact, than the returned
+        value is (parsed into) a OciImageManifestList.
+
+        see oci.model for both mimetype and model class definitions.
+
+        Note that in case no `accept` header is set, the returned manifest type differs depending
+        on the OCI Registry, if there actually is a multi-arch artifact.
+
+        GCR is known to return a single OCI Image manifest (defaulting to GNU/Linux x86_64),
+        whereas the registry backing quay.io will return a Manifest-List regardless of accept
+        header.
+        '''
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+        res = self.manifest_raw(
+            image_reference=image_reference,
+            absent_ok=absent_ok,
+            accept=accept,
+        )
+
+        if not res and absent_ok:
+            return None
+
+        manifest_dict = res.json()
+
+        # workaround: not all manifests contain `mediaType`
+        # -> fallback to content-type header
+        if not 'mediaType' in manifest_dict:
+            if (media_type := res.headers.get('Content-Type')):
+                manifest_dict['mediaType'] = media_type
+
+        if manifest_dict.get('mediaType') in (
+            om.DOCKER_MANIFEST_LIST_MIME,
+            om.OCI_IMAGE_INDEX_MIME,
+        ):
+            manifest = dacite.from_dict(
+                data_class=om.OciImageManifestList,
+                data=manifest_dict,
+            )
+            return manifest
+
+        if (schema_version := int(manifest_dict['schemaVersion'])) == 1:
+            manifest = dacite.from_dict(
+                data_class=om.OciImageManifestV1,
+                data=manifest_dict,
+            )
+            scope = _scope(image_reference=image_reference, action='pull')
+
+            def fs_layer_to_oci_blob_ref(fs_layer: om.OciBlobRefV1):
+                digest = fs_layer.blobSum
+
+                res = self._request(
+                    url=self.routes.blob_url(image_reference=image_reference, digest=digest),
+                    image_reference=image_reference,
+                    scope=scope,
+                    method='HEAD',
+                    stream=False,
+                    timeout=None,
+                )
+                if (mediaType := res.headers['Content-Type']) == 'application/octet-stream':
+                    # legacy container-images declare application/octet-stream as content-type,
+                    # which is not supported by containerd
+                    # https://github.com/containerd/containerd/pull/2456#issuecomment-406478687
+                    mediaType = 'application/vnd.docker.image.rootfs.diff.tar.gzip'
+                return om.OciBlobRef(
+                    digest=digest,
+                    mediaType=mediaType,
+                    size=int(res.headers['Content-Length']),
+                )
+
+            manifest.layers = [
+                fs_layer_to_oci_blob_ref(fs_layer) for fs_layer
+                in manifest.fsLayers
+            ]
+
+            return manifest
+        elif schema_version == 2:
+            return dacite.from_dict(
+                data_class=om.OciImageManifest,
+                data=manifest_dict,
+            )
+        else:
+            raise NotImplementedError(schema_version)
+
+    def head_manifest(
+        self,
+        image_reference: str,
+        absent_ok=False,
+        accept: str=None,
+    ) -> om.OciBlobRef | None:
+        '''
+        issues an HTTP-HEAD request for the specified oci-artifact's manifest and returns
+        the thus-retrieved metadata if it exists.
+
+        Note that the hash digest may be absent, or incorrect, as defined by the OCI
+        distribution-spec.
+
+        if `absent_ok` is truthy, `None` is returned in case the requested manifest does not
+        exist; otherwise, requests.exceptions.HTTPError is raised in this case.
+
+        To retrieve the actual manifest, use `self.manifest` or `self.manifest_raw`
+        '''
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        if not accept:
+            accept = om.MimeTypes.single_image
+
+        res = self._request(
+            url=self.routes.manifest_url(
+                image_reference=image_reference,
+                tag_preprocessing_callback=self.tag_preprocessing_callback,
+            ),
+            image_reference=image_reference,
+            method='HEAD',
+            headers={
+                'accept': accept,
+            },
+            scope=scope,
+            stream=False,
+            raise_for_status=not absent_ok,
+            warn_if_not_ok=not absent_ok,
+        )
+        if not res.ok and absent_ok:
+            return None
+
+        headers = res.headers
+
+        # XXX Docker-Content-Digest header may be absent or incorrect
+        # -> it would be preferrable to retrieve the manifest and calculate the hash manually
+
+        if size := headers.get('Content-Length'):
+            size = int(size)
+
+        return om.OciBlobRef(
+            digest=headers.get('Docker-Content-Digest', None),
+            mediaType=headers['Content-Type'],
+            size=size,
+        )
+
+    def to_digest_hash(
+        self,
+        image_reference: str | om.OciImageReference,
+        accept: str=None,
+    ):
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+        if image_reference.has_digest_tag:
+            return str(image_reference)
+
+        manifest_hash_digest = hashlib.sha256(
+            self.manifest_raw(
+                image_reference=image_reference,
+                accept=accept,
+            ).content
+        ).hexdigest()
+
+        prefix = image_reference.ref_without_tag
+
+        return f'{prefix}@sha256:{manifest_hash_digest}'
+
+    def _tags_single_request(
+        self,
+        url: str,
+        image_reference: str,
+        scope: str,
+    ) -> tuple[list[str], str | None]:
+        res = self._request(
+            url=url,
+            image_reference=image_reference,
+            scope=scope,
+            method='GET'
+        )
+
+        res.raise_for_status()
+
+        # Google-Artifact-Registry (maybe also others) will return http-200 + HTML in certain
+        # error cases (e.g. if image_reference contains a pipe (|) character)
+        try:
+            tags = res.json()['tags']
+        except json.decoder.JSONDecodeError as jde:
+            if not (content_type := res.headers['Content-Type']) == 'application/json':
+                jde.add_note(f'unexpected Content-Type: {content_type=}')
+
+            jde.add_note(f'{image_reference=}')
+
+            raise jde
+
+        next_url = _next_paginated_url(
+            url=url,
+            headers=res.headers,
+        )
+
+        return tags, next_url
+
+    def iter_tags(self, image_reference: str) -> collections.abc.Iterable[str]:
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        url = self.routes.ls_tags_url(image_reference=image_reference)
+
+        while url:
+            tags, url = self._tags_single_request(
+                url=url,
+                image_reference=image_reference,
+                scope=scope,
+            )
+
+            for tag in tags:
+                if self.tag_postprocessing_callback:
+                    tag = self.tag_postprocessing_callback(tag)
+
+                yield tag
+
+    def tags(self, image_reference: str) -> list[str]:
+        return list(self.iter_tags(image_reference=image_reference))
+
+    def has_multiarch(self, image_reference: str) -> bool:
+        res = self.head_manifest(
+            image_reference=image_reference,
+            absent_ok=True,
+            accept=om.MimeTypes.multiarch,
+        )
+        if res:
+            return True
+
+        # sanity-check: at least single image must exist
+        self.head_manifest(
+            image_reference=image_reference,
+            absent_ok=False,
+            accept=om.MimeTypes.single_image,
+        )
+        return False
+
+    @initialise_repository_if_required
+    def put_manifest(
+        self,
+        image_reference: str | om.OciImageReference,
+        manifest: bytes,
+    ):
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        parsed = json.loads(manifest)
+        content_type = parsed.get('mediaType', om.OCI_MANIFEST_SCHEMA_V2_MIME)
+
+        logger.debug(f'manifest-mimetype: {content_type=}')
+
+        res = self._request(
+            url=self.routes.manifest_url(
+                image_reference=image_reference,
+                tag_preprocessing_callback=self.tag_preprocessing_callback,
+            ),
+            image_reference=image_reference,
+            scope=scope,
+            method='PUT',
+            raise_for_status=False,
+            headers={
+                'Content-Type': content_type,
+            },
+            data=manifest,
+        )
+
+        if not res.ok:
+            logger.warning(f'our manifest was rejected (see below for more details): {manifest=}')
+
+        res.raise_for_status()
+
+        return res
+
+    def delete_manifest(
+        self,
+        image_reference: om.OciImageReference | str,
+        purge: bool=False,
+        accept: str=om.MimeTypes.prefer_multiarch,
+        absent_ok: bool=False,
+    ):
+        '''
+        deletes the specified manifest. Depending on whether the passed image_reference contains
+        a digest or a symbolic tag, the resulting semantics (and error cases) differs.
+
+        If the image-reference contains a symbolic tag, the tag will be removed (a.k.a. untagged).
+        The manifest will still be accessible, either through other tags, or through digest-tag.
+
+        If the image-reference contains a digest, the manifest will be removed and no longer be
+        accessible. However, this operation will fail if there are tags referencing the manifest.
+
+        If `purge` is set to `True`, _and_ the image-reference contains a symbolic tag, then the
+        manifest will be retrieved (to calculate the digest), then it will be untagged, then the
+        manifest will be deleted. Note that the last operation may still fail if there are other
+        tags referencing the same manifest.
+        '''
+        image_reference = om.OciImageReference(image_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        if not purge or image_reference.has_digest_tag:
+            if accept:
+                headers = {'Accept': accept}
+            else:
+                headers = {}
+
+            res = self._request(
+                url=self.routes.manifest_url(
+                    image_reference=image_reference,
+                    tag_preprocessing_callback=self.tag_preprocessing_callback,
+                ),
+                image_reference=image_reference,
+                scope=scope,
+                headers=headers,
+                method='DELETE',
+                raise_for_status=False,
+            )
+
+            if absent_ok and res.status_code == 404:
+                return res
+
+            res.raise_for_status()
+
+            return res
+        elif image_reference.has_symbolical_tag:
+            manifest_raw = self.manifest_raw(
+                image_reference=image_reference,
+                accept=accept,
+            )
+            manifest_digest = f'sha256:{hashlib.sha256(manifest_raw.content).hexdigest()}'
+
+            res = self.delete_manifest(
+                image_reference=image_reference,
+                purge=False,
+                accept=accept,
+                absent_ok=absent_ok,
+            )
+            res.raise_for_status()
+            return self.delete_manifest(
+                image_reference=f'{image_reference.ref_without_tag}@{manifest_digest}',
+                purge=False,
+                absent_ok=absent_ok,
+            )
+        else:
+            raise RuntimeError('this case should not occur (this is a bug)')
+
+    def delete_blob(
+        self,
+        image_reference: om.OciImageReference | str,
+        digest: str,
+    ):
+        image_reference = om.OciImageReference(image_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        res = self._request(
+            url=self.routes.blob_url(image_reference=image_reference, digest=digest),
+            image_reference=image_reference,
+            scope=scope,
+            method='DELETE',
+        )
+        res.raise_for_status()
+        return res
+
+    def blob(
+        self,
+        image_reference: str | om.OciImageReference,
+        digest: str,
+        stream=True,
+        absent_ok=False,
+    ) -> requests.models.Response:
+        image_reference = om.OciImageReference(image_reference)
+
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        res = self._request(
+            url=self.routes.blob_url(image_reference=image_reference, digest=digest),
+            image_reference=image_reference,
+            scope=scope,
+            method='GET',
+            stream=stream,
+            timeout=None,
+            raise_for_status=False,
+        )
+
+        if absent_ok and res.status_code == requests.codes.NOT_FOUND: # noqa
+            return None
+        res.raise_for_status()
+
+        return res
+
+    def head_blob(
+        self,
+        image_reference: str | om.OciImageReference,
+        digest: str,
+        absent_ok=True,
+    ):
+        image_reference = om.OciImageReference(image_reference)
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        res = self._request(
+            url=self.routes.blob_url(
+                image_reference=image_reference,
+                digest=digest,
+            ),
+            method='HEAD',
+            scope=scope,
+            image_reference=image_reference,
+            raise_for_status=False,
+            warn_if_not_ok=not absent_ok,
+        )
+
+        if absent_ok and res.status_code == 404:
+            return res
+
+        res.raise_for_status()
+
+        return res
+
+    def put_blob(
+        self,
+        image_reference: str | om.OciImageReference,
+        digest: str,
+        octets_count: int,
+        data: requests.models.Response | collections.abc.Generator | bytes | io.IOBase,
+        max_chunk=1024 * 1024 * 1, # 1 MiB
+        mimetype: str='application/octet-stream',
+    ):
+        '''
+        uploads blob as part of an image-upload as specified in oci-distribution-spec:
+        https://github.com/opencontainers/distribution-spec/blob/main/spec.md#push
+
+        mimetype should not be set to a different value than the default. It is exposed for
+        users seeking lowlevel control.
+        '''
+        image_reference = om.OciImageReference(image_reference)
+        head_res = self.head_blob(
+            image_reference=image_reference,
+            digest=digest,
+        )
+        if head_res.ok:
+            logger.debug(f'skipping blob upload {digest=} - already exists')
+            return
+
+        data_is_requests_resp = isinstance(data, requests.models.Response)
+        data_is_generator = isinstance(data, collections.abc.Generator)
+        data_is_filelike = hasattr(data, 'read')
+        data_is_bytes = isinstance(data, bytes)
+
+        if octets_count < max_chunk or data_is_filelike or data_is_bytes:
+            if data_is_requests_resp:
+                data = data.content
+            elif data_is_generator:
+                # at least GCR does not like chunked-uploads; if small enough, workaround this
+                # and create one (not-that-big) bytes-obj
+                _data = bytes()
+                for chunk in data:
+                    _data += chunk
+                data = _data
+            elif data_is_filelike:
+                pass # if filelike, http.client will handle streaming for us
+
+            return self._put_blob_single_post(
+                image_reference=image_reference,
+                digest=digest,
+                octets_count=octets_count,
+                data=data,
+                mimetype=mimetype,
+            )
+        elif octets_count >= max_chunk and (data_is_generator or data_is_requests_resp):
+            # workaround: write into temporary file, as at least GCR does not implement
+            # chunked-upload, and requests will not properly work w/ all generators
+            # (in particular, it will not work w/ our "fake" on)
+            with tempfile.TemporaryFile() as tf:
+                if data_is_generator:
+                    for chunk in data:
+                        tf.write(chunk)
+                elif data_is_requests_resp:
+                    while (chunk := data.raw.read(4096)):
+                        tf.write(chunk)
+                else:
+                    # must only enter this codepath, if either generator or requests-response
+                    raise RuntimeError('this line must not be reached')
+                tf.seek(0)
+
+                return self._put_blob_single_post(
+                    image_reference=image_reference,
+                    digest=digest,
+                    octets_count=octets_count,
+                    data=tf,
+                    mimetype=mimetype,
+                )
+        else:
+            if data_is_requests_resp:
+                with data:
+                  return self._put_blob_chunked(
+                      image_reference=image_reference,
+                      octets_count=octets_count,
+                      data_iterator=data.iter_content(chunk_size=max_chunk),
+                      chunk_size=max_chunk,
+                      mimetype=mimetype,
+                  )
+            else:
+              raise NotImplementedError
+
+    @initialise_repository_if_required
+    def _put_blob_chunked(
+        self,
+        image_reference: str | om.OciImageReference,
+        octets_count: int,
+        data_iterator: collections.abc.Iterator[bytes],
+        chunk_size: int=1024 * 1024 * 16, # 16 MiB
+        mimetype='application/octect-stream',
+    ):
+        image_reference = om.OciImageReference(image_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+        logger.debug(f'chunked-put {chunk_size=}')
+
+        # start uploading session
+        res = self._request(
+            url=self.routes.uploads_url(image_reference=image_reference),
+            image_reference=image_reference,
+            scope=scope,
+            method='POST',
+            headers={
+                'content-length': '0',
+            }
+        )
+        res.raise_for_status()
+
+        upload_url = res.headers['location']
+
+        octets_left = octets_count
+        octets_sent = 0
+        offset = 0
+        sha256 = hashlib.sha256()
+
+        while octets_left > 0:
+            octets_to_send = min(octets_left, chunk_size)
+            octets_left -= octets_to_send
+
+            data = next(data_iterator)
+            sha256.update(data)
+
+            if not len(data) == octets_to_send:
+                # sanity check to detect programming errors
+                raise ValueError(f'{len(data)=} vs {octets_to_send=}')
+
+            logger.debug(f'{octets_to_send=} {octets_left=} {len(data)=}')
+            logger.debug(f'{octets_sent + offset}-{octets_sent + octets_to_send + offset}')
+
+            crange_from = octets_sent
+            crange_to = crange_from + len(data) - 1
+
+            res = self._request(
+                url=upload_url,
+                image_reference=image_reference,
+                scope=scope,
+                method='PATCH',
+                data=data,
+                headers={
+                 'Content-Length': str(octets_to_send),
+                 'Content-Type': mimetype,
+                 'Content-Range': f'{crange_from}-{crange_to}',
+                 'Range': f'{crange_from}-{crange_to}',
+                }
+            )
+            res.raise_for_status()
+
+            upload_url = res.headers['location']
+
+            octets_sent += len(data)
+
+        sha256_digest = f'sha256:{sha256.hexdigest()}'
+
+        # close uploading session
+        query = urllib.parse.urlencode({'digest': sha256_digest})
+        upload_url = res.headers['location'] + '?' + query
+        res = self._request(
+            url=upload_url,
+            image_reference=image_reference,
+            scope=scope,
+            method='PUT',
+            headers={
+                 'Content-Length': '0',
+            },
+        )
+        return res
+
+    @initialise_repository_if_required
+    def _put_blob_single_post(
+        self,
+        image_reference: str | om.OciImageReference,
+        digest: str,
+        octets_count: int,
+        data: bytes,
+        mimetype: str='application/octet-stream',
+    ):
+        logger.debug(f'single-post {image_reference=} {octets_count=}')
+        image_reference = om.OciImageReference(image_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        # XXX according to distribution-spec, single-POST should also work - however
+        # this seems not to be true for registry-1.docker.io. To keep the code simple(r),
+        # always do a two-step upload; we might add a cfg-option (or maybe even discovery) for
+        # using single-post uploads for registries that support it (such as GCR or artifactory)
+        res = self._request(
+            url=self.routes.uploads_url(
+                image_reference=image_reference,
+            ),
+            image_reference=image_reference,
+            scope=scope,
+            method='POST',
+        )
+
+        upload_url = res.headers.get('Location')
+
+        # returned url _may_ be relative
+        if upload_url.startswith('/'):
+            parsed_url = urllib.parse.urlparse(res.url)
+            upload_url = f'{parsed_url.scheme}://{parsed_url.netloc}{upload_url}'
+
+        if '?' in upload_url:
+            prefix = '&'
+        else:
+            prefix = '?'
+
+        upload_url += prefix + urllib.parse.urlencode({'digest': digest})
+
+        res = self._request(
+            url=upload_url,
+            image_reference=image_reference,
+            scope=scope,
+            method='PUT',
+            headers={
+                'content-type': mimetype,
+                'content-length': str(octets_count),
+            },
+            data=data,
+            raise_for_status=False,
+        )
+
+        if res.ok and not res.status_code == 201: # spec says it MUST be 201
+            # also, 202 indicates the upload actually did not succeed e.g. for "docker-hub"
+            logger.warning(f'{image_reference=} {res.status_code=} {digest=} - PUT may have failed')
+
+        res.raise_for_status()
+        return res
