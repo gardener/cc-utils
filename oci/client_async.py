@@ -325,7 +325,10 @@ class Client:
                 image_reference=image_reference,
                 scope=scope,
             ).token
-            auth = 'AWS', password
+            auth = aiohttp.BasicAuth(
+                login='AWS',
+                password=password,
+            )
         else:
             token = self.token_cache.token(
                 image_reference=image_reference,
