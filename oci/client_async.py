@@ -610,7 +610,9 @@ class Client:
         # Google-Artifact-Registry (maybe also others) will return http-200 + HTML in certain
         # error cases (e.g. if image_reference contains a pipe (|) character)
         try:
-            tags_res = await res.json()
+            tags_res = await res.json(
+                content_type=None, # AWS ECR is using `text/plain` instead of `application/json`
+            )
             tags = tags_res['tags']
         except json.decoder.JSONDecodeError as jde:
             if not (content_type := res.headers['Content-Type']) == 'application/json':
