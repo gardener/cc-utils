@@ -296,13 +296,6 @@ jobs:
       version: ${{ steps.component-descriptor.outputs.version }}
 
     steps:
-      - name: collect-component-descriptor
-        id: component-descriptor
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
-        with:
-          component-descriptor-artefact: base-component-descriptor
-          component-descriptor: ${{ inputs.component-descriptor }}
-          outdir: /tmp/ocm
       - name: fetch-prepare-values
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
@@ -310,10 +303,23 @@ jobs:
       - name: prepare-prepare-workflow-values
         id: prep
         run: |
-          tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+          tar xf prepare-workflow-values.tar \
+            prepare-values.d/ocm-repositories \
+            prepare-values.d/oci-registry
           ocm_repos="$(cat prepare-values.d/ocm-repositories)"
+          oci_registry="$(cat prepare-values.d/oci-registry)"
           rm -rf prepare-values.d prepare-workflow-values.tar
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+          echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
+      - name: collect-component-descriptor
+        id: component-descriptor
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        with:
+          component-descriptor-artefact: base-component-descriptor
+          component-descriptor: ${{ inputs.component-descriptor }}
+          outdir: /tmp/ocm
+          oci-registry: ${{ steps.prep.outputs.oci-registry }}
+
       - name: checkout
         uses: actions/checkout@v6
       - name: prepare-next-version-operation
