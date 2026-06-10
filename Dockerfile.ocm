@@ -5,6 +5,7 @@ RUN --mount=type=bind,source=.,target=/src,rw \
         bash \
         python3 \
         py3-pip \
+        py3-setuptools \
 &&  cd /src  \
 && sed -i 's/-//g' /src/oci/VERSION \
 && export version_file=/src/ocm/image-version \
