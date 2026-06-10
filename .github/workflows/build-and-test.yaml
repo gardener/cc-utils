@@ -363,3 +363,153 @@ jobs:
           git add -A
           git commit -m "update documentation"
           git push origin refs/heads/gh-pages
+
+  test-spdx-external:
+    name: integration-test spdx-external
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare.outputs.can-push == 'true' }}
+    needs:
+      - prepare
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          remove-trusted-label: false
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - name: install-syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        with:
+          oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
+          gh-token: ${{ github.token }}
+      - name: run
+        shell: python
+        run: |
+          import logging
+          import os
+          import sys
+          import tempfile
+
+          import yaml
+
+          sys.path.insert(0, '.github/actions/merge-ocm-fragments')
+          import spdx_external
+
+          logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+
+          oci_registry = '${{ needs.prepare.outputs.oci-registry }}'
+          run_id = '${{ github.run_id }}'
+
+          component_descriptor = {
+              'meta': {'schemaVersion': 'v2'},
+              'component': {
+                  'name': 'github.com/gardener/cc-utils',
+                  'version': '0.0.0-spdx-inttest',
+                  'provider': 'internal',
+                  'repositoryContexts': [],
+                  'sources': [],
+                  'componentReferences': [],
+                  'resources': [
+                      {
+                          'name': 'local-placeholder',
+                          'version': '0.0.0',
+                          'type': 'ociImage',
+                          'relation': 'local',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'alpine:3',
+                          },
+                      },
+                      {
+                          'name': 'alpine',
+                          'version': '3',
+                          'type': 'ociImage',
+                          'relation': 'external',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'alpine:3',
+                          },
+                      },
+                      {
+                          'name': 'wolfi-base',
+                          'version': 'latest',
+                          'type': 'ociImage',
+                          'relation': 'external',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'cgr.dev/chainguard/wolfi-base:latest',
+                          },
+                      },
+                      {
+                          'name': 'busybox',
+                          'version': 'stable',
+                          'type': 'ociImage',
+                          'relation': 'external',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'busybox:stable',
+                          },
+                      },
+                  ],
+              },
+          }
+
+          with tempfile.TemporaryDirectory() as out_dir:
+              cd_path = os.path.join(out_dir, 'component-descriptor.yaml')
+              with open(cd_path, 'w') as f:
+                  yaml.safe_dump(component_descriptor, f)
+
+              spdx_external.process_external_resources(
+                  component_descriptor_path=cd_path,
+                  out_dir=out_dir,
+                  cache_registry=oci_registry,
+                  cache_repo_prefix=f'sbom-inttest/{run_id}',
+                  force_rescan=False,
+              )
+
+              with open(cd_path) as f:
+                  result = yaml.safe_load(f)
+
+          resources = result['component']['resources']
+          external_names = {'alpine', 'wolfi-base', 'busybox'}
+          sbom_resources = [
+              r for r in resources
+              if r.get('extraIdentity', {}).get('sbom-format')
+          ]
+
+          assert len(sbom_resources) == 6, \
+              f'expected 6 SBOM resources (2 per image), got {len(sbom_resources)}: ' \
+              f'{[(r["name"], r.get("extraIdentity")) for r in sbom_resources]}'
+
+          for r in sbom_resources:
+              assert r['name'] in external_names, \
+                  f'unexpected SBOM resource name: {r["name"]}'
+              assert r['access']['type'] == 'localBlob/v1', \
+                  f'{r["name"]}: expected localBlob/v1, got {r["access"]["type"]}'
+              labels = {l['name']: l['value'] for l in r.get('labels', [])}
+              assert 'gardener.cloud/sbom/source-image' in labels, \
+                  f'{r["name"]}: missing source-image label'
+              assert 'gardener.cloud/sbom/source-image-digest' in labels, \
+                  f'{r["name"]}: missing source-image-digest label'
+              sbom_label = labels.get('gardener.cloud/sbom')
+              assert sbom_label is not None, f'{r["name"]}: missing gardener.cloud/sbom label'
+              tool_ver = sbom_label.get('data-source', {}).get('tool-version')
+              fmt = r['extraIdentity']['sbom-format']
+              logging.getLogger('assert').info(
+                  f'{r["name"]} ({fmt}): ok (syft {tool_ver})'
+              )
+
+          # verify both formats are present for each image
+          for name in external_names:
+              fmts = {
+                  r['extraIdentity']['sbom-format']
+                  for r in sbom_resources if r['name'] == name
+              }
+              assert fmts == {'spdx-2.3', 'cyclonedx-1.6'}, \
+                  f'{name}: expected both spdx-2.3 and cyclonedx-1.6, got {fmts}'
+
+          logging.getLogger('assert').info('all assertions passed')

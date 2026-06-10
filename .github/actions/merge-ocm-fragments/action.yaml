@@ -72,6 +72,32 @@ inputs:
     description: |
       the ocm-component-prefixes to use in case post-processing is set to `component-cli`.
 
+  oci-registry:
+    required: false
+    type: string
+    description: |
+      If passed, SPDX documents are generated for all external OCI resources and stored in
+      a cache repository under this registry. OCI authentication is performed against the
+      registry automatically (OIDC preferred; the calling job must have `id-token: write`).
+
+      When omitted, the action behaves exactly as before — no SPDX generation, no OCI auth.
+
+  sbom-cache-repo-prefix:
+    required: false
+    type: string
+    default: sbom-cache
+    description: |
+      Repository-name prefix used when storing cached SBOM documents inside `oci-registry`.
+      Defaults to `sbom-cache`.
+
+  spdx-force-rescan:
+    required: false
+    type: boolean
+    default: false
+    description: |
+      When set to `true`, the SBOM cache is ignored and all external images are re-scanned.
+      Useful when a newer syft version is desired. Defaults to `false`.
+
 outputs:
   component-descriptor:
     description: |
@@ -311,6 +337,41 @@ runs:
           echo "Error: callback did not create ${COMPONENT_DESCRIPTOR_PATH}"
           exit 1
         fi
+
+    - name: install-syft
+      if: ${{ inputs.oci-registry != '' }}
+      shell: bash
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+          | sh -s -- -b /usr/local/bin
+
+    - name: authenticate-for-spdx
+      if: ${{ inputs.oci-registry != '' }}
+      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      with:
+        oci-image-reference: ${{ inputs.oci-registry }}
+        gh-token: ${{ github.token }}
+
+    - name: spdx-external-resources
+      if: ${{ inputs.oci-registry != '' }}
+      shell: python
+      run: |
+        import logging
+        import os
+        import sys
+
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import spdx_external
+
+        logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+
+        spdx_external.process_external_resources(
+            component_descriptor_path='${{ inputs.outdir }}/component-descriptor.yaml',
+            out_dir='${{ inputs.outdir }}',
+            cache_registry='${{ inputs.oci-registry }}',
+            cache_repo_prefix='${{ inputs.sbom-cache-repo-prefix }}',
+            force_rescan='${{ inputs.spdx-force-rescan }}' == 'true',
+        )
 
     - name: output-component-descriptor
       id: output
