@@ -4,6 +4,7 @@
 .vscode/
 __pycache__/
 .cache/
+.claude/
 build/
 dist/
 tmp/
