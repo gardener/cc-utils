@@ -49,3 +49,13 @@ class FileFilter(ProcessorBase):
         replication_resource_element.remove_files = self._remove_entries
 
         return replication_resource_element
+
+
+class SbomInjectionProcessor(ProcessorBase):
+    '''Marks resources for SBOM injection. No image modification performed here.'''
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.inject_sboms = True
+        return replication_resource_element

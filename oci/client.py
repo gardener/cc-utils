@@ -219,6 +219,17 @@ class OciRoutes:
             tag,
         )
 
+    def referrers_url(
+        self,
+        image_reference: str | om.OciImageReference,
+        digest: str,
+    ) -> str:
+        return urljoin(
+            self.artifact_base_url(image_reference=image_reference),
+            'referrers',
+            digest,
+        )
+
 
 def _retry_after_seconds(res: requests.models.Response, fallback: float) -> float:
     try:
@@ -1022,6 +1033,53 @@ class Client:
             accept=om.MimeTypes.single_image,
         )
         return False
+
+    def referrers(
+        self,
+        image_reference: str | om.OciImageReference,
+        artifact_type: str | None = None,
+        absent_ok: bool = False,
+    ) -> tuple[dict, ...] | None:
+        '''
+        Return referrer descriptors for the given image (OCI 1.1 referrers API).
+
+        `image_reference` must be digest-addressed (e.g. repo@sha256:...).
+        If `artifact_type` is given, only referrers with a matching artifactType are returned.
+
+        Returns None if the registry returns 404 (referrers API not supported) and
+        `absent_ok` is True; an empty tuple if the index exists but has no matching entries;
+        otherwise a tuple of referrer descriptor dicts.
+
+        Raises HTTPError on 404 when `absent_ok` is False.
+        '''
+        image_reference = om.OciImageReference.to_image_ref(image_reference)
+        digest = image_reference.tag  # sha256:<hex> from a digest ref
+        scope = _scope(image_reference=image_reference, action='pull')
+
+        params = {}
+        if artifact_type:
+            params['artifactType'] = artifact_type
+
+        res = self._request(
+            url=self.routes.referrers_url(
+                image_reference=image_reference,
+                digest=digest,
+            ),
+            image_reference=image_reference,
+            scope=scope,
+            method='GET',
+            raise_for_status=False,
+            warn_if_not_ok=not absent_ok,
+            **({'params': params} if params else {}),
+        )
+
+        if res.status_code == 404:
+            if absent_ok:
+                return None
+            res.raise_for_status()
+
+        res.raise_for_status()
+        return tuple(res.json().get('manifests') or ())
 
     @initialise_repository_if_required
     def put_manifest(
