@@ -163,10 +163,7 @@ runs:
         cd "${{ inputs.outdir }}"
 
         # workaround: download-artifact@v3 does not allow merging. hence, flatten directories
-        for d in $(find -type d); do
-          if [ "$d" == "." ]; then
-            continue
-          fi
+        for d in $(find -type d -name "${{ steps.preprocess.outputs.artefact-name }}"); do
           echo "debug: sub-directory $d contains:"
           ls $d
           mv $d/* .
