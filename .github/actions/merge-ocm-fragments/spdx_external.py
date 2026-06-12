@@ -425,45 +425,16 @@ def _build_sbom_resources(
 ) -> tuple[dict, dict]:
     '''Return (spdx_resource, cdx_resource) OCM resource dicts for one external image.'''
     resource = info.resource
-    version = resource.get('version') or component_version
-
-    def _make_resource(media_type, sbom_format, blob_digest, data):
-        label_value = {
-            'data-source': {
-                'kind': 'local-scan',
-                'tool': 'syft',
-                'tool-version': tool_ver,
-            },
-            'format': sbom_format,
-        } if tool_ver else None
-        return {
-            'name': resource['name'],
-            'version': version,
-            'type': media_type,
-            'relation': str(ocm.ResourceRelation.EXTERNAL),
-            'extraIdentity': {'sbom-format': sbom_format},
-            'access': {
-                'type': str(ocm.AccessType.LOCAL_BLOB),
-                'localReference': blob_digest,
-                'mediaType': media_type,
-                'size': len(data),
-            },
-            'labels': [
-                {'name': 'gardener.cloud/sbom/source-image',
-                 'value': resource['access']['imageReference']},
-                {'name': 'gardener.cloud/sbom/source-image-digest',
-                 'value': info.source_digest},
-                *(
-                    [{'name': 'gardener.cloud/sbom', 'value': label_value}]
-                    if label_value else []
-                ),
-            ],
-        }
-
-    return (
-        _make_resource(osbom.SPDX_JSON_MEDIA_TYPE, 'spdx-2.3', spdx_blob_digest, spdx_bytes),
-        _make_resource(osbom.CYCLONEDX_JSON_MEDIA_TYPE, 'cyclonedx-1.6', cdx_blob_digest,
-                       cdx_bytes),
+    return osbom.build_sbom_ocm_resources(
+        resource_name=resource['name'],
+        version=resource.get('version') or component_version,
+        source_image_ref=resource['access']['imageReference'],
+        source_digest=info.source_digest,
+        spdx_bytes=spdx_bytes,
+        cdx_bytes=cdx_bytes,
+        spdx_blob_digest=spdx_blob_digest,
+        cdx_blob_digest=cdx_blob_digest,
+        tool_ver=tool_ver,
     )
 
 

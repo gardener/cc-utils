@@ -364,6 +364,37 @@ jobs:
           git commit -m "update documentation"
           git push origin refs/heads/gh-pages
 
+  test-ctt-sbom-inject:
+    name: integration-test ctt-sbom-inject
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare.outputs.can-push == 'true' }}
+    needs:
+      - prepare
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          remove-trusted-label: false
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - name: install-syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b /usr/local/bin
+      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+        with:
+          oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
+          gh-token: ${{ github.token }}
+      - name: run
+        shell: python
+        run: |
+          import os
+          import sys
+          sys.path.insert(0, '.')
+          import ctt.test.test_ctt_sbom_inject as t
+          t.run(run_id=os.environ['GITHUB_RUN_ID'])
+
   test-spdx-external:
     name: integration-test spdx-external
     runs-on: ubuntu-latest

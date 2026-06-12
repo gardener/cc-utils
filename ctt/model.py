@@ -14,6 +14,7 @@ class ReplicationResourceOptions:
     convert_to_relative_ref: bool = False
     # if set, this ref is written into the component-descriptor instead of the actual push target
     descriptor_ref_override: str | None = None
+    inject_sboms: bool = False
 
 
 @dataclasses.dataclass(kw_only=True)
