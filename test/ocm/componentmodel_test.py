@@ -28,6 +28,35 @@ def test_deserialisation():
     assert isinstance(source.access, ocm.GithubAccess)
 
 
+def test_schema_rejects_extra_identity_int_value():
+    '''regression: YAML parses unquoted `386` as int; schema must reject such documents'''
+    cd_dict = {
+        'meta': {'schemaVersion': 'v2'},
+        'component': {
+            'name': 'github.test/foo/bar',
+            'version': '1.0.0',
+            'provider': 'test',
+            'repositoryContexts': [{'baseUrl': 'eu.gcr.io/test', 'type': 'ociRegistry'}],
+            'componentReferences': [],
+            'labels': [],
+            'sources': [],
+            'resources': [{
+                'name': 'docforge',
+                'version': '1.0.0',
+                'type': 'application/octet-stream',
+                'relation': 'local',
+                'labels': [],
+                'srcRefs': [],
+                'extraIdentity': {'architecture': 386, 'os': 'windows'},
+                'access': {'type': 'localBlob', 'localReference': 'sha256:abc', 'size': 0},
+            }],
+        },
+    }
+
+    with unittest.TestCase().assertRaises(jsonschema.exceptions.ValidationError):
+        ocm.ComponentDescriptor.validate(cd_dict, validation_mode=ocm.ValidationMode.FAIL)
+
+
 def test_deserialisation_of_custom_resources():
     with open(os.path.join(test_res_dir, 'component_descriptor_v2_custom.yaml')) as f:
         component_descriptor_dict = yaml.safe_load(f)
