@@ -19,6 +19,7 @@ _EMPTY_CONFIG = b'{}'
 _EMPTY_CONFIG_DIGEST = f'sha256:{hashlib.sha256(_EMPTY_CONFIG).hexdigest()}'
 
 SPDX_JSON_MEDIA_TYPE = 'application/spdx+json'
+CYCLONEDX_JSON_MEDIA_TYPE = 'application/vnd.cyclonedx+json'
 OCI_EMPTY_CONFIG_MEDIA_TYPE = 'application/vnd.oci.empty.v1+json'
 
 
@@ -27,7 +28,7 @@ def push_sbom_referrer(
     image_reference: str | om.OciImageReference,
     oci_client: oc.Client,
     sbom_media_type: str = SPDX_JSON_MEDIA_TYPE,
-    syft_version: str | None = None,
+    tool_version: str | None = None,
 ) -> str:
     '''
     Push an SBOM file as an OCI referrer manifest for the given image.
@@ -36,8 +37,8 @@ def push_sbom_referrer(
     manifest's `subject` is set to the digest-addressed descriptor of the
     target image, establishing the referrer relationship.
 
-    If `syft_version` is given it is recorded in the manifest annotations as
-    `gardener.cloud/sbom/syft-version`.
+    If `tool_version` is given it is recorded in the manifest annotations as
+    `gardener.cloud/sbom/tool-version`.
 
     Returns the digest of the pushed referrer manifest.
     '''
@@ -101,7 +102,7 @@ def push_sbom_referrer(
         artifactType=sbom_media_type,
         annotations={
             'org.opencontainers.image.created': _utcnow_iso(),
-            **({'gardener.cloud/sbom/syft-version': syft_version} if syft_version else {}),
+            **({'gardener.cloud/sbom/tool-version': tool_version} if tool_version else {}),
         },
     )
 

@@ -217,8 +217,9 @@ on:
         default: true
         required: false
         description: |
-          Whether to generate an SPDX SBOM for each built image and push it as an OCI referrer
-          manifest alongside the image. Requires the image to have been pushed (`push != never`).
+          Whether to generate SPDX and CycloneDX SBOMs for each built image and push them as OCI
+          referrer manifests alongside the image. Requires the image to have been pushed
+          (`push != never`).
     secrets:
       auth-token:
         required: false
@@ -507,29 +508,26 @@ jobs:
           set -eu
           docker push ${{ matrix.args.image-reference }}
 
+      - name: 'install syft / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: anchore/sbom-action/download-syft@v0
+
       - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ matrix.args.image-reference }}
-          format: spdx-json
-          output-file: sbom.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
-
-      - name: 'get syft version / ${{ matrix.args.platform-name }}'
-        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        id: syft-version
+        id: sbom-generate
         shell: bash
         run: |
           set -euo pipefail
+          syft scan '${{ matrix.args.image-reference }}' \
+            -o 'spdx-json=sbom.spdx.json' \
+            -o 'cyclonedx-json@1.6=sbom.cdx.json'
           version="$(syft version --output json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
 
-      - name: 'push SBOM referrer / ${{ matrix.args.platform-name }}'
+      - name: 'push SBOM referrers / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
         id: sbom-push
         shell: python
@@ -551,20 +549,32 @@ jobs:
               '${{ matrix.args.image-reference }}',
           )
 
-          syft_version = '${{ steps.syft-version.outputs.version }}' or None
+          tool_version = '${{ steps.sbom-generate.outputs.version }}' or None
 
-          referrer_digest = oci.sbom.push_sbom_referrer(
+          spdx_digest = oci.sbom.push_sbom_referrer(
               sbom_path='sbom.spdx.json',
               image_reference=image_ref,
               oci_client=oci_client,
-              syft_version=syft_version,
+              sbom_media_type=oci.sbom.SPDX_JSON_MEDIA_TYPE,
+              tool_version=tool_version,
+          )
+          cdx_digest = oci.sbom.push_sbom_referrer(
+              sbom_path='sbom.cdx.json',
+              image_reference=image_ref,
+              oci_client=oci_client,
+              sbom_media_type=oci.sbom.CYCLONEDX_JSON_MEDIA_TYPE,
+              tool_version=tool_version,
           )
 
-          referrer_ref = f'{image_ref.ref_without_tag}@{referrer_digest}'
-          print(f'SBOM referrer pushed: {referrer_ref}')
+          repo = image_ref.ref_without_tag
+          spdx_ref = f'{repo}@{spdx_digest}'
+          cdx_ref = f'{repo}@{cdx_digest}'
+          print(f'SPDX referrer: {spdx_ref}')
+          print(f'CycloneDX referrer: {cdx_ref}')
 
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f'referrer-ref={referrer_ref}\n')
+              f.write(f'spdx-referrer-ref={spdx_ref}\n')
+              f.write(f'cdx-referrer-ref={cdx_ref}\n')
 
       - name: 'build SBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
@@ -582,56 +592,83 @@ jobs:
           platform = '${{ matrix.args.platform-name }}'  # e.g. linux/amd64
           os_name, architecture = platform.split('/', 1)
           name = '${{ inputs.name }}'
-          extra_identity = {
-              'version': '${{ inputs.version }}',
-              'os': os_name,
-              'architecture': architecture,
-          }
+          version = '${{ inputs.version }}'
 
-          syft_version = '${{ steps.syft-version.outputs.version }}' or None
-          syft_label = ocm.Label(
-              name='gardener.cloud/sbom/syft',
-              value={
-                  'version': syft_version,
-                  'format': 'spdx-json',
-              },
-          ) if syft_version else None
-          labels = [syft_label] if syft_label else []
+          tool_version = '${{ steps.sbom-generate.outputs.version }}' or None
 
-          inline_resource = ocm.Resource(
-              name=f'{name}-ocm',
-              version='${{ inputs.version }}',
-              type='application/spdx+json',
-              extraIdentity=extra_identity,
-              access=ocm.LocalBlobAccess(
-                  localReference='sbom.spdx.json',
-                  mediaType='application/spdx+json',
-              ),
-              relation=ocm.ResourceRelation.LOCAL,
-              labels=labels,
+          def make_label(sbom_format):
+              if not tool_version:
+                  return None
+              return ocm.Label(
+                  name='gardener.cloud/sbom',
+                  value={
+                      'data-source': {
+                          'kind': 'local-scan',
+                          'tool': 'syft',
+                          'tool-version': tool_version,
+                      },
+                      'format': sbom_format,
+                  },
+              )
+
+          def make_resources(sbom_format, media_type, inline_path, referrer_ref):
+              extra_identity = {
+                  'version': version,
+                  'os': os_name,
+                  'architecture': architecture,
+                  'sbom-format': sbom_format,
+              }
+              label = make_label(sbom_format)
+              labels = [label] if label else []
+              inline = ocm.Resource(
+                  name=name,
+                  version=version,
+                  type=media_type,
+                  extraIdentity=extra_identity,
+                  access=ocm.LocalBlobAccess(
+                      localReference=inline_path,
+                      mediaType=media_type,
+                  ),
+                  relation=ocm.ResourceRelation.LOCAL,
+                  labels=labels,
+              )
+              ref = ocm.Resource(
+                  name=f'{name}-sbom-ref',
+                  version=version,
+                  type=media_type,
+                  extraIdentity=extra_identity,
+                  access=ocm.OciAccess(
+                      imageReference=referrer_ref,
+                  ),
+                  relation=ocm.ResourceRelation.LOCAL,
+                  labels=labels,
+              )
+              return inline, ref
+
+          spdx_inline, spdx_ref = make_resources(
+              sbom_format='spdx-2.3',
+              media_type='application/spdx+json',
+              inline_path='sbom.spdx.json',
+              referrer_ref='${{ steps.sbom-push.outputs.spdx-referrer-ref }}',
+          )
+          cdx_inline, cdx_ref = make_resources(
+              sbom_format='cyclonedx-1.6',
+              media_type='application/vnd.cyclonedx+json',
+              inline_path='sbom.cdx.json',
+              referrer_ref='${{ steps.sbom-push.outputs.cdx-referrer-ref }}',
           )
 
-          ref_resource = ocm.Resource(
-              name=f'{name}-spdx-ref',
-              version='${{ inputs.version }}',
-              type='application/spdx+json',
-              extraIdentity=extra_identity,
-              access=ocm.OciAccess(
-                  imageReference='${{ steps.sbom-push.outputs.referrer-ref }}',
-              ),
-              relation=ocm.ResourceRelation.LOCAL,
-              labels=labels,
-          )
-
+          resources = (spdx_inline, spdx_ref, cdx_inline, cdx_ref)
           with open('sbom-ocm-resources.yaml', 'w') as f:
               yaml.dump_all(
-                  [dataclasses.asdict(r) for r in (inline_resource, ref_resource)],
+                  [dataclasses.asdict(r) for r in resources],
                   stream=f,
                   Dumper=ocm.EnumValueYamlDumper,
               )
 
           os.makedirs('blobs.d', exist_ok=True)
           os.link('sbom.spdx.json', 'blobs.d/sbom.spdx.json')
+          os.link('sbom.cdx.json', 'blobs.d/sbom.cdx.json')
 
       - name: 'export SBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
