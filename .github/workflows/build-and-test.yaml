@@ -379,9 +379,13 @@ jobs:
           remove-trusted-label: false
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: install-syft
+        shell: bash
         run: |
+          install_dir="${HOME}/.local/bin"
+          mkdir -p "${install_dir}"
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-            | sh -s -- -b /usr/local/bin
+            | sh -s -- -b "${install_dir}"
+          echo "${install_dir}" >> "${GITHUB_PATH}"
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}

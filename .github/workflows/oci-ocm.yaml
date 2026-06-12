@@ -510,7 +510,13 @@ jobs:
 
       - name: 'install syft / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: anchore/sbom-action/download-syft@v0
+        shell: bash
+        run: |
+          install_dir="${HOME}/.local/bin"
+          mkdir -p "${install_dir}"
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b "${install_dir}"
+          echo "${install_dir}" >> "${GITHUB_PATH}"
 
       - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
