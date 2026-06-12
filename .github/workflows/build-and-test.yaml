@@ -163,11 +163,11 @@ jobs:
           find "${pkg_dir}"
           tar czf distribution-packages.tar.gz dist
       - name: export-ocm-fragments
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@b7096d1e79e89813790d466ba35f9c82733b6368
         with:
           ocm-resources-file: dist/ocm_resources.yaml
           blobs-directory: dist/blobs.d
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@1ffbc92f9683890f8d87be7e6d677da743c48363
         with:
           name: distribution-packages
           path: distribution-packages.tar.gz
@@ -182,7 +182,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Retrieve Distribution Packages
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@1ffbc92f9683890f8d87be7e6d677da743c48363
         with:
           name: distribution-packages
       - name: lint
@@ -247,7 +247,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Retrieve Distribution Packages
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@1ffbc92f9683890f8d87be7e6d677da743c48363
         with:
           name: distribution-packages
       - name: run-tests
@@ -299,7 +299,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@d773214153095bb9c2891b3cc5a284f653903e7f
         with:
           remove-trusted-label: false
       - name: install-act
@@ -326,7 +326,7 @@ jobs:
           mkdir documentation-out.d
           GH_PAGES_PATH=$PWD/documentation-out.d .ci/generate_documentation
           ls documentation-out.d
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@1ffbc92f9683890f8d87be7e6d677da743c48363
         with:
           name: documentation
           path: documentation-out.d
@@ -347,11 +347,11 @@ jobs:
         with:
           ref: refs/heads/gh-pages
       - name: Retrieve Documentation
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@1ffbc92f9683890f8d87be7e6d677da743c48363
         with:
           name: documentation
           path: /tmp/documentation-out.d
-      - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@aefb4e7b5d9971c7d50848bdbebc521ef9c0c21c
       - name: Publish Documentation
         run: |
           tar c -C /tmp/documentation-out.d . | tar x -C.
@@ -374,15 +374,15 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@d773214153095bb9c2891b3cc5a284f653903e7f
         with:
           remove-trusted-label: false
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@aefb4e7b5d9971c7d50848bdbebc521ef9c0c21c
       - name: install-syft
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
             | sh -s -- -b /usr/local/bin
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@853e1e561c1e157a77f9900afa7683539f3ca114
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
           gh-token: ${{ github.token }}
