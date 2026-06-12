@@ -557,18 +557,16 @@ jobs:
 
           tool_version = '${{ steps.sbom-generate.outputs.version }}' or None
 
-          spdx_digest = oci.sbom.push_sbom_referrer(
-              sbom_path='sbom.spdx.json',
+          with open('sbom.spdx.json', 'rb') as f:
+              spdx_bytes = f.read()
+          with open('sbom.cdx.json', 'rb') as f:
+              cdx_bytes = f.read()
+
+          spdx_digest, cdx_digest = oci.sbom.push_sbom_referrers(
+              spdx_bytes=spdx_bytes,
+              cdx_bytes=cdx_bytes,
               image_reference=image_ref,
               oci_client=oci_client,
-              sbom_media_type=oci.sbom.SPDX_JSON_MEDIA_TYPE,
-              tool_version=tool_version,
-          )
-          cdx_digest = oci.sbom.push_sbom_referrer(
-              sbom_path='sbom.cdx.json',
-              image_reference=image_ref,
-              oci_client=oci_client,
-              sbom_media_type=oci.sbom.CYCLONEDX_JSON_MEDIA_TYPE,
               tool_version=tool_version,
           )
 

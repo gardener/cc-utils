@@ -23,6 +23,7 @@ import yaml
 import cnudie.retrieve
 import ctt.oci_util
 import ctt.replicate
+import ctt.sbom_inject
 import oci
 import oci.client
 import oci.model as om
@@ -851,6 +852,118 @@ def process_replication_plan_step(
         replication_plan_step.resources,
     ))
 
+    # --- SBOM injection (between Phase 1 image uploads and Phase 2 descriptor patching) ---
+    # Maps component_identity → list of extra OCM resource dicts to append.
+    sbom_extra_resources: dict[ocm.ComponentIdentity, list[dict]] = collections.defaultdict(list)
+
+    sbom_candidates = [
+        rre for rre in replication_resource_elements
+        if rre.inject_sboms
+    ]
+    if sbom_candidates:
+        if processing_mode is not ProcessingMode.DRY_RUN:
+            ctt.sbom_inject.check_syft()
+
+        tmpdir = os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP') or None
+        syft_ver = ctt.sbom_inject._syft_version()
+
+        # parallel referrer lookup
+        def _lookup(rre):
+            tgt_ref = rre.tgt_ref
+            # resolve to digest; use multiarch accept so registries serve index manifests
+            digest_ref_str = oci_client.to_digest_hash(
+                tgt_ref,
+                accept=replication_mode.accept_header(),
+            )
+            digest_ref = om.OciImageReference.to_image_ref(digest_ref_str)
+
+            # if the manifest is a multiarch index, resolve to linux/amd64 so syft
+            # can scan a concrete single-platform manifest (some registries reject
+            # index manifest requests when the Accept header doesn't include index types)
+            try:
+                manifest = oci_client.manifest(
+                    digest_ref,
+                    accept=replication_mode.accept_header(),
+                )
+                if isinstance(manifest, om.OciImageManifestList):
+                    entries = [
+                        e for e in manifest.manifests
+                        if e.platform and e.platform.os == 'linux'
+                        and e.platform.architecture == 'amd64'
+                    ] or (manifest.manifests[:1] if manifest.manifests else [])
+                    if entries:
+                        plat_digest = entries[0].digest
+                        digest_ref = om.OciImageReference.to_image_ref(
+                            f'{digest_ref.ref_without_tag}@{plat_digest}'
+                        )
+            except Exception:  # nosec B110
+                pass  # keep the index digest ref; scan will fail gracefully
+
+            hit = ctt.sbom_inject.lookup_sbom_referrers(
+                image_ref=digest_ref,
+                oci_client=oci_client,
+            )
+            return rre, digest_ref, hit
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as lk_exec:
+            lookup_results = list(lk_exec.map(_lookup, sbom_candidates))
+
+        hits = [(rre, dref, hit) for rre, dref, hit in lookup_results if hit is not None]
+        misses = [(rre, dref) for rre, dref, hit in lookup_results if hit is None]
+
+        logger.info(
+            f'SBOM injection: {len(hits)} cache hit(s), {len(misses)} cache miss(es)'
+        )
+
+        # process cache hits
+        for rre, dref, hit in hits:
+            spdx_bytes, cdx_bytes, spdx_ref_digest, cdx_ref_digest = hit
+            tool_ver = ctt.sbom_inject._syft_version_from_spdx(spdx_bytes)
+            repo_ref = dref.ref_without_tag
+            source_image_ref = str(rre.src_ref)
+            source_digest = dref.tag  # sha256:<hex>
+            spdx_res, cdx_res = ctt.sbom_inject.build_sbom_ocm_resources(
+                resource_name=rre.source.name,
+                version=rre.source.version,
+                source_image_ref=source_image_ref,
+                source_digest=source_digest,
+                repo_ref=repo_ref,
+                spdx_referrer_digest=spdx_ref_digest,
+                cdx_referrer_digest=cdx_ref_digest,
+                tool_ver=tool_ver,
+            )
+            sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res))
+
+        # process cache misses (resource-aware scans)
+        if misses and processing_mode is not ProcessingMode.DRY_RUN:
+            miss_items = [(rre.source.name, dref) for rre, dref in misses]
+            miss_map = {rre.source.name: (rre, dref) for rre, dref in misses}
+
+            scan_results = ctt.sbom_inject.run_injections_resource_aware(
+                items=miss_items,
+                oci_client=oci_client,
+                tmpdir=tmpdir or '/tmp',  # nosec B108
+                tool_ver=syft_ver,
+            )
+            for name, spdx_bytes, cdx_bytes, tool_ver, spdx_dig, cdx_dig, status in scan_results:
+                if status != 'scanned':
+                    continue
+                rre, dref = miss_map[name]
+                repo_ref = dref.ref_without_tag
+                source_digest = dref.tag
+                spdx_res, cdx_res = ctt.sbom_inject.build_sbom_ocm_resources(
+                    resource_name=rre.source.name,
+                    version=rre.source.version,
+                    source_image_ref=str(rre.src_ref),
+                    source_digest=source_digest,
+                    repo_ref=repo_ref,
+                    spdx_referrer_digest=spdx_dig,
+                    cdx_referrer_digest=cdx_dig,
+                    tool_ver=tool_ver,
+                )
+                sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res))
+
+    # --- Phase 2: component-descriptor patching ---
     is_root_component_descriptor = lambda component_descriptor: (
         component_descriptor.component.name == root_component_descriptor.component.name
         and component_descriptor.component.version == root_component_descriptor.component.version
@@ -886,6 +999,10 @@ def process_replication_plan_step(
             patched_resources.get(resource.identity(peer_resources), resource)
             for resource in component.resources
         ]
+
+        # append any SBOM resources injected for this component
+        for sbom_resource in sbom_extra_resources.get(component.identity(), ()):
+            component.resources.append(sbom_resource)
 
         # Validate the patched component-descriptor and exit on fail
         if not skip_cd_validation:
