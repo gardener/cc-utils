@@ -355,11 +355,15 @@ def build_sbom_ocm_resources(
     spdx_referrer_digest: str,
     cdx_referrer_digest: str,
     tool_ver: str | None,
+    source_extra_identity: dict | None = None,
 ) -> tuple[ocm.Resource, ocm.Resource]:
     '''
     Build (spdx_resource, cdx_resource) OCM Resource objects for CTT-injected SBOMs.
 
     Uses OciAccess pointing at the referrer manifest digest already pushed to the target.
+    `source_extra_identity` is merged into the SBOM resource's extraIdentity so that SBOM
+    resources derived from same-named source resources with different extraIdentity (e.g.
+    different platforms) remain distinguishable.
     '''
     def _make(media_type, sbom_format, referrer_digest):
         label_value = {
@@ -376,12 +380,13 @@ def build_sbom_ocm_resources(
         ]
         if label_value:
             labels.append(ocm.Label(name='gardener.cloud/sbom', value=label_value))
+        extra_id = {**(source_extra_identity or {}), 'sbom-format': sbom_format}
         return ocm.Resource(
             name=resource_name,
             version=version,
             type=media_type,
             relation=ocm.ResourceRelation.EXTERNAL,
-            extraIdentity={'sbom-format': sbom_format},
+            extraIdentity=extra_id,
             access=ocm.OciAccess(
                 imageReference=f'{repo_ref}@{referrer_digest}',
             ),

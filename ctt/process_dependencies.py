@@ -931,13 +931,15 @@ def process_replication_plan_step(
                 spdx_referrer_digest=spdx_ref_digest,
                 cdx_referrer_digest=cdx_ref_digest,
                 tool_ver=tool_ver,
+                source_extra_identity=rre.source.extraIdentity or None,
             )
             sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res))
 
         # process cache misses (resource-aware scans)
         if misses and processing_mode is not ProcessingMode.DRY_RUN:
-            miss_items = [(rre.source.name, dref) for rre, dref in misses]
-            miss_map = {rre.source.name: (rre, dref) for rre, dref in misses}
+            # key by digest-ref string (unique per image) to avoid name collisions
+            miss_items = [(str(dref), dref) for rre, dref in misses]
+            miss_map = {str(dref): (rre, dref) for rre, dref in misses}
 
             scan_results = ctt.sbom_inject.run_injections_resource_aware(
                 items=miss_items,
@@ -945,10 +947,10 @@ def process_replication_plan_step(
                 tmpdir=tmpdir or '/tmp',  # nosec B108
                 tool_ver=syft_ver,
             )
-            for name, spdx_bytes, cdx_bytes, tool_ver, spdx_dig, cdx_dig, status in scan_results:
+            for key, spdx_bytes, cdx_bytes, tool_ver, spdx_dig, cdx_dig, status in scan_results:
                 if status != 'scanned':
                     continue
-                rre, dref = miss_map[name]
+                rre, dref = miss_map[key]
                 repo_ref = dref.ref_without_tag
                 source_digest = dref.tag
                 spdx_res, cdx_res = ctt.sbom_inject.build_sbom_ocm_resources(
@@ -960,6 +962,7 @@ def process_replication_plan_step(
                     spdx_referrer_digest=spdx_dig,
                     cdx_referrer_digest=cdx_dig,
                     tool_ver=tool_ver,
+                    source_extra_identity=rre.source.extraIdentity or None,
                 )
                 sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res))
 
