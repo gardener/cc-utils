@@ -120,7 +120,7 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@2247d4ce97df3e25ebe85bf0ea2a82d8dd30edb7
     - name: preprocess
       id: preprocess
       shell: bash
@@ -142,7 +142,7 @@ runs:
         EOF
     - name: import-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@b60e55c05cf18d82ea6826127abd26a82b3f9462
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-component-descriptor-artefact
@@ -177,7 +177,7 @@ runs:
            --out "${component_descriptor}"
         fi
     - name: import-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@b60e55c05cf18d82ea6826127abd26a82b3f9462
       with:
         pattern: ${{ steps.preprocess.outputs.artefact-name }}
         path: ${{ inputs.outdir }}
@@ -241,7 +241,7 @@ runs:
           f.write(f'component-version={name}:{version}\n')
 
     - name: checkout-for-postprocessing
-      uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      uses: gardener/cc-utils/.github/actions/trusted-checkout@5e167a4bf4b24ad8b480bf299647d84ba30c039b
       if: ${{ inputs.post-process == 'component-cli' }}
       with:
         path: repo.d # avoid conflicts w/ component-descriptor
@@ -350,7 +350,7 @@ runs:
 
     - name: authenticate-for-spdx
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@01c63aeea614487cd42c6a6c405b2c65ea80773a
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
         gh-token: ${{ github.token }}
