@@ -18,7 +18,6 @@ jsonschema
 odg-client>=0.4.0
 pycryptodome
 pyjwt
-pylama
 pylint
 pytest
 python-dateutil
