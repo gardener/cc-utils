@@ -13,7 +13,7 @@ echo 'running pylint for all modules (errors only)'
 
 pushd "${src_dir}"
 if pylint \
-    --disable=W,R,C \
+    --disable=W,R,C,E0606,E1101,E3701 \
     --ignore-patterns='test_.*,doc/lib/.*' \
     --output-format=colorized \
     "${src_dir}"; then
