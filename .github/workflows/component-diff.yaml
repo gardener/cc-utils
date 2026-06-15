@@ -41,12 +41,12 @@ jobs:
       - uses: actions/checkout@v6
       - name: collect-component-descriptor
         id: component-descriptor
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@9688d36f2396c47386947ad11be8a1f9a7718353
         with:
           component-descriptor-artefact: base-component-descriptor
       - name: fetch-prepare-values
         if: ${{ inputs.ocm-repositories == '' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@b60e55c05cf18d82ea6826127abd26a82b3f9462
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -60,7 +60,7 @@ jobs:
             ocm_repositories="${{ inputs.ocm-repositories }}"
           fi
           echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
-      - uses: gardener/cc-utils/.github/actions/component-diff@master
+      - uses: gardener/cc-utils/.github/actions/component-diff@78f4bd8b3a222f1c873b4369dd2f61caf437a070
         id: component-diff
         with:
           component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
