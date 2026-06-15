@@ -256,6 +256,7 @@ jobs:
   preprocess:
     environment: ${{ inputs.github-environment }}
     runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions: {}
     outputs:
       args: ${{ steps.preprocess.outputs.args }}
       target-image-ref: ${{ steps.preprocess.outputs.target-image-ref }}

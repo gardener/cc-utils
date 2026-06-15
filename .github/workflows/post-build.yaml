@@ -217,6 +217,7 @@ jobs:
   repo-metadata:
     environment: ${{ inputs.github-environment }}
     runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions: {}
     outputs:
       fork: ${{ steps.repo-metadata.outputs.fork }}
     steps:
