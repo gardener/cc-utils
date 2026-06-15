@@ -129,3 +129,38 @@ def test_build_sbom_ocm_resources_no_source_extra_identity():
     assert spdx.extraIdentity == {'sbom-format': 'spdx-2.3'}
     assert cdx.extraIdentity == {'sbom-format': 'cyclonedx-1.6'}
     assert spdx.identity(peers=[spdx, cdx]) != cdx.identity(peers=[spdx, cdx])
+
+
+def test_build_sbom_ocm_resources_version_and_format_both_unique():
+    '''
+    Same name, different versions, no source extraIdentity: SPDX and CycloneDX
+    resources for the same source version must have distinct identities even
+    after the version-fallback fires (because other versions trigger it).
+
+    This is the scenario that caused the LSS release failure (run 6894333):
+    many hyperkube resources at different k8s versions produce SBOM resources
+    all named 'hyperkube' with extraIdentity={sbom-format: ...}.  The
+    version-fallback must preserve sbom-format so SPDX and CycloneDX at the
+    same version remain distinguishable.
+    '''
+    def _make(version):
+        return sbom_inject.build_sbom_ocm_resources(
+            resource_name='hyperkube',
+            version=version,
+            source_image_ref=f'registry.example.com/hyperkube:{version}',
+            source_digest='sha256:aabbcc',
+            repo_ref='registry.example.com/hyperkube',
+            spdx_referrer_digest='sha256:spdxref',
+            cdx_referrer_digest='sha256:cdxref',
+            tool_ver=None,
+        )
+
+    spdx_135, cdx_135 = _make('1.35.3')
+    spdx_133, cdx_133 = _make('1.33.8')
+
+    all_resources = [spdx_135, cdx_135, spdx_133, cdx_133]
+    identities = [r.identity(peers=all_resources) for r in all_resources]
+
+    assert len(set(map(str, identities))) == 4, (
+        f'expected 4 distinct identities, got duplicates: {[str(i) for i in identities]}'
+    )

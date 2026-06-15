@@ -220,9 +220,12 @@ def iter_results_for_component_node(
             for idx, a in enumerate(artefacts):
                 aid = a.identity(artefacts)
                 if aid in seen_ids:
-                    duplicate_resources.append(
-                        f'{idx=}: {aid}'
+                    detail = (
+                        f'idx={idx}: {aid}'
+                        f' (name={a.name!r}, version={getattr(a, "version", "?")!r}'
+                        f', extraIdentity={getattr(a, "extraIdentity", None)!r})'
                     )
+                    duplicate_resources.append(detail)
                 else:
                     seen_ids.add(aid)
 
