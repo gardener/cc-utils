@@ -9,14 +9,18 @@ linters_with_findings=()
 
 export PYTHONPATH="${src_dir}"
 
-echo 'running pylama for all modules (errors only)'
+echo 'running pylint for all modules (errors only)'
 
 pushd "${src_dir}"
-if pylama -iW,R,C  -lpylint --options "${src_dir}/pylama.ini" "${src_dir}"; then
-    echo 'pylama succeeded'
+if pylint \
+    --disable=W,R,C \
+    --ignore-patterns='test_.*,doc/lib/.*' \
+    --output-format=colorized \
+    "${src_dir}"; then
+    echo 'pylint succeeded'
 else
-    echo 'pylama yielded findings (see above)'
-    linters_with_findings+=('pylama')
+    echo 'pylint yielded findings (see above)'
+    linters_with_findings+=('pylint')
 fi
 
 if "${src_dir}/.ci/lint-flake8"; then

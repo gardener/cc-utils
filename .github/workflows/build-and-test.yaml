@@ -199,7 +199,6 @@ jobs:
             flake8 \
             jq \
             setuptools \
-            pylama \
             pylint \
             > /tmp/pip3-install.log; then
             echo "error while trying to install packages:"
