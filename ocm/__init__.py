@@ -446,11 +446,14 @@ class Artifact(LabelMethodsMixin):
             if peer is self:
                 continue
             if peer.identity(peers=()) == identity:
-                # there is at least one collision (id est: another artifact w/ same name)
+                # there is at least one collision — add version as tiebreaker while
+                # preserving extraIdentity so resources with the same name+version but
+                # different extraIdentity (e.g. different SBOM formats) remain distinct.
                 # pylint: disable=E1101
-                return ArtifactIdentity(
+                return IdCtor(
                     name=self.name,
                     version=self.version,
+                    **(self.extraIdentity or {}),
                 )
         # there were no collisions
         return identity
