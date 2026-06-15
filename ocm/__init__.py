@@ -411,8 +411,8 @@ class Artifact(LabelMethodsMixin):
         returns the identity-object for this artifact (component-ref, resource, or source).
 
         Note that, the `version` attribute is implicitly added iff
-        there would otherwise be a conflict, iff this artifact only uses its `name` as
-        identity-attr (which is the default).
+        there would otherwise be a conflict among peers (i.e. two or more artifacts share
+        the same name and extraIdentity).
 
         In future versions of component-descriptor, this behaviour will be discontinued. It will
         instead be regarded as an error if the IDs of a given sequence of artifacts (declared by
@@ -439,9 +439,6 @@ class Artifact(LabelMethodsMixin):
         )
 
         if not peers:
-            return identity
-
-        if len(identity) > 1:  # special-case-handling not required if there are additional-id-attrs
             return identity
 
         # check whether there are collissions
