@@ -164,3 +164,21 @@ def test_build_sbom_ocm_resources_version_and_format_both_unique():
     assert len(set(map(str, identities))) == 4, (
         f'expected 4 distinct identities, got duplicates: {[str(i) for i in identities]}'
     )
+
+
+def test_identity_version_fallback_with_version_in_extra_identity():
+    '''
+    version-fallback must not raise TypeError when a resource already has
+    'version' in its extraIdentity (unusual but valid in the wild).
+    '''
+    r1 = _fake_resource('foo', version='1.0', extra_identity={'version': 'v2', 'arch': 'amd64'})
+    r2 = _fake_resource('foo', version='1.0', extra_identity={'version': 'v2', 'arch': 'arm64'})
+    # triggers version-fallback: same name+extraIdentity base among peers
+    r3 = _fake_resource('foo', version='2.0', extra_identity={'version': 'v2', 'arch': 'amd64'})
+
+    all_resources = [r1, r2, r3]
+    # must not raise
+    identities = [r.identity(peers=all_resources) for r in all_resources]
+    assert len(set(map(str, identities))) == 3, (
+        f'expected 3 distinct identities, got: {[str(i) for i in identities]}'
+    )

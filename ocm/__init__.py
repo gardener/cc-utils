@@ -449,11 +449,17 @@ class Artifact(LabelMethodsMixin):
                 # there is at least one collision — add version as tiebreaker while
                 # preserving extraIdentity so resources with the same name+version but
                 # different extraIdentity (e.g. different SBOM formats) remain distinct.
+                # Strip 'name'/'version' from extraIdentity to avoid duplicate-keyword errors
+                # if a resource happens to carry those keys there (unusual but valid).
                 # pylint: disable=E1101
+                extra = {
+                    k: v for k, v in (self.extraIdentity or {}).items()
+                    if k not in ('name', 'version')
+                }
                 return IdCtor(
                     name=self.name,
                     version=self.version,
-                    **(self.extraIdentity or {}),
+                    **extra,
                 )
         # there were no collisions
         return identity
