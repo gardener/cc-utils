@@ -258,7 +258,7 @@ def build_sbom_ocm_resources(
             'version': version,
             'type': media_type,
             'relation': str(ocm.ResourceRelation.EXTERNAL),
-            'extraIdentity': {'sbom-format': sbom_format},
+            'extraIdentity': {'version': version, 'sbom-format': sbom_format},
             'access': {
                 'type': str(ocm.AccessType.LOCAL_BLOB),
                 'localReference': blob_digest,

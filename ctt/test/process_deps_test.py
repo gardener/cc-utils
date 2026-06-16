@@ -126,8 +126,8 @@ def test_build_sbom_ocm_resources_no_source_extra_identity():
         cdx_referrer_digest='sha256:cdxref',
         tool_ver=None,
     )
-    assert spdx.extraIdentity == {'sbom-format': 'spdx-2.3'}
-    assert cdx.extraIdentity == {'sbom-format': 'cyclonedx-1.6'}
+    assert spdx.extraIdentity == {'version': '2.0', 'sbom-format': 'spdx-2.3'}
+    assert cdx.extraIdentity == {'version': '2.0', 'sbom-format': 'cyclonedx-1.6'}
     assert spdx.identity(peers=[spdx, cdx]) != cdx.identity(peers=[spdx, cdx])
 
 
