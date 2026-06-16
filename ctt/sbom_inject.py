@@ -380,7 +380,7 @@ def build_sbom_ocm_resources(
         ]
         if label_value:
             labels.append(ocm.Label(name='gardener.cloud/sbom', value=label_value))
-        extra_id = {**(source_extra_identity or {}), 'sbom-format': sbom_format}
+        extra_id = {**(source_extra_identity or {}), 'version': version, 'sbom-format': sbom_format}
         return ocm.Resource(
             name=resource_name,
             version=version,
