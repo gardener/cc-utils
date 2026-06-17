@@ -132,11 +132,7 @@ def iter_sboms_for_resource(
                 source=SbomSource.OCI_REFERRER,
                 component=component,
                 resource=resource,
-                sbom=om.OciReferrer(
-                    digest=ref['digest'],
-                    artifact_type=ref.get('artifactType', media_type),
-                    annotations=ref.get('annotations', {}),
-                ),
+                sbom=ref,
             )
 
 

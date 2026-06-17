@@ -1039,7 +1039,7 @@ class Client:
         image_reference: str | om.OciImageReference,
         artifact_type: str | None = None,
         absent_ok: bool = False,
-    ) -> tuple[dict, ...] | None:
+    ) -> tuple[om.OciReferrer, ...] | None:
         '''
         Return referrer descriptors for the given image (OCI 1.1 referrers API).
 
@@ -1048,7 +1048,7 @@ class Client:
 
         Returns None if the registry returns 404 (referrers API not supported) and
         `absent_ok` is True; an empty tuple if the index exists but has no matching entries;
-        otherwise a tuple of referrer descriptor dicts.
+        otherwise a tuple of OciReferrer descriptors.
 
         Raises HTTPError on 404 when `absent_ok` is False.
         '''
@@ -1079,7 +1079,14 @@ class Client:
             res.raise_for_status()
 
         res.raise_for_status()
-        return tuple(res.json().get('manifests') or ())
+        return tuple(
+            om.OciReferrer(
+                digest=entry['digest'],
+                artifact_type=entry.get('artifactType', ''),
+                annotations=entry.get('annotations', {}),
+            )
+            for entry in (res.json().get('manifests') or ())
+        )
 
     @initialise_repository_if_required
     def put_manifest(

@@ -165,8 +165,8 @@ def lookup_sbom_referrers(
     cdx_descriptor = cdx_referrers[0]
 
     try:
-        spdx_manifest_digest = spdx_descriptor['digest']
-        cdx_manifest_digest = cdx_descriptor['digest']
+        spdx_manifest_digest = spdx_descriptor.digest
+        cdx_manifest_digest = cdx_descriptor.digest
 
         def _download_sbom_blob(manifest_digest: str) -> bytes:
             manifest_bytes = oci_client.manifest_raw(
