@@ -118,6 +118,7 @@ def _fetch_sboms(parsed):
 
     written = 0
     missing = 0
+    errors = 0
 
     for node in ocm_iter.iter_resources(component=root_component, lookup=lookup):
         component = node.component
@@ -147,7 +148,11 @@ def _fetch_sboms(parsed):
             try:
                 doc_bytes = si.fetch_sbom_document(mapping, oci_client)
             except Exception as e:
-                print(f'warning: failed to fetch SBOM for {resource.name!r} ({fmt_id}): {e}')
+                print(
+                    f'error: failed to fetch SBOM for {resource.name!r} ({fmt_id}): {e}',
+                    file=sys.stderr,
+                )
+                errors += 1
                 continue
             with open(outpath, 'wb') as f:
                 f.write(doc_bytes)
@@ -164,10 +169,15 @@ def _fetch_sboms(parsed):
                 )
                 missing += 1
 
+    parts = [f'{written} written']
     if missing:
-        print(f'{written} SBOM(s) written, {missing} missing.', file=sys.stderr)
+        parts.append(f'{missing} missing')
+    if errors:
+        parts.append(f'{errors} fetch error(s)')
+    print(', '.join(parts) + '.', file=sys.stderr)
+
+    if errors:
         sys.exit(1)
-    print(f'{written} SBOM(s) written.', file=sys.stderr)
 
 
 def main():
