@@ -1,0 +1,115 @@
+name: Upload SBOMs to GCS
+
+# Reusable workflow: fetches SBOM documents for all resources in an OCM component
+# tree and uploads them to a GCS bucket via the Google Cloud Storage JSON API.
+#
+# Designed for self-hosted runners that have access to a GCP instance-metadata
+# endpoint (needed by the oidc-gcp-token-exchange action for the dual-token auth).
+#
+# Caller example:
+#
+#   jobs:
+#     sbom-upload:
+#       uses: gardener/cc-utils/.github/workflows/sbom-upload.yaml@v1
+#       with:
+#         ocm-component: 'github.com/my-org/my-component:1.2.3'
+#         ocm-repositories: |
+#           europe-docker.pkg.dev/my-gcp-project/releases
+#         oci-registry: europe-docker.pkg.dev/my-gcp-project
+#         gcs-bucket: my-cumulus-pipeline-id
+#         token-exchange-api-url: 'https://api.example.com'
+#         token-exchange-audience: 'api://MyService'
+#         token-exchange-pipeline-id: 'my-pipeline'
+#         token-exchange-pipeline-group-id: 'my-org/my-project'
+#         token-exchange-scope: 'my-scope'
+#       permissions:
+#         id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      ocm-component:
+        description: 'Root OCM component in name:version format'
+        required: true
+        type: string
+      ocm-repositories:
+        description: 'Newline-separated list of OCM repository base URLs'
+        required: true
+        type: string
+      oci-registry:
+        description: >
+          OCI registry host (or image-reference prefix) to authenticate against,
+          passed to the oci-auth action. Must cover all OCM repositories.
+        required: true
+        type: string
+      gcs-bucket:
+        description: 'GCS bucket name (pipeline ID) to upload SBOMs into'
+        required: true
+        type: string
+      token-exchange-api-url:
+        description: 'Base URL of the token exchange API'
+        required: true
+        type: string
+      token-exchange-audience:
+        description: 'OIDC audience for both the GitHub and GCP identity tokens'
+        required: true
+        type: string
+      token-exchange-pipeline-id:
+        description: 'Pipeline identifier passed to the token exchange API'
+        required: true
+        type: string
+      token-exchange-pipeline-group-id:
+        description: 'Pipeline group identifier passed to the token exchange API'
+        required: true
+        type: string
+      token-exchange-scope:
+        description: 'Scope to request from the token exchange API (e.g. "cumulus")'
+        required: true
+        type: string
+      runner:
+        description: 'Runner label(s) as a JSON array string, e.g. "[\"self-hosted\"]"'
+        required: false
+        type: string
+        default: '["self-hosted"]'
+
+jobs:
+  sbom-upload:
+    runs-on: ${{ fromJSON(inputs.runner) }}
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Exchange tokens
+        uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@master
+        with:
+          api-url: ${{ inputs.token-exchange-api-url }}
+          oidc-audience: ${{ inputs.token-exchange-audience }}
+          pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
+          pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
+          systems: ${{ inputs.token-exchange-scope }}
+          token-env-prefix: 'GCS_'
+        # exports GCS_<SCOPE_UPPER>_TOKEN into $GITHUB_ENV
+
+      - name: Export GCS token
+        id: gcs-token
+        shell: bash
+        env:
+          SCOPE: ${{ inputs.token-exchange-scope }}
+        run: |
+          upper=$(echo "$SCOPE" | tr '[:lower:]' '[:upper:]')
+          token_var="GCS_${upper}_TOKEN"
+          echo "gcs-token=${!token_var}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to OCI registry
+        uses: gardener/cc-utils/.github/actions/oci-auth@master
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          oci-image-reference: ${{ inputs.oci-registry }}
+
+      - name: Fetch and upload SBOMs
+        uses: gardener/cc-utils/.github/actions/sbom-upload@sbom-upload-workflow
+        with:
+          ocm-component: ${{ inputs.ocm-component }}
+          ocm-repositories: ${{ inputs.ocm-repositories }}
+          gcs-bucket: ${{ inputs.gcs-bucket }}
+          gcs-token: ${{ steps.gcs-token.outputs.gcs-token }}
