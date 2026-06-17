@@ -546,7 +546,7 @@ jobs:
           import oci.auth
           import oci.client
           import oci.model
-          import oci.sbom
+          import sbom.oci
 
           oci_client = oci.client.Client(
               credentials_lookup=oci.auth.docker_credentials_lookup(),
@@ -563,7 +563,7 @@ jobs:
           with open('sbom.cdx.json', 'rb') as f:
               cdx_bytes = f.read()
 
-          spdx_digest, cdx_digest = oci.sbom.push_sbom_referrers(
+          spdx_digest, cdx_digest = sbom.oci.push_sbom_referrers(
               spdx_bytes=spdx_bytes,
               cdx_bytes=cdx_bytes,
               image_reference=image_ref,

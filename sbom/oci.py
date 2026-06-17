@@ -1,10 +1,12 @@
+# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
 '''
-Utilities for pushing SBOM documents as OCI referrers (OCI 1.1) and building
-OCM resource descriptors for SBOM artefacts.
+OCI 1.1 referrer mechanics for SBOM documents.
 
-An SBOM is stored as a single-layer OCI manifest whose `subject` field points
-to the image it describes.  The referrer manifest is pushed by digest; registries
-that implement the OCI 1.1 referrers API expose it via GET /v2/<repo>/referrers/<digest>.
+An SBOM is stored as a single-layer OCI manifest whose `subject` field points to the image it
+describes.  The referrer manifest is pushed by digest; registries that implement the OCI 1.1
+referrers API expose it via GET /v2/<repo>/referrers/<digest>.
 '''
 import hashlib
 import json
@@ -241,8 +243,8 @@ def build_sbom_ocm_resources(
     '''
     Build (spdx_resource, cdx_resource) OCM resource dicts for one scanned image.
 
-    Both resources use the source image's resource name with extraIdentity.sbom-format
-    to distinguish them, matching the convention established in the upstream pipeline.
+    Resources use localBlob access (SBOM inlined into the component descriptor blob store).
+    Both share the source image's resource name; extraIdentity.sbom-format distinguishes them.
     '''
     def _make(media_type, sbom_format, blob_digest, sbom_bytes):
         label_value = {
