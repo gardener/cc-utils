@@ -489,6 +489,19 @@ class OciImageManifestList:
         return raw
 
 
+@dataclasses.dataclass(frozen=True)
+class OciReferrer:
+    '''
+    Descriptor of an OCI referrer manifest as returned by the OCI 1.1 referrers API.
+
+    Represents any artefact that declares a `subject` pointing at a given image digest —
+    not limited to SBOMs (signatures, attestations, etc. are also referrers).
+    '''
+    digest: str           # sha256:<hex> of the referrer manifest
+    artifact_type: str    # artifactType field of the referrer manifest
+    annotations: dict     # annotations from the referrer manifest
+
+
 def as_manifest(
     manifest: str | bytes | dict | OciImageManifest | OciImageManifestList,
     media_type: str=None,
