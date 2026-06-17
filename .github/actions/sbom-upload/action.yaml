@@ -1,0 +1,42 @@
+name: 'Upload SBOMs to GCS'
+description: >
+  Fetches SBOM documents for all resources in an OCM component tree and uploads
+  them to a GCS bucket via the Google Cloud Storage JSON API. Incremental:
+  resources already present in the bucket are skipped without OCI referrer calls.
+
+inputs:
+  ocm-component:
+    description: 'Root OCM component in name:version format'
+    required: true
+  ocm-repositories:
+    description: 'Newline-separated list of OCM repository base URLs'
+    required: true
+  gcs-bucket:
+    description: 'GCS bucket name to upload SBOMs into'
+    required: true
+  gcs-token:
+    description: 'Bearer token for the GCS JSON API'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+
+    - name: Upload SBOMs
+      shell: bash
+      env:
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+      run: |
+        set -euo pipefail
+        repos_args=()
+        while IFS= read -r repo; do
+          [ -z "$repo" ] && continue
+          repos_args+=(--ocm-repository "$repo")
+        done <<< "$OCM_REPOSITORIES"
+        python3 "$GITHUB_ACTION_PATH/upload.py" \
+          --ocm-component '${{ inputs.ocm-component }}' \
+          --gcs-bucket '${{ inputs.gcs-bucket }}' \
+          --gcs-token '${{ inputs.gcs-token }}' \
+          "${repos_args[@]}"
