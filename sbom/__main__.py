@@ -98,7 +98,7 @@ def _fetch_sboms(parsed):
 
     format_prefixes: list[str] = parsed.sbom_formats
 
-    ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository)
+    ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*parsed.ocm_repositories)
     lookup = cnudie.retrieve.composite_component_descriptor_lookup(
         lookups=(
             cnudie.retrieve.in_memory_cache_component_descriptor_lookup(
@@ -192,7 +192,14 @@ def main():
     parser.add_argument(
         '--ocm-repository',
         required=True,
-        help='OCM repository base URL (e.g. europe-docker.pkg.dev/gardener-project/releases)',
+        action='append',
+        dest='ocm_repositories',
+        metavar='OCM_REPOSITORY',
+        help=(
+            'OCM repository base URL '
+            '(e.g. europe-docker.pkg.dev/gardener-project/releases); '
+            'may be specified multiple times'
+        ),
     )
     parser.add_argument(
         'component',
