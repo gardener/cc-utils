@@ -98,8 +98,18 @@ def _fetch_sboms(parsed):
 
     format_prefixes: list[str] = parsed.sbom_formats
 
-    lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
+    ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository)
+    lookup = cnudie.retrieve.composite_component_descriptor_lookup(
+        lookups=(
+            cnudie.retrieve.in_memory_cache_component_descriptor_lookup(
+                ocm_repository_lookup=ocm_repo_lookup,
+            ),
+            cnudie.retrieve.oci_component_descriptor_lookup(
+                ocm_repository_lookup=ocm_repo_lookup,
+                oci_client=oci_client,
+            ),
+        ),
+        ocm_repository_lookup=ocm_repo_lookup,
     )
 
     root_component = lookup(
