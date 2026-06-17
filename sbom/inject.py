@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 '''
-SBOM injection for CTT replication.
+Syft-based SBOM scanning and injection for OCI images.
 
-For each replicated OCI image that has `inject_sboms=True`:
+For each image:
   1. Check the target registry for existing SPDX + CycloneDX referrer manifests.
   2. Cache hit: download both SBOM blobs from the target.
   3. Cache miss: run syft, push both referrer manifests to the target.
 
-Scan admission mirrors the resource-aware approach in spdx_external.py:
+Scan admission mirrors a resource-aware approach:
   disk:   compressed_layer_bytes * 5.0
   memory: 200 MiB + compressed_layer_bytes * 2.0
 Minimum headroom: 2 GiB disk, 1 GiB memory.  At least one scan is always admitted.
@@ -23,8 +23,8 @@ import tempfile
 
 import oci.client as oc
 import oci.model as om
-import oci.sbom as osbom
 import ocm
+import sbom.oci as soci
 
 _DOCKER_CONFIG_PATH = os.path.expanduser('~/.docker/config.json')
 
@@ -148,12 +148,12 @@ def lookup_sbom_referrers(
 
     spdx_referrers = oci_client.referrers(
         image_reference=image_ref,
-        artifact_type=osbom.SPDX_JSON_MEDIA_TYPE,
+        artifact_type=soci.SPDX_JSON_MEDIA_TYPE,
         absent_ok=True,
     )
     cdx_referrers = oci_client.referrers(
         image_reference=image_ref,
-        artifact_type=osbom.CYCLONEDX_JSON_MEDIA_TYPE,
+        artifact_type=soci.CYCLONEDX_JSON_MEDIA_TYPE,
         absent_ok=True,
     )
 
@@ -245,7 +245,7 @@ def scan_image(
 
     resolved_tool_ver = tool_ver or _syft_version_from_spdx(spdx_bytes)
 
-    spdx_referrer_digest, cdx_referrer_digest = osbom.push_sbom_referrers(
+    spdx_referrer_digest, cdx_referrer_digest = soci.push_sbom_referrers(
         spdx_bytes=spdx_bytes,
         cdx_bytes=cdx_bytes,
         image_reference=image_ref,
@@ -358,7 +358,7 @@ def build_sbom_ocm_resources(
     source_extra_identity: dict | None = None,
 ) -> tuple[ocm.Resource, ocm.Resource]:
     '''
-    Build (spdx_resource, cdx_resource) OCM Resource objects for CTT-injected SBOMs.
+    Build (spdx_resource, cdx_resource) OCM Resource objects for injected SBOMs.
 
     Uses OciAccess pointing at the referrer manifest digest already pushed to the target.
     `source_extra_identity` is merged into the SBOM resource's extraIdentity so that SBOM
@@ -394,6 +394,6 @@ def build_sbom_ocm_resources(
         )
 
     return (
-        _make(osbom.SPDX_JSON_MEDIA_TYPE,     'spdx-2.3',      spdx_referrer_digest),
-        _make(osbom.CYCLONEDX_JSON_MEDIA_TYPE, 'cyclonedx-1.6', cdx_referrer_digest),
+        _make(soci.SPDX_JSON_MEDIA_TYPE,     'spdx-2.3',      spdx_referrer_digest),
+        _make(soci.CYCLONEDX_JSON_MEDIA_TYPE, 'cyclonedx-1.6', cdx_referrer_digest),
     )

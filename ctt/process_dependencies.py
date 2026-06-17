@@ -23,7 +23,7 @@ import yaml
 import cnudie.retrieve
 import ctt.oci_util
 import ctt.replicate
-import ctt.sbom_inject
+import sbom.inject as sbom_inject
 import oci
 import oci.client
 import oci.model as om
@@ -862,10 +862,10 @@ def process_replication_plan_step(
     ]
     if sbom_candidates:
         if processing_mode is not ProcessingMode.DRY_RUN:
-            ctt.sbom_inject.check_syft()
+            sbom_inject.check_syft()
 
         tmpdir = os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP') or None
-        syft_ver = ctt.sbom_inject._syft_version()
+        syft_ver = sbom_inject._syft_version()
 
         # parallel referrer lookup
         def _lookup(rre):
@@ -899,7 +899,7 @@ def process_replication_plan_step(
             except Exception:  # nosec B110
                 pass  # keep the index digest ref; scan will fail gracefully
 
-            hit = ctt.sbom_inject.lookup_sbom_referrers(
+            hit = sbom_inject.lookup_sbom_referrers(
                 image_ref=digest_ref,
                 oci_client=oci_client,
             )
@@ -918,11 +918,11 @@ def process_replication_plan_step(
         # process cache hits
         for rre, dref, hit in hits:
             spdx_bytes, cdx_bytes, spdx_ref_digest, cdx_ref_digest = hit
-            tool_ver = ctt.sbom_inject._syft_version_from_spdx(spdx_bytes)
+            tool_ver = sbom_inject._syft_version_from_spdx(spdx_bytes)
             repo_ref = dref.ref_without_tag
             source_image_ref = str(rre.src_ref)
             source_digest = dref.tag  # sha256:<hex>
-            spdx_res, cdx_res = ctt.sbom_inject.build_sbom_ocm_resources(
+            spdx_res, cdx_res = sbom_inject.build_sbom_ocm_resources(
                 resource_name=rre.source.name,
                 version=rre.source.version,
                 source_image_ref=source_image_ref,
@@ -941,7 +941,7 @@ def process_replication_plan_step(
             miss_items = [(str(dref), dref) for rre, dref in misses]
             miss_map = {str(dref): (rre, dref) for rre, dref in misses}
 
-            scan_results = ctt.sbom_inject.run_injections_resource_aware(
+            scan_results = sbom_inject.run_injections_resource_aware(
                 items=miss_items,
                 oci_client=oci_client,
                 tmpdir=tmpdir or '/tmp',  # nosec B108
@@ -953,7 +953,7 @@ def process_replication_plan_step(
                 rre, dref = miss_map[key]
                 repo_ref = dref.ref_without_tag
                 source_digest = dref.tag
-                spdx_res, cdx_res = ctt.sbom_inject.build_sbom_ocm_resources(
+                spdx_res, cdx_res = sbom_inject.build_sbom_ocm_resources(
                     resource_name=rre.source.name,
                     version=rre.source.version,
                     source_image_ref=str(rre.src_ref),

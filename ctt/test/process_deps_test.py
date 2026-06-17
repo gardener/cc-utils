@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import ctt.process_dependencies as process_dependencies
-import ctt.sbom_inject as sbom_inject
+import sbom.inject as sbom_inject
 import ocm
 
 

@@ -58,7 +58,7 @@ import yaml
 import oci.auth as oa
 import oci.client as oc
 import oci.model as om
-import oci.sbom as osbom
+import sbom.oci as osbom
 import ocm
 
 logger = logging.getLogger(__name__)
