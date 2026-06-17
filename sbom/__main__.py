@@ -120,11 +120,7 @@ def _fetch_sboms(parsed):
     missing = 0
     errors = 0
 
-    for node in ocm_iter.iter_resources(
-        component=root_component,
-        lookup=lookup,
-        recursion_depth=0 if parsed.no_recurse else -1,
-    ):
+    for node in ocm_iter.iter_resources(component=root_component, lookup=lookup):
         component = node.component
         resource = node.resource
 
@@ -217,12 +213,6 @@ def main():
             'Use exact version (e.g. spdx-2.3) or prefix (e.g. spdx) to match any version. '
             'Default: spdx cyclonedx'
         ),
-    )
-    parser.add_argument(
-        '--no-recurse',
-        action='store_true',
-        default=False,
-        help='do not recurse into component references; only process the root component',
     )
 
     parsed = parser.parse_args()
