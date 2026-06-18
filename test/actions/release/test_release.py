@@ -16,6 +16,7 @@ sys.path.insert(
 
 import release
 import release_notes.ocm as rn_ocm
+import ocm
 
 
 def _make_component(version='1.0.0'):
@@ -121,3 +122,184 @@ def test_branch_info_resource_appended():
     resource = component.resources[0]
     assert resource.name == 'branch-info'
     assert resource.version == '1.0.0'
+
+
+# --- Asset.matches() ---
+
+def _make_asset(name, extra_id):
+    '''helper: build an Asset with the given name and extra extraIdentity fields'''
+    return release.Asset(
+        name=f'{name}-linux-amd64',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': name, 'os': 'linux', 'architecture': 'amd64', **extra_id},
+    )
+
+
+def _make_resource(name, extra_identity, type='executable'):
+    return ocm.Resource(
+        name=name,
+        version='1.0.0',
+        type=type,
+        extraIdentity=extra_identity,
+        access=ocm.LocalBlobAccess(
+            localReference='sha256:abc',
+            mediaType='application/octet-stream',
+        ),
+        relation=ocm.ResourceRelation.LOCAL,
+    )
+
+
+def test_asset_matches_exact_extra_identity():
+    asset = _make_asset('gardenadm', {})
+    resource = _make_resource('gardenadm', {'os': 'linux', 'architecture': 'amd64'})
+    assert asset.matches(resource)
+
+
+def test_asset_no_match_wrong_name():
+    asset = _make_asset('gardenadm', {})
+    resource = _make_resource('other', {'os': 'linux', 'architecture': 'amd64'})
+    assert not asset.matches(resource)
+
+
+def test_asset_no_match_wrong_arch():
+    asset = _make_asset('gardenadm', {})
+    resource = _make_resource('gardenadm', {'os': 'linux', 'architecture': 'arm64'})
+    assert not asset.matches(resource)
+
+
+def test_asset_no_match_sbom_resource_with_extra_key():
+    # SBOM resource shares name/os/arch but adds sbom-format — must NOT match
+    asset = _make_asset('gardenadm', {})
+    sbom_resource = _make_resource(
+        'gardenadm',
+        {'os': 'linux', 'architecture': 'amd64', 'sbom-format': 'spdx-2.3'},
+        type='application/spdx+json',
+    )
+    assert not asset.matches(sbom_resource)
+
+
+def test_asset_matches_sbom_resource_when_format_specified():
+    # caller can still select the SBOM resource explicitly by including sbom-format in id
+    asset = release.Asset(
+        name='gardenadm-linux-amd64-spdx',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'gardenadm', 'os': 'linux', 'architecture': 'amd64', 'sbom-format': 'spdx-2.3'},
+    )
+    sbom_resource = _make_resource(
+        'gardenadm',
+        {'os': 'linux', 'architecture': 'amd64', 'sbom-format': 'spdx-2.3'},
+        type='application/spdx+json',
+    )
+    assert asset.matches(sbom_resource)
+
+
+def test_gardener_gardenadm_ambiguity():
+    # regression test: gardener/gardener Release workflow failed with
+    # "asset=Asset(..., id={'name': 'gardenadm', 'os': 'linux', 'architecture': 'amd64'})
+    #  is ambiguous (more than one matching OCM-Resource)"
+    # because SBOM inline resources share name/os/arch with the binary resource.
+    asset = release.Asset(
+        name='gardenadm-linux-amd64',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'gardenadm', 'os': 'linux', 'architecture': 'amd64'},
+    )
+    binary = _make_resource('gardenadm', {'os': 'linux', 'architecture': 'amd64'})
+    spdx = _make_resource(
+        'gardenadm',
+        {'os': 'linux', 'architecture': 'amd64', 'sbom-format': 'spdx-2.3'},
+        type='application/spdx+json',
+    )
+    cdx = _make_resource(
+        'gardenadm',
+        {'os': 'linux', 'architecture': 'amd64', 'sbom-format': 'cyclonedx-1.6'},
+        type='application/vnd.cyclonedx+json',
+    )
+
+    matches = [r for r in (binary, spdx, cdx) if asset.matches(r)]
+    assert matches == [binary]
+
+
+def test_asset_type_in_id_matches():
+    # type is a top-level field checked via getattr; enum values must be normalised
+    asset = release.Asset(
+        name='img',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'img', 'type': 'ociImage'},
+    )
+    resource = ocm.Resource(
+        name='img',
+        version='1.0.0',
+        type=ocm.ArtefactType.OCI_IMAGE,  # enum — value is 'ociImage'
+        extraIdentity={},
+        access=ocm.LocalBlobAccess(
+            localReference='sha256:abc',
+            mediaType='application/octet-stream',
+        ),
+        relation=ocm.ResourceRelation.LOCAL,
+    )
+    assert asset.matches(resource)
+
+
+def test_asset_type_in_id_no_match():
+    asset = release.Asset(
+        name='img',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'img', 'type': 'blob/v1'},
+    )
+    resource = ocm.Resource(
+        name='img',
+        version='1.0.0',
+        type=ocm.ArtefactType.OCI_IMAGE,
+        extraIdentity={},
+        access=ocm.LocalBlobAccess(
+            localReference='sha256:abc',
+            mediaType='application/octet-stream',
+        ),
+        relation=ocm.ResourceRelation.LOCAL,
+    )
+    assert not asset.matches(resource)
+
+
+def test_asset_version_in_id_matches():
+    asset = release.Asset(
+        name='bin',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'bin', 'version': '1.0.0'},
+    )
+    assert asset.matches(_make_resource('bin', {}))
+
+
+def test_asset_version_in_id_no_match():
+    asset = release.Asset(
+        name='bin',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'bin', 'version': '9.9.9'},
+    )
+    assert not asset.matches(_make_resource('bin', {}))
+
+
+def test_asset_version_in_extra_identity_covered_by_id():
+    # reviewer concern: version appears in both id and resource extraIdentity;
+    # self.id.keys() covers it so the extra-key check must not block the match
+    asset = release.Asset(
+        name='bin',
+        mime_type=None,
+        type='ocm-resource',
+        id={'name': 'bin', 'version': '1.0.0', 'os': 'linux'},
+    )
+    resource = _make_resource('bin', {'version': '1.0.0', 'os': 'linux'})
+    assert asset.matches(resource)
+
+
+def test_asset_no_match_resource_missing_required_extra_key():
+    # id requires 'os' but resource extraIdentity has no such key
+    asset = _make_asset('bin', {})
+    resource = _make_resource('bin', {'architecture': 'amd64'})  # 'os' absent
+    assert not asset.matches(resource)

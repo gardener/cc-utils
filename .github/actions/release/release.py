@@ -35,7 +35,10 @@ class Asset:
             if not resource_value == v:
                 return False
 
-        return True
+        # reject if resource carries extraIdentity keys not covered by id —
+        # such keys are part of the OCM identity and make it a distinct resource
+        # (e.g. SBOM resources share name/os/arch with binaries but add sbom-format)
+        return not (resource.extraIdentity.keys() - self.id.keys())
 
     def __post_init__(self):
         # basic validation: id.name must be present and non-empty
