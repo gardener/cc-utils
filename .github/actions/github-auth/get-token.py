@@ -68,7 +68,7 @@ def _open_with_retry(
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            delay = min(backoff_base ** attempt, backoff_cap)
+            delay = min(backoff_base ** (attempt+1), backoff_cap)
             print(
                 f'WARNING: HTTP {e.code} from {url}, '
                 f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
@@ -79,7 +79,7 @@ def _open_with_retry(
             if attempt == retries:
                 print(f'ERROR: Request to {url} failed: {e.reason}', file=sys.stderr)
                 sys.exit(1)
-            delay = min(backoff_base ** attempt, backoff_cap)
+            delay = min(backoff_base ** (attempt+1), backoff_cap)
             print(
                 f'WARNING: Request to {url} failed: {e.reason}, '
                 f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
