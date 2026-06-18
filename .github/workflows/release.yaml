@@ -470,7 +470,7 @@ jobs:
           OEOF
       - name: publish-release-notes-to-slack
         if: ${{ inputs.slack-channel-id != '' }}
-        uses: slackapi/slack-github-action@v2
+        uses: slackapi/slack-github-action@v3
         with:
           method: files.uploadV2
           token: ${{ secrets.slack-token || secrets.SLACK_APP_TOKEN_GARDENER_CICD }}
