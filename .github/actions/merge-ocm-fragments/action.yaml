@@ -190,16 +190,20 @@ runs:
 
         # download-artifact@v3 (used on GHE) ignores `pattern`, so non-OCM artifacts may land
         # here too; filter by naming convention to avoid processing unrelated files/directories.
-        # extract into the subdir where the tarball lives (avoids conflicts with the subdir name
-        # itself), then move extracted files up to outdir.
         echo "extracting ocm-fragment archives"
         for tf in $(find . -name "*.ocm-artefacts.tar.gz"); do
           echo "extracting ${tf}"
           subdir=$(dirname "${tf}")
-          tar xf "${tf}" -C "${subdir}"
+          if [ "${subdir}" = "." ]; then
+            tar xf "${tf}"
+          else
+            # artifact landed in a named subdir (download-artifact@v3 on GHE); extract there to
+            # avoid conflict between the tarball's top-level entry and the pre-existing subdir,
+            # then move contents up to outdir
+            tar xf "${tf}" -C "${subdir}"
+            find "${subdir}" -maxdepth 1 -mindepth 1 -exec mv -t . {} +
+          fi
           unlink "${tf}"
-          # move extracted contents up to outdir; subdir itself stays (and is harmless)
-          find "${subdir}" -maxdepth 1 -mindepth 1 -exec mv -t . {} +
         done
     - name: merge-fragments
       id: merge
