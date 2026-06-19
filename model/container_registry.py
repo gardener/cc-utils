@@ -11,7 +11,6 @@ import urllib.parse
 import dacite
 
 import ci.log
-import ci.util
 import oci.auth as oa
 import oci.model as om
 import oci.util
@@ -259,7 +258,7 @@ def find_config(
 ) -> ContainerRegistryConfig | None:
     image_reference = str(image_reference)
     if not cfg_factory:
-        cfg_factory = ci.util.ctx().cfg_factory()
+        raise ValueError('cfg_factory is required')
 
     if isinstance(image_reference, om.OciImageReference):
         image_reference = image_reference.normalised_image_reference()

@@ -8,14 +8,9 @@ import pkgutil
 import sys
 import threading
 import typing
-import urllib.parse
 
 import dacite
 import deprecated
-import github3.exceptions
-import yaml
-
-import ctx
 
 import model.base
 from model.base import (
@@ -68,15 +63,6 @@ class LocalFileCfgSrc(CfgTypeSrc):
 
 
 @dc(frozen=True)
-class GithubRepoFileSrc(CfgTypeSrc):
-    repository_url: str
-    relpath: str
-
-    def __repr__(self):
-        return f'{self.__class__.__name__}: {self.repository_url} -> {self.relpath}'
-
-
-@dc(frozen=True)
 class ConfigTypeModel:
     factory_method: typing.Optional[str]
     cfg_type_name: str
@@ -89,7 +75,7 @@ class ConfigType:
     represents a configuration type (used for serialisation and deserialisation)
     '''
     model: ConfigTypeModel
-    src: typing.Tuple[typing.Union[LocalFileCfgSrc, GithubRepoFileSrc], ...] = empty_tuple
+    src: typing.Tuple[LocalFileCfgSrc, ...] = empty_tuple
 
     def sources(self):
         return self.src
@@ -127,62 +113,6 @@ class ConfigFactory:
     def _parse_local_file(cfg_dir: str, cfg_src: LocalFileCfgSrc):
         cfg_file = cfg_src.file
         return parse_yaml_file(os.path.join(cfg_dir, cfg_file))
-
-    @staticmethod
-    def _parse_repo_file(
-        cfg_src: GithubRepoFileSrc,
-        lookup_cfg_factory,
-    ):
-        import ccc.github
-        repo_url = cfg_src.repository_url
-        if not '://' in repo_url:
-            repo_url = 'https://' + repo_url
-        repo_url = urllib.parse.urlparse(repo_url)
-
-        # shortcut lookup if local repo-mapping was configured
-        if ctx.cfg and ctx.cfg.ctx and (repo_mappings := ctx.cfg.ctx.github_repo_mappings):
-            for repo_mapping in repo_mappings:
-                url = repo_mapping.repo_url
-                if not '://' in url:
-                    url = 'https://' + url
-                url = urllib.parse.urlparse(url)
-                if not url == repo_url:
-                    continue
-                fpath = os.path.join(repo_mapping.path, cfg_src.relpath)
-                try:
-                    with open(fpath) as f:
-                        return yaml.safe_load(f)
-                except Exception as e:
-                    e.add_note(fpath)
-                    logger.error(f'{e=} while loading {fpath=}')
-                    raise
-
-        if not lookup_cfg_factory:
-            raise RuntimeError('cannot resolve non-local cfg w/o bootstrap-cfg-factory')
-
-        gh_api = ccc.github.github_api(
-            ccc.github.github_cfg_for_repo_url(
-                repo_url,
-                cfg_factory=lookup_cfg_factory,
-            ),
-            cfg_factory=lookup_cfg_factory,
-        )
-        org, repo = repo_url.path.strip('/').split('/')
-        gh_repo = gh_api.repository(org, repo)
-
-        try:
-            file_contents = gh_repo.file_contents(
-                path=cfg_src.relpath,
-                ref=gh_repo.default_branch,
-            ).decoded.decode('utf-8')
-
-        except github3.exceptions.NotFoundError:
-            logger.error(
-                f"Unable to access file '{cfg_src.relpath}' in repository '{repo_url.path}'"
-            )
-            raise
-
-        return yaml.safe_load(file_contents)
 
     @staticmethod
     def from_cfg_dir(
@@ -240,13 +170,6 @@ class ConfigFactory:
                     parsed_cfg = ConfigFactory._parse_local_file(
                         cfg_dir=cfg_dir,
                         cfg_src=cfg_src,
-                    )
-                elif isinstance(cfg_src, GithubRepoFileSrc):
-                    if disable_cfg_element_lookup:
-                        continue
-                    parsed_cfg = ConfigFactory._parse_repo_file(
-                        cfg_src=cfg_src,
-                        lookup_cfg_factory=lookup_cfg_factory,
                     )
                 else:
                     raise NotImplementedError(cfg_src)

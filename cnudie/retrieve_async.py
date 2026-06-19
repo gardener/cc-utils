@@ -621,11 +621,6 @@ def create_default_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repository_lookup,
         )
     ]
-    if not cache_dir:
-        import ctx
-        if ctx.cfg:
-            cache_dir = ctx.cfg.ctx.cache_dir
-
     if cache_dir:
         lookups.append(
             file_system_cache_component_descriptor_lookup(

@@ -85,7 +85,6 @@ class LintingResult:
 
 
 def _set_cli(is_cli: bool):
-    ctx().args._cli = is_cli
     global Failure
     if is_cli:
         class Failure(SystemExit):
@@ -154,15 +153,8 @@ class CliHints:
         return CliHint(type=not_empty, help=help, **kwargs)
 
 
-def ctx():
-    # late import because the ctx module is altered after all existing modules have
-    # already been imported
-    import ctx
-    return ctx
-
-
 def _quiet():
-    return ctx().args and ctx().args.quiet
+    return False
 
 
 def _print(msg, colour, outfh=sys.stdout):

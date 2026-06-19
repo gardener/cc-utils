@@ -26,14 +26,10 @@ import yaml
 import ccc.oci
 import ci.util
 import cnudie.retrieve
-import ctx
 import ocm
 import ocm.iter
 import ocm.util
 import reutil
-
-
-_cfg = ctx.cfg
 
 
 @dataclasses.dataclass
@@ -66,7 +62,7 @@ def diff(
     name_template_expr: str=None,
     resource_types: [str]=None,
     ocm_repo_urls: [str]=None,
-    cache_dir: str=_cfg.ctx.cache_dir,
+    cache_dir: str=None,
     defaults_file: str=None,
     outfile_prefix: str='resource-diff'
 ):
