@@ -57,7 +57,7 @@ inputs:
     default: github-oidc-federation
   retries:
     type: number
-    default: 1
+    default: 3
     description: |
       Number of retry attempts on transient errors (5xx, 408, 429, network failures).
   backoff-base:
