@@ -188,20 +188,11 @@ runs:
         set -eu
         cd "${{ inputs.outdir }}"
 
-        # workaround: download-artifact@v3 does not allow merging. hence, flatten directories
-        for d in $(find -type d); do
-          if [ "$d" == "." ]; then
-            continue
-          fi
-          echo "debug: sub-directory $d contains:"
-          ls $d
-          mv $d/* .
-        done
-
-        echo "extracting files with pattern *.tar.gz"
-        for tf in $(find -name "*.tar.gz"); do
-          tf=$(basename $tf)
-          echo "extracting ${tf} into $PWD"
+        # download-artifact@v3 (used on GHE) ignores `pattern`, so non-OCM artifacts may land
+        # here too; filter by naming convention to avoid processing unrelated files/directories
+        echo "extracting ocm-fragment archives"
+        for tf in $(find . -name "*.ocm-artefacts.tar.gz"); do
+          echo "extracting ${tf}"
           tar xf "${tf}"
           unlink "${tf}"
         done
