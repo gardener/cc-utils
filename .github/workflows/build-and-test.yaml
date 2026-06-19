@@ -293,6 +293,18 @@ jobs:
                   value:
                     - test
 
+  test-merge-ocm-fragments-extract:
+    name: integration-test merge-ocm-fragments extract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          remove-trusted-label: false
+      - name: run
+        run: test/actions/test-extract-ocm-fragments.sh
+
   test-actions:
     runs-on: ubuntu-latest
     permissions:
