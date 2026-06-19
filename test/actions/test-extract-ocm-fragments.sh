@@ -10,8 +10,10 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 
 # Creates a realistic .ocm-artefacts tarball (matching export-ocm-fragments output format).
 # Writes the tarball to dest_dir; echoes the fragment filename (the file the tarball contains).
+# If blobs=1 is passed, also include a blobs.d dir with a dummy blob.
 make_tarball() {
     local dest_dir="$1"
+    local blobs="${2:-0}"
     local fragment_digest='aabbccdd1234567890aabbccdd1234567890abcd'
     local tarball_digest='1234567890aabbccdd1234567890aabbccddee00'
     local fragment_file="${fragment_digest}.ocm-artefacts"
@@ -19,8 +21,14 @@ make_tarball() {
     local tmpdir; tmpdir=$(mktemp -d)
     printf 'resources: [{name: test-resource, version: 1.0.0}]\n' \
         > "${tmpdir}/${fragment_file}"
+    if [ "${blobs}" = '1' ]; then
+        mkdir "${tmpdir}/blobs.d"
+        printf 'blobdata\n' > "${tmpdir}/blobs.d/${fragment_digest}"
+    fi
+    local tar_extra=''
+    [ "${blobs}" = '1' ] && tar_extra='blobs.d'
     tar czf "${dest_dir}/${tarball_digest}.ocm-artefacts.tar.gz" \
-        -C "${tmpdir}" "${fragment_file}"
+        -C "${tmpdir}" "${fragment_file}" ${tar_extra}
     rm -rf "${tmpdir}"
     echo "${fragment_file}"
 }
@@ -68,6 +76,34 @@ done
 "${extract}" "${outdir}"
 found=$(find "${outdir}" -maxdepth 1 -name '*.ocm-artefacts' -type f | wc -l)
 [ "${found}" -eq "${n}" ] || fail "expected ${n} fragment files, found ${found}"
+[ -z "$(find "${outdir}" -name '*.tar.gz')" ] || fail 'leftover tarballs'
+echo '    PASS'
+rm -rf "${outdir}"
+
+echo '==> v3 layout: multiple fragments each with blobs.d (blobs.d must be merged)'
+outdir=$(mktemp -d)
+n=3
+for i in $(seq 1 "${n}"); do
+    frag_digest="$(printf '%040d' "${i}")"
+    tar_digest="$(printf 'tar%037d' "${i}")"
+    blob_digest="$(printf 'blob%036d' "${i}")"
+    tmpdir=$(mktemp -d)
+    printf 'resources: [{name: resource-%s, version: 1.0.0}]\n' "${i}" \
+        > "${tmpdir}/${frag_digest}.ocm-artefacts"
+    mkdir "${tmpdir}/blobs.d"
+    printf 'blobdata-%s\n' "${i}" > "${tmpdir}/blobs.d/${blob_digest}"
+    tar czf "/tmp/${tar_digest}.ocm-artefacts.tar.gz" \
+        -C "${tmpdir}" "${frag_digest}.ocm-artefacts" blobs.d
+    rm -rf "${tmpdir}"
+    mkdir "${outdir}/${frag_digest}.ocm-artefacts"
+    mv "/tmp/${tar_digest}.ocm-artefacts.tar.gz" \
+        "${outdir}/${frag_digest}.ocm-artefacts/"
+done
+"${extract}" "${outdir}"
+found=$(find "${outdir}" -maxdepth 1 -name '*.ocm-artefacts' -type f | wc -l)
+[ "${found}" -eq "${n}" ] || fail "expected ${n} fragment files, found ${found}"
+blobs=$(find "${outdir}/blobs.d" -maxdepth 1 -type f | wc -l)
+[ "${blobs}" -eq "${n}" ] || fail "expected ${n} blob files, found ${blobs}"
 [ -z "$(find "${outdir}" -name '*.tar.gz')" ] || fail 'leftover tarballs'
 echo '    PASS'
 rm -rf "${outdir}"
