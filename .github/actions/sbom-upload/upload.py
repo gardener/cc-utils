@@ -55,21 +55,6 @@ def _filename(
     )
 
 
-def _gcs_token_expires_in(token: str) -> int | None:
-    '''Query GCP tokeninfo endpoint; returns seconds until expiry, or None on error.'''
-    url = (
-        'https://oauth2.googleapis.com/tokeninfo'
-        f'?access_token={urllib.parse.quote(token, safe="")}'
-    )
-    try:
-        with urllib.request.urlopen(url) as r:  # nosec B310
-            body = json.load(r)
-        return int(body['expires_in'])
-    except Exception as e:
-        print(f'warning: could not determine token expiry: {e}', file=sys.stderr)
-        return None
-
-
 @dataclasses.dataclass
 class _TokenRefreshConfig:
     api_url: str
@@ -79,8 +64,8 @@ class _TokenRefreshConfig:
     scope: str
 
 
-def _fetch_token(cfg: _TokenRefreshConfig) -> tuple[str, int | None]:
-    '''Perform dual-token exchange against System Trust; return (token, expires_in).'''
+def _fetch_token(cfg: _TokenRefreshConfig) -> str:
+    '''Perform dual-token exchange against System Trust; return scoped GCS token.'''
     # Step 1: GitHub OIDC token
     actions_token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
     actions_token_request_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
@@ -129,9 +114,7 @@ def _fetch_token(cfg: _TokenRefreshConfig) -> tuple[str, int | None]:
     with urllib.request.urlopen(req) as r:  # nosec B310
         tokens = json.load(r)
     token = tokens[cfg.scope]
-
-    expires_in = _gcs_token_expires_in(token)
-    return token, expires_in
+    return token
 
 
 def _make_token_lookup(
@@ -154,11 +137,9 @@ def _make_token_lookup(
         if refresh_cfg is None:
             raise RuntimeError('no refresh config — cannot re-fetch token')
         print('GCS token expired; re-fetching via System Trust ...', file=sys.stderr)
-        new_token, expires_in = _fetch_token(refresh_cfg)
+        new_token = _fetch_token(refresh_cfg)
         with lock:
             state[0] = new_token
-        if expires_in is not None:
-            print(f'new GCS token valid for {expires_in}s', file=sys.stderr)
         return new_token
 
     return token_lookup
@@ -337,13 +318,6 @@ def main() -> None:
     name, version = args.ocm_component.rsplit(':', 1)
     bucket = args.gcs_bucket
     gcs_prefix = f'sbom/{version}'
-
-    # report token TTL at startup
-    expires_in = _gcs_token_expires_in(args.gcs_token)
-    if expires_in is not None:
-        print(f'GCS token expires in {expires_in}s', file=sys.stderr)
-    else:
-        print('GCS token expiry unknown', file=sys.stderr)
 
     refresh_cfg_args = (
         args.token_exchange_api_url,
