@@ -44,7 +44,7 @@ runs:
   using: composite
   steps:
     - name: Install gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@32b253c3f5dbb94d19edce0009b9730f4411fa0f
 
     - name: Upload SBOMs
       shell: bash
