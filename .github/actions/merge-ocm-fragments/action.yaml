@@ -184,27 +184,7 @@ runs:
         merge-multiple: true
     - name: extract-ocm-fragments
       shell: bash
-      run: |
-        set -eu
-        cd "${{ inputs.outdir }}"
-
-        # download-artifact@v3 (used on GHE) ignores `pattern`, so non-OCM artifacts may land
-        # here too; filter by naming convention to avoid processing unrelated files/directories.
-        echo "extracting ocm-fragment archives"
-        for tf in $(find . -name "*.ocm-artefacts.tar.gz"); do
-          echo "extracting ${tf}"
-          subdir=$(dirname "${tf}")
-          if [ "${subdir}" = "." ]; then
-            tar xf "${tf}"
-          else
-            # artifact landed in a named subdir (download-artifact@v3 on GHE); extract there to
-            # avoid conflict between the tarball's top-level entry and the pre-existing subdir,
-            # then move contents up to outdir
-            tar xf "${tf}" -C "${subdir}"
-            find "${subdir}" -maxdepth 1 -mindepth 1 -exec mv -t . {} +
-          fi
-          unlink "${tf}"
-        done
+      run: '"${{ github.action_path }}/extract.sh" "${{ inputs.outdir }}"'
     - name: merge-fragments
       id: merge
       shell: python
