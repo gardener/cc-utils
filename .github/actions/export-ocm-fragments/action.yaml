@@ -94,7 +94,7 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@f95881b8d6c8806bac046effc1a1e2cc4ed4e668
     - name: preprocess
       shell: bash
       run: |
@@ -232,7 +232,7 @@ runs:
           f.write(f'artefact-tarfile={ocm_tar_outfname}\n')
 
     - name: upload-ocm-fragments-artefact
-      uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      uses: gardener/cc-utils/.github/actions/upload-artifact@eccde3e0cecdd83b826a537ba6962b6a387be31a
       with:
         name: ${{ steps.merge.outputs.artefact-name }}
         path: ${{ steps.merge.outputs.artefact-tarfile }}
