@@ -29,8 +29,8 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - uses: gardener/cc-utils/.github/actions/oci-auth@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a06e4dcb4837fd68d2a183b56edf954ad2bc5bcb
+    - uses: gardener/cc-utils/.github/actions/oci-auth@fb5a66fc35f5a81d156a78c6f439b5ec6458048e
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
     - name: Create component diff
