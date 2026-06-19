@@ -690,23 +690,11 @@ def create_default_component_descriptor_lookup(
         mapping of the delivery-service, in case it could not be retrieved using
         `ocm_repository_lookup`
     '''
-    if not ocm_repository_lookup:
-        import ctx
-        ocm_repository_lookup = ctx.cfg.ctx.ocm_repository_lookup
-
     lookups = [
         in_memory_cache_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repository_lookup,
         )
     ]
-    if not cache_dir:
-        try:
-            import ctx
-            if ctx.cfg:
-                cache_dir = ctx.cfg.ctx.cache_dir
-        except ImportError:
-            # ctx-module is an optional dependency for local dev setups
-            pass
 
     if cache_dir:
         lookups.append(

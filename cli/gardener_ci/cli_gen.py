@@ -7,7 +7,6 @@
 
 import argparse
 import enum
-import functools
 import inspect
 import itertools
 import os
@@ -33,23 +32,7 @@ import ci.log
 # "configure_default_logging(force=True, stdout_level=logging.DEBUG)" in specific module cli
 ci.log.configure_default_logging(force=True)
 
-import ctx  # noqa: E402
-
-
-cfg = ctx.cfg
-terminal_cfg = cfg.terminal
-
-if terminal_cfg and terminal_cfg.output_columns is not None:
-    column_width = terminal_cfg.output_columns
-    # Create a custom width formatter by fixing two arguments for the default formatter class,
-    # namely 'width' (defaults to 80 - 2) and 'max_help_position' (defaults to 24)
-    FORMATTER_CLASS = functools.partial(
-        argparse.RawDescriptionHelpFormatter,
-        max_help_position=24,
-        width=column_width
-    )
-else:
-    FORMATTER_CLASS = argparse.RawDescriptionHelpFormatter
+FORMATTER_CLASS = argparse.RawDescriptionHelpFormatter
 
 
 def _subcommand_modules() -> dict[str, str]:
@@ -111,12 +94,6 @@ def main():
         parser.print_usage()
         sys.exit(1)
     parsed = parser.parse_args()
-    # write parsed args to global ctx module so called module functions may
-    # retrieve if (see ci.util.ctx)
-    ctx.args = parsed
-
-    ctx.load_config()
-
     # mark 'cli' mode
     ci.util._set_cli(True)
     if hasattr(parsed, 'module'):
