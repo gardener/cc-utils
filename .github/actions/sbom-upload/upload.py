@@ -393,6 +393,8 @@ def main() -> None:
     # (avoids OCI referrer calls — dominant cost on re-runs)
     work = []
     skipped = 0
+    duplicates = 0
+    planned_blobs = set(existing_blobs)  # dedup within run (OCM + OCI referrer may overlap)
     for node in ocm_iter.iter_resources(component=root_component, lookup=lookup):
         resource_prefix = (
             f'{gcs_prefix}/'
@@ -411,10 +413,11 @@ def main() -> None:
             fmt_id = _fmt_id(mapping)
             if fmt_id:
                 blob = f'{gcs_prefix}/{_filename(node.component, node.resource, fmt_id)}'
-                if blob not in existing_blobs:
+                if blob not in planned_blobs:
                     work.append((node, mapping, fmt_id, blob))
+                    planned_blobs.add(blob)
                 else:
-                    skipped += 1
+                    duplicates += 1
 
     uploaded = 0
     errors = 0
@@ -444,6 +447,8 @@ def main() -> None:
     parts = [f'{uploaded} uploaded']
     if skipped:
         parts.append(f'{skipped} skipped (already present)')
+    if duplicates:
+        parts.append(f'{duplicates} duplicate sources suppressed')
     print(', '.join(parts) + '.', file=sys.stderr)
     if errors:
         print(f'{errors} error(s).', file=sys.stderr)
