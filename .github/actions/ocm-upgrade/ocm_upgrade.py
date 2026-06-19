@@ -330,7 +330,6 @@ def create_upgrade_pullrequest(
         repository=repository,
         git_helper=git_helper,
         commit_message=commit_message,
-        target_branch=branch,
         delete_on_exit=auto_merge,
     ) as upgrade_branch_name:
         pull_request = repository.create_pull(
