@@ -376,13 +376,13 @@ def main() -> None:
     throttle = _UploadThrottle()
     existing_blobs = _gcs_list_prefix(bucket, token_lookup(), gcs_prefix + '/')
 
-    # collect work items; skip resource entirely if any blobs exist for it already
-    # (avoids OCI referrer calls — dominant cost on re-runs)
-    work = []
-    skipped = 0
-    duplicates = 0
-    planned_blobs = set(existing_blobs)  # dedup within run (OCM + OCI referrer may overlap)
-    for node in ocm_iter.iter_resources(component=root_component, lookup=lookup):
+    # phase 1: discover SBOMs — OCI referrer calls are the dominant cost on first runs;
+    # parallelise across resources, dedup serially from results.
+    all_nodes = list(ocm_iter.iter_resources(component=root_component, lookup=lookup))
+    print(f'discovered {len(all_nodes)} resources', file=sys.stderr)
+
+    def _discover(node) -> tuple:
+        '''Return (skipped_count, [(node, mapping, fmt_id, blob), ...]).'''
         resource_prefix = (
             f'{gcs_prefix}/'
             f'{_mangle(node.component.name)}:{node.component.version}'
@@ -390,8 +390,8 @@ def main() -> None:
         )
         already = [b for b in existing_blobs if b.startswith(resource_prefix)]
         if already:
-            skipped += len(already)
-            continue
+            return len(already), []
+        items = []
         for mapping in si.iter_sboms_for_resource(
             resource=node.resource,
             component=node.component,
@@ -400,13 +400,28 @@ def main() -> None:
             fmt_id = _fmt_id(mapping)
             if fmt_id:
                 blob = f'{gcs_prefix}/{_filename(node.component, node.resource, fmt_id)}'
+                items.append((node, mapping, fmt_id, blob))
+        return 0, items
+
+    work = []
+    skipped = 0
+    duplicates = 0
+    planned_blobs = set(existing_blobs)  # dedup within run (OCM + OCI referrer may overlap)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+        for n_skipped, items in pool.map(_discover, all_nodes):
+            skipped += n_skipped
+            for item in items:
+                _, _, _, blob = item
                 if blob not in planned_blobs:
-                    work.append((node, mapping, fmt_id, blob))
+                    work.append(item)
                     planned_blobs.add(blob)
                 else:
                     duplicates += 1
 
-    print(f'{len(work)} to upload, {skipped} already present', file=sys.stderr)
+    print(
+        f'{len(work)} to upload, {skipped} already present, {duplicates} duplicates suppressed',
+        file=sys.stderr,
+    )
 
     uploaded = 0
     errors = 0
