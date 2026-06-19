@@ -59,7 +59,7 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@6d104352ac85094d141b13cd85bf0b9da477c139
     - name: validate-component-descriptor
       id: val
       shell: python
