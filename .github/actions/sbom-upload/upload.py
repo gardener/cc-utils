@@ -55,6 +55,14 @@ def _filename(
     )
 
 
+def _fmt_bytes(n: int) -> str:
+    v = float(n)
+    for unit in ('B', 'KiB', 'MiB', 'GiB'):
+        if v < 1024 or unit == 'GiB':
+            return f'{v:.0f} {unit}' if unit == 'B' else f'{v:.1f} {unit}'
+        v /= 1024
+
+
 @dataclasses.dataclass
 class _TokenRefreshConfig:
     api_url: str
@@ -113,8 +121,7 @@ def _fetch_token(cfg: _TokenRefreshConfig) -> str:
     )
     with urllib.request.urlopen(req) as r:  # nosec B310
         tokens = json.load(r)
-    token = tokens[cfg.scope]
-    return token
+    return tokens[cfg.scope]
 
 
 def _make_token_lookup(
@@ -136,10 +143,12 @@ def _make_token_lookup(
                 return state[0]
         if refresh_cfg is None:
             raise RuntimeError('no refresh config — cannot re-fetch token')
-        print('GCS token expired; re-fetching via System Trust ...', file=sys.stderr)
+        t0 = time.monotonic()
+        print('GCS token expired — re-fetching via System Trust ...', file=sys.stderr)
         new_token = _fetch_token(refresh_cfg)
         with lock:
             state[0] = new_token
+        print(f'GCS token refreshed in {time.monotonic() - t0:.1f}s', file=sys.stderr)
         return new_token
 
     return token_lookup
@@ -157,6 +166,7 @@ class _UploadThrottle:
         self._active = 0
         self._lo = lo
         self._hi = hi
+        print(f'concurrency: {initial} workers (AIMD, lo={lo} hi={hi})', file=sys.stderr)
 
     def acquire(self) -> None:
         with self._cv:
@@ -166,10 +176,13 @@ class _UploadThrottle:
     def release(self, grew: bool = False, shrank: bool = False) -> None:
         with self._cv:
             self._active -= 1
+            old = self._target
             if grew and self._target < self._hi:
                 self._target += 1
             elif shrank:
                 self._target = max(self._lo, self._target // 2)
+            if self._target != old:
+                print(f'concurrency: {old} → {self._target}', file=sys.stderr)
             self._cv.notify_all()
 
 
@@ -328,10 +341,10 @@ def main() -> None:
     )
     if all(refresh_cfg_args):
         refresh_cfg = _TokenRefreshConfig(*refresh_cfg_args)
-        print('token auto-refresh enabled', file=sys.stderr)
+        print('token auto-refresh: enabled', file=sys.stderr)
     else:
         refresh_cfg = None
-        print('token auto-refresh disabled (no refresh args supplied)', file=sys.stderr)
+        print('token auto-refresh: disabled (no refresh args supplied)', file=sys.stderr)
 
     token_lookup = _make_token_lookup(
         initial_token=args.gcs_token,
@@ -393,39 +406,65 @@ def main() -> None:
                 else:
                     duplicates += 1
 
+    print(f'{len(work)} to upload, {skipped} already present', file=sys.stderr)
+
     uploaded = 0
     errors = 0
+    total_bytes = 0
+    total_fetch_s = 0.0
+    total_upload_s = 0.0
+    stats_lock = threading.Lock()
 
-    def _process(item: tuple) -> str:
+    def _process(item: tuple) -> bool:
         node, mapping, fmt_id, blob = item
+        t0 = time.monotonic()
         try:
             data = si.fetch_sbom_document(mapping, oci_client)
         except Exception as e:
             print(f'error fetching {node.resource.name} ({fmt_id}): {e}', file=sys.stderr)
-            return 'error'
+            return False
+        fetch_s = time.monotonic() - t0
+        nbytes = len(data)
+        t1 = time.monotonic()
         try:
             blob_name = _gcs_upload(throttle, bucket, token_lookup, data, blob)
         except Exception as e:
             print(f'error uploading {node.resource.name} ({fmt_id}): {e}', file=sys.stderr)
-            return 'error'
+            return False
+        upload_s = time.monotonic() - t1
         print(f'gs://{bucket}/{blob_name}')
-        return 'ok'
+        with stats_lock:
+            nonlocal total_bytes, total_fetch_s, total_upload_s
+            total_bytes += nbytes
+            total_fetch_s += fetch_s
+            total_upload_s += upload_s
+        return True
 
+    t_start = time.monotonic()
     with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
-        for result in pool.map(_process, work):
-            if result == 'ok':
+        for ok in pool.map(_process, work):
+            if ok:
                 uploaded += 1
             else:
                 errors += 1
+    elapsed = time.monotonic() - t_start
 
-    parts = [f'{uploaded} uploaded']
+    parts = [f'{uploaded} uploaded ({_fmt_bytes(total_bytes)})']
     if skipped:
         parts.append(f'{skipped} skipped (already present)')
     if duplicates:
         parts.append(f'{duplicates} duplicate sources suppressed')
-    print(', '.join(parts) + '.', file=sys.stderr)
     if errors:
-        print(f'{errors} error(s).', file=sys.stderr)
+        parts.append(f'{errors} error(s)')
+    print(', '.join(parts) + f' — {elapsed:.0f}s elapsed', file=sys.stderr)
+    if uploaded:
+        print(
+            f'fetch: {total_fetch_s:.1f}s cumulative'
+            f'  upload: {total_upload_s:.1f}s cumulative'
+            f'  throughput: {_fmt_bytes(int(total_bytes / elapsed))}/s',
+            file=sys.stderr,
+        )
+    if errors:
         sys.exit(1)
 
 
