@@ -4,9 +4,11 @@
 # SPDX-License-Identifier: Apache-2.0
 import argparse
 import concurrent.futures
+import dataclasses
 import datetime
 import email.utils
 import json
+import os
 import random
 import sys
 import threading
@@ -51,6 +53,115 @@ def _filename(
         f'_{_mangle(resource.name)}:{resource.version}'
         f'{extra}.sbom.{fmt_id}'
     )
+
+
+def _gcs_token_expires_in(token: str) -> int | None:
+    '''Query GCP tokeninfo endpoint; returns seconds until expiry, or None on error.'''
+    url = (
+        'https://oauth2.googleapis.com/tokeninfo'
+        f'?access_token={urllib.parse.quote(token, safe="")}'
+    )
+    try:
+        with urllib.request.urlopen(url) as r:  # nosec B310
+            body = json.load(r)
+        return int(body['expires_in'])
+    except Exception as e:
+        print(f'warning: could not determine token expiry: {e}', file=sys.stderr)
+        return None
+
+
+@dataclasses.dataclass
+class _TokenRefreshConfig:
+    api_url: str
+    oidc_audience: str
+    pipeline_id: str
+    pipeline_group_id: str
+    scope: str
+
+
+def _fetch_token(cfg: _TokenRefreshConfig) -> tuple[str, int | None]:
+    '''Perform dual-token exchange against System Trust; return (token, expires_in).'''
+    # Step 1: GitHub OIDC token
+    actions_token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
+    actions_token_request_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
+    if not actions_token_request_token or not actions_token_request_url:
+        raise RuntimeError('ACTIONS_ID_TOKEN_REQUEST_TOKEN / _URL not set; cannot refresh token')
+
+    oidc_url = f'{actions_token_request_url}&audience={urllib.parse.quote(cfg.oidc_audience)}'
+    req = urllib.request.Request(
+        oidc_url,
+        headers={'Authorization': f'Bearer {actions_token_request_token}'},
+    )
+    with urllib.request.urlopen(req) as r:  # nosec B310
+        actions_token = json.load(r)['value']
+
+    # Step 2: GCP instance-identity token
+    gcp_meta_url = (
+        'http://metadata/computeMetadata/v1/instance/service-accounts/default/identity'
+        f'?audience={urllib.parse.quote(cfg.oidc_audience)}&format=full'
+    )
+    req = urllib.request.Request(
+        gcp_meta_url,
+        headers={'Metadata-Flavor': 'Google'},
+    )
+    with urllib.request.urlopen(req) as r:  # nosec B310
+        gcp_token = r.read().decode()
+
+    # Step 3: System Trust /auth
+    group_enc = urllib.parse.quote(cfg.pipeline_group_id, safe='')
+    pipeline_enc = urllib.parse.quote(cfg.pipeline_id, safe='')
+    req = urllib.request.Request(
+        f'{cfg.api_url}/auth?group_id={group_enc}&pipeline_id={pipeline_enc}',
+        headers={
+            'X-Trust-Authorization-Orchestrator': actions_token,
+            'X-Trust-Authorization-Runtime': gcp_token,
+        },
+    )
+    with urllib.request.urlopen(req) as r:  # nosec B310
+        session_token = json.load(r)['token']
+
+    # Step 4: System Trust /tokens
+    scope_enc = urllib.parse.quote(cfg.scope, safe='')
+    req = urllib.request.Request(
+        f'{cfg.api_url}/tokens?systems={scope_enc}',
+        headers={'Authorization': f'Bearer {session_token}'},
+    )
+    with urllib.request.urlopen(req) as r:  # nosec B310
+        tokens = json.load(r)
+    token = tokens[cfg.scope]
+
+    expires_in = _gcs_token_expires_in(token)
+    return token, expires_in
+
+
+def _make_token_lookup(
+    initial_token: str,
+    refresh_cfg: '_TokenRefreshConfig | None',
+):
+    '''
+    Return a thread-safe token_lookup(refresh=False) closure.
+
+    token_lookup()              → current cached token
+    token_lookup(refresh=True)  → re-fetch via System Trust, update cache, return new token
+    '''
+    lock = threading.Lock()
+    state = [initial_token]
+
+    def token_lookup(refresh: bool = False) -> str:
+        if not refresh:
+            with lock:
+                return state[0]
+        if refresh_cfg is None:
+            raise RuntimeError('no refresh config — cannot re-fetch token')
+        print('GCS token expired; re-fetching via System Trust ...', file=sys.stderr)
+        new_token, expires_in = _fetch_token(refresh_cfg)
+        with lock:
+            state[0] = new_token
+        if expires_in is not None:
+            print(f'new GCS token valid for {expires_in}s', file=sys.stderr)
+        return new_token
+
+    return token_lookup
 
 
 class _UploadThrottle:
@@ -126,11 +237,12 @@ def _gcs_list_prefix(bucket: str, gcs_token: str, prefix: str) -> set[str]:
 def _gcs_upload(
     throttle: _UploadThrottle,
     bucket: str,
-    gcs_token: str,
+    token_lookup,
     data: bytes,
     blob: str,
 ) -> str:
-    # 429 → AIMD backoff, retry up to 20×; 5xx → retry 3×; other 4xx → fail fast
+    # 429 → AIMD backoff, retry up to 20×; 5xx → retry 3×; 401 → token refresh + 1 retry;
+    # other 4xx → fail fast
     MAX_429 = 20
     MAX_5XX = 3
     url = (
@@ -140,11 +252,12 @@ def _gcs_upload(
     )
     n429 = 0
     n5xx = 0
+    refreshed = False
     while True:
         throttle.acquire()
         try:
             req = urllib.request.Request(url, data=data, headers={
-                'Authorization': f'Bearer {gcs_token}',
+                'Authorization': f'Bearer {token_lookup()}',
                 'Content-Type': 'application/octet-stream',
             })
             with urllib.request.urlopen(req) as r:  # nosec B310
@@ -159,6 +272,11 @@ def _gcs_upload(
                     raise
                 wait = _retry_after(e.headers, n429)
                 time.sleep(wait + random.uniform(0, 2))
+            elif e.code == 401 and not refreshed:
+                # token likely expired — refresh once and retry
+                throttle.release()
+                token_lookup(refresh=True)
+                refreshed = True
             elif e.code >= 500:
                 n5xx += 1
                 throttle.release()
@@ -167,7 +285,7 @@ def _gcs_upload(
                 time.sleep(2 ** n5xx)
             else:
                 throttle.release()
-                raise  # 4xx non-429: not transient
+                raise  # 4xx non-429/non-401: not transient
         except Exception:
             throttle.release()
             raise
@@ -193,6 +311,12 @@ def main() -> None:
     )
     parser.add_argument('--gcs-bucket', required=True, metavar='BUCKET')
     parser.add_argument('--gcs-token', required=True, metavar='TOKEN')
+    # token refresh (optional — enables mid-run re-auth on 401)
+    parser.add_argument('--token-exchange-api-url', default='', metavar='URL')
+    parser.add_argument('--token-exchange-audience', default='', metavar='AUD')
+    parser.add_argument('--token-exchange-pipeline-id', default='', metavar='ID')
+    parser.add_argument('--token-exchange-pipeline-group-id', default='', metavar='GID')
+    parser.add_argument('--token-exchange-scope', default='', metavar='SCOPE')
     args = parser.parse_args()
 
     errors = []
@@ -212,8 +336,33 @@ def main() -> None:
 
     name, version = args.ocm_component.rsplit(':', 1)
     bucket = args.gcs_bucket
-    gcs_token = args.gcs_token
     gcs_prefix = f'sbom/{version}'
+
+    # report token TTL at startup
+    expires_in = _gcs_token_expires_in(args.gcs_token)
+    if expires_in is not None:
+        print(f'GCS token expires in {expires_in}s', file=sys.stderr)
+    else:
+        print('GCS token expiry unknown', file=sys.stderr)
+
+    refresh_cfg_args = (
+        args.token_exchange_api_url,
+        args.token_exchange_audience,
+        args.token_exchange_pipeline_id,
+        args.token_exchange_pipeline_group_id,
+        args.token_exchange_scope,
+    )
+    if all(refresh_cfg_args):
+        refresh_cfg = _TokenRefreshConfig(*refresh_cfg_args)
+        print('token auto-refresh enabled', file=sys.stderr)
+    else:
+        refresh_cfg = None
+        print('token auto-refresh disabled (no refresh args supplied)', file=sys.stderr)
+
+    token_lookup = _make_token_lookup(
+        initial_token=args.gcs_token,
+        refresh_cfg=refresh_cfg,
+    )
 
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(absent_ok=True),
@@ -238,7 +387,7 @@ def main() -> None:
     ).component
 
     throttle = _UploadThrottle()
-    existing_blobs = _gcs_list_prefix(bucket, gcs_token, gcs_prefix + '/')
+    existing_blobs = _gcs_list_prefix(bucket, token_lookup(), gcs_prefix + '/')
 
     # collect work items; skip resource entirely if any blobs exist for it already
     # (avoids OCI referrer calls — dominant cost on re-runs)
@@ -278,7 +427,7 @@ def main() -> None:
             print(f'error fetching {node.resource.name} ({fmt_id}): {e}', file=sys.stderr)
             return 'error'
         try:
-            blob_name = _gcs_upload(throttle, bucket, gcs_token, data, blob)
+            blob_name = _gcs_upload(throttle, bucket, token_lookup, data, blob)
         except Exception as e:
             print(f'error uploading {node.resource.name} ({fmt_id}): {e}', file=sys.stderr)
             return 'error'

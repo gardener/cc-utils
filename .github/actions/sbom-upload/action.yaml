@@ -17,6 +17,28 @@ inputs:
   gcs-token:
     description: 'Bearer token for the GCS JSON API'
     required: true
+  # Token refresh inputs (optional): when all four are supplied, upload.py will
+  # re-request a fresh GCS token via System Trust on HTTP 401 mid-run.
+  token-exchange-api-url:
+    description: 'Base URL of the token exchange API (enables mid-run token refresh)'
+    required: false
+    default: ''
+  token-exchange-audience:
+    description: 'OIDC audience for token refresh'
+    required: false
+    default: ''
+  token-exchange-pipeline-id:
+    description: 'Pipeline identifier for token refresh'
+    required: false
+    default: ''
+  token-exchange-pipeline-group-id:
+    description: 'Pipeline group identifier for token refresh'
+    required: false
+    default: ''
+  token-exchange-scope:
+    description: 'Scope to re-request on token refresh (e.g. "cumulus")'
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -39,4 +61,9 @@ runs:
           --ocm-component '${{ inputs.ocm-component }}' \
           --gcs-bucket '${{ inputs.gcs-bucket }}' \
           --gcs-token '${{ inputs.gcs-token }}' \
+          --token-exchange-api-url '${{ inputs.token-exchange-api-url }}' \
+          --token-exchange-audience '${{ inputs.token-exchange-audience }}' \
+          --token-exchange-pipeline-id '${{ inputs.token-exchange-pipeline-id }}' \
+          --token-exchange-pipeline-group-id '${{ inputs.token-exchange-pipeline-group-id }}' \
+          --token-exchange-scope '${{ inputs.token-exchange-scope }}' \
           "${repos_args[@]}"
