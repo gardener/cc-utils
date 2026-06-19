@@ -417,7 +417,6 @@ def commit_and_push_to_tmp_branch(
     repository: github3.repos.repo.Repository,
     git_helper: gitutil.GitHelper,
     commit_message: str,
-    target_branch: str,
     delete_on_exit: bool=False,
 ):
     '''
@@ -429,7 +428,11 @@ def commit_and_push_to_tmp_branch(
     commit = git_helper.index_to_commit(message=commit_message)
     logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
     new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    head_sha = repository.ref(f'heads/{target_branch}').object.sha
+    # use the local commit's parent rather than a live API call to heads/{target_branch}:
+    # if master advances between checkout and here (e.g. during a long set_dependency_version
+    # callback), the API would return a newer SHA that is not an ancestor of our local commit,
+    # making the push a non-fast-forward → rejected.
+    head_sha = commit.parents[0].hexsha
     repository.create_ref(f'refs/heads/{new_branch_name}', head_sha)
 
     try:
