@@ -86,7 +86,7 @@ jobs:
           oidc-audience: ${{ inputs.token-exchange-audience }}
           pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
           pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
-          systems: ${{ inputs.token-exchange-scope }}
+          scopes: ${{ inputs.token-exchange-scope }}
           token-env-prefix: 'GCS_'
         # exports GCS_<SCOPE_UPPER>_TOKEN into $GITHUB_ENV
 
