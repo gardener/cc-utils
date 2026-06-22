@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 '''
-SBOM (Software Bill of Materials) support for OCI images and OCM components.
+SBOM/CBOM support for OCI images and OCM components.
 
 Sub-modules:
   sbom.oci     — OCI 1.1 referrer push/lookup mechanics and media-type constants
-  sbom.inject  — syft-based scanning, resource-aware injection, OCM resource construction
+  sbom.cbom    — OCI referrer mechanics and OCM resource construction for CBOM documents
+  sbom.inject  — syft/cbomkit-theia scanning, resource-aware injection, OCM resource construction
   sbom.iter    — iterate and retrieve SBOM documents across OCM component trees
 '''
 from sbom.oci import (  # noqa: F401
@@ -16,6 +17,12 @@ from sbom.oci import (  # noqa: F401
     SBOM_FORMATS,
     push_sbom_referrer,
     push_sbom_referrers,
+)
+from sbom.cbom import (  # noqa: F401
+    CBOM_ARTIFACT_TYPE,
+    CBOM_LAYER_MEDIA_TYPE,
+    push_cbom_referrer,
+    build_cbom_ocm_resources,
 )
 from sbom.iter import (  # noqa: F401
     SbomSource,

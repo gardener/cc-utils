@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 '''
-Syft-based SBOM scanning and injection for OCI images.
+Syft-based SBOM scanning and cbomkit-theia-based CBOM scanning for OCI images.
 
 For each image:
   1. Check the target registry for existing SPDX + CycloneDX referrer manifests.
-  2. Cache hit: download both SBOM blobs from the target.
-  3. Cache miss: run syft, push both referrer manifests to the target.
+  2. Cache hit: download both SBOM blobs from the target; run cbomkit-theia on the
+     CycloneDX blob to produce a CBOM (no image re-download needed).
+  3. Cache miss: run syft, push both SBOM referrer manifests to the target; then run
+     cbomkit-theia on the resulting CycloneDX output to produce and push the CBOM.
 
 Scan admission mirrors a resource-aware approach:
   disk:   compressed_layer_bytes * 5.0
@@ -24,6 +26,7 @@ import tempfile
 import oci.client as oc
 import oci.model as om
 import ocm
+import sbom.cbom as scbom
 import sbom.oci as soci
 
 _DOCKER_CONFIG_PATH = os.path.expanduser('~/.docker/config.json')
@@ -50,6 +53,63 @@ def check_syft():
             'syft is not installed or not on PATH. '
             'Please install syft (https://github.com/anchore/syft) before running CTT '
             'with SBOM injection enabled.'
+        )
+
+
+def check_cbomkit_theia():
+    '''Verify cbomkit-theia is on PATH; raise RuntimeError with a friendly message if not.'''
+    try:
+        subprocess.run(  # nosec B607
+            ['cbomkit-theia', '--help'],
+            check=True,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            'cbomkit-theia is not installed or not on PATH. '
+            'Please install cbomkit-theia (https://github.com/IBM/cbomkit-theia) before '
+            'running CTT with SBOM/CBOM injection enabled.'
+        )
+
+
+def _cbomkit_theia_version() -> str | None:
+    try:
+        result = subprocess.run(  # nosec B607
+            ['cbomkit-theia', 'version'],
+            capture_output=True,
+            text=True,
+        )
+        for line in (result.stdout + result.stderr).splitlines():
+            parts = line.split()
+            if parts:
+                return parts[-1]
+    except Exception:  # nosec B110
+        pass
+    return None
+
+
+def _run_cbomkit_theia(
+    image_ref: str,
+    cdx_bom_path: str,
+    out_path: str,
+    tmpdir: str,
+) -> None:
+    '''
+    Run cbomkit-theia on `image_ref`, enriching `cdx_bom_path` (CycloneDX SBOM) with
+    cryptographic findings. Output is written to `out_path`.
+    '''
+    env = os.environ.copy()
+    env['TMPDIR'] = tmpdir
+    with open(out_path, 'w') as out_f:
+        subprocess.run(  # nosec B607
+            [
+                'cbomkit-theia', 'image',
+                '--bom', cdx_bom_path,
+                image_ref,
+            ],
+            check=True,
+            stdout=out_f,
+            env=env,
         )
 
 
@@ -212,10 +272,12 @@ def scan_image(
     oci_client: oc.Client,
     tmpdir: str,
     tool_ver: str | None = None,
-) -> tuple[bytes, bytes, str | None, str, str]:
+) -> tuple[bytes, bytes, bytes, str | None, str | None, str, str, str]:
     '''
-    Scan the image with syft, push both referrer manifests to the target, and return
-    (spdx_bytes, cdx_bytes, tool_ver, spdx_referrer_digest, cdx_referrer_digest).
+    Scan the image with syft and cbomkit-theia, push all three referrer manifests to the
+    target, and return:
+      (spdx_bytes, cdx_bytes, cbom_bytes, tool_ver, cbom_tool_ver,
+       spdx_referrer_digest, cdx_referrer_digest, cbom_referrer_digest)
 
     `image_ref` should be digest-addressed.
     '''
@@ -227,6 +289,7 @@ def scan_image(
     with tempfile.TemporaryDirectory(dir=tmpdir) as tmp:
         spdx_path = os.path.join(tmp, 'sbom.spdx.json')
         cdx_path = os.path.join(tmp, 'sbom.cdx.json')
+        cbom_path = os.path.join(tmp, 'cbom.cdx.json')
 
         subprocess.run(  # nosec B607
             [
@@ -238,12 +301,22 @@ def scan_image(
             env=env,
         )
 
+        _run_cbomkit_theia(
+            image_ref=str(image_ref),
+            cdx_bom_path=cdx_path,
+            out_path=cbom_path,
+            tmpdir=tmpdir,
+        )
+
         with open(spdx_path, 'rb') as f:
             spdx_bytes = f.read()
         with open(cdx_path, 'rb') as f:
             cdx_bytes = f.read()
+        with open(cbom_path, 'rb') as f:
+            cbom_bytes = f.read()
 
     resolved_tool_ver = tool_ver or _syft_version_from_spdx(spdx_bytes)
+    cbom_tool_ver = _cbomkit_theia_version()
 
     spdx_referrer_digest, cdx_referrer_digest = soci.push_sbom_referrers(
         spdx_bytes=spdx_bytes,
@@ -252,8 +325,18 @@ def scan_image(
         oci_client=oci_client,
         tool_version=resolved_tool_ver,
     )
+    cbom_referrer_digest = scbom.push_cbom_referrer(
+        cbom_bytes=cbom_bytes,
+        image_reference=image_ref,
+        oci_client=oci_client,
+        tool_version=cbom_tool_ver,
+    )
 
-    return spdx_bytes, cdx_bytes, resolved_tool_ver, spdx_referrer_digest, cdx_referrer_digest
+    return (
+        spdx_bytes, cdx_bytes, cbom_bytes,
+        resolved_tool_ver, cbom_tool_ver,
+        spdx_referrer_digest, cdx_referrer_digest, cbom_referrer_digest,
+    )
 
 
 def run_injections_resource_aware(
@@ -261,7 +344,7 @@ def run_injections_resource_aware(
     oci_client: oc.Client,
     tmpdir: str,
     tool_ver: str | None = None,
-) -> list[tuple[str, bytes, bytes, str | None, str, str, str]]:
+) -> list[tuple[str, bytes, bytes, bytes, str | None, str | None, str, str, str, str]]:
     '''
     Scan images with resource-aware admission control.
 
@@ -269,8 +352,9 @@ def run_injections_resource_aware(
     had a cache miss (no existing referrers).
 
     Returns a list of
-      (resource_name, spdx_bytes, cdx_bytes, tool_ver,
-       spdx_referrer_digest, cdx_referrer_digest, status)
+      (resource_name, spdx_bytes, cdx_bytes, cbom_bytes,
+       tool_ver, cbom_tool_ver,
+       spdx_referrer_digest, cdx_referrer_digest, cbom_referrer_digest, status)
     where status is 'scanned' or 'failed'.  Failed entries have None for bytes/digests.
     '''
     results = []
@@ -297,16 +381,16 @@ def run_injections_resource_aware(
 
     def _do_scan(name, ref, est_disk, est_mem):
         try:
-            spdx, cdx, ver, spdx_dig, cdx_dig = scan_image(
+            spdx, cdx, cbom, ver, cbom_ver, spdx_dig, cdx_dig, cbom_dig = scan_image(
                 image_ref=ref,
                 oci_client=oci_client,
                 tmpdir=tmpdir,
                 tool_ver=tool_ver,
             )
-            return name, spdx, cdx, ver, spdx_dig, cdx_dig, 'scanned'
+            return name, spdx, cdx, cbom, ver, cbom_ver, spdx_dig, cdx_dig, cbom_dig, 'scanned'
         except Exception as e:
             logger.warning(f'{name!r}: scan failed: {e}')
-            return name, None, None, None, None, None, 'failed'
+            return name, None, None, None, None, None, None, None, None, 'failed'
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         running: dict[concurrent.futures.Future, tuple[int, int]] = {}
@@ -324,7 +408,7 @@ def run_injections_resource_aware(
                 f = executor.submit(_do_scan, name, ref, est_disk, est_mem)
                 running[f] = (est_disk, est_mem)
                 logger.info(
-                    f'admitted SBOM scan for {name!r} '
+                    f'admitted SBOM/CBOM scan for {name!r} '
                     f'(est disk={est_disk // 1024 // 1024} MB '
                     f'mem={est_mem // 1024 // 1024} MB, '
                     f'{len(running)} running, {len(pending)} pending)'
@@ -354,18 +438,20 @@ def build_sbom_ocm_resources(
     repo_ref: str,
     spdx_referrer_digest: str,
     cdx_referrer_digest: str,
-    tool_ver: str | None,
+    cbom_referrer_digest: str = '',
+    tool_ver: str | None = None,
+    cbom_tool_ver: str | None = None,
     source_extra_identity: dict | None = None,
-) -> tuple[ocm.Resource, ocm.Resource]:
+) -> tuple[ocm.Resource, ocm.Resource, ocm.Resource]:
     '''
-    Build (spdx_resource, cdx_resource) OCM Resource objects for injected SBOMs.
+    Build (spdx_resource, cdx_resource, cbom_resource) OCM Resource objects.
 
-    Uses OciAccess pointing at the referrer manifest digest already pushed to the target.
-    `source_extra_identity` is merged into the SBOM resource's extraIdentity so that SBOM
-    resources derived from same-named source resources with different extraIdentity (e.g.
-    different platforms) remain distinguishable.
+    All three use OciAccess pointing at the referrer manifest digest already pushed to the
+    target.  `source_extra_identity` is merged into each resource's extraIdentity so that
+    resources derived from same-named sources with different extraIdentity (e.g. different
+    platforms) remain distinguishable.
     '''
-    def _make(media_type, sbom_format, referrer_digest):
+    def _make_sbom(media_type, sbom_format, referrer_digest):
         label_value = {
             'data-source': {
                 'kind': 'local-scan',
@@ -380,20 +466,52 @@ def build_sbom_ocm_resources(
         ]
         if label_value:
             labels.append(ocm.Label(name='gardener.cloud/sbom', value=label_value))
-        extra_id = {**(source_extra_identity or {}), 'version': version, 'sbom-format': sbom_format}
+        extra_id = {
+            **(source_extra_identity or {}),
+            'version': version,
+            'sbom-format': sbom_format,
+        }
         return ocm.Resource(
             name=resource_name,
             version=version,
             type=media_type,
             relation=ocm.ResourceRelation.EXTERNAL,
             extraIdentity=extra_id,
-            access=ocm.OciAccess(
-                imageReference=f'{repo_ref}@{referrer_digest}',
-            ),
+            access=ocm.OciAccess(imageReference=f'{repo_ref}@{referrer_digest}'),
             labels=labels,
         )
 
+    label_value = {
+        'data-source': {
+            'kind': 'local-scan',
+            'tool': 'cbomkit-theia',
+            'tool-version': cbom_tool_ver,
+        },
+        'format': 'cyclonedx-1.6',
+    } if cbom_tool_ver else None
+    cbom_labels = [
+        ocm.Label(name='gardener.cloud/cbom/source-image',        value=source_image_ref),
+        ocm.Label(name='gardener.cloud/cbom/source-image-digest', value=source_digest),
+    ]
+    if label_value:
+        cbom_labels.append(ocm.Label(name='gardener.cloud/cbom', value=label_value))
+    cbom_extra_id = {
+        **(source_extra_identity or {}),
+        'version': version,
+        'cbom-format': 'cyclonedx-1.6',
+    }
+    cbom_resource = ocm.Resource(
+        name=resource_name,
+        version=version,
+        type=scbom.CBOM_LAYER_MEDIA_TYPE,
+        relation=ocm.ResourceRelation.EXTERNAL,
+        extraIdentity=cbom_extra_id,
+        access=ocm.OciAccess(imageReference=f'{repo_ref}@{cbom_referrer_digest}'),
+        labels=cbom_labels,
+    )
+
     return (
-        _make(soci.SPDX_JSON_MEDIA_TYPE,     'spdx-2.3',      spdx_referrer_digest),
-        _make(soci.CYCLONEDX_JSON_MEDIA_TYPE, 'cyclonedx-1.6', cdx_referrer_digest),
+        _make_sbom(soci.SPDX_JSON_MEDIA_TYPE,     'spdx-2.3',      spdx_referrer_digest),
+        _make_sbom(soci.CYCLONEDX_JSON_MEDIA_TYPE, 'cyclonedx-1.6', cdx_referrer_digest),
+        cbom_resource,
     )
