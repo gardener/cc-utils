@@ -88,23 +88,23 @@ def test_build_sbom_ocm_resources_distinct_identity_for_same_name():
         tool_ver='1.0.0',
     )
 
-    spdx_amd64, cdx_amd64 = sbom_inject.build_sbom_ocm_resources(
+    spdx_amd64, cdx_amd64, cbom_amd64 = sbom_inject.build_sbom_ocm_resources(
         resource_name='hyperkube',
         source_extra_identity={'arch': 'amd64'},
         **common_kwargs,
     )
-    spdx_arm64, cdx_arm64 = sbom_inject.build_sbom_ocm_resources(
+    spdx_arm64, cdx_arm64, cbom_arm64 = sbom_inject.build_sbom_ocm_resources(
         resource_name='hyperkube',
         source_extra_identity={'arch': 'arm64'},
         **common_kwargs,
     )
 
-    all_resources = [spdx_amd64, cdx_amd64, spdx_arm64, cdx_arm64]
+    all_resources = [spdx_amd64, cdx_amd64, cbom_amd64, spdx_arm64, cdx_arm64, cbom_arm64]
 
     # each resource must have a unique identity among its peers
     identities = [r.identity(peers=all_resources) for r in all_resources]
-    assert len(set(map(str, identities))) == 4, (
-        f'expected 4 distinct identities, got: {identities}'
+    assert len(set(map(str, identities))) == 6, (
+        f'expected 6 distinct identities, got: {identities}'
     )
 
     # arch must be present in extra_identity
@@ -112,11 +112,12 @@ def test_build_sbom_ocm_resources_distinct_identity_for_same_name():
     assert spdx_arm64.extraIdentity.get('arch') == 'arm64'
     assert spdx_amd64.extraIdentity.get('sbom-format') == 'spdx-2.3'
     assert cdx_amd64.extraIdentity.get('sbom-format') == 'cyclonedx-1.6'
+    assert cbom_amd64.extraIdentity.get('cbom-format') == 'cyclonedx-1.6'
 
 
 def test_build_sbom_ocm_resources_no_source_extra_identity():
-    '''Without source_extra_identity the only distinguisher is sbom-format.'''
-    spdx, cdx = sbom_inject.build_sbom_ocm_resources(
+    '''Without source_extra_identity the only distinguisher is sbom-format / cbom-format.'''
+    spdx, cdx, cbom = sbom_inject.build_sbom_ocm_resources(
         resource_name='myimage',
         version='2.0',
         source_image_ref='registry.example.com/myimage:2.0',
@@ -128,7 +129,9 @@ def test_build_sbom_ocm_resources_no_source_extra_identity():
     )
     assert spdx.extraIdentity == {'version': '2.0', 'sbom-format': 'spdx-2.3'}
     assert cdx.extraIdentity == {'version': '2.0', 'sbom-format': 'cyclonedx-1.6'}
-    assert spdx.identity(peers=[spdx, cdx]) != cdx.identity(peers=[spdx, cdx])
+    assert cbom.extraIdentity == {'version': '2.0', 'cbom-format': 'cyclonedx-1.6'}
+    peers = [spdx, cdx, cbom]
+    assert len({r.identity(peers=peers) for r in peers}) == 3
 
 
 def test_build_sbom_ocm_resources_version_and_format_both_unique():
@@ -155,14 +158,14 @@ def test_build_sbom_ocm_resources_version_and_format_both_unique():
             tool_ver=None,
         )
 
-    spdx_135, cdx_135 = _make('1.35.3')
-    spdx_133, cdx_133 = _make('1.33.8')
+    spdx_135, cdx_135, cbom_135 = _make('1.35.3')
+    spdx_133, cdx_133, cbom_133 = _make('1.33.8')
 
-    all_resources = [spdx_135, cdx_135, spdx_133, cdx_133]
+    all_resources = [spdx_135, cdx_135, cbom_135, spdx_133, cdx_133, cbom_133]
     identities = [r.identity(peers=all_resources) for r in all_resources]
 
-    assert len(set(map(str, identities))) == 4, (
-        f'expected 4 distinct identities, got duplicates: {[str(i) for i in identities]}'
+    assert len(set(map(str, identities))) == 6, (
+        f'expected 6 distinct identities, got duplicates: {[str(i) for i in identities]}'
     )
 
 
