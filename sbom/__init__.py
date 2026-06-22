@@ -9,6 +9,7 @@ Sub-modules:
   sbom.cbom    — OCI referrer mechanics and OCM resource construction for CBOM documents
   sbom.inject  — syft/cbomkit-theia scanning, resource-aware injection, OCM resource construction
   sbom.iter    — iterate and retrieve SBOM documents across OCM component trees
+  sbom.s3      — S3 download helper for public-bucket resources
 '''
 from sbom.oci import (  # noqa: F401
     SPDX_JSON_MEDIA_TYPE,
@@ -17,6 +18,7 @@ from sbom.oci import (  # noqa: F401
     SBOM_FORMATS,
     push_sbom_referrer,
     push_sbom_referrers,
+    push_sbom_standalone,
 )
 from sbom.cbom import (  # noqa: F401
     CBOM_ARTIFACT_TYPE,
@@ -30,4 +32,13 @@ from sbom.iter import (  # noqa: F401
     iter_sboms_for_resource,
     iter_sboms,
     fetch_sbom_document,
+)
+from sbom.inject import (  # noqa: F401
+    scan_s3_resource,
+    build_s3_sbom_ocm_resources,
+)
+from sbom.s3 import (  # noqa: F401
+    iter_s3_object,
+    s3_url,
+    synthetic_oci_ref,
 )

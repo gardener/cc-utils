@@ -79,6 +79,13 @@ def configure_parser(parser):
         ),
     )
 
+    parser.add_argument(
+        '--inject-s3-sboms',
+        action='store_true',
+        default=False,
+        help='scan S3-backed resources and inject SBOM/CBOM documents into replicated descriptors',
+    )
+
 
 def replicate(parsed):
     _init_logging()
@@ -125,6 +132,7 @@ def replicate(parsed):
         processing_mode=processing_mode,
         max_workers=max_workers,
         pruning_mode=parsed.pruning_mode,
+        inject_s3_sboms=parsed.inject_s3_sboms,
     ):
         pass
 

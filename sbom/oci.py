@@ -294,6 +294,116 @@ def build_sbom_ocm_resources(
     )
 
 
+def push_sbom_standalone(
+    spdx_bytes: bytes,
+    cdx_bytes: bytes,
+    repo_ref: str,
+    content_digest: str,
+    oci_client: oc.Client,
+    tool_version: str | None = None,
+) -> tuple[str, str]:
+    '''
+    Push SPDX and CycloneDX SBOM documents as standalone OCI manifests (no `subject` field).
+
+    Used for S3-backed resources that have no OCI image to hang referrers off.  Each document
+    is pushed as a single-layer manifest; the tag used is derived from `content_digest` so the
+    result is content-addressable and cache lookups are cheap (HEAD request).
+
+    Returns (spdx_manifest_digest, cdx_manifest_digest).
+    '''
+    annotations = {'gardener.cloud/sbom/tool-version': tool_version} if tool_version else None
+    digests = []
+    for doc_bytes, doc_media_type, artifact_type in (
+        (spdx_bytes, SPDX_JSON_MEDIA_TYPE,      SPDX_JSON_MEDIA_TYPE),
+        (cdx_bytes,  CYCLONEDX_JSON_MEDIA_TYPE,  CYCLONEDX_JSON_MEDIA_TYPE),
+    ):
+        doc_digest = f'sha256:{hashlib.sha256(doc_bytes).hexdigest()}'
+        logger.info(f'pushing standalone doc blob {doc_digest} to {repo_ref}')
+        oci_client.put_blob(
+            image_reference=repo_ref,
+            digest=doc_digest,
+            octets_count=len(doc_bytes),
+            data=doc_bytes,
+            mimetype=doc_media_type,
+        )
+        oci_client.put_blob(
+            image_reference=repo_ref,
+            digest=_EMPTY_CONFIG_DIGEST,
+            octets_count=len(_EMPTY_CONFIG),
+            data=_EMPTY_CONFIG,
+            mimetype=OCI_EMPTY_CONFIG_MEDIA_TYPE,
+        )
+        manifest = om.OciImageManifest(
+            config=om.OciBlobRef(
+                digest=_EMPTY_CONFIG_DIGEST,
+                mediaType=OCI_EMPTY_CONFIG_MEDIA_TYPE,
+                size=len(_EMPTY_CONFIG),
+            ),
+            layers=[
+                om.OciBlobRef(
+                    digest=doc_digest,
+                    mediaType=doc_media_type,
+                    size=len(doc_bytes),
+                ),
+            ],
+            artifactType=artifact_type,
+            annotations={
+                'org.opencontainers.image.created': _utcnow_iso(),
+                **(annotations or {}),
+            },
+        )
+        manifest_bytes = json.dumps(manifest.as_dict()).encode()
+        manifest_digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
+        logger.info(f'pushing standalone SBOM manifest to {repo_ref}@{manifest_digest}')
+        oci_client.put_manifest(
+            image_reference=f'{repo_ref}@{manifest_digest}',
+            manifest=manifest_bytes,
+        )
+        digests.append(manifest_digest)
+    return digests[0], digests[1]
+
+
+def lookup_sbom_standalone(
+    repo_ref: str,
+    spdx_manifest_digest: str,
+    cdx_manifest_digest: str,
+    oci_client: oc.Client,
+) -> tuple[bytes, bytes] | None:
+    '''
+    Check whether standalone SBOM manifests already exist in the registry.
+
+    Returns (spdx_bytes, cdx_bytes) if both are present, otherwise None.
+    The digests come from the synthetic OCI ref built from the S3 content hash.
+    '''
+    try:
+        spdx_manifest_bytes = oci_client.manifest_raw(
+            f'{repo_ref}@{spdx_manifest_digest}',
+            absent_ok=True,
+        )
+        cdx_manifest_bytes = oci_client.manifest_raw(
+            f'{repo_ref}@{cdx_manifest_digest}',
+            absent_ok=True,
+        )
+    except Exception:  # nosec B110
+        return None
+
+    if spdx_manifest_bytes is None or cdx_manifest_bytes is None:
+        return None
+
+    def _get_layer_blob(manifest_bytes_resp, repo) -> bytes:
+        m = json.loads(manifest_bytes_resp.content)
+        blob_digest = m['layers'][0]['digest']
+        return oci_client.blob(image_reference=repo, digest=blob_digest).content
+
+    try:
+        spdx_bytes = _get_layer_blob(spdx_manifest_bytes, repo_ref)
+        cdx_bytes = _get_layer_blob(cdx_manifest_bytes, repo_ref)
+        return spdx_bytes, cdx_bytes
+    except Exception as e:
+        logger.warning(f'failed to fetch existing standalone SBOM blobs from {repo_ref}: {e}')
+        return None
+
+
 def _utcnow_iso() -> str:
     import datetime
     return datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')

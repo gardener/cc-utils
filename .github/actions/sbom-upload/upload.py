@@ -31,7 +31,11 @@ def _mangle(s: str) -> str:
 
 def _fmt_id(mapping: si.SbomMapping) -> str | None:
     if mapping.source is si.SbomSource.OCM:
-        return (mapping.sbom.extraIdentity or {}).get('sbom-format')
+        ei = mapping.sbom.extraIdentity or {}
+        # SBOM resources use 'sbom-format'; CBOM resources use 'cbom-format'
+        return ei.get('sbom-format') or (
+            f'cbom-{ei["cbom-format"]}' if ei.get('cbom-format') else None
+        )
     for fid, media_type in soci.SBOM_FORMATS:
         if mapping.sbom.artifact_type == media_type:
             return fid
@@ -45,7 +49,7 @@ def _filename(
 ) -> str:
     extra_vals = [
         v for k, v in sorted((resource.extraIdentity or {}).items())
-        if k not in ('sbom-format', 'version')
+        if k not in ('sbom-format', 'cbom-format', 'version')
     ]
     extra = ('-' + '-'.join(extra_vals)) if extra_vals else ''
     return (

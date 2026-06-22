@@ -26,6 +26,7 @@ import ctt.oci_util
 import ctt.replicate
 import sbom.cbom as sbom_cbom
 import sbom.inject as sbom_inject
+import sbom.s3 as sbom_s3
 import oci
 import oci.client
 import oci.model as om
@@ -635,6 +636,7 @@ def process_images(
     max_workers: int=16,
     tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
     pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
+    inject_s3_sboms: bool=False,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -731,6 +733,7 @@ def process_images(
             skip_component_upload=skip_component_upload,
             overwrite_descriptors=pruning_mode is PruningMode.FORCE_OVERWRITE_DESCRIPTORS,
             max_workers=max_workers,
+            inject_s3_sboms=inject_s3_sboms,
         )
 
 
@@ -749,6 +752,7 @@ def process_replication_plan_step(
     skip_component_upload: collections.abc.Callable[[ocm.Component], bool] | None=None,
     overwrite_descriptors: bool=False,
     max_workers: int=16,
+    inject_s3_sboms: bool=False,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     def process_replication_resource_element(
         replication_resource_element: ctt.model.ReplicationResourceElement,
@@ -865,7 +869,6 @@ def process_replication_plan_step(
     if sbom_candidates:
         if processing_mode is not ProcessingMode.DRY_RUN:
             sbom_inject.check_syft()
-            sbom_inject.check_cbomkit_theia()
 
         tmpdir = os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP') or None
         syft_ver = sbom_inject._syft_version()
@@ -1005,6 +1008,78 @@ def process_replication_plan_step(
                     source_extra_identity=rre.source.extraIdentity or None,
                 )
                 sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res, cbom_res))
+
+    # --- S3 SBOM injection ---
+    # Scans S3-backed resources from the component descriptors and injects SBOM/CBOM resources.
+    # Enabled only when inject_s3_sboms=True (default: False).
+    if inject_s3_sboms:
+        if processing_mode is not ProcessingMode.DRY_RUN:
+            sbom_inject.check_syft()
+
+        tmpdir = os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP') or '/tmp'  # nosec B108
+        syft_ver = sbom_inject._syft_version()
+        registry_base = replication_plan_step.target_ocm_repository
+
+        # collect all S3 resources across all components in this replication step
+        s3_candidates = [
+            (rce.target.component, resource)
+            for rce in replication_plan_step.components
+            for resource in rce.target.component.resources
+            if isinstance(resource.access, (ocm.S3Access, ocm.LegacyS3Access))
+        ]
+
+        logger.info(f'S3 SBOM injection: {len(s3_candidates)} S3 resource(s) to process')
+
+        for component, resource in s3_candidates:
+            component_id = component.identity()
+            access = resource.access
+
+            if isinstance(access, ocm.LegacyS3Access):
+                s3_url = sbom_s3.s3_url(access.bucketName, access.objectKey, access.region)
+            else:
+                s3_url = sbom_s3.s3_url(access.bucket, access.key, access.region)
+
+            if processing_mode is ProcessingMode.DRY_RUN:
+                logger.info(
+                    f'dry-run: would scan S3 resource {resource.name!r} ({s3_url})'
+                )
+                continue
+
+            try:
+                (spdx_bytes, cdx_bytes, cbom_bytes,
+                 tool_ver, cbom_tool_ver,
+                 spdx_digest, cdx_digest, cbom_digest,
+                 repo_ref, content_digest) = sbom_inject.scan_s3_resource(
+                    access=access,
+                    oci_client=oci_client,
+                    registry_base=registry_base,
+                    tmpdir=tmpdir,
+                    tool_ver=syft_ver,
+                )
+            except Exception as e:
+                logger.warning(
+                    f'{resource.name!r}: S3 SBOM scan failed: {e}'
+                )
+                continue
+
+            spdx_res, cdx_res, cbom_res = sbom_inject.build_s3_sbom_ocm_resources(
+                resource_name=resource.name,
+                version=resource.version,
+                s3_url=s3_url,
+                content_digest=content_digest,
+                repo_ref=repo_ref,
+                spdx_manifest_digest=spdx_digest,
+                cdx_manifest_digest=cdx_digest,
+                cbom_manifest_digest=cbom_digest,
+                tool_ver=tool_ver,
+                cbom_tool_ver=cbom_tool_ver,
+                source_extra_identity=resource.extraIdentity or None,
+            )
+            sbom_extra_resources[component_id].extend((spdx_res, cdx_res, cbom_res))
+            logger.info(
+                f'{resource.name!r}: S3 SBOM/CBOM injected '
+                f'(spdx={spdx_digest[:16]}... cdx={cdx_digest[:16]}...)'
+            )
 
     # --- Phase 2: component-descriptor patching ---
     is_root_component_descriptor = lambda component_descriptor: (

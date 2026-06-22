@@ -84,10 +84,10 @@ def iter_sboms_for_resource(
     '''
     # --- phase 1: OCM resources from the component descriptor (in-memory, no I/O) ---
     resource_name = resource.name
-    # SBOM resources share name (and non-sbom extraIdentity keys) with their source resource
+    # SBOM/CBOM resources share name (and non-sbom/cbom extraIdentity keys) with their source
     source_extra = {
         k: v for k, v in (resource.extraIdentity or {}).items()
-        if k not in ('sbom-format', 'version')
+        if k not in ('sbom-format', 'cbom-format', 'version')
     }
     for candidate in component.resources:
         if not _is_sbom_resource(candidate):
