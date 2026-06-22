@@ -390,9 +390,21 @@ jobs:
           remove-trusted-label: false
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: install-syft
+        shell: bash
         run: |
+          install_dir="${HOME}/.local/bin"
+          mkdir -p "${install_dir}"
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-            | sh -s -- -b /usr/local/bin
+            | sh -s -- -b "${install_dir}"
+          echo "${install_dir}" >> "${GITHUB_PATH}"
+      - name: install-cbomkit-theia
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="${HOME}/.local/bin"
+          mkdir -p "${install_dir}"
+          GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
+          echo "${install_dir}" >> "${GITHUB_PATH}"
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
@@ -427,6 +439,14 @@ jobs:
           mkdir -p "${install_dir}"
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
             | sh -s -- -b "${install_dir}"
+          echo "${install_dir}" >> "${GITHUB_PATH}"
+      - name: install-cbomkit-theia
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="${HOME}/.local/bin"
+          mkdir -p "${install_dir}"
+          GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
           echo "${install_dir}" >> "${GITHUB_PATH}"
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
@@ -526,10 +546,18 @@ jobs:
               r for r in resources
               if r.get('extraIdentity', {}).get('sbom-format')
           ]
+          cbom_resources = [
+              r for r in resources
+              if r.get('extraIdentity', {}).get('cbom-format')
+          ]
 
           assert len(sbom_resources) == 6, \
               f'expected 6 SBOM resources (2 per image), got {len(sbom_resources)}: ' \
               f'{[(r["name"], r.get("extraIdentity")) for r in sbom_resources]}'
+
+          assert len(cbom_resources) == 3, \
+              f'expected 3 CBOM resources (1 per image), got {len(cbom_resources)}: ' \
+              f'{[(r["name"], r.get("extraIdentity")) for r in cbom_resources]}'
 
           for r in sbom_resources:
               assert r['name'] in external_names, \
@@ -549,7 +577,21 @@ jobs:
                   f'{r["name"]} ({fmt}): ok (syft {tool_ver})'
               )
 
-          # verify both formats are present for each image
+          for r in cbom_resources:
+              assert r['name'] in external_names, \
+                  f'unexpected CBOM resource name: {r["name"]}'
+              assert r['access']['type'] == 'localBlob/v1', \
+                  f'{r["name"]}: expected localBlob/v1, got {r["access"]["type"]}'
+              labels = {l['name']: l['value'] for l in r.get('labels', [])}
+              assert 'gardener.cloud/cbom/source-image' in labels, \
+                  f'{r["name"]}: missing cbom source-image label'
+              assert 'gardener.cloud/cbom/source-image-digest' in labels, \
+                  f'{r["name"]}: missing cbom source-image-digest label'
+              logging.getLogger('assert').info(
+                  f'{r["name"]} (cbom-cyclonedx-1.6): ok'
+              )
+
+          # verify both SBOM formats are present for each image
           for name in external_names:
               fmts = {
                   r['extraIdentity']['sbom-format']

@@ -3,23 +3,24 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 '''
-Generate and cache SPDX and CycloneDX SBOM documents for external OCM OCI-image resources.
+Generate and cache SPDX, CycloneDX SBOM, and CycloneDX CBOM documents for external OCM
+OCI-image resources.
 
 Processing is split into two phases:
 
   Phase 1 (parallel, unconstrained):
     For each external OCI image: resolve the platform-specific digest, fetch the manifest
-    to obtain compressed layer sizes, and check the SBOM cache. Produces a list of cache
-    hits (SBOM blobs already exist) and misses (syft scan required).
+    to obtain compressed layer sizes, and check the SBOM/CBOM cache.  Produces a list of
+    full hits (all three documents cached), partial hits (SBOM cached but CBOM missing), and
+    full misses (syft scan required).
 
   Phase 2a (parallel, unconstrained):
-    Download cached SBOM blobs for all cache hits.
+    Download cached blobs for all full hits; for partial hits, download SBOM blobs and run
+    cbomkit-theia only.
 
   Phase 2b (resource-aware sequential/parallel):
-    Run syft for cache misses. Before admitting each scan, check available memory and
-    tmpfs space against the size estimate derived from the image manifest. At least one
-    scan is always admitted to prevent deadlock. On completion, re-check resources and
-    admit the next pending scan.
+    Run syft + cbomkit-theia for full misses.  Before admitting each scan, check available
+    memory and tmpfs space.  At least one scan is always admitted to prevent deadlock.
 
 Cache addressing:
     <cache_registry>/<cache_repo_prefix>/<mangled-source-repo>:<cache-tag>
@@ -27,11 +28,12 @@ Cache addressing:
   <mangled-source-repo>  source image repository path with '/' and ':' replaced by '-'
   <cache-tag>            source image digest with ':' replaced by '-' (e.g. sha256-abc123…)
 
-  Each cache manifest has two layers: layer[0] = SPDX JSON, layer[1] = CycloneDX JSON.
+  Cache manifest layers:
+    layer[0] = SPDX JSON
+    layer[1] = CycloneDX SBOM JSON
+    layer[2] = CycloneDX CBOM JSON  (absent in legacy 2-layer entries → CBOM partial miss)
 
-TMPDIR is forwarded to syft subprocesses and used as the parent for the per-scan
-temporary directory, so both syft's layer unpacking and the output SBOM files land
-on the same filesystem that is measured for available space.
+TMPDIR is forwarded to syft and cbomkit-theia subprocesses.
 
 Resource estimation (per syft invocation):
   disk:   compressed_layer_bytes * 5.0
@@ -58,10 +60,20 @@ import yaml
 import oci.auth as oa
 import oci.client as oc
 import oci.model as om
+import sbom.cbom as scbom
 import sbom.oci as osbom
 import ocm
 
 logger = logging.getLogger(__name__)
+
+# Canonical document types we want to produce for every image, in cache-layer order.
+# Each entry: (format_id, media_type, layer_index)
+# This table drives both cache interpretation and scan scheduling.
+_WANTED_DOCS: tuple[tuple[str, str, int], ...] = (
+    ('spdx-2.3',          osbom.SPDX_JSON_MEDIA_TYPE,       0),
+    ('cyclonedx-1.6',     osbom.CYCLONEDX_JSON_MEDIA_TYPE,  1),
+    ('cbom-cyclonedx-1.6', scbom.CBOM_LAYER_MEDIA_TYPE,     2),
+)
 
 
 @dataclasses.dataclass
@@ -76,20 +88,23 @@ class _ImageInfo:
 
 
 @dataclasses.dataclass
-class _CacheHit:
+class _CacheResult:
     info: _ImageInfo
+    # format_id → blob bytes for documents present in the cache (subset of _WANTED_DOCS)
+    cached: dict[str, bytes] = dataclasses.field(default_factory=dict)
 
-
-@dataclasses.dataclass
-class _CacheMiss:
-    info: _ImageInfo
+    @property
+    def missing(self) -> tuple[str, ...]:
+        '''format_ids that are wanted but absent from the cache.'''
+        return tuple(fid for fid, _, _ in _WANTED_DOCS if fid not in self.cached)
 
 
 class _ScanStatus(enum.Enum):
-    RESOLVE_FAILED = 'resolve-failed'
-    CACHE_HIT      = 'cache-hit'
-    SCANNED        = 'scanned'
-    SCAN_FAILED    = 'scan-failed'
+    RESOLVE_FAILED  = 'resolve-failed'
+    CACHE_HIT       = 'cache-hit'
+    SCAN_CBOM_ONLY  = 'scan-cbom-only'
+    SCANNED         = 'scanned'
+    SCAN_FAILED     = 'scan-failed'
 
 
 @dataclasses.dataclass
@@ -224,37 +239,46 @@ def _check_cache(
     oci_client: oc.Client,
     cache_registry: str,
     cache_prefix: str,
-) -> _CacheHit | _CacheMiss:
+) -> _CacheResult:
+    '''
+    Check the cache for all wanted document types.
+
+    Returns a _CacheResult with `cached` populated for each format_id that has a layer
+    entry in the cache manifest.  An absent/unreachable cache entry → empty `cached`.
+    '''
     source_ref = om.OciImageReference.to_image_ref(info.digest_ref)
     cref = _cache_ref(cache_registry, cache_prefix, source_ref, info.source_digest)
-    res = oci_client.manifest_raw(cref, absent_ok=True)
-    if res is not None:
-        logger.info(f'{info.resource["name"]!r}: cache hit ({cref})')
-        return _CacheHit(info=info)
-    logger.info(f'{info.resource["name"]!r}: cache miss — syft scan required')
-    return _CacheMiss(info=info)
-
-
-def _download_cached_sboms(
-    hit: _CacheHit,
-    oci_client: oc.Client,
-    cache_registry: str,
-    cache_prefix: str,
-) -> tuple[_ImageInfo, bytes, bytes] | None:
-    source_ref = om.OciImageReference.to_image_ref(hit.info.digest_ref)
-    cref = _cache_ref(cache_registry, cache_prefix, source_ref, hit.info.source_digest)
     cache_repo = _cache_repo(cache_registry, cache_prefix, source_ref)
-    try:
-        manifest_res = oci_client.manifest_raw(cref)
-        manifest = manifest_res.json()
-        spdx_digest = manifest['layers'][0]['digest']
-        cdx_digest = manifest['layers'][1]['digest']
-        spdx_bytes = oci_client.blob(image_reference=cache_repo, digest=spdx_digest).content
-        cdx_bytes = oci_client.blob(image_reference=cache_repo, digest=cdx_digest).content
-        return (hit.info, spdx_bytes, cdx_bytes)
-    except Exception as e:
-        logger.warning(f'{hit.info.resource["name"]!r}: failed to download cached SBOMs: {e}')
-        return None
+    result = _CacheResult(info=info)
+
+    res = oci_client.manifest_raw(cref, absent_ok=True)
+    if res is None:
+        logger.info(f'{info.resource["name"]!r}: cache miss — full scan required')
+        return result
+
+    manifest = res.json()
+    layers = manifest.get('layers', [])
+
+    for fid, _, idx in _WANTED_DOCS:
+        if idx >= len(layers):
+            continue
+        layer_digest = layers[idx]['digest']
+        try:
+            blob = oci_client.blob(image_reference=cache_repo, digest=layer_digest).content
+            result.cached[fid] = blob
+        except Exception as e:
+            logger.warning(
+                f'{info.resource["name"]!r}: failed to fetch cached {fid} blob: {e}'
+            )
+
+    missing = result.missing
+    if missing:
+        logger.info(
+            f'{info.resource["name"]!r}: partial cache hit — missing: {missing}'
+        )
+    else:
+        logger.info(f'{info.resource["name"]!r}: full cache hit')
+    return result
 
 
 def _run_syft(image_reference: str, spdx_out_path: str, cdx_out_path: str, tmpdir: str):
@@ -269,6 +293,27 @@ def _run_syft(image_reference: str, spdx_out_path: str, cdx_out_path: str, tmpdi
         check=True,
         env=env,
     )
+
+
+def _run_cbomkit_theia(
+    image_reference: str,
+    cdx_bom_path: str,
+    cbom_out_path: str,
+    tmpdir: str,
+) -> None:
+    env = os.environ.copy()
+    env['TMPDIR'] = tmpdir
+    with open(cbom_out_path, 'w') as out_f:
+        subprocess.run(  # nosec B607
+            [
+                'cbomkit-theia', 'image',
+                '--bom', cdx_bom_path,
+                image_reference,
+            ],
+            check=True,
+            stdout=out_f,
+            env=env,
+        )
 
 
 def _syft_version_from_spdx(spdx_bytes: bytes) -> str | None:
@@ -303,21 +348,26 @@ def _syft_version() -> str | None:
 def _push_sboms_to_cache(
     spdx_path: str,
     cdx_path: str,
+    cbom_path: str | None,
     cache_repo: str,
     source_digest: str,
     oci_client: oc.Client,
     tool_version: str | None,
 ) -> None:
     '''
-    Push SPDX and CycloneDX blobs as a two-layer OCI manifest into the cache repo,
-    addressed by a tag derived from source_digest (sha256:<hex> → sha256-<hex>).
+    Push SPDX and CycloneDX SBOM blobs (and optionally CBOM) as an OCI manifest into the
+    cache repo, addressed by a tag derived from source_digest.
 
-    layer[0] = SPDX JSON, layer[1] = CycloneDX JSON.
+    layer[0] = SPDX JSON, layer[1] = CycloneDX SBOM JSON[, layer[2] = CycloneDX CBOM JSON].
     '''
     with open(spdx_path, 'rb') as f:
         spdx_bytes = f.read()
     with open(cdx_path, 'rb') as f:
         cdx_bytes = f.read()
+    cbom_bytes = None
+    if cbom_path is not None:
+        with open(cbom_path, 'rb') as f:
+            cbom_bytes = f.read()
 
     empty_config = b'{}'
     empty_config_digest = f'sha256:{hashlib.sha256(empty_config).hexdigest()}'
@@ -329,11 +379,15 @@ def _push_sboms_to_cache(
         mimetype=osbom.OCI_EMPTY_CONFIG_MEDIA_TYPE,
     )
 
-    layers = []
-    for data, media_type in (
+    layer_specs = [
         (spdx_bytes, osbom.SPDX_JSON_MEDIA_TYPE),
         (cdx_bytes, osbom.CYCLONEDX_JSON_MEDIA_TYPE),
-    ):
+    ]
+    if cbom_bytes is not None:
+        layer_specs.append((cbom_bytes, scbom.CBOM_LAYER_MEDIA_TYPE))
+
+    layers = []
+    for data, media_type in layer_specs:
         digest = f'sha256:{hashlib.sha256(data).hexdigest()}'
         oci_client.put_blob(
             image_reference=cache_repo,
@@ -365,44 +419,114 @@ def _push_sboms_to_cache(
 
 
 def _scan_image(
-    miss: _CacheMiss,
+    miss: _CacheResult,
     oci_client: oc.Client,
     cache_registry: str,
     cache_prefix: str,
     syft_ver: str | None,
     tmpdir: str,
-) -> tuple[_ImageInfo, bytes, bytes] | None:
+) -> _CacheResult | None:
+    '''
+    Produce all missing documents for `miss` by running the appropriate tools,
+    update the cache, and return a fully-populated _CacheResult.
+
+    - If SPDX or CycloneDX SBOM is missing: run syft (produces both SBOM formats at once).
+    - If only CBOM is missing (SBOM already cached): run cbomkit-theia only.
+
+    Returns None on complete failure.
+    '''
     info = miss.info
     resource_name = info.resource['name']
     source_ref = om.OciImageReference.to_image_ref(info.digest_ref)
     cache_repo = _cache_repo(cache_registry, cache_prefix, source_ref)
+    missing = miss.missing
+    cached = dict(miss.cached)  # copy; we'll populate it
 
-    try:
-        with tempfile.TemporaryDirectory(dir=tmpdir) as tmp:
-            spdx_path = os.path.join(tmp, 'sbom.spdx.json')
-            cdx_path = os.path.join(tmp, 'sbom.cdx.json')
-            logger.info(f'{resource_name!r}: running syft on {info.digest_ref}')
-            _run_syft(info.digest_ref, spdx_path, cdx_path, tmpdir)
+    need_syft    = 'spdx-2.3' in missing or 'cyclonedx-1.6' in missing
+    need_cbomkit = 'cbom-cyclonedx-1.6' in missing
+
+    with tempfile.TemporaryDirectory(dir=tmpdir) as tmp:
+        spdx_path = os.path.join(tmp, 'sbom.spdx.json')
+        cdx_path  = os.path.join(tmp, 'sbom.cdx.json')
+        cbom_path = os.path.join(tmp, 'cbom.cdx.json')
+
+        if need_syft:
+            try:
+                logger.info(f'{resource_name!r}: running syft on {info.digest_ref}')
+                _run_syft(info.digest_ref, spdx_path, cdx_path, tmpdir)
+                with open(spdx_path, 'rb') as f:
+                    cached['spdx-2.3'] = f.read()
+                with open(cdx_path, 'rb') as f:
+                    cached['cyclonedx-1.6'] = f.read()
+            except Exception as e:
+                logger.warning(f'{resource_name!r}: syft failed: {e}')
+                return None
+        else:
+            # write cached CDX to disk so cbomkit-theia can use it as --bom input
+            with open(cdx_path, 'wb') as f:
+                f.write(cached['cyclonedx-1.6'])
+
+        if need_cbomkit:
+            try:
+                logger.info(f'{resource_name!r}: running cbomkit-theia on {info.digest_ref}')
+                _run_cbomkit_theia(info.digest_ref, cdx_path, cbom_path, tmpdir)
+                with open(cbom_path, 'rb') as f:
+                    cached['cbom-cyclonedx-1.6'] = f.read()
+            except Exception as e:
+                logger.warning(f'{resource_name!r}: cbomkit-theia failed: {e}')
+                # if syft already ran and produced SBOM, cache those before giving up
+                spdx_done = cached.get('spdx-2.3', b'')
+                cdx_done  = cached.get('cyclonedx-1.6', b'')
+                if spdx_done and cdx_done:
+                    if need_syft:
+                        # paths already on disk from syft run above
+                        pass
+                    else:
+                        with open(spdx_path, 'wb') as f:
+                            f.write(spdx_done)
+                    # cbom_path not written — push 2-layer cache entry
+                    logger.info(
+                        f'{resource_name!r}: caching SBOM-only (no CBOM) at '
+                        f'{cache_repo}:{_cache_tag(info.source_digest)}'
+                    )
+                    _push_sboms_to_cache(
+                        spdx_path=spdx_path,
+                        cdx_path=cdx_path,
+                        cbom_path=None,
+                        cache_repo=cache_repo,
+                        source_digest=info.source_digest,
+                        oci_client=oci_client,
+                        tool_version=syft_ver,
+                    )
+                return None
+
+        # update cache with all three layers
+        spdx_final = cached.get('spdx-2.3', b'')
+        cdx_final  = cached.get('cyclonedx-1.6', b'')
+        cbom_final = cached.get('cbom-cyclonedx-1.6', b'')
+        if spdx_final and cdx_final and cbom_final:
+            # write out paths for _push_sboms_to_cache (expects file paths)
+            if not need_syft:
+                with open(spdx_path, 'wb') as f:
+                    f.write(spdx_final)
+            if not need_cbomkit:
+                with open(cbom_path, 'wb') as f:
+                    f.write(cbom_final)
             logger.info(
-                f'{resource_name!r}: pushing SBOMs to cache '
+                f'{resource_name!r}: pushing SBOM+CBOM to cache '
                 f'{cache_repo}:{_cache_tag(info.source_digest)}'
             )
             _push_sboms_to_cache(
                 spdx_path=spdx_path,
                 cdx_path=cdx_path,
+                cbom_path=cbom_path,
                 cache_repo=cache_repo,
                 source_digest=info.source_digest,
                 oci_client=oci_client,
                 tool_version=syft_ver,
             )
-            with open(spdx_path, 'rb') as f:
-                spdx_bytes = f.read()
-            with open(cdx_path, 'rb') as f:
-                cdx_bytes = f.read()
-        return (info, spdx_bytes, cdx_bytes)
-    except Exception as e:
-        logger.warning(f'{resource_name!r}: scan failed: {e}')
-        return None
+
+    return _CacheResult(info=info, cached=cached)
 
 
 def _store_blob(blobs_dir: str, data: bytes) -> str:
@@ -418,17 +542,23 @@ def _build_sbom_resources(
     info: _ImageInfo,
     spdx_bytes: bytes,
     cdx_bytes: bytes,
+    cbom_bytes: bytes | None,
     spdx_blob_digest: str,
     cdx_blob_digest: str,
+    cbom_blob_digest: str | None,
     component_version: str,
     tool_ver: str | None,
-) -> tuple[dict, dict]:
-    '''Return (spdx_resource, cdx_resource) OCM resource dicts for one external image.'''
+) -> tuple[dict, ...]:
+    '''Return (spdx_resource, cdx_resource[, cbom_resource]) OCM resource dicts.'''
     resource = info.resource
-    return osbom.build_sbom_ocm_resources(
-        resource_name=resource['name'],
-        version=resource.get('version') or component_version,
-        source_image_ref=resource['access']['imageReference'],
+    name = resource['name']
+    version = resource.get('version') or component_version
+    source_image_ref = resource['access']['imageReference']
+
+    sbom_resources = osbom.build_sbom_ocm_resources(
+        resource_name=name,
+        version=version,
+        source_image_ref=source_image_ref,
         source_digest=info.source_digest,
         spdx_bytes=spdx_bytes,
         cdx_bytes=cdx_bytes,
@@ -437,21 +567,36 @@ def _build_sbom_resources(
         tool_ver=tool_ver,
     )
 
+    if cbom_bytes is None or cbom_blob_digest is None:
+        return sbom_resources
+
+    cbom_resources = scbom.build_cbom_ocm_resources(
+        resource_name=name,
+        version=version,
+        source_image_ref=source_image_ref,
+        source_digest=info.source_digest,
+        cbom_bytes=cbom_bytes,
+        cbom_blob_digest=cbom_blob_digest,
+        tool_ver=None,
+    )
+    return (*sbom_resources, *cbom_resources)
+
 
 def _run_scans_resource_aware(
-    misses: list[_CacheMiss],
+    incomplete: list[_CacheResult],
     oci_client: oc.Client,
     cache_registry: str,
     cache_prefix: str,
     syft_ver: str | None,
     tmpdir: str,
-) -> list[tuple[_ImageInfo, bytes, bytes]]:
+) -> list[_CacheResult]:
     '''
-    Admit syft scans one at a time, gated by available memory and tmpfs space.
+    Admit _scan_image calls one at a time, gated by available memory and tmpfs space.
+    `incomplete` contains _CacheResult entries with at least one missing document.
     Always admits at least one job to prevent deadlock.
     '''
     results = []
-    pending = list(misses)
+    pending = list(incomplete)
     reserved_disk = 0
     reserved_mem = 0
 
@@ -469,11 +614,10 @@ def _run_scans_resource_aware(
         running: dict[concurrent.futures.Future, tuple[int, int]] = {}
 
         while pending or running:
-            # admit as many as resources allow
             while pending:
-                miss = pending[0]
-                est_disk, est_mem = _estimate_bytes(miss.info)
-                force = not running  # always admit if nothing is running
+                cr = pending[0]
+                est_disk, est_mem = _estimate_bytes(cr.info)
+                force = not running
                 if not _can_admit(est_disk, est_mem, force):
                     break
                 pending.pop(0)
@@ -481,7 +625,7 @@ def _run_scans_resource_aware(
                 reserved_mem += est_mem
                 f = executor.submit(
                     _scan_image,
-                    miss,
+                    cr,
                     oci_client,
                     cache_registry,
                     cache_prefix,
@@ -490,14 +634,15 @@ def _run_scans_resource_aware(
                 )
                 running[f] = (est_disk, est_mem)
                 logger.info(
-                    f'admitted scan for {miss.info.resource["name"]!r} '
-                    f'(est disk={est_disk//1024//1024}MB '
+                    f'admitted scan for {cr.info.resource["name"]!r} '
+                    f'(missing={cr.missing}, '
+                    f'est disk={est_disk//1024//1024}MB '
                     f'mem={est_mem//1024//1024}MB, '
                     f'{len(running)} running, {len(pending)} pending)'
                 )
 
             if not running:
-                break  # nothing running and nothing pending
+                break
 
             done, _ = concurrent.futures.wait(
                 running,
@@ -508,7 +653,7 @@ def _run_scans_resource_aware(
                 reserved_disk -= est_disk
                 reserved_mem -= est_mem
                 result = f.result()
-                if result:
+                if result is not None:
                     results.append(result)
 
     return results
@@ -519,9 +664,10 @@ def _write_step_summary(records: list[_ScanRecord]) -> None:
     if not summary_path:
         return
 
-    hits    = [r for r in records if r.status is _ScanStatus.CACHE_HIT]
-    scanned = [r for r in records if r.status is _ScanStatus.SCANNED]
-    failed  = [r for r in records if r.status in (
+    hits       = [r for r in records if r.status is _ScanStatus.CACHE_HIT]
+    scanned    = [r for r in records if r.status is _ScanStatus.SCANNED]
+    cbom_only  = [r for r in records if r.status is _ScanStatus.SCAN_CBOM_ONLY]
+    failed     = [r for r in records if r.status in (
         _ScanStatus.SCAN_FAILED, _ScanStatus.RESOLVE_FAILED,
     )]
 
@@ -532,12 +678,13 @@ def _write_step_summary(records: list[_ScanRecord]) -> None:
     )
 
     summary = textwrap.dedent(f'''\
-        ## SBOM (SPDX + CycloneDX) — external OCI images
+        ## SBOM + CBOM — external OCI images
 
         | | count |
         |---|---|
-        | cache hits | {len(hits)} |
-        | freshly scanned | {len(scanned)} |
+        | full cache hits | {len(hits)} |
+        | freshly scanned (SBOM+CBOM) | {len(scanned)} |
+        | CBOM-only scan (SBOM cached) | {len(cbom_only)} |
         | failed | {len(failed)} |
         | **total** | **{len(records)}** |
 
@@ -558,11 +705,11 @@ def process_external_resources(
     force_rescan: bool = False,
 ) -> None:
     '''
-    Scan external OCI image resources for SPDX and CycloneDX SBOM documents;
-    patch results into the component descriptor.
+    Scan external OCI image resources for SPDX SBOM, CycloneDX SBOM, and CycloneDX CBOM
+    documents; patch results into the component descriptor.
     '''
     tmpdir = os.environ.get('RUNNER_TEMP') or os.environ.get('TMPDIR') or tempfile.gettempdir()
-    logger.info(f'using tmpdir for syft: {tmpdir}')
+    logger.info(f'using tmpdir for syft/cbomkit-theia: {tmpdir}')
 
     oci_client = oc.Client(credentials_lookup=oa.docker_credentials_lookup())
 
@@ -609,7 +756,7 @@ def process_external_resources(
         ))
 
     records: list[_ScanRecord] = []
-    resolved = []
+    resolved: list[_ImageInfo] = []
     for resource, info in zip(external_oci, image_infos):
         if info is None:
             records.append(_ScanRecord(
@@ -621,68 +768,88 @@ def process_external_resources(
             resolved.append(info)
 
     if force_rescan:
-        logger.info('force-rescan: skipping cache check, treating all images as misses')
-        hits = []
-        misses = [_CacheMiss(info=i) for i in resolved]
+        logger.info('force-rescan: skipping cache check')
+        cache_results = [_CacheResult(info=i) for i in resolved]
     else:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             cache_results = list(executor.map(
                 lambda i: _check_cache(i, oci_client, cache_registry, cache_repo_prefix),
                 resolved,
             ))
-        hits = [r for r in cache_results if isinstance(r, _CacheHit)]
-        misses = [r for r in cache_results if isinstance(r, _CacheMiss)]
-    logger.info(f'phase 1 done: {len(hits)} cache hit(s), {len(misses)} cache miss(es)')
 
-    # --- phase 2a: parallel download of cached SBOM blobs ---
-    scan_results: list[tuple[_ImageInfo, bytes, bytes, _ScanStatus]] = []
+    full_hits  = [cr for cr in cache_results if not cr.missing]
+    incomplete = [cr for cr in cache_results if cr.missing]
+    # record each image's missing set now, before _scan_image returns a fully-populated result
+    original_missing: dict[str, tuple[str, ...]] = {
+        cr.info.resource['name']: cr.missing for cr in incomplete
+    }
+    logger.info(
+        f'phase 1 done: {len(full_hits)} full cache hit(s), '
+        f'{len(incomplete)} incomplete (need scan)'
+    )
 
-    if hits:
-        logger.info(f'phase 2a: downloading {len(hits)} cached SBOM document(s)')
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            downloaded = list(executor.map(
-                lambda h: _download_cached_sboms(h, oci_client, cache_registry, cache_repo_prefix),
-                hits,
-            ))
-        for hit, result in zip(hits, downloaded):
-            if result is not None:
-                scan_results.append((result[0], result[1], result[2], _ScanStatus.CACHE_HIT))
-            else:
-                records.append(_ScanRecord(
-                    resource_name=hit.info.resource['name'],
-                    image_ref=hit.info.resource['access']['imageReference'],
-                    status=_ScanStatus.SCAN_FAILED,
-                    compressed_mb=hit.info.compressed_layer_bytes / 1024 / 1024,
-                ))
-
-    # --- phase 2b: resource-aware syft scans for cache misses ---
+    # --- phase 2: resource-aware scanning for incomplete entries ---
     syft_ver = _syft_version()
-    if misses:
-        logger.info(f'phase 2b: scanning {len(misses)} image(s) with syft {syft_ver or "?"}')
-        for info, spdx_bytes, cdx_bytes in _run_scans_resource_aware(
-            misses=misses,
-            oci_client=oci_client,
-            cache_registry=cache_registry,
-            cache_prefix=cache_repo_prefix,
-            syft_ver=syft_ver,
-            tmpdir=tmpdir,
-        ):
-            scan_results.append((info, spdx_bytes, cdx_bytes, _ScanStatus.SCANNED))
+    all_results: list[_CacheResult] = list(full_hits)
 
-        # record misses that produced no result as failures
-        scanned_names = {info.resource['name'] for info, _, __, status in scan_results
-                         if status is _ScanStatus.SCANNED}
-        for miss in misses:
-            if miss.info.resource['name'] not in scanned_names:
-                records.append(_ScanRecord(
-                    resource_name=miss.info.resource['name'],
-                    image_ref=miss.info.resource['access']['imageReference'],
-                    status=_ScanStatus.SCAN_FAILED,
-                    compressed_mb=miss.info.compressed_layer_bytes / 1024 / 1024,
-                ))
+    if incomplete:
+        # CBOM-only partial hits can be done in parallel (no syft, so cheaper)
+        cbom_only_list = [
+            cr for cr in incomplete
+            if cr.missing == ('cbom-cyclonedx-1.6',)
+        ]
+        need_syft_list = [
+            cr for cr in incomplete
+            if cr.missing != ('cbom-cyclonedx-1.6',)
+        ]
 
-    if not scan_results:
-        logger.info('no SBOM results to add to component descriptor')
+        if cbom_only_list:
+            logger.info(
+                f'phase 2: {len(cbom_only_list)} CBOM-only scan(s) (SBOM already cached)'
+            )
+            all_results.extend(_run_scans_resource_aware(
+                incomplete=cbom_only_list,
+                oci_client=oci_client,
+                cache_registry=cache_registry,
+                cache_prefix=cache_repo_prefix,
+                syft_ver=syft_ver,
+                tmpdir=tmpdir,
+            ))
+            scanned_cbom_names = {r.info.resource['name'] for r in all_results}
+            for cr in cbom_only_list:
+                if cr.info.resource['name'] not in scanned_cbom_names:
+                    records.append(_ScanRecord(
+                        resource_name=cr.info.resource['name'],
+                        image_ref=cr.info.resource['access']['imageReference'],
+                        status=_ScanStatus.SCAN_FAILED,
+                        compressed_mb=cr.info.compressed_layer_bytes / 1024 / 1024,
+                    ))
+
+        if need_syft_list:
+            logger.info(
+                f'phase 2: {len(need_syft_list)} full scan(s) '
+                f'with syft {syft_ver or "?"} + cbomkit-theia'
+            )
+            all_results.extend(_run_scans_resource_aware(
+                incomplete=need_syft_list,
+                oci_client=oci_client,
+                cache_registry=cache_registry,
+                cache_prefix=cache_repo_prefix,
+                syft_ver=syft_ver,
+                tmpdir=tmpdir,
+            ))
+            scanned_names = {r.info.resource['name'] for r in all_results}
+            for cr in need_syft_list:
+                if cr.info.resource['name'] not in scanned_names:
+                    records.append(_ScanRecord(
+                        resource_name=cr.info.resource['name'],
+                        image_ref=cr.info.resource['access']['imageReference'],
+                        status=_ScanStatus.SCAN_FAILED,
+                        compressed_mb=cr.info.compressed_layer_bytes / 1024 / 1024,
+                    ))
+
+    if not all_results:
+        logger.info('no BOM results to add to component descriptor')
         _write_step_summary(records)
         return
 
@@ -690,33 +857,59 @@ def process_external_resources(
     os.makedirs(blobs_dir, exist_ok=True)
 
     new_resources = []
-    for info, spdx_bytes, cdx_bytes, status in scan_results:
+    for cr in all_results:
+        info = cr.info
+        spdx_bytes  = cr.cached.get('spdx-2.3')
+        cdx_bytes   = cr.cached.get('cyclonedx-1.6')
+        cbom_bytes  = cr.cached.get('cbom-cyclonedx-1.6')
+
+        if not spdx_bytes or not cdx_bytes:
+            logger.warning(f'{info.resource["name"]!r}: SBOM missing from results — skipping')
+            continue
+
         spdx_digest = _store_blob(blobs_dir, spdx_bytes)
-        cdx_digest = _store_blob(blobs_dir, cdx_bytes)
+        cdx_digest  = _store_blob(blobs_dir, cdx_bytes)
+        cbom_digest = _store_blob(blobs_dir, cbom_bytes) if cbom_bytes else None
         tool_ver = _syft_version_from_spdx(spdx_bytes)
-        spdx_resource, cdx_resource = _build_sbom_resources(
+
+        bom_resources = _build_sbom_resources(
             info=info,
             spdx_bytes=spdx_bytes,
             cdx_bytes=cdx_bytes,
+            cbom_bytes=cbom_bytes,
             spdx_blob_digest=spdx_digest,
             cdx_blob_digest=cdx_digest,
+            cbom_blob_digest=cbom_digest,
             component_version=component_version,
             tool_ver=tool_ver,
         )
-        new_resources.extend((spdx_resource, cdx_resource))
+        new_resources.extend(bom_resources)
+
+        was_full_hit = info.resource['name'] not in original_missing and not force_rescan
+        orig_miss = original_missing.get(info.resource['name'], ())
+        had_cbom_only_miss = cbom_bytes is not None and orig_miss == ('cbom-cyclonedx-1.6',)
+        if was_full_hit:
+            status = _ScanStatus.CACHE_HIT
+        elif had_cbom_only_miss:
+            status = _ScanStatus.SCAN_CBOM_ONLY
+        else:
+            status = _ScanStatus.SCANNED
+
         records.append(_ScanRecord(
             resource_name=info.resource['name'],
             image_ref=info.resource['access']['imageReference'],
             status=status,
             compressed_mb=info.compressed_layer_bytes / 1024 / 1024,
         ))
-        logger.info(f'added SBOM resources for {info.resource["name"]!r}')
+        logger.info(
+            f'added {len(bom_resources)} BOM resource(s) for {info.resource["name"]!r}'
+        )
 
     component['resources'].extend(new_resources)
     with open(component_descriptor_path, 'w') as f:
         yaml.safe_dump(cd_raw, f)
 
-    logger.info(f'appended {len(new_resources)} SBOM resource(s) to component descriptor')
+    logger.info(f'appended {len(new_resources)} BOM resource(s) to component descriptor')
     _write_step_summary(records)
 
 

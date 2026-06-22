@@ -306,15 +306,22 @@ def run(run_id: str):
         r for r in all_resources
         if isinstance(r.extraIdentity, dict) and r.extraIdentity.get('sbom-format')
     ]
+    cbom_resources = [
+        r for r in all_resources
+        if isinstance(r.extraIdentity, dict) and r.extraIdentity.get('cbom-format')
+    ]
     oci_image_resources = [
         r for r in all_resources
         if r.access.type is ocm.AccessType.OCI_REGISTRY
-        and not (isinstance(r.extraIdentity, dict) and r.extraIdentity.get('sbom-format'))
+        and not (isinstance(r.extraIdentity, dict) and (
+            r.extraIdentity.get('sbom-format') or r.extraIdentity.get('cbom-format')
+        ))
     ]
 
     logger.info(
         f'{len(oci_image_resources)} OCI image resource(s) replicated, '
-        f'{len(sbom_resources)} SBOM resource(s) injected'
+        f'{len(sbom_resources)} SBOM resource(s) injected, '
+        f'{len(cbom_resources)} CBOM resource(s) injected'
     )
 
     assert sbom_resources, (
@@ -326,6 +333,12 @@ def run(run_id: str):
     assert len(sbom_resources) == len(oci_image_resources) * 2, (
         f'expected {len(oci_image_resources) * 2} SBOM resources '
         f'(2 per image), got {len(sbom_resources)}'
+    )
+
+    # expect 1 CBOM resource per OCI image resource
+    assert len(cbom_resources) == len(oci_image_resources), (
+        f'expected {len(oci_image_resources)} CBOM resources '
+        f'(1 per image), got {len(cbom_resources)}'
     )
 
     formats_found = {r.extraIdentity['sbom-format'] for r in sbom_resources}
@@ -353,6 +366,23 @@ def run(run_id: str):
         )
         fmt = r.extraIdentity['sbom-format']
         logger.info(f'  {r.name} ({fmt}): {img_ref}')
+
+    for r in cbom_resources:
+        assert r.access.type is ocm.AccessType.OCI_REGISTRY, (
+            f'cbom: expected ociRegistry access, got {r.access.type}'
+        )
+        img_ref = r.access.imageReference
+        assert '@sha256:' in img_ref, (
+            f'cbom: imageReference {img_ref!r} has no digest'
+        )
+        assert img_ref.startswith(dst_repo_url), (
+            f'cbom: imageReference {img_ref!r} should start with {dst_repo_url!r}'
+        )
+        labels = {l.name: l.value for l in r.labels}
+        assert 'gardener.cloud/cbom/source-image' in labels, (
+            'cbom: missing source-image label'
+        )
+        logger.info(f'  {r.name} (cbom-cyclonedx-1.6): {img_ref}')
 
     logger.info('all assertions passed')
 
