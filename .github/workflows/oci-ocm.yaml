@@ -519,6 +519,16 @@ jobs:
             | sh -s -- -b "${install_dir}"
           echo "${install_dir}" >> "${GITHUB_PATH}"
 
+      - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          install_dir="${HOME}/.local/bin"
+          mkdir -p "${install_dir}"
+          GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
+          echo "${install_dir}" >> "${GITHUB_PATH}"
+
       - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
         id: sbom-generate
@@ -529,6 +539,17 @@ jobs:
             -o 'spdx-json=sbom.spdx.json' \
             -o 'cyclonedx-json@1.6=sbom.cdx.json'
           version="$(syft version --output json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: 'generate CBOM / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: cbom-generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cbomkit-theia image --bom sbom.cdx.json \
+            '${{ matrix.args.image-reference }}' > cbom.cdx.json
+          version="$(cbomkit-theia version 2>/dev/null | awk '{print $NF}' || true)"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
@@ -680,6 +701,104 @@ jobs:
         uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
         with:
           ocm-resources-file: sbom-ocm-resources.yaml
+          blobs-directory: blobs.d
+          ctx: ${{ inputs.ctx }}
+
+      - name: 'push CBOM referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: cbom-push
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import os
+
+          import oci.auth
+          import oci.client
+          import oci.model
+          import sbom.cbom
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+
+          image_ref = oci.model.OciImageReference.to_image_ref(
+              '${{ matrix.args.image-reference }}',
+          )
+
+          tool_version = '${{ steps.cbom-generate.outputs.version }}' or None
+
+          with open('cbom.cdx.json', 'rb') as f:
+              cbom_bytes = f.read()
+
+          cbom_digest = sbom.cbom.push_cbom_referrer(
+              cbom_bytes=cbom_bytes,
+              image_reference=image_ref,
+              oci_client=oci_client,
+              tool_version=tool_version,
+          )
+
+          repo = image_ref.ref_without_tag
+          cbom_ref = f'{repo}@{cbom_digest}'
+          print(f'CBOM referrer: {cbom_ref}')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'cbom-referrer-ref={cbom_ref}\n')
+
+      - name: 'build CBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import dataclasses
+          import os
+
+          import yaml
+
+          import ocm
+          import sbom.cbom
+
+          platform = '${{ matrix.args.platform-name }}'  # e.g. linux/amd64
+          os_name, architecture = platform.split('/', 1)
+          name = '${{ inputs.name }}'
+          version = '${{ inputs.version }}'
+
+          tool_version = '${{ steps.cbom-generate.outputs.version }}' or None
+
+          with open('cbom.cdx.json', 'rb') as f:
+              cbom_bytes = f.read()
+
+          import hashlib
+          cbom_digest = f'sha256:{hashlib.sha256(cbom_bytes).hexdigest()}'
+
+          resources = sbom.cbom.build_cbom_ocm_resources(
+              resource_name=name,
+              version=version,
+              source_image_ref='${{ matrix.args.image-reference }}',
+              source_digest='',
+              cbom_bytes=cbom_bytes,
+              cbom_blob_digest=cbom_digest,
+              tool_ver=tool_version,
+              cbom_referrer_digest='${{ steps.cbom-push.outputs.cbom-referrer-ref }}',
+          )
+
+          # patch extraIdentity with platform info (mirroring SBOM convention)
+          for r in resources:
+              r['extraIdentity']['os'] = os_name
+              r['extraIdentity']['architecture'] = architecture
+
+          with open('cbom-ocm-resources.yaml', 'w') as f:
+              yaml.dump_all(resources, stream=f)
+
+          os.makedirs('blobs.d', exist_ok=True)
+          os.link('cbom.cdx.json', 'blobs.d/cbom.cdx.json')
+
+      - name: 'export CBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          ocm-resources-file: cbom-ocm-resources.yaml
           blobs-directory: blobs.d
           ctx: ${{ inputs.ctx }}
 
