@@ -16,6 +16,7 @@ import jsonschema
 import logging
 import os
 import threading
+import tempfile
 
 import dacite
 import yaml
@@ -23,6 +24,7 @@ import yaml
 import cnudie.retrieve
 import ctt.oci_util
 import ctt.replicate
+import sbom.cbom as sbom_cbom
 import sbom.inject as sbom_inject
 import oci
 import oci.client
@@ -863,6 +865,7 @@ def process_replication_plan_step(
     if sbom_candidates:
         if processing_mode is not ProcessingMode.DRY_RUN:
             sbom_inject.check_syft()
+            sbom_inject.check_cbomkit_theia()
 
         tmpdir = os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP') or None
         syft_ver = sbom_inject._syft_version()
@@ -919,10 +922,38 @@ def process_replication_plan_step(
         for rre, dref, hit in hits:
             spdx_bytes, cdx_bytes, spdx_ref_digest, cdx_ref_digest = hit
             tool_ver = sbom_inject._syft_version_from_spdx(spdx_bytes)
+            cbom_tool_ver = sbom_inject._cbomkit_theia_version()
             repo_ref = dref.ref_without_tag
             source_image_ref = str(rre.src_ref)
             source_digest = dref.tag  # sha256:<hex>
-            spdx_res, cdx_res = sbom_inject.build_sbom_ocm_resources(
+
+            # generate CBOM from the existing CycloneDX SBOM — no image re-download
+            cbom_referrer_digest = None
+            if processing_mode is not ProcessingMode.DRY_RUN:
+                try:
+                    with tempfile.TemporaryDirectory(dir=tmpdir or None) as _tmp:
+                        cdx_path = os.path.join(_tmp, 'sbom.cdx.json')
+                        cbom_path = os.path.join(_tmp, 'cbom.cdx.json')
+                        with open(cdx_path, 'wb') as _f:
+                            _f.write(cdx_bytes)
+                        sbom_inject._run_cbomkit_theia(
+                            image_ref=str(dref),
+                            cdx_bom_path=cdx_path,
+                            out_path=cbom_path,
+                            tmpdir=_tmp,
+                        )
+                        with open(cbom_path, 'rb') as _f:
+                            cbom_bytes = _f.read()
+                        cbom_referrer_digest = sbom_cbom.push_cbom_referrer(
+                            cbom_bytes=cbom_bytes,
+                            image_reference=dref,
+                            oci_client=oci_client,
+                            tool_version=cbom_tool_ver,
+                        )
+                except Exception as e:
+                    logger.warning(f'{rre.source.name!r}: CBOM generation failed: {e}')
+
+            spdx_res, cdx_res, cbom_res = sbom_inject.build_sbom_ocm_resources(
                 resource_name=rre.source.name,
                 version=rre.source.version,
                 source_image_ref=source_image_ref,
@@ -930,10 +961,15 @@ def process_replication_plan_step(
                 repo_ref=repo_ref,
                 spdx_referrer_digest=spdx_ref_digest,
                 cdx_referrer_digest=cdx_ref_digest,
+                cbom_referrer_digest=cbom_referrer_digest or '',
                 tool_ver=tool_ver,
+                cbom_tool_ver=cbom_tool_ver,
                 source_extra_identity=rre.source.extraIdentity or None,
             )
-            sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res))
+            extra = [spdx_res, cdx_res]
+            if cbom_referrer_digest:
+                extra.append(cbom_res)
+            sbom_extra_resources[rre.component_id].extend(extra)
 
         # process cache misses (resource-aware scans)
         if misses and processing_mode is not ProcessingMode.DRY_RUN:
@@ -947,13 +983,15 @@ def process_replication_plan_step(
                 tmpdir=tmpdir or '/tmp',  # nosec B108
                 tool_ver=syft_ver,
             )
-            for key, spdx_bytes, cdx_bytes, tool_ver, spdx_dig, cdx_dig, status in scan_results:
+            for (key, spdx_bytes, cdx_bytes, cbom_bytes,
+                 tool_ver, cbom_tool_ver,
+                 spdx_dig, cdx_dig, cbom_dig, status) in scan_results:
                 if status != 'scanned':
                     continue
                 rre, dref = miss_map[key]
                 repo_ref = dref.ref_without_tag
                 source_digest = dref.tag
-                spdx_res, cdx_res = sbom_inject.build_sbom_ocm_resources(
+                spdx_res, cdx_res, cbom_res = sbom_inject.build_sbom_ocm_resources(
                     resource_name=rre.source.name,
                     version=rre.source.version,
                     source_image_ref=str(rre.src_ref),
@@ -961,10 +999,12 @@ def process_replication_plan_step(
                     repo_ref=repo_ref,
                     spdx_referrer_digest=spdx_dig,
                     cdx_referrer_digest=cdx_dig,
+                    cbom_referrer_digest=cbom_dig,
                     tool_ver=tool_ver,
+                    cbom_tool_ver=cbom_tool_ver,
                     source_extra_identity=rre.source.extraIdentity or None,
                 )
-                sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res))
+                sbom_extra_resources[rre.component_id].extend((spdx_res, cdx_res, cbom_res))
 
     # --- Phase 2: component-descriptor patching ---
     is_root_component_descriptor = lambda component_descriptor: (
