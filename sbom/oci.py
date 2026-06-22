@@ -33,24 +33,24 @@ SBOM_FORMATS: tuple[tuple[str, str], ...] = (
 )
 
 
-def _build_sbom_referrer_manifest(
-    sbom_bytes: bytes,
-    sbom_media_type: str,
+def _build_referrer_manifest(
+    doc_bytes: bytes,
+    doc_media_type: str,
+    artifact_type: str,
     subject_digest: str,
     subject_media_type: str,
     subject_size: int,
-    tool_version: str | None = None,
+    annotations: dict | None = None,
 ) -> tuple[bytes, str]:
     '''
-    Build an OCI referrer manifest for the given SBOM bytes and subject descriptor.
+    Build an OCI referrer manifest for a single-layer document blob.
 
     Pure function — no I/O.  Returns (manifest_bytes, manifest_digest).
 
-    The caller is responsible for pushing the SBOM blob and the empty config blob
+    The caller is responsible for pushing the document blob and the empty config blob
     before pushing the returned manifest.
     '''
-    sbom_digest = f'sha256:{hashlib.sha256(sbom_bytes).hexdigest()}'
-    sbom_size = len(sbom_bytes)
+    doc_digest = f'sha256:{hashlib.sha256(doc_bytes).hexdigest()}'
 
     manifest = om.OciImageManifest(
         config=om.OciBlobRef(
@@ -60,9 +60,9 @@ def _build_sbom_referrer_manifest(
         ),
         layers=[
             om.OciBlobRef(
-                digest=sbom_digest,
-                mediaType=sbom_media_type,
-                size=sbom_size,
+                digest=doc_digest,
+                mediaType=doc_media_type,
+                size=len(doc_bytes),
             ),
         ],
         subject=om.OciBlobRef(
@@ -70,16 +70,104 @@ def _build_sbom_referrer_manifest(
             mediaType=subject_media_type,
             size=subject_size,
         ),
-        artifactType=sbom_media_type,
+        artifactType=artifact_type,
         annotations={
             'org.opencontainers.image.created': _utcnow_iso(),
-            **({'gardener.cloud/sbom/tool-version': tool_version} if tool_version else {}),
+            **(annotations or {}),
         },
     )
 
     manifest_bytes = json.dumps(manifest.as_dict()).encode()
     manifest_digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
     return manifest_bytes, manifest_digest
+
+
+# kept for backwards-compat — delegates to the generic helper
+def _build_sbom_referrer_manifest(
+    sbom_bytes: bytes,
+    sbom_media_type: str,
+    subject_digest: str,
+    subject_media_type: str,
+    subject_size: int,
+    tool_version: str | None = None,
+) -> tuple[bytes, str]:
+    return _build_referrer_manifest(
+        doc_bytes=sbom_bytes,
+        doc_media_type=sbom_media_type,
+        artifact_type=sbom_media_type,
+        subject_digest=subject_digest,
+        subject_media_type=subject_media_type,
+        subject_size=subject_size,
+        annotations=(
+            {'gardener.cloud/sbom/tool-version': tool_version} if tool_version else None
+        ),
+    )
+
+
+def _resolve_subject(
+    image_reference: str | om.OciImageReference,
+    oci_client: oc.Client,
+) -> tuple[str, str, int, str]:
+    '''
+    Resolve an image reference to its subject descriptor fields plus the repo ref.
+
+    Returns (subject_digest, subject_media_type, subject_size, repo_ref).
+    '''
+    image_ref = om.OciImageReference.to_image_ref(image_reference)
+    digest_ref = oci_client.to_digest_hash(image_ref)
+    digest_image_ref = om.OciImageReference.to_image_ref(digest_ref)
+    subject_digest = digest_image_ref.tag  # 'sha256:<hex>'
+    manifest_raw_res = oci_client.manifest_raw(digest_image_ref)
+    subject_media_type = manifest_raw_res.headers.get(
+        'Content-Type', om.OCI_MANIFEST_SCHEMA_V2_MIME,
+    )
+    subject_size = len(manifest_raw_res.content)
+    return subject_digest, subject_media_type, subject_size, image_ref.ref_without_tag
+
+
+def _push_referrer(
+    doc_bytes: bytes,
+    doc_media_type: str,
+    artifact_type: str,
+    repo_ref: str,
+    subject_digest: str,
+    subject_media_type: str,
+    subject_size: int,
+    oci_client: oc.Client,
+    annotations: dict | None = None,
+) -> str:
+    '''
+    Push a document blob as an OCI referrer manifest. Returns the referrer digest.
+    '''
+    doc_digest = f'sha256:{hashlib.sha256(doc_bytes).hexdigest()}'
+    logger.info(f'pushing doc blob {doc_digest} ({len(doc_bytes)} bytes) to {repo_ref}')
+    oci_client.put_blob(
+        image_reference=repo_ref,
+        digest=doc_digest,
+        octets_count=len(doc_bytes),
+        data=doc_bytes,
+        mimetype=doc_media_type,
+    )
+    oci_client.put_blob(
+        image_reference=repo_ref,
+        digest=_EMPTY_CONFIG_DIGEST,
+        octets_count=len(_EMPTY_CONFIG),
+        data=_EMPTY_CONFIG,
+        mimetype=OCI_EMPTY_CONFIG_MEDIA_TYPE,
+    )
+    manifest_bytes, referrer_digest = _build_referrer_manifest(
+        doc_bytes=doc_bytes,
+        doc_media_type=doc_media_type,
+        artifact_type=artifact_type,
+        subject_digest=subject_digest,
+        subject_media_type=subject_media_type,
+        subject_size=subject_size,
+        annotations=annotations,
+    )
+    referrer_ref = f'{repo_ref}@{referrer_digest}'
+    logger.info(f'pushing referrer manifest to {referrer_ref}')
+    oci_client.put_manifest(image_reference=referrer_ref, manifest=manifest_bytes)
+    return referrer_digest
 
 
 def push_sbom_referrer(
@@ -92,70 +180,27 @@ def push_sbom_referrer(
     '''
     Push an SBOM file as an OCI referrer manifest for the given image.
 
-    The SBOM blob is pushed as the single layer of a new OCI manifest; the
-    manifest's `subject` is set to the digest-addressed descriptor of the
-    target image, establishing the referrer relationship.
-
-    If `tool_version` is given it is recorded in the manifest annotations as
-    `gardener.cloud/sbom/tool-version`.
-
     Returns the digest of the pushed referrer manifest.
     '''
-    image_ref = om.OciImageReference.to_image_ref(image_reference)
-
-    # resolve to digest so subject.digest is canonical
-    digest_ref = oci_client.to_digest_hash(image_ref)
-    digest_image_ref = om.OciImageReference.to_image_ref(digest_ref)
-    subject_digest = digest_image_ref.tag  # 'sha256:<hex>'
-
-    manifest_raw_res = oci_client.manifest_raw(digest_image_ref)
-    subject_media_type = manifest_raw_res.headers.get(
-        'Content-Type', om.OCI_MANIFEST_SCHEMA_V2_MIME,
-    )
-    subject_size = len(manifest_raw_res.content)
-
     with open(sbom_path, 'rb') as f:
         sbom_bytes = f.read()
 
-    sbom_digest = f'sha256:{hashlib.sha256(sbom_bytes).hexdigest()}'
-    sbom_size = len(sbom_bytes)
-    repo_ref = image_ref.ref_without_tag
-
-    logger.info(f'pushing SBOM blob {sbom_digest} ({sbom_size} bytes) to {repo_ref}')
-    oci_client.put_blob(
-        image_reference=repo_ref,
-        digest=sbom_digest,
-        octets_count=sbom_size,
-        data=sbom_bytes,
-        mimetype=sbom_media_type,
+    subject_digest, subject_media_type, subject_size, repo_ref = _resolve_subject(
+        image_reference, oci_client,
     )
-
-    oci_client.put_blob(
-        image_reference=repo_ref,
-        digest=_EMPTY_CONFIG_DIGEST,
-        octets_count=len(_EMPTY_CONFIG),
-        data=_EMPTY_CONFIG,
-        mimetype=OCI_EMPTY_CONFIG_MEDIA_TYPE,
-    )
-
-    manifest_bytes, referrer_digest = _build_sbom_referrer_manifest(
-        sbom_bytes=sbom_bytes,
-        sbom_media_type=sbom_media_type,
+    return _push_referrer(
+        doc_bytes=sbom_bytes,
+        doc_media_type=sbom_media_type,
+        artifact_type=sbom_media_type,
+        repo_ref=repo_ref,
         subject_digest=subject_digest,
         subject_media_type=subject_media_type,
         subject_size=subject_size,
-        tool_version=tool_version,
+        oci_client=oci_client,
+        annotations=(
+            {'gardener.cloud/sbom/tool-version': tool_version} if tool_version else None
+        ),
     )
-
-    referrer_ref = f'{repo_ref}@{referrer_digest}'
-    logger.info(f'pushing SBOM referrer manifest to {referrer_ref}')
-    oci_client.put_manifest(
-        image_reference=referrer_ref,
-        manifest=manifest_bytes,
-    )
-
-    logger.info(f'SBOM referrer pushed: {referrer_digest}')
-    return referrer_digest
 
 
 def push_sbom_referrers(
@@ -169,63 +214,29 @@ def push_sbom_referrers(
     Push SPDX and CycloneDX SBOM documents as OCI referrer manifests for the given image.
 
     Resolves the subject descriptor once and reuses it for both manifests.
-    Pushes three blobs (spdx, cdx, empty config) and two manifests.
 
     Returns (spdx_referrer_digest, cdx_referrer_digest).
     '''
-    image_ref = om.OciImageReference.to_image_ref(image_reference)
-    repo_ref = image_ref.ref_without_tag
-
-    digest_ref = oci_client.to_digest_hash(image_ref)
-    digest_image_ref = om.OciImageReference.to_image_ref(digest_ref)
-    subject_digest = digest_image_ref.tag
-
-    manifest_raw_res = oci_client.manifest_raw(digest_image_ref)
-    subject_media_type = manifest_raw_res.headers.get(
-        'Content-Type', om.OCI_MANIFEST_SCHEMA_V2_MIME,
+    subject_digest, subject_media_type, subject_size, repo_ref = _resolve_subject(
+        image_reference, oci_client,
     )
-    subject_size = len(manifest_raw_res.content)
-
-    # push shared empty config once
-    oci_client.put_blob(
-        image_reference=repo_ref,
-        digest=_EMPTY_CONFIG_DIGEST,
-        octets_count=len(_EMPTY_CONFIG),
-        data=_EMPTY_CONFIG,
-        mimetype=OCI_EMPTY_CONFIG_MEDIA_TYPE,
-    )
-
+    annotations = {'gardener.cloud/sbom/tool-version': tool_version} if tool_version else None
     digests = []
     for sbom_bytes, sbom_media_type in (
         (spdx_bytes, SPDX_JSON_MEDIA_TYPE),
         (cdx_bytes, CYCLONEDX_JSON_MEDIA_TYPE),
     ):
-        sbom_digest = f'sha256:{hashlib.sha256(sbom_bytes).hexdigest()}'
-        sbom_size = len(sbom_bytes)
-        logger.info(f'pushing SBOM blob {sbom_digest} ({sbom_size} bytes) to {repo_ref}')
-        oci_client.put_blob(
-            image_reference=repo_ref,
-            digest=sbom_digest,
-            octets_count=sbom_size,
-            data=sbom_bytes,
-            mimetype=sbom_media_type,
-        )
-        manifest_bytes, referrer_digest = _build_sbom_referrer_manifest(
-            sbom_bytes=sbom_bytes,
-            sbom_media_type=sbom_media_type,
+        digests.append(_push_referrer(
+            doc_bytes=sbom_bytes,
+            doc_media_type=sbom_media_type,
+            artifact_type=sbom_media_type,
+            repo_ref=repo_ref,
             subject_digest=subject_digest,
             subject_media_type=subject_media_type,
             subject_size=subject_size,
-            tool_version=tool_version,
-        )
-        referrer_ref = f'{repo_ref}@{referrer_digest}'
-        logger.info(f'pushing SBOM referrer manifest to {referrer_ref}')
-        oci_client.put_manifest(
-            image_reference=referrer_ref,
-            manifest=manifest_bytes,
-        )
-        digests.append(referrer_digest)
-
+            oci_client=oci_client,
+            annotations=annotations,
+        ))
     return digests[0], digests[1]
 
 
