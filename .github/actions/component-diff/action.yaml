@@ -49,12 +49,14 @@ runs:
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
     - name: extract-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
       shell: bash
       run: |
         set -eu
-        tar xf component-descriptor.tar.gz component-descriptor.yaml
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C "${{ github.workspace }}" component-descriptor.yaml
     - name: Create component diff
       id: component-diff
       shell: python

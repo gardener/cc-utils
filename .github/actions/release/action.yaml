@@ -203,13 +203,14 @@ runs:
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
     - name: extract-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
       shell: bash
       run: |
         set -eu
-        tar xf component-descriptor.tar.gz component-descriptor.yaml
-        mv component-descriptor.yaml /tmp/component-descriptor.yaml
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C /tmp component-descriptor.yaml
     - name: import-release-commit
       uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
