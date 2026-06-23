@@ -63,5 +63,5 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/component-diff@master
         id: component-diff
         with:
-          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+          component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
           ocm-repositories: ${{ steps.prepare.outputs.ocm-repositories }}

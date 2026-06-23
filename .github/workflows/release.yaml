@@ -394,7 +394,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/release-notes@master
         id: release-notes
         with:
-          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+          component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
           github-token: ${{ steps.fed-token.outputs.token }}
           draft: false
@@ -418,7 +418,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/release@master
         id: release
         with:
-          component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+          component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
           component-descriptor-blobs-dir: /tmp/ocm/blobs.d
           release-commit-objects: ${{ inputs.release-commit-objects }}
           release-commit-objects-artefact: release-commit-objects

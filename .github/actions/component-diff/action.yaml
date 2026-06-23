@@ -6,10 +6,21 @@ description: |
 
 inputs:
   component-descriptor:
-    required: true
+    required: false
     type: string
     description: |
       An OCM-Component-Descriptor in YAML form.
+
+      Either this input or `component-descriptor-artifact` must be provided.
+  component-descriptor-artifact:
+    required: false
+    type: string
+    description: |
+      Name of a GHA artifact containing the component-descriptor, as produced by
+      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+
+      Preferred over the inline `component-descriptor` input for large descriptors.
   ocm-repositories:
     required: true
     type: string
@@ -33,6 +44,17 @@ runs:
     - uses: gardener/cc-utils/.github/actions/oci-auth@master
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf component-descriptor.tar.gz component-descriptor.yaml
     - name: Create component diff
       id: component-diff
       shell: python
@@ -48,9 +70,14 @@ runs:
         import ocm
         import version
 
+        if '${{ inputs.component-descriptor-artifact }}':
+          with open('component-descriptor.yaml') as f:
+            raw = yaml.safe_load(f)
+        else:
+          raw = yaml.safe_load('''${{ inputs.component-descriptor}}''')
 
         current_component_descriptor = ocm.ComponentDescriptor.from_dict(
-          component_descriptor_dict=yaml.safe_load('''${{ inputs.component-descriptor}}'''),
+          component_descriptor_dict=raw,
         )
         component_name = current_component_descriptor.component.name
         component_version = current_component_descriptor.component.version
