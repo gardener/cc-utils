@@ -99,13 +99,6 @@ inputs:
       Useful when a newer syft version is desired. Defaults to `false`.
 
 outputs:
-  component-descriptor:
-    description: |
-      the resulting component-descriptor (inline YAML).
-
-      Deprecated for large descriptors: GHA silently aborts a job once
-      GITHUB_OUTPUT exceeds 1 MiB.  Prefer `component-descriptor-artifact`.
-    value: ${{ steps.output.outputs.component-descriptor }}
   component-descriptor-artifact:
     description: |
       name of the GHA artifact containing the merged component-descriptor.
@@ -169,9 +162,6 @@ runs:
           echo "Error: archive did not contain expected ${component_descriptor_path} file"
           exit 1
         fi
-        echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
-        cat "${component_descriptor_path}" >> ${GITHUB_OUTPUT}
-        echo EOF >> "${GITHUB_OUTPUT}"
         mv "${component_descriptor_path}" "${{ inputs.outdir }}/base-component-descriptor.yaml"
     - name: prepare-component-descriptor
       shell: bash
@@ -364,15 +354,6 @@ runs:
             cache_repo_prefix='${{ inputs.sbom-cache-repo-prefix }}',
             force_rescan='${{ inputs.spdx-force-rescan }}' == 'true',
         )
-
-    - name: output-component-descriptor
-      id: output
-      shell: bash
-      run: |
-        set -eu
-        echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
-        cat "${{ inputs.outdir }}/component-descriptor.yaml" >> "${GITHUB_OUTPUT}"
-        echo EOF >> ${GITHUB_OUTPUT}
 
     - name: upload-component-descriptor-artifact
       shell: bash

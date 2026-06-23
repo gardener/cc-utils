@@ -19,8 +19,8 @@ on:
         value: ${{ jobs.prepare.outputs.version }}
       base-component-descriptor:
         description: |
-          the base OCM Component-Descriptor in YAML-format (use `merge-ocm-fragments`-action
-          to collect full component-descriptor):
+          name of the GHA artifact holding the base OCM Component-Descriptor
+          (use `merge-ocm-fragments` action to collect full component-descriptor):
         value: ${{ jobs.prepare.outputs.component-descriptor }}
 
 jobs:

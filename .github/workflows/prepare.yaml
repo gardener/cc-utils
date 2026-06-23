@@ -188,11 +188,6 @@ on:
           `import-commit` action.
         value: release-commit-objects
 
-      component-descriptor:
-        description: |
-          A base-component-descriptor, as output by `base-component-descriptor` action.
-        value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
-
 jobs:
   version-and-ocm:
     environment: ${{ inputs.github-environment }}
@@ -209,7 +204,7 @@ jobs:
       can-push: ${{ steps.params.outputs.can-push }}
       version: ${{ steps.version.outputs.version }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
-      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor }}
+      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
     steps:
       - name: params
         id: params
@@ -295,9 +290,7 @@ jobs:
           # version-and-ocm
           echo "${{ steps.version.outputs.version }}" > $p/version
           echo "${{ steps.version.outputs.commit-digest }}" > $p/commit-digest
-          cat <<EOF > $p/component-descriptor
-          ${{ steps.component-descriptor.outputs.component-descriptor }}
-          EOF
+          # component-descriptor is passed via the `base-component-descriptor` artifact
 
           tar cf "${{ inputs.output-artefact-filename }}" $p
           tar tf "${{ inputs.output-artefact-filename }}" # debug

@@ -180,11 +180,11 @@ inputs:
       The relative path (from repository root) to the directory containing the release-notes docs.
 
 outputs:
-  component-descriptor:
+  component-descriptor-artifact:
     description: |
-      the Component-Descriptor as it was published (which may contain modifications compared
-      to the component-descriptor that was passed-in as input).
-    value: ${{ steps.publish-component-descriptor.outputs.component-descriptor }}
+      name of the GHA artifact containing the published component-descriptor
+      (same artifact as uploaded by the `release` action: `component-descriptor`).
+    value: component-descriptor
 
 defaults:
   run:
@@ -376,10 +376,6 @@ runs:
           --on-exist ${{ inputs.on-existing-component-descriptor }}
 
         tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
-
-        echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
-        cat /tmp/component-descriptor.yaml >> "${GITHUB_OUTPUT}"
-        echo EOF >> "${GITHUB_OUTPUT}"
 
     - name: upload OCM Component-Descriptor as artifact
       uses: gardener/cc-utils/.github/actions/upload-artifact@master

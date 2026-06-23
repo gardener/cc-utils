@@ -52,13 +52,16 @@ inputs:
       whether or not to push the built helmchart.
 
   component-descriptor:
-    required: true
+    required: false
     type: string
     description: |
-      An OCM-Component-Descriptor in YAML form. It may be incomplete, but must contain at least:
-      - component.version attribute
-      - component.name attribute
-      - all resources referenced in helmchart
+      An OCM-Component-Descriptor in YAML form (inline). Prefer `component-descriptor-artifact`.
+
+  component-descriptor-artifact:
+    required: false
+    type: string
+    description: |
+      Name of a GHA artifact containing the component-descriptor (preferred over inline input).
 
   mappings:
     required: true
@@ -97,14 +100,31 @@ runs:
   steps:
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - uses: azure/setup-helm@v4
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C /tmp component-descriptor.yaml
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<'EOF' > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
     - name: preprocess-inputs
       shell: bash
       run: |
         cat <<EOF > /tmp/mappings.yaml
         ${{ inputs.mappings }}
-        EOF
-        cat <<EOF > /tmp/component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
         EOF
     - name: authenticate
       if: ${{ inputs.push == 'true' }}
