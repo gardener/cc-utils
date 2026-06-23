@@ -149,8 +149,8 @@ jobs:
             pull-requests: write
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
         with:
-          component-descriptor: |
-            ${{ inputs.component-descriptor || needs.prepare.outputs.component-descriptor }}
+          component-descriptor: ${{ inputs.component-descriptor }}
+          component-descriptor-artifact: ${{ inputs.component-descriptor == '' && needs.prepare.outputs.component-descriptor || '' }}
           ocm-repositories: |
             ${{ needs.prepare.outputs.ocm-repositories || inputs.ocm-repositories }}
           github-token: ${{ steps.checkout.outputs.token }}

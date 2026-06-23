@@ -25,9 +25,14 @@ inputs:
   component-descriptor:
     description: |
       The effective OCM-Component-Descriptor based on which Upgrade-Pullrequests should be
-      created.
+      created. Prefer `component-descriptor-artifact`.
     type: string
-    required: true
+    required: false
+  component-descriptor-artifact:
+    description: |
+      Name of a GHA artifact containing the component-descriptor (preferred over inline input).
+    type: string
+    required: false
   ocm-repositories:
     description: |
       A comma-separated list of OCM-Repositories that should be used to lookup Component-Versions.
@@ -107,12 +112,29 @@ runs:
       with:
         token: ${{ inputs.github-token }}
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
-    - name: write-component-descriptor
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
       shell: bash
       run: |
-        cat <<EOF > /tmp/component-descriptor.yaml
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C /tmp component-descriptor.yaml
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<'EOF' > /tmp/component-descriptor.yaml
         ${{ inputs.component-descriptor }}
         EOF
+    - name: write-ocm-repositories
+      shell: bash
+      run: |
         cat <<EOF > /tmp/ocm-repositories
         ${{ inputs.ocm-repositories }}
         EOF

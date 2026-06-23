@@ -78,10 +78,11 @@ inputs:
       configures how generated base-component-descriptor should be post-processed
 
 outputs:
-  component-descriptor:
+  component-descriptor-artifact:
     description: |
-      the base-component-descriptor
-    value: ${{ steps.base-component-descriptor.outputs.component-descriptor }}
+      name of the GHA artifact containing the base-component-descriptor
+      (artifact name: `base-component-descriptor`).
+    value: base-component-descriptor
 
 runs:
   using: composite
@@ -224,11 +225,6 @@ runs:
           tf.add(
             name='base-component.yaml',
           )
-
-        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          f.write('component-descriptor<<EOF\n')
-          f.write(component_descriptor_str)
-          f.write('EOF\n')
 
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
           f.write(textwrap.dedent(f'''\

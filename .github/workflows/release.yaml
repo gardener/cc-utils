@@ -273,10 +273,10 @@ on:
           published as part of component-descriptor, as well as via slack, if `slack-channel-id`
           input is specified).
         value: ${{ jobs.release-and-bump.outputs.release-notes }}
-      component-descriptor:
+      component-descriptor-artifact:
         description: |
-          The component-descriptor document, as it was uploaded during release
-        value: ${{ jobs.release-and-bump.outputs.component-descriptor }}
+          Name of the GHA artifact containing the component-descriptor as published during release.
+        value: ${{ jobs.release-and-bump.outputs.component-descriptor-artifact }}
       version:
         description: |
           The component-version (for convenience)
@@ -292,7 +292,7 @@ jobs:
 
     outputs:
       release-notes: ${{ steps.release-notes.outputs.release-notes }}
-      component-descriptor: ${{ steps.release.outputs.component-descriptor }}
+      component-descriptor-artifact: ${{ steps.release.outputs.component-descriptor-artifact }}
       version: ${{ steps.component-descriptor.outputs.version }}
 
     steps:
