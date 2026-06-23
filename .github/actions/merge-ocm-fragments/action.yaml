@@ -101,8 +101,17 @@ inputs:
 outputs:
   component-descriptor:
     description: |
-      the resulting component-descriptor
+      the resulting component-descriptor (inline YAML).
+
+      Deprecated for large descriptors: GHA silently aborts a job once
+      GITHUB_OUTPUT exceeds 1 MiB.  Prefer `component-descriptor-artifact`.
     value: ${{ steps.output.outputs.component-descriptor }}
+  component-descriptor-artifact:
+    description: |
+      name of the GHA artifact containing the merged component-descriptor.
+      The artifact holds a single file `component-descriptor.tar.gz` which
+      in turn contains `component-descriptor.yaml`.
+    value: merged-component-descriptor
   name:
     description: |
       the component-name (for convenience)
@@ -364,3 +373,14 @@ runs:
         echo "component-descriptor<<EOF" >> "${GITHUB_OUTPUT}"
         cat "${{ inputs.outdir }}/component-descriptor.yaml" >> "${GITHUB_OUTPUT}"
         echo EOF >> ${GITHUB_OUTPUT}
+
+    - name: upload-component-descriptor-artifact
+      shell: bash
+      run: |
+        set -eu
+        tar czf /tmp/merged-component-descriptor.tar.gz \
+          -C "${{ inputs.outdir }}" component-descriptor.yaml
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      with:
+        name: merged-component-descriptor
+        path: /tmp/merged-component-descriptor.tar.gz

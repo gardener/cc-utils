@@ -18,7 +18,17 @@ inputs:
     description: |
       Effective Component-Descriptor to publish. Any local-blobs are assumed to already be
       present in target-OCI-Repository.
-    required: true
+
+      Either this input or `component-descriptor-artifact` must be provided.
+    required: false
+  component-descriptor-artifact:
+    description: |
+      Name of a GHA artifact containing the component-descriptor, as produced by
+      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+
+      Preferred over the inline `component-descriptor` input for large descriptors.
+    required: false
   component-descriptor-blobs-dir:
     description: |
       Directory containing blobfiles referenced as local-blobs in component-descriptor
@@ -188,6 +198,18 @@ runs:
     - uses: actions/checkout@v6
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf component-descriptor.tar.gz component-descriptor.yaml
+        mv component-descriptor.yaml /tmp/component-descriptor.yaml
     - name: import-release-commit
       uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
@@ -201,9 +223,11 @@ runs:
       shell: bash
       run: |
         # pass to next steps
-        cat <<"EOF" > /tmp/component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
-        EOF
+        if [ -z "${{ inputs.component-descriptor-artifact }}" ]; then
+          cat <<"EOF" > /tmp/component-descriptor.yaml
+          ${{ inputs.component-descriptor }}
+          EOF
+        fi
         version=$(yq .component.version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
 

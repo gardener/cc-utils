@@ -8,7 +8,17 @@ inputs:
       effective OCM component-descriptor. It is sufficient to pass a `base component-descriptor`,
       as output by `base-component-descriptor` workflow. Its version must be set to next planned
       version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
-    required: true
+
+      Either this input or `component-descriptor-artifact` must be provided.
+    required: false
+  component-descriptor-artifact:
+    description: |
+      Name of a GHA artifact containing the component-descriptor, as produced by
+      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+
+      Preferred over the inline `component-descriptor` input for large descriptors.
+    required: false
   ocm-repositories:
     description: |
       a (commaseparated) list of ocm-repository-URLs where component-versions are to be looked up
@@ -73,6 +83,18 @@ runs:
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
 
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf component-descriptor.tar.gz component-descriptor.yaml
+
     - name: Prepare release-notes variants cfg
       id: prep-releaes-notes-variants-cfg
       shell: python
@@ -101,9 +123,11 @@ runs:
       run: |
         set -eu
 
-        cat <<EOF > component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
-        EOF
+        if [ -z "${{ inputs.component-descriptor-artifact }}" ]; then
+          cat <<EOF > component-descriptor.yaml
+          ${{ inputs.component-descriptor }}
+          EOF
+        fi
 
         echo 'Component-Descriptor:'
         cat component-descriptor.yaml

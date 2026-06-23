@@ -322,7 +322,7 @@ jobs:
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/release-notes@master
         with:
-          component-descriptor: ${{ needs.component-descriptor.outputs.component-descriptor }}
+          component-descriptor-artifact: component-descriptor
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
           github-token: ${{ steps.fed-token.outputs.token || secrets.GITHUB_TOKEN }}
           draft: true
