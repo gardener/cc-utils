@@ -305,6 +305,8 @@ def main() -> None:
     )
     parser.add_argument('--gcs-bucket', required=True, metavar='BUCKET')
     parser.add_argument('--gcs-token', required=True, metavar='TOKEN')
+    parser.add_argument('--run-key', default='', metavar='KEY',
+        help='GCS path prefix (run key); defaults to OCM component version')
     # token refresh (optional — enables mid-run re-auth on 401)
     parser.add_argument('--token-exchange-api-url', default='', metavar='URL')
     parser.add_argument('--token-exchange-audience', default='', metavar='AUD')
@@ -330,7 +332,7 @@ def main() -> None:
 
     name, version = args.ocm_component.rsplit(':', 1)
     bucket = args.gcs_bucket
-    gcs_prefix = f'sbom/{version}'
+    gcs_prefix = f'{args.run_key or version}/sbom'
 
     refresh_cfg_args = (
         args.token_exchange_api_url,

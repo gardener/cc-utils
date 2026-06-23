@@ -17,6 +17,10 @@ inputs:
   gcs-token:
     description: 'Bearer token for the GCS JSON API'
     required: true
+  run-key:
+    description: 'GCS path prefix (run key); defaults to OCM component version'
+    required: false
+    default: ''
   # Token refresh inputs (optional): when all four are supplied, upload.py will
   # re-request a fresh GCS token via System Trust on HTTP 401 mid-run.
   token-exchange-api-url:
@@ -36,7 +40,7 @@ inputs:
     required: false
     default: ''
   token-exchange-scope:
-    description: 'Scope to re-request on token refresh (e.g. "cumulus")'
+    description: 'Scope to re-request on token refresh (e.g. "sbom")'
     required: false
     default: ''
 
@@ -61,6 +65,7 @@ runs:
           --ocm-component '${{ inputs.ocm-component }}' \
           --gcs-bucket '${{ inputs.gcs-bucket }}' \
           --gcs-token '${{ inputs.gcs-token }}' \
+          --run-key '${{ inputs.run-key }}' \
           --token-exchange-api-url '${{ inputs.token-exchange-api-url }}' \
           --token-exchange-audience '${{ inputs.token-exchange-audience }}' \
           --token-exchange-pipeline-id '${{ inputs.token-exchange-pipeline-id }}' \

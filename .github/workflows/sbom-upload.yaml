@@ -6,6 +6,10 @@ name: Upload SBOMs to GCS
 # Designed for self-hosted runners that have access to a GCP instance-metadata
 # endpoint (needed by the oidc-gcp-token-exchange action for the dual-token auth).
 #
+# GCS path layout:
+#   gs://<gcs-bucket>/<ocm-version>/sbom/<component>:<version>_<resource>:<version>.sbom.<fmt>
+#   └─── bucket ────┘└─ run-key ─┘└─ category ──┘└──────────── filename ──────────────────┘
+#
 # Caller example:
 #
 #   jobs:
@@ -16,7 +20,7 @@ name: Upload SBOMs to GCS
 #         ocm-repositories: |
 #           europe-docker.pkg.dev/my-gcp-project/releases
 #         oci-registry: europe-docker.pkg.dev/my-gcp-project
-#         gcs-bucket: my-cumulus-pipeline-id
+#         gcs-bucket: my-pipeline-id
 #         token-exchange-api-url: 'https://api.example.com'
 #         token-exchange-audience: 'api://MyService'
 #         token-exchange-pipeline-id: 'my-pipeline'
@@ -63,7 +67,7 @@ on:
         required: true
         type: string
       token-exchange-scope:
-        description: 'Scope to request from the token exchange API (e.g. "cumulus")'
+        description: 'Scope to request from the token exchange API (e.g. "sbom")'
         required: true
         type: string
       runner:
@@ -71,6 +75,11 @@ on:
         required: false
         type: string
         default: '["self-hosted"]'
+      run-key:
+        description: 'GCS path prefix (run key); defaults to OCM component version'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   sbom-upload:
@@ -113,6 +122,7 @@ jobs:
           ocm-repositories: ${{ inputs.ocm-repositories }}
           gcs-bucket: ${{ inputs.gcs-bucket }}
           gcs-token: ${{ steps.gcs-token.outputs.gcs-token }}
+          run-key: ${{ inputs.run-key }}
           token-exchange-api-url: ${{ inputs.token-exchange-api-url }}
           token-exchange-audience: ${{ inputs.token-exchange-audience }}
           token-exchange-pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
