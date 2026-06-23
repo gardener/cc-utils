@@ -117,17 +117,19 @@ runs:
         with open('release-notes-variants-cfg.yaml', 'w') as f:
           yaml.dump(release_notes_variant_cfg, f)
 
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<'EOF' > component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
+
     - name: Retrieve Release-Notes
       id: release-notes
       shell: bash
       run: |
         set -eu
-
-        if [ -z "${{ inputs.component-descriptor-artifact }}" ]; then
-          cat <<EOF > component-descriptor.yaml
-          ${{ inputs.component-descriptor }}
-          EOF
-        fi
 
         echo 'Component-Descriptor:'
         cat component-descriptor.yaml
