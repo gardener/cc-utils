@@ -378,9 +378,9 @@ runs:
       shell: bash
       run: |
         set -eu
-        tar czf /tmp/merged-component-descriptor.tar.gz \
+        tar czf /tmp/component-descriptor.tar.gz \
           -C "${{ inputs.outdir }}" component-descriptor.yaml
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         name: merged-component-descriptor
-        path: /tmp/merged-component-descriptor.tar.gz
+        path: /tmp/component-descriptor.tar.gz
