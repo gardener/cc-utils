@@ -334,12 +334,7 @@ runs:
         set -euo pipefail
         install_dir="${HOME}/.local/bin"
         mkdir -p "${install_dir}"
-        tag="$(curl -sSfL https://api.github.com/repos/IBM/cbomkit-theia/releases/latest \
-          | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
-        curl -sSfL \
-          "https://github.com/IBM/cbomkit-theia/releases/download/${tag}/cbomkit-theia_linux_amd64" \
-          -o "${install_dir}/cbomkit-theia"
-        chmod +x "${install_dir}/cbomkit-theia"
+        GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
         echo "${install_dir}" >> "${GITHUB_PATH}"
 
     - name: authenticate-for-spdx
