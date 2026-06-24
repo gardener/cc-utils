@@ -187,15 +187,10 @@ on:
           It is output using the `capture-commit` action, and can be imported using the
           `import-commit` action.
         value: release-commit-objects
-      component-descriptor:
-        description: |
-          The name of the GHA artifact holding the base OCM Component-Descriptor.
-          Deprecated: use component-descriptor-artefact instead.
-        value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
       component-descriptor-artefact:
         description: |
           The name of the GHA artifact holding the base OCM Component-Descriptor.
-        value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
+        value: ${{ jobs.version-and-ocm.outputs.component-descriptor-artefact }}
 
 jobs:
   version-and-ocm:
@@ -213,7 +208,7 @@ jobs:
       can-push: ${{ steps.params.outputs.can-push }}
       version: ${{ steps.version.outputs.version }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
-      component-descriptor: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
+      component-descriptor-artefact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
     steps:
       - name: params
         id: params
