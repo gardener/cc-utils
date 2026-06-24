@@ -190,6 +190,11 @@ on:
       component-descriptor:
         description: |
           The name of the GHA artifact holding the base OCM Component-Descriptor.
+          Deprecated: use component-descriptor-artefact instead.
+        value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
+      component-descriptor-artefact:
+        description: |
+          The name of the GHA artifact holding the base OCM Component-Descriptor.
         value: ${{ jobs.version-and-ocm.outputs.component-descriptor }}
 
 jobs:
