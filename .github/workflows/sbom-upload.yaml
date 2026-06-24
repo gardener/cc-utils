@@ -83,14 +83,15 @@ on:
       release-status:
         description: >
           Cumulus release status to write after upload. Empty string disables the step.
-          promoted: artifact in release Artifactory; locks <run-key>/sbom/** in the GCS bucket.
-          released: locks all files under <run-key>/ in the GCS bucket permanently (terminal state).
-          deployed-to-production: in production, possibly behind feature toggles.
-          release-candidate: flagged for potential release; no extra file locks.
+          promoted: registers run-key with Cumulus; locks <run-key>/sbom/** permanently.
+          released: additionally locks all of <run-key>/ permanently (terminal state).
+            Must be preceded by a prior promoted write to take effect.
+          release-candidate: informational; no file locks.
+          deployed-to-production: informational; no additional locks beyond promoted.
           (empty): skip status upload, e.g. for dev/test runs.
         required: false
         type: string
-        default: 'promoted'
+        default: 'release-candidate'
       on-already-released:
         description: >
           Action when the run is already in "released" state: "skip" exits early,
