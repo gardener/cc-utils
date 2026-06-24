@@ -80,6 +80,33 @@ on:
         required: false
         type: string
         default: ''
+      release-status:
+        description: >
+          Cumulus release status to write after upload. Empty string disables the step.
+          promoted: artifact in release Artifactory; locks <run-key>/sbom/** in the GCS bucket.
+          released: locks all files under <run-key>/ in the GCS bucket permanently (terminal state).
+          deployed-to-production: in production, possibly behind feature toggles.
+          release-candidate: flagged for potential release; no extra file locks.
+          (empty): skip status upload, e.g. for dev/test runs.
+        required: false
+        type: choice
+        options:
+          - promoted
+          - released
+          - deployed-to-production
+          - release-candidate
+          - ''
+        default: 'promoted'
+      on-already-released:
+        description: >
+          Action when the run is already in "released" state: "skip" exits early,
+          "fail" aborts with an error.
+        required: false
+        type: choice
+        options:
+          - skip
+          - fail
+        default: 'skip'
 
 jobs:
   sbom-upload:
@@ -123,6 +150,8 @@ jobs:
           gcs-bucket: ${{ inputs.gcs-bucket }}
           gcs-token: ${{ steps.gcs-token.outputs.gcs-token }}
           run-key: ${{ inputs.run-key }}
+          release-status: ${{ inputs.release-status }}
+          on-already-released: ${{ inputs.on-already-released }}
           token-exchange-api-url: ${{ inputs.token-exchange-api-url }}
           token-exchange-audience: ${{ inputs.token-exchange-audience }}
           token-exchange-pipeline-id: ${{ inputs.token-exchange-pipeline-id }}

@@ -3,6 +3,8 @@ description: >
   Fetches SBOM documents for all resources in an OCM component tree and uploads
   them to a GCS bucket via the Google Cloud Storage JSON API. Incremental:
   resources already present in the bucket are skipped without OCI referrer calls.
+  Optionally checks the current Cumulus release status before uploading and sets
+  it afterwards.
 
 inputs:
   ocm-component:
@@ -21,6 +23,26 @@ inputs:
     description: 'GCS path prefix (run key); defaults to OCM component version'
     required: false
     default: ''
+  release-status:
+    description: >
+      Cumulus release status to write after upload. Empty string disables the step.
+      Allowed values:
+        promoted             – artifact pushed to release Artifactory via staging service;
+                               locks <run-key>/sbom/** in the GCS bucket.
+        deployed-to-production – artifact running in production, new functionality may still
+                               be behind feature toggles.
+        release-candidate    – run flagged as a candidate for release; no additional file locks.
+        released             – locks all files under <run-key>/ in the GCS bucket permanently
+                               (terminal state; cannot be reversed via file upload).
+        (empty string)       – skip status upload entirely (useful for dev/test runs).
+    required: false
+    default: 'promoted'
+  on-already-released:
+    description: >
+      Action when the run is already in "released" state: "skip" exits early,
+      "fail" aborts with an error.
+    required: false
+    default: 'skip'
   # Token refresh inputs (optional): when all four are supplied, upload.py will
   # re-request a fresh GCS token via System Trust on HTTP 401 mid-run.
   token-exchange-api-url:
@@ -44,13 +66,90 @@ inputs:
     required: false
     default: ''
 
+outputs:
+  run-key:
+    description: 'Effective GCS path prefix used for this run'
+    value: ${{ steps.resolve-run-key.outputs.run-key }}
+
 runs:
   using: composite
   steps:
+    - name: Resolve run-key
+      id: resolve-run-key
+      shell: bash
+      run: |
+        set -euo pipefail
+        run_key='${{ inputs.run-key }}'
+        if [ -z "$run_key" ]; then
+          # extract version from name:version
+          run_key='${{ inputs.ocm-component }}'
+          run_key="${run_key##*:}"
+        fi
+        echo "run-key=${run_key}" >> "$GITHUB_OUTPUT"
+        echo "Effective run-key: ${run_key}"
+
+    - name: Check current release status
+      id: check-status
+      shell: bash
+      env:
+        BUCKET: ${{ inputs.gcs-bucket }}
+        GCS_TOKEN: ${{ inputs.gcs-token }}
+        RUN_KEY: ${{ steps.resolve-run-key.outputs.run-key }}
+        ON_ALREADY_RELEASED: ${{ inputs.on-already-released }}
+      run: |
+        set -euo pipefail
+        prefix="${RUN_KEY}/.status-log/release/"
+        prefix_enc="${prefix//\//%2F}"
+        resp=$(curl -s -o /tmp/gcs-list.json -w '%{http_code}' \
+          "https://storage.googleapis.com/storage/v1/b/${BUCKET}/o?prefix=${prefix_enc}" \
+          -H "Authorization: Bearer ${GCS_TOKEN}" || echo "curl-failed")
+        if [ "$resp" != "200" ]; then
+          echo "status-check: HTTP ${resp} — skipping (best-effort)"
+          echo "already-released=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        # fetch the lexicographically last status file, check its releaseStatus
+        already_released=$(python3 - <<'PYEOF'
+        import json, urllib.request, os, sys
+
+        with open('/tmp/gcs-list.json') as f:
+            d = json.load(f)
+
+        items = d.get('items', [])
+        status_items = [i for i in items if '/.status-log/release/release-status' in i['name']]
+        if not status_items:
+            print('false')
+            sys.exit(0)
+
+        latest = sorted(status_items, key=lambda i: i['name'])[-1]
+        url = latest['mediaLink']
+        req = urllib.request.Request(url, headers={'Authorization': f"Bearer {os.environ['GCS_TOKEN']}"})
+        with urllib.request.urlopen(req) as r:
+            payload = json.load(r)
+
+        if payload.get('releaseStatus') == 'released':
+            print('true')
+        else:
+            print('false')
+        PYEOF
+        )
+        echo "already-released=${already_released}" >> "$GITHUB_OUTPUT"
+        if [ "$already_released" = "true" ]; then
+          echo "Run-key '${RUN_KEY}' is already in 'released' state."
+          if [ "$ON_ALREADY_RELEASED" = "fail" ]; then
+            echo "on-already-released=fail → aborting." >&2
+            exit 1
+          else
+            echo "on-already-released=skip → exiting early."
+          fi
+        fi
+
     - name: Install gardener-gha-libs
+      if: steps.check-status.outputs.already-released != 'true'
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
 
     - name: Upload SBOMs
+      if: steps.check-status.outputs.already-released != 'true'
       shell: bash
       env:
         OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
@@ -65,10 +164,39 @@ runs:
           --ocm-component '${{ inputs.ocm-component }}' \
           --gcs-bucket '${{ inputs.gcs-bucket }}' \
           --gcs-token '${{ inputs.gcs-token }}' \
-          --run-key '${{ inputs.run-key }}' \
+          --run-key '${{ steps.resolve-run-key.outputs.run-key }}' \
           --token-exchange-api-url '${{ inputs.token-exchange-api-url }}' \
           --token-exchange-audience '${{ inputs.token-exchange-audience }}' \
           --token-exchange-pipeline-id '${{ inputs.token-exchange-pipeline-id }}' \
           --token-exchange-pipeline-group-id '${{ inputs.token-exchange-pipeline-group-id }}' \
           --token-exchange-scope '${{ inputs.token-exchange-scope }}' \
           "${repos_args[@]}"
+
+    - name: Set release status
+      if: >
+        steps.check-status.outputs.already-released != 'true' &&
+        inputs.release-status != ''
+      shell: bash
+      env:
+        BUCKET: ${{ inputs.gcs-bucket }}
+        GCS_TOKEN: ${{ inputs.gcs-token }}
+        RUN_KEY: ${{ steps.resolve-run-key.outputs.run-key }}
+        RELEASE_STATUS: ${{ inputs.release-status }}
+      run: |
+        set -euo pipefail
+        ts=$(date -u +%s)
+        blob="${RUN_KEY}/.status-log/release/release-status-${ts}.json"
+        blob_enc="${blob//\//%2F}"
+        status=$(printf '{"releaseStatus":"%s"}' "$RELEASE_STATUS" | \
+          curl -s -o /tmp/gcs-status-resp.json -w '%{http_code}' \
+            -X POST \
+            "https://storage.googleapis.com/upload/storage/v1/b/${BUCKET}/o?uploadType=media&name=${blob_enc}" \
+            -H "Authorization: Bearer ${GCS_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @- \
+        )
+        echo "set-release-status: HTTP ${status}"
+        if [ "$status" != "200" ]; then
+          cat /tmp/gcs-status-resp.json || true
+          echo "Warning: failed to set release status (HTTP ${status})" >&2
+        fi
