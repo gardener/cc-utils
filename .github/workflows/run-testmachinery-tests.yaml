@@ -93,11 +93,11 @@ jobs:
 
     steps:
       - uses: azure/setup-kubectl@v4
-      - uses: gardener/cc-utils/.github/actions/setup-testrunner@master
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/setup-testrunner@cef068bb22195e8fd6fb9f9eb8c5ad7d67f0c37c
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@bda68f9d6a172ffc1eda14b3b0c2a5678fcb9a4f
         with:
           remove-trusted-label: false
-      - uses: gardener/cc-utils/.github/actions/kubernetes-auth@master
+      - uses: gardener/cc-utils/.github/actions/kubernetes-auth@4f3d10f0cc58e349b5962cd3189f2929d38a201a
         with:
           server: ${{ inputs.k8s-api-endpoint }}
           server-ca: ${{ inputs.k8s-api-ca }}
