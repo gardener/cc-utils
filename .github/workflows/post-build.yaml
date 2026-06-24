@@ -153,14 +153,14 @@ jobs:
     steps:
       - name: collect-component-descriptor
         id: collect
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@fd9719e66bb03b200fff88c2220ac0f370b37c26
         with:
           component-descriptor-artefact: base-component-descriptor
           outdir: /tmp/ocm
           post-process: ${{ inputs.ocm-post-process }}
 
       - name: fetch-prepare-values
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@9f712e1945d279aa5a1ea337c05e1f97576dabab
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -187,12 +187,12 @@ jobs:
             >> $GITHUB_OUTPUT
       - name: authenticate-against-oci-registry
         if: ${{ steps.prep.outputs.can-push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/oci-auth@master
+        uses: gardener/cc-utils/.github/actions/oci-auth@336601b11f3fb1d58e09fc0c17fd053c5b848c61
         with:
           oci-image-reference: ${{ steps.prep.outputs.ocm-repositories }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
-      - uses: gardener/cc-utils/.github/actions/ocm-validate@master
+      - uses: gardener/cc-utils/.github/actions/ocm-validate@57d073982842cfb2b1682523bedf751db399155e
         with:
           component-descriptor-path: /tmp/ocm/component-descriptor.yaml
           on-validation-errors: ${{ inputs.on-validation-errors }}
@@ -209,7 +209,7 @@ jobs:
             --on-exist ${{ inputs.on-existing-component-descriptor }}
           tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
       - name: upload-component-descriptor-as-artefact
-        uses: gardener/cc-utils/.github/actions/upload-artifact@master
+        uses: gardener/cc-utils/.github/actions/upload-artifact@459733846f854d866967237cfca92be4e9d46744
         with:
           path: component-descriptor.tar.gz
           name: component-descriptor
@@ -222,7 +222,7 @@ jobs:
       fork: ${{ steps.repo-metadata.outputs.fork }}
     steps:
       - id: repo-metadata
-        uses: gardener/cc-utils/.github/actions/repo-metadata@master
+        uses: gardener/cc-utils/.github/actions/repo-metadata@9f712e1945d279aa5a1ea337c05e1f97576dabab
         with:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -294,7 +294,7 @@ jobs:
           fi
       - name: fetch-prepare-values
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' && inputs.ocm-repositories == '' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@9f712e1945d279aa5a1ea337c05e1f97576dabab
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -309,7 +309,7 @@ jobs:
             ocm_repos="${{ inputs.ocm-repositories }}"
           fi
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@9f712e1945d279aa5a1ea337c05e1f97576dabab
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
@@ -320,7 +320,7 @@ jobs:
             pull-requests: read
       - name: draft-release-notes
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
-        uses: gardener/cc-utils/.github/actions/release-notes@master
+        uses: gardener/cc-utils/.github/actions/release-notes@d26a671b6260efcca973cb8b63a6ed71d849f190
         with:
           component-descriptor-artifact: component-descriptor
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
@@ -345,7 +345,7 @@ jobs:
               include_resources: true
       - name: update-draft-release
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
-        uses: gardener/cc-utils/.github/actions/draft-release@master
+        uses: gardener/cc-utils/.github/actions/draft-release@17c6424258393e834d4a87336c2ed010aee0ecf4
         with:
           version: ${{ needs.component-descriptor.outputs.version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
