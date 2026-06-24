@@ -89,23 +89,14 @@ on:
           release-candidate: flagged for potential release; no extra file locks.
           (empty): skip status upload, e.g. for dev/test runs.
         required: false
-        type: choice
-        options:
-          - promoted
-          - released
-          - deployed-to-production
-          - release-candidate
-          - ''
+        type: string
         default: 'promoted'
       on-already-released:
         description: >
           Action when the run is already in "released" state: "skip" exits early,
           "fail" aborts with an error.
         required: false
-        type: choice
-        options:
-          - skip
-          - fail
+        type: string
         default: 'skip'
 
 jobs:
