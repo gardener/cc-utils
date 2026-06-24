@@ -1,0 +1,342 @@
+# SPDX-FileCopyrightText: 2021 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import abc
+import collections.abc
+
+import ctt.model
+import ocm
+
+
+class UploaderBase:
+    @abc.abstractmethod
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        raise NotImplementedError('must be implemented by its subclasses')
+
+
+class PrependTargetUploader(UploaderBase):
+    def __init__(
+        self,
+        mangle: bool=True,
+        mangle_replacement_char: str='_',
+        convert_to_relative_refs: bool=False,
+        remove_prefixes: list[str]=[],
+    ):
+        self._mangle = mangle
+        self._mangle_replacement_char = mangle_replacement_char
+        self._convert_to_relative_refs = convert_to_relative_refs
+        self._remove_prefixes = remove_prefixes
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        tgt_oci_registry: str,
+        target_as_source: bool=False,
+    ) -> ctt.model.ReplicationResourceElement:
+        supported_access_types = (
+            ocm.AccessType.OCI_REGISTRY,
+            ocm.AccessType.RELATIVE_OCI_REFERENCE,
+        )
+        if replication_resource_element.source.access.type not in supported_access_types:
+            raise RuntimeError(f'PrependTargetUploader only supports {supported_access_types=}')
+
+        if not target_as_source:
+            src_ref = replication_resource_element.src_ref
+        else:
+            src_ref = replication_resource_element.tgt_ref
+
+        src_base_ref = src_ref.ref_without_tag
+
+        for remove_prefix in self._remove_prefixes:
+            src_base_ref = src_base_ref.removeprefix(remove_prefix)
+
+        if self._mangle:
+            src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
+
+        # if a prefix is to be removed from existing src base ref, it is likely that it should be
+        # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
+        # Instead, leave it up to the configuration to decide on the joining character.
+        if not self._remove_prefixes:
+            tgt_ref = '/'.join((
+                tgt_oci_registry.rstrip('/'),
+                src_base_ref.lstrip('/'),
+            ))
+        else:
+            tgt_ref = tgt_oci_registry + src_base_ref
+
+        if src_ref.has_mixed_tag:
+            symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
+            tgt_ref = f'{tgt_ref}:{symbolical_tag}@{digest_tag}'
+        elif src_ref.has_digest_tag:
+            tgt_ref = f'{tgt_ref}@{src_ref.tag}'
+        elif src_ref.has_symbolical_tag:
+            tgt_ref = f'{tgt_ref}:{src_ref.tag}'
+
+        if src_ref.has_digest_tag:
+            replication_resource_element.reference_by_digest = True
+
+        if self._convert_to_relative_refs:
+            replication_resource_element.convert_to_relative_ref = True
+
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
+        )
+
+        return replication_resource_element
+
+
+class RepositoryUploader(UploaderBase):
+    def __init__(
+        self,
+        repository: str | None=None,
+        mangle: bool=True,
+        mangle_replacement_char: str='_',
+        convert_to_relative_refs: bool=False,
+        remove_prefixes: list[str]=[],
+    ):
+        self._repository = repository
+        self._mangle = mangle
+        self._mangle_replacement_char = mangle_replacement_char
+        self._convert_to_relative_refs = convert_to_relative_refs
+        self._remove_prefixes = remove_prefixes
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        tgt_oci_registry: str,
+        target_as_source: bool=False,
+    ) -> ctt.model.ReplicationResourceElement:
+        supported_access_types = (
+            ocm.AccessType.OCI_REGISTRY,
+            ocm.AccessType.RELATIVE_OCI_REFERENCE,
+        )
+        if replication_resource_element.source.access.type not in supported_access_types:
+            raise RuntimeError(f'RepositoryUploader only supports {supported_access_types=}')
+
+        if not target_as_source:
+            src_ref = replication_resource_element.src_ref
+        else:
+            src_ref = replication_resource_element.tgt_ref
+
+        src_base_ref = src_ref.ref_without_tag
+
+        for remove_prefix in self._remove_prefixes:
+            src_base_ref = src_base_ref.removeprefix(remove_prefix)
+
+        if self._mangle:
+            src_base_ref = src_base_ref.replace('.', self._mangle_replacement_char)
+
+        if self._repository:
+            tgt_ref = '/'.join((
+                tgt_oci_registry.rstrip('/'),
+                self._repository.lstrip('/'),
+            ))
+        else:
+            tgt_ref = tgt_oci_registry
+
+        # if a prefix is to be removed from existing src base ref, it is likely that it should be
+        # replaced by the new prefix, instead of only prepended (where a joining `/` is reasonable).
+        # Instead, leave it up to the configuration to decide on the joining character.
+        if not self._remove_prefixes:
+            tgt_ref = '/'.join((
+                tgt_ref.rstrip('/'),
+                src_base_ref.lstrip('/'),
+            ))
+        else:
+            tgt_ref = tgt_ref + src_base_ref
+
+        if src_ref.has_mixed_tag:
+            symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
+            tgt_ref = f'{tgt_ref}:{symbolical_tag}@{digest_tag}'
+        elif src_ref.has_digest_tag:
+            tgt_ref = f'{tgt_ref}@{src_ref.tag}'
+        elif src_ref.has_symbolical_tag:
+            tgt_ref = f'{tgt_ref}:{src_ref.tag}'
+
+        if src_ref.has_digest_tag:
+            replication_resource_element.reference_by_digest = True
+
+        if self._convert_to_relative_refs:
+            replication_resource_element.convert_to_relative_ref = True
+
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
+        )
+
+        return replication_resource_element
+
+
+class TagSuffixUploader(UploaderBase):
+    def __init__(
+        self,
+        suffix,
+        separator='-',
+    ):
+        self._suffix = suffix
+        self._separator = separator
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        target_as_source: bool=False,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        if replication_resource_element.source.access.type is not ocm.AccessType.OCI_REGISTRY:
+            raise RuntimeError(f'TagSuffixUploader only supports {ocm.AccessType.OCI_REGISTRY=}')
+
+        if not target_as_source:
+            src_ref = replication_resource_element.src_ref
+        else:
+            src_ref = replication_resource_element.tgt_ref
+
+        if src_ref.has_digest_tag:
+            raise RuntimeError('Cannot append tag suffix to resource that is accessed via digest')
+
+        tgt_tag = self._separator.join((src_ref.tag, self._suffix))
+        tgt_ref = ':'.join((src_ref.ref_without_tag, tgt_tag))
+
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
+        )
+
+        return replication_resource_element
+
+
+class ExtraTagUploader(UploaderBase):
+    '''
+    Uploader that will push additional tags to uploaded images.
+
+    extra_tags: a static list of tags (e.g. "latest"). Will be overwritten if present
+    tag_expressions: a list of tag-expressions that will be evaluated
+
+    tag_expressions are python-expressions and will be evaluated with the following scope:
+
+    ```
+    resource: the OCM-Resource (see ocm package)
+    ```
+
+    As an example, the following expression might be used to restore "symbolic tags" from
+    OCM-metadata, like so:
+    ```
+    uploaders:
+        restore_symbolic_tag:
+            type: ExtraTagUploader
+            kwargs:
+                tag_expressions:
+                    - '{resource.version}'
+    ```
+    '''
+    def __init__(
+        self,
+        extra_tags: collections.abc.Iterable[str]=(),
+        tag_expressions: collections.abc.Iterable[str]=(),
+    ):
+        self.extra_tags = list(extra_tags)
+        self.tag_expressions = list(tag_expressions)
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.extra_tags = list(self.extra_tags)
+
+        resource = replication_resource_element.target
+        for expr in self.tag_expressions:
+            res = eval( # nosec B307
+                expr,
+                {'resource': resource},
+            )
+            if not isinstance(res, str):
+                raise ValueError(f'{expr=} did not yield str, but {type(res)=}')
+            replication_resource_element.extra_tags.append(res)
+
+        return replication_resource_element
+
+
+class DigestUploader(UploaderBase):
+    '''
+    sets `reference_target_by_digest` attribute in upload-request, which will result in
+    target-component-descriptor's resouce's access use digest rather than tag to reference
+    oci image. If `retain_symbolic_tag` is set, the symbolic tag is kept and the digest
+    is appended, otherwise the digest overwrites the symbolic tag.
+    '''
+    def __init__(
+        self,
+        retain_symbolic_tag: bool=False,
+    ):
+        self._retain_symbolic_tag = retain_symbolic_tag
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.reference_by_digest = True
+        replication_resource_element.retain_symbolic_tag = self._retain_symbolic_tag
+
+        return replication_resource_element
+
+
+class DescriptorRefRewriteUploader(UploaderBase):
+    '''
+    Rewrites the image-reference written into the component-descriptor without changing the actual
+    push target.  This is useful when the OCI registry the artifacts are pushed to differs from
+    the one clients are supposed to pull from (e.g. a primary region registry vs. a global CDN
+    endpoint that geo-routes to regional replicas).
+
+    `src_prefix` is matched against the beginning of the target ref (as computed by any preceding
+    uploaders) and replaced by `tgt_prefix`.  Both values are compared/applied on the full
+    image-reference string including the host.
+
+    Example cfg:
+    ```yaml
+    uploaders:
+      rewrite_for_global:
+        type: DescriptorRefRewriteUploader
+        kwargs:
+          src_prefix: keppel.eu-de-1.cloud.sap/
+          tgt_prefix: keppel.global.cloud.sap/
+    ```
+    '''
+    def __init__(
+        self,
+        src_prefix: str,
+        tgt_prefix: str,
+    ):
+        self._src_prefix = src_prefix
+        self._tgt_prefix = tgt_prefix
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        target_as_source: bool=False,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        if not target_as_source:
+            ref = str(replication_resource_element.src_ref)
+        else:
+            ref = str(replication_resource_element.tgt_ref)
+
+        if not ref.startswith(self._src_prefix):
+            raise ValueError(
+                f'{ref!r} does not start with {self._src_prefix!r}; '
+                'check DescriptorRefRewriteUploader configuration'
+            )
+
+        descriptor_ref = self._tgt_prefix + ref.removeprefix(self._src_prefix)
+        replication_resource_element.descriptor_ref_override = descriptor_ref
+
+        return replication_resource_element
