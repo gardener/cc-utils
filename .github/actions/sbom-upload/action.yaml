@@ -146,7 +146,7 @@ runs:
 
     - name: Install gardener-gha-libs
       if: steps.check-status.outputs.already-released != 'true'
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@4f3d10f0cc58e349b5962cd3189f2929d38a201a
 
     - name: Upload SBOMs
       if: steps.check-status.outputs.already-released != 'true'
