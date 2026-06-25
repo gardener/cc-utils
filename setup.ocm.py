@@ -42,6 +42,7 @@ setuptools.setup(
         'cnudie',
         'ctt',
         'ocm',
+        'sbom',
     ),
     package_data={
         'ctt': (
