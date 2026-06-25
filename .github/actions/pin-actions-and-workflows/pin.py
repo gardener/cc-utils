@@ -189,7 +189,7 @@ def _extract_internal_deps(
         if '@' not in after_repo:
             continue
         dep_prefix, ref = after_repo.rsplit('@', 1)
-        if not _is_pinned(ref, repo) and dep_prefix in known_prefixes:
+        if dep_prefix in known_prefixes:
             yield dep_prefix
 
 
@@ -296,11 +296,17 @@ def _rewrite_parsed(
             continue
         dep_prefix, ref = after_repo.rsplit('@', 1)
         if _is_pinned(ref, repo):
-            continue
-        digest = prefix_to_digest.get(dep_prefix)
-        if digest is None:
-            logger.warning('No pinned digest found for %s — leaving unchanged', dep_prefix)
-            continue
+            # For internal deps: update if a newer digest is available; otherwise skip.
+            # For external deps: prefix_to_digest has no entry, so we skip correctly.
+            new_digest = prefix_to_digest.get(dep_prefix)
+            if new_digest is None or new_digest == ref:
+                continue
+            digest = new_digest
+        else:
+            digest = prefix_to_digest.get(dep_prefix)
+            if digest is None:
+                logger.warning('No pinned digest found for %s — leaving unchanged', dep_prefix)
+                continue
         step[key] = f'{own_prefix}{dep_prefix}@{digest}'
         changed = True
 
