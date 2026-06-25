@@ -329,7 +329,7 @@ runs:
 
     - name: install-cbomkit-theia
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@6adc9678b4c8780481a322d3b6492cf42d6502ca
 
     - name: authenticate-for-spdx
       if: ${{ inputs.oci-registry != '' }}
