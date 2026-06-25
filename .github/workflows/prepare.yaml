@@ -217,7 +217,7 @@ jobs:
     steps:
       - name: params
         id: params
-        uses: gardener/cc-utils/.github/actions/params@0b6242d5ece7580a7fb3109e2f6b0aa9005f1400
+        uses: gardener/cc-utils/.github/actions/params@master
         with:
           mode: ${{ inputs.mode }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
@@ -225,7 +225,7 @@ jobs:
           snapshots-suffix: ${{ inputs.snapshots-suffix }}
           releases-suffix: ${{ inputs.releases-suffix }}
           ocm-repositories: ${{ inputs.ocm-repositories }}
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@a5b1491ea86de48f04973d998e56433655d78bad
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           fetch-depth: ${{ inputs.checkout-fetch-depth }}
           submodules: ${{ inputs.checkout-submodules }}
@@ -249,7 +249,7 @@ jobs:
           fi
           echo "prerelease=${prerelease}" >> ${GITHUB_OUTPUT}
           echo "commit-message=${commit_msg}" >> ${GITHUB_OUTPUT}
-      - uses: gardener/cc-utils/.github/actions/version@c0de0b1905aed54005f1f6c56fb42e3342736c8c
+      - uses: gardener/cc-utils/.github/actions/version@master
         id: version
         name: create-release-commit
         with:
@@ -272,7 +272,7 @@ jobs:
           versionfile: ${{ inputs.versionfile }}
           version-operation: ${{ inputs.version-operation }}
           commit-kind: ${{ inputs.mode == 'release' && 'release' || 'build' }}
-      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@3477807502047b06732ea8e386b7d1363221bc22
+      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@master
         id: component-descriptor
         with:
           base-component: ${{ inputs.base-component-file }}
@@ -304,7 +304,7 @@ jobs:
           tar cf "${{ inputs.output-artefact-filename }}" $p
           tar tf "${{ inputs.output-artefact-filename }}" # debug
 
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@d95236f2aeaa7c861ca52aec76e7b42ad9e528ad
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
         with:
           name: ${{ inputs.output-artefact }}
           path: ${{ inputs.output-artefact-filename }}
