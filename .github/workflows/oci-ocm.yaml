@@ -521,7 +521,7 @@ jobs:
 
       - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: ./.github/actions/install-cbomkit-theia
+        uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
 
       - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
