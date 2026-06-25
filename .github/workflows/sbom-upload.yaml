@@ -71,10 +71,10 @@ on:
         required: true
         type: string
       runner:
-        description: 'Runner label(s) as a JSON array string, e.g. "[\"self-hosted\"]"'
+        description: 'Newline-separated list of runner labels (e.g. "self-hosted")'
         required: false
         type: string
-        default: '["self-hosted"]'
+        default: 'self-hosted'
       run-key:
         description: 'GCS path prefix (run key); defaults to OCM component version'
         required: false
@@ -102,7 +102,7 @@ on:
 
 jobs:
   sbom-upload:
-    runs-on: ${{ fromJSON(inputs.runner) }}
+    runs-on: ${{ inputs.runner }}
     permissions:
       id-token: write
 
