@@ -329,13 +329,7 @@ runs:
 
     - name: install-cbomkit-theia
       if: ${{ inputs.oci-registry != '' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        install_dir="${HOME}/.local/bin"
-        mkdir -p "${install_dir}"
-        GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
-        echo "${install_dir}" >> "${GITHUB_PATH}"
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
 
     - name: authenticate-for-spdx
       if: ${{ inputs.oci-registry != '' }}
