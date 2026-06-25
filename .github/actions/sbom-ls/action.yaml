@@ -43,4 +43,4 @@ runs:
           --gcs-token  "$GCS_TOKEN" \
           --limit      "$LIMIT")
         echo "versions=${output}" >> "$GITHUB_OUTPUT"
-        echo "$output"
+        echo "$output" | python3 -m json.tool

@@ -122,8 +122,7 @@ def main() -> None:
             status = None
         results.append({'version': run_key, 'status': status})
 
-    json.dump(results, sys.stdout, indent=2)
-    print()  # trailing newline
+    print(json.dumps(results))
 
 
 if __name__ == '__main__':
