@@ -1,0 +1,70 @@
+name: 'Set Cumulus release status (sbom-set-status)'
+description: >
+  Writes a Cumulus release-status entry for a GCS run-key, with smart
+  transition logic: targets that require a prior "promoted" write
+  (deployed-to-production, released) will have it prepended automatically
+  if not already present. For "released", also polls until sbom/ is locked
+  before writing, confirming Cumulus has processed the promoted write.
+
+inputs:
+  gcs-bucket:
+    description: 'GCS bucket name (Cumulus pipeline UUID)'
+    required: true
+  gcs-token:
+    description: 'Bearer token for the GCS JSON API'
+    required: true
+  run-key:
+    description: 'GCS path prefix (run-key) to set status on, e.g. "1.2.3"'
+    required: true
+  release-status:
+    description: >
+      Target release status. One of:
+        release-candidate    – informational; no file locks.
+        promoted             – registers run-key with Cumulus; locks sbom/** permanently.
+        deployed-to-production – informational; no additional locks beyond promoted.
+        released             – locks all of <run-key>/ permanently (terminal state).
+      For deployed-to-production and released, a promoted write is prepended
+      automatically if not already present. For released, additionally waits
+      for sbom/ to become locked before writing.
+    required: true
+  on-already-released:
+    description: >
+      Action when the run-key is already in "released" state:
+        skip – exit 0 (default)
+        fail – exit 1
+    required: false
+    default: 'skip'
+  poll-interval:
+    description: 'Seconds between lock-poll attempts when transitioning to released (default: 30)'
+    required: false
+    default: '30'
+  poll-timeout:
+    description: >
+      Max seconds to wait for sbom/ lock before proceeding to write released (default: 600).
+      A warning is printed if the timeout is reached; the released write still proceeds.
+    required: false
+    default: '600'
+
+runs:
+  using: composite
+  steps:
+    - name: Set release status
+      shell: bash
+      env:
+        GCS_BUCKET: ${{ inputs.gcs-bucket }}
+        GCS_TOKEN: ${{ inputs.gcs-token }}
+        RUN_KEY: ${{ inputs.run-key }}
+        RELEASE_STATUS: ${{ inputs.release-status }}
+        ON_ALREADY_RELEASED: ${{ inputs.on-already-released }}
+        POLL_INTERVAL: ${{ inputs.poll-interval }}
+        POLL_TIMEOUT: ${{ inputs.poll-timeout }}
+      run: |
+        set -euo pipefail
+        python3 "$GITHUB_ACTION_PATH/set_status.py" \
+          --gcs-bucket           "$GCS_BUCKET" \
+          --gcs-token            "$GCS_TOKEN" \
+          --run-key              "$RUN_KEY" \
+          --release-status       "$RELEASE_STATUS" \
+          --on-already-released  "$ON_ALREADY_RELEASED" \
+          --poll-interval        "$POLL_INTERVAL" \
+          --poll-timeout         "$POLL_TIMEOUT"
