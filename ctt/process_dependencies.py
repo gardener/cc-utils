@@ -15,6 +15,7 @@ import json
 import jsonschema
 import logging
 import os
+import requests
 import threading
 import tempfile
 
@@ -792,10 +793,23 @@ def process_replication_plan_step(
                       f'skipping {push_target=}: already present {oci_manifest_digest=}'
                     )
                     continue
-                oci_client.put_manifest(
-                    image_reference=push_target,
-                    manifest=manifest_bytes,
-                )
+                try:
+                    oci_client.put_manifest(
+                        image_reference=push_target,
+                        manifest=manifest_bytes,
+                    )
+                except requests.exceptions.HTTPError as e:
+                    if (
+                        e.response is not None
+                        and e.response.status_code == 409
+                        and replication_resource_element.ignore_extra_tag_policy_violations
+                    ):
+                        logger.warning(
+                            f'pushing extra tag {push_target=} was rejected by tag policy '
+                            f'(409) - ignoring as configured'
+                        )
+                    else:
+                        raise
 
         if digest := replication_resource_element.target.digest:
             # if resource has a digest we understand, and is an ociArtifact, then we need to

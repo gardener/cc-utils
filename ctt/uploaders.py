@@ -217,6 +217,12 @@ class ExtraTagUploader(UploaderBase):
 
     extra_tags: a static list of tags (e.g. "latest"). Will be overwritten if present
     tag_expressions: a list of tag-expressions that will be evaluated
+    excluded_artefact_types: artefact-types (ocm.ArtefactType values or raw strings) for which
+        no extra tags are pushed; useful when multiple artefact types share the same repository
+        (e.g. spdx-documents alongside oci-images) and the target registry forbids retagging
+    skip_all_types_except: if given, only artefacts whose type is in this list receive extra tags;
+        all others are skipped (mutually exclusive with `excluded_artefact_types`)
+    skip_retagging: if True, no extra tags are ever pushed regardless of other settings
 
     tag_expressions are python-expressions and will be evaluated with the following scope:
 
@@ -233,15 +239,41 @@ class ExtraTagUploader(UploaderBase):
             kwargs:
                 tag_expressions:
                     - '{resource.version}'
+                excluded_artefact_types:
+                    - blob/v1
     ```
     '''
     def __init__(
         self,
         extra_tags: collections.abc.Iterable[str]=(),
         tag_expressions: collections.abc.Iterable[str]=(),
+        excluded_artefact_types: collections.abc.Iterable[str]=(),
+        skip_all_types_except: collections.abc.Iterable[str] | None=None,
+        skip_retagging: bool=False,
+        ignore_tag_policy_violations: bool=False,
     ):
+        if excluded_artefact_types and skip_all_types_except is not None:
+            raise ValueError('excluded_artefact_types and skip_all_types_except are mutually exclusive')
         self.extra_tags = list(extra_tags)
         self.tag_expressions = list(tag_expressions)
+        self._excluded_types = {str(t) for t in excluded_artefact_types}
+        self._allowed_types = (
+            {str(t) for t in skip_all_types_except}
+            if skip_all_types_except is not None
+            else None
+        )
+        self._skip_retagging = skip_retagging
+        self._ignore_tag_policy_violations = ignore_tag_policy_violations
+
+    def _should_skip(self, resource: ocm.Resource) -> bool:
+        if self._skip_retagging:
+            return True
+        rtype = str(resource.type)
+        if self._excluded_types and rtype in self._excluded_types:
+            return True
+        if self._allowed_types is not None and rtype not in self._allowed_types:
+            return True
+        return False
 
     def process(
         self,
@@ -249,9 +281,17 @@ class ExtraTagUploader(UploaderBase):
         /,
         **kwargs,
     ) -> ctt.model.ReplicationResourceElement:
-        replication_resource_element.extra_tags = list(self.extra_tags)
-
         resource = replication_resource_element.target
+
+        if self._should_skip(resource):
+            replication_resource_element.extra_tags = []
+            return replication_resource_element
+
+        replication_resource_element.extra_tags = list(self.extra_tags)
+        replication_resource_element.ignore_extra_tag_policy_violations = (
+            self._ignore_tag_policy_violations
+        )
+
         for expr in self.tag_expressions:
             res = eval( # nosec B307
                 expr,

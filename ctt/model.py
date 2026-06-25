@@ -15,6 +15,9 @@ class ReplicationResourceOptions:
     # if set, this ref is written into the component-descriptor instead of the actual push target
     descriptor_ref_override: str | None = None
     inject_sboms: bool = False
+    # if True, 409 responses when pushing extra tags (e.g. from immutable tag policies) are
+    # downgraded to a warning instead of raising
+    ignore_extra_tag_policy_violations: bool = False
 
 
 @dataclasses.dataclass(kw_only=True)
