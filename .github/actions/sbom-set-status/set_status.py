@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 '''
-Set the Cumulus release status for a given GCS run-key.
+Set the Cumulus release status for one or more GCS run-keys.
 
 Smart transition logic:
   - release-candidate, promoted: single write.
@@ -129,7 +129,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--gcs-bucket', required=True, metavar='BUCKET')
     parser.add_argument('--gcs-token', required=True, metavar='TOKEN')
-    parser.add_argument('--run-key', required=True, metavar='KEY')
+
+    key_group = parser.add_mutually_exclusive_group(required=True)
+    key_group.add_argument('--run-key', metavar='KEY',
+        help='single GCS run-key to set status on')
+    key_group.add_argument('--run-keys', metavar='KEYS',
+        help='newline-separated list of GCS run-keys to set status on')
+
     parser.add_argument(
         '--release-status',
         required=True,
@@ -143,6 +149,13 @@ def main() -> None:
         default='skip',
         metavar='ACTION',
         help='"skip" exits 0, "fail" exits 1 when run-key is already released (default: skip)',
+    )
+    parser.add_argument(
+        '--on-absent',
+        choices=('skip', 'fail'),
+        default='skip',
+        metavar='ACTION',
+        help='"skip" ignores run-keys with no status entries, "fail" aborts (default: skip)',
     )
     parser.add_argument(
         '--poll-interval',
@@ -162,30 +175,42 @@ def main() -> None:
 
     bucket = args.gcs_bucket
     token = args.gcs_token
-    run_key = args.run_key
     target = args.release_status
 
-    current = _current_status(bucket, token, run_key)
-    print(f'run-key: {run_key!r}  current: {current!r}  target: {target!r}', file=sys.stderr)
+    if args.run_keys:
+        run_keys = [k.strip() for k in args.run_keys.splitlines() if k.strip()]
+    else:
+        run_keys = [args.run_key]
 
-    if current == 'released':
-        msg = f'run-key {run_key!r} is already in "released" state'
-        if args.on_already_released == 'fail':
-            print(f'error: {msg}', file=sys.stderr)
-            sys.exit(1)
-        print(f'{msg} — skipping', file=sys.stderr)
-        return
+    for run_key in run_keys:
+        current = _current_status(bucket, token, run_key)
+        print(f'run-key: {run_key!r}  current: {current!r}  target: {target!r}', file=sys.stderr)
 
-    # pre-write promoted if the target requires it and it hasn't been done yet
-    if target in _NEEDS_PROMOTED and current not in _PROMOTED_DONE:
-        print('pre-writing promoted (required before {})'.format(target), file=sys.stderr)
-        _write_status(bucket, token, run_key, 'promoted')
+        if current is None:
+            if args.on_absent == 'fail':
+                print(f'error: run-key {run_key!r} has no status entries', file=sys.stderr)
+                sys.exit(1)
+            print(f'run-key {run_key!r} absent — skipping', file=sys.stderr)
+            continue
 
-    # for released: wait until Cumulus has processed the promoted write (sbom/ locked)
-    if target == 'released':
-        _poll_sbom_locked(bucket, token, run_key, args.poll_interval, args.poll_timeout)
+        if current == 'released':
+            msg = f'run-key {run_key!r} is already in "released" state'
+            if args.on_already_released == 'fail':
+                print(f'error: {msg}', file=sys.stderr)
+                sys.exit(1)
+            print(f'{msg} — skipping', file=sys.stderr)
+            continue
 
-    _write_status(bucket, token, run_key, target)
+        # pre-write promoted if the target requires it and it hasn't been done yet
+        if target in _NEEDS_PROMOTED and current not in _PROMOTED_DONE:
+            print('pre-writing promoted (required before {})'.format(target), file=sys.stderr)
+            _write_status(bucket, token, run_key, 'promoted')
+
+        # for released: wait until Cumulus has processed the promoted write (sbom/ locked)
+        if target == 'released':
+            _poll_sbom_locked(bucket, token, run_key, args.poll_interval, args.poll_timeout)
+
+        _write_status(bucket, token, run_key, target)
 
 
 if __name__ == '__main__':
