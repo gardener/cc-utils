@@ -519,6 +519,12 @@ jobs:
             | sh -s -- -b "${install_dir}"
           echo "${install_dir}" >> "${GITHUB_PATH}"
 
+      - uses: actions/setup-go@v5
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        with:
+          go-version: stable
+          cache: false
+
       - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
         shell: bash
