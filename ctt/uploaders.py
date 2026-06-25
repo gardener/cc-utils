@@ -253,7 +253,9 @@ class ExtraTagUploader(UploaderBase):
         ignore_tag_policy_violations: bool=False,
     ):
         if excluded_artefact_types and skip_all_types_except is not None:
-            raise ValueError('excluded_artefact_types and skip_all_types_except are mutually exclusive')
+            raise ValueError(
+                'excluded_artefact_types and skip_all_types_except are mutually exclusive'
+            )
         self.extra_tags = list(extra_tags)
         self.tag_expressions = list(tag_expressions)
         self._excluded_types = {str(t) for t in excluded_artefact_types}
