@@ -1,0 +1,31 @@
+name: Install cbomkit-theia
+description: |
+  Installs cbomkit-theia by extracting the binary from the official OCI image.
+  Supports linux/amd64 and linux/arm64.
+
+inputs:
+  version:
+    description: cbomkit-theia version to install
+    required: false
+    default: 1.1.2
+
+runs:
+  using: composite
+  steps:
+    - name: install-cbomkit-theia
+      shell: bash
+      run: |
+        set -euo pipefail
+        arch="$(uname -m)"
+        case "${arch}" in
+          x86_64)  platform='linux/amd64' ;;
+          aarch64) platform='linux/arm64' ;;
+          *) echo "unsupported architecture: ${arch}"; exit 1 ;;
+        esac
+        image="ghcr.io/cbomkit/cbomkit-theia:${{ inputs.version }}"
+        install_dir="${HOME}/.local/bin"
+        mkdir -p "${install_dir}"
+        cid="$(docker create --platform "${platform}" "${image}")"
+        docker cp "${cid}:/app/cbomkit-theia" "${install_dir}/cbomkit-theia"
+        docker rm "${cid}"
+        echo "${install_dir}" >> "${GITHUB_PATH}"

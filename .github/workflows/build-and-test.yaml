@@ -398,13 +398,7 @@ jobs:
             | sh -s -- -b "${install_dir}"
           echo "${install_dir}" >> "${GITHUB_PATH}"
       - name: install-cbomkit-theia
-        shell: bash
-        run: |
-          set -euo pipefail
-          install_dir="${HOME}/.local/bin"
-          mkdir -p "${install_dir}"
-          GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
-          echo "${install_dir}" >> "${GITHUB_PATH}"
+        uses: ./.github/actions/install-cbomkit-theia
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
@@ -441,13 +435,7 @@ jobs:
             | sh -s -- -b "${install_dir}"
           echo "${install_dir}" >> "${GITHUB_PATH}"
       - name: install-cbomkit-theia
-        shell: bash
-        run: |
-          set -euo pipefail
-          install_dir="${HOME}/.local/bin"
-          mkdir -p "${install_dir}"
-          GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
-          echo "${install_dir}" >> "${GITHUB_PATH}"
+        uses: ./.github/actions/install-cbomkit-theia
       - uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}

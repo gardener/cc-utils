@@ -519,21 +519,9 @@ jobs:
             | sh -s -- -b "${install_dir}"
           echo "${install_dir}" >> "${GITHUB_PATH}"
 
-      - uses: actions/setup-go@v5
-        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        with:
-          go-version: stable
-          cache: false
-
       - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          install_dir="${HOME}/.local/bin"
-          mkdir -p "${install_dir}"
-          GOBIN="${install_dir}" go install github.com/cbomkit/cbomkit-theia@latest
-          echo "${install_dir}" >> "${GITHUB_PATH}"
+        uses: ./.github/actions/install-cbomkit-theia
 
       - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
