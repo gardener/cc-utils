@@ -1,6 +1,6 @@
 name: 'Set Cumulus release status (sbom-set-status)'
 description: >
-  Writes a Cumulus release-status entry for a GCS run-key, with smart
+  Writes a Cumulus release-status entry for one or more GCS run-keys, with smart
   transition logic: targets that require a prior "promoted" write
   (deployed-to-production, released) will have it prepended automatically
   if not already present. For "released", also polls until sbom/ is locked
@@ -14,8 +14,13 @@ inputs:
     description: 'Bearer token for the GCS JSON API'
     required: true
   run-key:
-    description: 'GCS path prefix (run-key) to set status on, e.g. "1.2.3"'
-    required: true
+    description: 'Single GCS path prefix (run-key) to set status on, e.g. "1.2.3"'
+    required: false
+    default: ''
+  run-keys:
+    description: 'Newline-separated list of GCS run-keys to set status on'
+    required: false
+    default: ''
   release-status:
     description: >
       Target release status. One of:
@@ -31,6 +36,13 @@ inputs:
     description: >
       Action when the run-key is already in "released" state:
         skip – exit 0 (default)
+        fail – exit 1
+    required: false
+    default: 'skip'
+  on-absent:
+    description: >
+      Action when a run-key has no status entries in the bucket:
+        skip – silently ignore (default)
         fail – exit 1
     required: false
     default: 'skip'
@@ -54,17 +66,31 @@ runs:
         GCS_BUCKET: ${{ inputs.gcs-bucket }}
         GCS_TOKEN: ${{ inputs.gcs-token }}
         RUN_KEY: ${{ inputs.run-key }}
+        RUN_KEYS: ${{ inputs.run-keys }}
         RELEASE_STATUS: ${{ inputs.release-status }}
         ON_ALREADY_RELEASED: ${{ inputs.on-already-released }}
+        ON_ABSENT: ${{ inputs.on-absent }}
         POLL_INTERVAL: ${{ inputs.poll-interval }}
         POLL_TIMEOUT: ${{ inputs.poll-timeout }}
       run: |
         set -euo pipefail
-        python3 "$GITHUB_ACTION_PATH/set_status.py" \
-          --gcs-bucket           "$GCS_BUCKET" \
-          --gcs-token            "$GCS_TOKEN" \
-          --run-key              "$RUN_KEY" \
-          --release-status       "$RELEASE_STATUS" \
-          --on-already-released  "$ON_ALREADY_RELEASED" \
-          --poll-interval        "$POLL_INTERVAL" \
-          --poll-timeout         "$POLL_TIMEOUT"
+        if [ -n "${RUN_KEYS}" ]; then
+          python3 "$GITHUB_ACTION_PATH/set_status.py" \
+            --gcs-bucket           "$GCS_BUCKET" \
+            --gcs-token            "$GCS_TOKEN" \
+            --run-keys             "$RUN_KEYS" \
+            --release-status       "$RELEASE_STATUS" \
+            --on-already-released  "$ON_ALREADY_RELEASED" \
+            --on-absent            "$ON_ABSENT" \
+            --poll-interval        "$POLL_INTERVAL" \
+            --poll-timeout         "$POLL_TIMEOUT"
+        else
+          python3 "$GITHUB_ACTION_PATH/set_status.py" \
+            --gcs-bucket           "$GCS_BUCKET" \
+            --gcs-token            "$GCS_TOKEN" \
+            --run-key              "$RUN_KEY" \
+            --release-status       "$RELEASE_STATUS" \
+            --on-already-released  "$ON_ALREADY_RELEASED" \
+            --poll-interval        "$POLL_INTERVAL" \
+            --poll-timeout         "$POLL_TIMEOUT"
+        fi

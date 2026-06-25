@@ -1,0 +1,145 @@
+name: Set Cumulus SBOM release status
+
+# Reusable workflow: sets a Cumulus release status for one or more versions.
+#
+# When limit > 1, also processes the (limit-1) preceding versions by decrementing
+# the minor component (requires major.minor.patch scheme with incrementing minor).
+# Versions absent from the bucket are silently skipped.
+#
+# Caller example:
+#
+#   jobs:
+#     set-status:
+#       uses: gardener/cc-utils/.github/workflows/sbom-set-status.yaml@v1
+#       with:
+#         run-key: '1.2795.0'
+#         release-status: released
+#         gcs-bucket: my-pipeline-uuid
+#         token-exchange-api-url: 'https://api.example.com'
+#         token-exchange-audience: 'api://MyService'
+#         token-exchange-pipeline-id: 'my-pipeline'
+#         token-exchange-pipeline-group-id: 'my-org/my-project'
+#         token-exchange-scope: 'cumulus'
+#       permissions:
+#         id-token: write
+
+on:
+  workflow_call:
+    inputs:
+      run-key:
+        description: 'Version / GCS run-key (e.g. "1.2.3")'
+        required: true
+        type: string
+      limit:
+        description: >
+          Number of consecutive versions to process, counting down from run-key.
+          1 (default) = only run-key; N = run-key plus the N-1 preceding versions.
+        required: false
+        type: string
+        default: '1'
+      release-status:
+        description: >
+          Target Cumulus release status: release-candidate, promoted,
+          deployed-to-production, or released.
+        required: true
+        type: string
+      gcs-bucket:
+        description: 'GCS bucket name (Cumulus pipeline UUID)'
+        required: true
+        type: string
+      token-exchange-api-url:
+        description: 'Base URL of the token exchange API'
+        required: true
+        type: string
+      token-exchange-audience:
+        description: 'OIDC audience for the identity token'
+        required: true
+        type: string
+      token-exchange-pipeline-id:
+        description: 'Pipeline identifier passed to the token exchange API'
+        required: true
+        type: string
+      token-exchange-pipeline-group-id:
+        description: 'Pipeline group identifier passed to the token exchange API'
+        required: true
+        type: string
+      token-exchange-scope:
+        description: 'Scope to request from the token exchange API (e.g. "cumulus")'
+        required: true
+        type: string
+      runner:
+        description: 'Newline-separated list of runner labels (e.g. "self-hosted")'
+        required: false
+        type: string
+        default: 'self-hosted'
+      on-already-released:
+        description: '"skip" (default) or "fail" when a version is already released'
+        required: false
+        type: string
+        default: 'skip'
+      poll-interval:
+        description: 'Seconds between lock-poll attempts when transitioning to released'
+        required: false
+        type: string
+        default: '30'
+      poll-timeout:
+        description: 'Max seconds to wait for sbom/ lock before proceeding (default: 600)'
+        required: false
+        type: string
+        default: '600'
+
+jobs:
+  set-status:
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Exchange tokens
+        uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@master
+        with:
+          api-url: ${{ inputs.token-exchange-api-url }}
+          oidc-audience: ${{ inputs.token-exchange-audience }}
+          pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
+          pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
+          scopes: ${{ inputs.token-exchange-scope }}
+          token-env-prefix: 'GCS_'
+
+      - name: Export GCS token
+        id: gcs-token
+        shell: bash
+        env:
+          SCOPE: ${{ inputs.token-exchange-scope }}
+        run: |
+          upper=$(echo "$SCOPE" | tr '[:lower:]' '[:upper:]')
+          token_var="GCS_${upper}_TOKEN"
+          echo "gcs-token=${!token_var}" >> "$GITHUB_OUTPUT"
+
+      - name: Build run-key list
+        id: keys
+        shell: bash
+        env:
+          RUN_KEY: ${{ inputs.run-key }}
+          LIMIT: ${{ inputs.limit }}
+        run: |
+          set -euo pipefail
+          IFS=. read -r major minor patch <<< "$RUN_KEY"
+          {
+            printf 'run-keys<<EOF\n'
+            for i in $(seq 0 $((LIMIT - 1))); do
+              printf '%s.%s.%s\n' "$major" "$((minor - i))" "$patch"
+            done
+            printf 'EOF\n'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set release status
+        uses: gardener/cc-utils/.github/actions/sbom-set-status@master
+        with:
+          gcs-bucket: ${{ inputs.gcs-bucket }}
+          gcs-token: ${{ steps.gcs-token.outputs.gcs-token }}
+          run-keys: ${{ steps.keys.outputs.run-keys }}
+          release-status: ${{ inputs.release-status }}
+          on-already-released: ${{ inputs.on-already-released }}
+          on-absent: 'skip'
+          poll-interval: ${{ inputs.poll-interval }}
+          poll-timeout: ${{ inputs.poll-timeout }}
