@@ -1,0 +1,46 @@
+name: 'List Cumulus versions'
+description: >
+  Lists versions (GCS run-keys) present in a Cumulus pipeline bucket, ordered
+  greatest-to-smallest by semver, with the current release status of each.
+  Bare-integer or two-component versions are normalised to three components
+  (e.g. "42" → "42.0.0", "1.2" → "1.2.0") for comparison purposes; the
+  original run-key string is preserved in the output.
+
+inputs:
+  gcs-bucket:
+    description: 'GCS bucket name (Cumulus pipeline ID / UUID)'
+    required: true
+  gcs-token:
+    description: 'Bearer token for the GCS JSON API'
+    required: true
+  limit:
+    description: 'Maximum number of versions to return, starting from the greatest (default: 20)'
+    required: false
+    default: '20'
+
+outputs:
+  versions:
+    description: >
+      JSON array of objects ordered greatest-to-smallest:
+        [{"version": "1.2.3", "status": "promoted"}, ...]
+      status is null when no status file has been written yet.
+    value: ${{ steps.list.outputs.versions }}
+
+runs:
+  using: composite
+  steps:
+    - name: List versions
+      id: list
+      shell: bash
+      env:
+        GCS_BUCKET: ${{ inputs.gcs-bucket }}
+        GCS_TOKEN: ${{ inputs.gcs-token }}
+        LIMIT: ${{ inputs.limit }}
+      run: |
+        set -euo pipefail
+        output=$(python3 "$GITHUB_ACTION_PATH/list_versions.py" \
+          --gcs-bucket "$GCS_BUCKET" \
+          --gcs-token  "$GCS_TOKEN" \
+          --limit      "$LIMIT")
+        echo "versions=${output}" >> "$GITHUB_OUTPUT"
+        echo "$output"
