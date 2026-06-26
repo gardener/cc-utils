@@ -32,10 +32,7 @@ def _mangle(s: str) -> str:
 def _fmt_id(mapping: si.SbomMapping) -> str | None:
     if mapping.source is si.SbomSource.OCM:
         ei = mapping.sbom.extraIdentity or {}
-        # SBOM resources use 'sbom-format'; CBOM resources use 'cbom-format'
-        return ei.get('sbom-format') or (
-            f'cbom-{ei["cbom-format"]}' if ei.get('cbom-format') else None
-        )
+        return ei.get('sbom-format') or ei.get('cbom-format') or None
     for fid, media_type in soci.SBOM_FORMATS:
         if mapping.sbom.artifact_type == media_type:
             return fid

@@ -112,7 +112,7 @@ def test_build_sbom_ocm_resources_distinct_identity_for_same_name():
     assert spdx_arm64.extraIdentity.get('arch') == 'arm64'
     assert spdx_amd64.extraIdentity.get('sbom-format') == 'spdx-2.3'
     assert cdx_amd64.extraIdentity.get('sbom-format') == 'cyclonedx-1.6'
-    assert cbom_amd64.extraIdentity.get('cbom-format') == 'cyclonedx-1.6'
+    assert cbom_amd64.extraIdentity.get('cbom-format') == 'cyclonedx-1.6+cbom'
 
 
 def test_build_sbom_ocm_resources_no_source_extra_identity():
@@ -129,7 +129,7 @@ def test_build_sbom_ocm_resources_no_source_extra_identity():
     )
     assert spdx.extraIdentity == {'version': '2.0', 'sbom-format': 'spdx-2.3'}
     assert cdx.extraIdentity == {'version': '2.0', 'sbom-format': 'cyclonedx-1.6'}
-    assert cbom.extraIdentity == {'version': '2.0', 'cbom-format': 'cyclonedx-1.6'}
+    assert cbom.extraIdentity == {'version': '2.0', 'cbom-format': 'cyclonedx-1.6+cbom'}
     peers = [spdx, cdx, cbom]
     assert len({r.identity(peers=peers) for r in peers}) == 3
 

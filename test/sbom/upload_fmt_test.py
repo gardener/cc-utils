@@ -65,9 +65,9 @@ def test_fmt_id_cyclonedx():
 
 
 def test_fmt_id_cbom():
-    r = _make_sbom_resource({'cbom-format': 'cyclonedx-1.6', 'version': 'v1.0.0'})
+    r = _make_sbom_resource({'cbom-format': 'cyclonedx-1.6+cbom', 'version': 'v1.0.0'})
     m = _make_mapping(r)
-    assert _fmt_id(m) == 'cbom-cyclonedx-1.6'
+    assert _fmt_id(m) == 'cyclonedx-1.6+cbom'
 
 
 def test_fmt_id_neither_returns_none():
@@ -86,11 +86,11 @@ def test_filename_excludes_cbom_format_key():
         componentReferences=[],
         resources=[],
     )
-    resource = _make_sbom_resource({'cbom-format': 'cyclonedx-1.6', 'version': 'v1.0.0'})
-    name = _filename(component, resource, 'cbom-cyclonedx-1.6')
-    # should not contain 'cyclonedx-1.6' twice (the format value should not appear in name)
-    assert name.count('cyclonedx-1.6') == 1
-    assert name.endswith('.sbom.cbom-cyclonedx-1.6')
+    resource = _make_sbom_resource({'cbom-format': 'cyclonedx-1.6+cbom', 'version': 'v1.0.0'})
+    name = _filename(component, resource, 'cyclonedx-1.6+cbom')
+    # cbom-format value should not appear as an extra suffix in the filename
+    assert name.count('cyclonedx-1.6+cbom') == 1
+    assert name.endswith('.sbom.cyclonedx-1.6+cbom')
 
 
 def test_filename_excludes_sbom_format_key():

@@ -58,6 +58,22 @@ def check_syft():
         )
 
 
+def check_cbomkit_theia():
+    '''Verify cbomkit-theia is on PATH; raise RuntimeError with a friendly message if not.'''
+    try:
+        subprocess.run(  # nosec B607
+            ['cbomkit-theia', '--help'],
+            check=True,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            'cbomkit-theia is not installed or not on PATH. '
+            'Please install cbomkit-theia (https://github.com/IBM/cbomkit-theia) before '
+            'running CTT with SBOM/CBOM injection enabled.'
+        )
+
+
 def _cbomkit_theia_version() -> str | None:
     try:
         result = subprocess.run(  # nosec B607
@@ -292,21 +308,17 @@ def scan_image(
         with open(cdx_path, 'rb') as f:
             cdx_bytes = f.read()
 
-        try:
-            _run_cbomkit_theia(
-                image_ref=str(image_ref),
-                cdx_bom_path=cdx_path,
-                out_path=cbom_path,
-                tmpdir=tmpdir,
-            )
-            with open(cbom_path, 'rb') as f:
-                cbom_bytes = f.read()
-        except Exception as e:
-            logger.warning('cbomkit-theia failed for %r: %s', str(image_ref), e)
-            cbom_bytes = None
+        _run_cbomkit_theia(
+            image_ref=str(image_ref),
+            cdx_bom_path=cdx_path,
+            out_path=cbom_path,
+            tmpdir=tmpdir,
+        )
+        with open(cbom_path, 'rb') as f:
+            cbom_bytes = f.read()
 
     resolved_tool_ver = tool_ver or _syft_version_from_spdx(spdx_bytes)
-    cbom_tool_ver = _cbomkit_theia_version() if cbom_bytes is not None else None
+    cbom_tool_ver = _cbomkit_theia_version()
 
     spdx_referrer_digest, cdx_referrer_digest = soci.push_sbom_referrers(
         spdx_bytes=spdx_bytes,
@@ -320,7 +332,7 @@ def scan_image(
         image_reference=image_ref,
         oci_client=oci_client,
         tool_version=cbom_tool_ver,
-    ) if cbom_bytes is not None else None
+    )
 
     return (
         spdx_bytes, cdx_bytes, cbom_bytes,
@@ -477,7 +489,7 @@ def build_sbom_ocm_resources(
             'tool': 'cbomkit-theia',
             'tool-version': cbom_tool_ver,
         },
-        'format': 'cyclonedx-1.6',
+        'format': 'cyclonedx-1.6+cbom',
     } if cbom_tool_ver else None
     cbom_labels = [
         ocm.Label(name='gardener.cloud/cbom/source-image',        value=source_image_ref),
@@ -488,7 +500,7 @@ def build_sbom_ocm_resources(
     cbom_extra_id = {
         **(source_extra_identity or {}),
         'version': version,
-        'cbom-format': 'cyclonedx-1.6',
+        'cbom-format': 'cyclonedx-1.6+cbom',
     }
     cbom_resource = ocm.Resource(
         name=resource_name,
@@ -739,7 +751,7 @@ def build_s3_sbom_ocm_resources(
             'tool': 'cbomkit-theia',
             'tool-version': cbom_tool_ver,
         },
-        'format': 'cyclonedx-1.6',
+        'format': 'cyclonedx-1.6+cbom',
     } if cbom_tool_ver else None
     cbom_labels = [
         ocm.Label(name='gardener.cloud/cbom/source-image',        value=s3_url),
@@ -750,7 +762,7 @@ def build_s3_sbom_ocm_resources(
     cbom_extra_id = {
         **(source_extra_identity or {}),
         'version': version,
-        'cbom-format': 'cyclonedx-1.6',
+        'cbom-format': 'cyclonedx-1.6+cbom',
     }
     cbom_resource = ocm.Resource(
         name=resource_name,
