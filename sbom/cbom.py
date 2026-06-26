@@ -72,14 +72,14 @@ def build_cbom_ocm_resources(
     extraIdentity.cbom-format distinguishes CBOM resources from SBOM resources that share
     the same resource name.
     '''
-    extra_identity = {'version': version, 'cbom-format': 'cyclonedx-1.6'}
+    extra_identity = {'version': version, 'cbom-format': 'cyclonedx-1.6+cbom'}
     label_value = {
         'data-source': {
             'kind': 'local-scan',
             'tool': 'cbomkit-theia',
             'tool-version': tool_ver,
         },
-        'format': 'cyclonedx-1.6',
+        'format': 'cyclonedx-1.6+cbom',
     } if tool_ver else None
     labels = [
         {'name': 'gardener.cloud/cbom/source-image',        'value': source_image_ref},

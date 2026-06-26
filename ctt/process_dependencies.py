@@ -883,6 +883,7 @@ def process_replication_plan_step(
     if sbom_candidates:
         if processing_mode is not ProcessingMode.DRY_RUN:
             sbom_inject.check_syft()
+            sbom_inject.check_cbomkit_theia()
 
         tmpdir = os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP') or None
         syft_ver = sbom_inject._syft_version()
