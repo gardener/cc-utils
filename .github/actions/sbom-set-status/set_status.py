@@ -81,6 +81,25 @@ def _write_status(bucket: str, token: str, run_key: str, status: str) -> None:
     print(f'wrote status: {status}', file=sys.stderr)
 
 
+def _first_sbom_object(bucket: str, token: str, run_key: str) -> str | None:
+    '''Return the name of the first object under <run_key>/sbom/, or None.'''
+    prefix = f'{run_key}/sbom/'
+    url = (
+        f'{_GCS_BASE}/{urllib.parse.quote(bucket, safe="")}/o'
+        f'?prefix={urllib.parse.quote(prefix, safe="")}&maxResults=1'
+    )
+    req = urllib.request.Request(url, headers={'Authorization': f'Bearer {token}'})
+    try:
+        with urllib.request.urlopen(req) as r:  # nosec B310
+            body = json.load(r)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None
+        raise
+    items = body.get('items', [])
+    return items[0]['name'] if items else None
+
+
 def _poll_sbom_locked(
     bucket: str,
     token: str,
@@ -88,11 +107,19 @@ def _poll_sbom_locked(
     interval: int,
     timeout: int,
 ) -> None:
-    '''Poll a canary write to sbom/ until Cumulus applies the promoted lock (HTTP 403).'''
-    canary = f'{run_key}/sbom/.sbom-set-status-probe'
+    '''Poll an overwrite of an existing sbom/ object until Cumulus applies the hold (HTTP 403).
+
+    Cumulus locks by setting per-object holds on existing objects, not path-level IAM.
+    A new-object write always succeeds (200); only overwriting a held object returns 403.
+    If no sbom/ objects exist, the lock can never fire — skip immediately.
+    '''
+    probe = _first_sbom_object(bucket, token, run_key)
+    if probe is None:
+        print('no sbom/ objects found — skipping lock poll', file=sys.stderr)
+        return
     url = (
         f'{_GCS_UPLOAD}/{urllib.parse.quote(bucket, safe="")}/o'
-        f'?uploadType=media&name={urllib.parse.quote(canary, safe="")}'
+        f'?uploadType=media&name={urllib.parse.quote(probe, safe="")}'
     )
     deadline = time.monotonic() + timeout
     attempt = 0
