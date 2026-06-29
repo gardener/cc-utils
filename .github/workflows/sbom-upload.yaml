@@ -99,6 +99,17 @@ on:
         required: false
         type: string
         default: 'skip'
+      scan-missing:
+        description: >
+          If true, run syft + cbomkit-theia for any OCI image resource that has no existing
+          SBOM referrer manifests, and push the results to the OCI registry before uploading.
+          Requires self-hosted runners with sufficient disk/memory.
+          NOTE: pushing referrer manifests requires write access to the OCI/OCM repository;
+          callers must ensure the authenticated identity has push permissions.
+          Default: false.
+        required: false
+        type: string
+        default: 'false'
 
 jobs:
   sbom-upload:
@@ -149,3 +160,4 @@ jobs:
           token-exchange-pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
           token-exchange-pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
           token-exchange-scope: ${{ inputs.token-exchange-scope }}
+          scan-missing: ${{ inputs.scan-missing }}
