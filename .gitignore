@@ -9,3 +9,4 @@ build/
 dist/
 tmp/
 .github/actions/install-gardener-gha-libs/_bundle/
+cumulus.md
