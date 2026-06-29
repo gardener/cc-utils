@@ -638,21 +638,17 @@ def scan_s3_resource(
         with open(cdx_path, 'rb') as f:
             cdx_bytes = f.read()
 
-        try:
-            _run_cbomkit_theia(
-                image_ref=blob_path,  # cbomkit-theia accepts local paths too
-                cdx_bom_path=cdx_path,
-                out_path=cbom_path,
-                tmpdir=tmp,
-            )
-            with open(cbom_path, 'rb') as f:
-                cbom_bytes = f.read()
-        except Exception as e:
-            logger.warning('cbomkit-theia failed for %r: %s', blob_path, e)
-            cbom_bytes = None
+        _run_cbomkit_theia(
+            image_ref=blob_path,  # cbomkit-theia accepts local paths too
+            cdx_bom_path=cdx_path,
+            out_path=cbom_path,
+            tmpdir=tmp,
+        )
+        with open(cbom_path, 'rb') as f:
+            cbom_bytes = f.read()
 
     resolved_tool_ver = tool_ver or _syft_version_from_spdx(spdx_bytes)
-    cbom_tool_ver = _cbomkit_theia_version() if cbom_bytes is not None else None
+    cbom_tool_ver = _cbomkit_theia_version()
 
     spdx_digest, cdx_digest = soci.push_sbom_standalone(
         spdx_bytes=spdx_bytes,
@@ -667,7 +663,7 @@ def scan_s3_resource(
         repo_ref=repo_ref,
         oci_client=oci_client,
         tool_version=cbom_tool_ver,
-    ) if cbom_bytes is not None else None
+    )
 
     return (
         spdx_bytes, cdx_bytes, cbom_bytes,
