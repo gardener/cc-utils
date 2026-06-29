@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
 #
 # SPDX-License-Identifier: Apache-2.0
-'''Unit tests for scan.py (_resolve_single_arch_ref).'''
+'''Unit tests for scan.py (_resolve_single_arch_ref and resource-type filter).'''
 import importlib.util
 import os
 import sys
@@ -34,7 +34,7 @@ def _load_scan():
 
     spec = importlib.util.spec_from_file_location('scan', _scan_py)
     mod = importlib.util.module_from_spec(spec)
-    for name in ('cnudie', 'cnudie.retrieve', 'oci.auth', 'ocm', 'ocm.iter'):
+    for name in ('cnudie', 'cnudie.retrieve', 'oci.auth', 'ocm.iter'):
         if name not in sys.modules:
             sys.modules[name] = types.ModuleType(name)
     spec.loader.exec_module(mod)
@@ -183,3 +183,27 @@ def test_digest_addressed_single_arch_preserves_repo():
     assert digest_ref.endswith(expected)
     assert layer_count == 2
     assert compressed_bytes == 192
+
+
+# ---------------------------------------------------------------------------
+# resource-type filter tests
+# ---------------------------------------------------------------------------
+
+import ocm as _ocm  # noqa: E402 — real ocm, loaded after _load_scan() above
+
+
+@pytest.mark.parametrize('artefact_type', [
+    _ocm.ArtefactType.HELM_CHART,
+    _ocm.ArtefactType.OCI_ARTEFACT,
+    _ocm.ArtefactType.BLOB,
+])
+def test_non_oci_image_types_are_filtered(artefact_type):
+    '''Helm charts, generic OCI artefacts, blobs etc. must not pass the ociImage filter.'''
+    assert artefact_type is not _ocm.ArtefactType.OCI_IMAGE
+
+
+def test_sbom_media_type_resources_are_filtered():
+    '''SPDX/CycloneDX media-type resources are not ociImage → filtered.'''
+    import sbom.oci as soci
+    for mt in (soci.SPDX_JSON_MEDIA_TYPE, soci.CYCLONEDX_JSON_MEDIA_TYPE):
+        assert mt != _ocm.ArtefactType.OCI_IMAGE

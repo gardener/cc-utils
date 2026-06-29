@@ -32,13 +32,6 @@ import oci.model as om
 import ocm
 import ocm.iter as ocm_iter
 import sbom.inject as sinject
-import sbom.oci as soci
-
-# resource types that hold SBOM/CBOM documents — not container images to be scanned
-_SBOM_RESOURCE_TYPES = frozenset({
-    soci.SPDX_JSON_MEDIA_TYPE,
-    soci.CYCLONEDX_JSON_MEDIA_TYPE,
-})
 
 
 def _fmt_mb(n_bytes: int) -> str:
@@ -160,7 +153,7 @@ def main() -> None:
         access = resource.access
         if not isinstance(access, ocm.OciAccess):
             continue
-        if resource.type in _SBOM_RESOURCE_TYPES:
+        if resource.type is not ocm.ArtefactType.OCI_IMAGE:
             continue
         image_ref = om.OciImageReference.to_image_ref(access.imageReference)
         digest_ref, layer_count, compressed_bytes = _resolve_single_arch_ref(image_ref, oci_client)
