@@ -65,6 +65,17 @@ inputs:
     description: 'Scope to re-request on token refresh (e.g. "sbom")'
     required: false
     default: ''
+  scan-missing:
+    description: >
+      If true, run syft + cbomkit-theia for any OCI image resource that has no existing
+      SBOM referrer manifests, and push the results to the OCI registry before uploading.
+      Requires syft and cbomkit-theia to be on PATH.
+      Pushed referrers are discovered on subsequent runs, avoiding redundant scans.
+      OCM component descriptors and OCI image manifests are not modified.
+      NOTE: pushing referrer manifests requires write access to the OCI/OCM repository;
+      callers must ensure the authenticated identity has push permissions.
+    required: false
+    default: 'false'
 
 outputs:
   run-key:
@@ -147,6 +158,43 @@ runs:
     - name: Install gardener-gha-libs
       if: steps.check-status.outputs.already-released != 'true'
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+
+    - name: Install syft
+      if: >
+        steps.check-status.outputs.already-released != 'true' &&
+        inputs.scan-missing == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        install_dir="${HOME}/.local/bin"
+        mkdir -p "${install_dir}"
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+          | sh -s -- -b "${install_dir}"
+        echo "${install_dir}" >> "${GITHUB_PATH}"
+
+    - name: Install cbomkit-theia
+      if: >
+        steps.check-status.outputs.already-released != 'true' &&
+        inputs.scan-missing == 'true'
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+
+    - name: Scan missing SBOMs
+      if: >
+        steps.check-status.outputs.already-released != 'true' &&
+        inputs.scan-missing == 'true'
+      shell: bash
+      env:
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+      run: |
+        set -euo pipefail
+        repos_args=()
+        while IFS= read -r repo; do
+          [ -z "$repo" ] && continue
+          repos_args+=(--ocm-repository "$repo")
+        done <<< "$OCM_REPOSITORIES"
+        python3 "$GITHUB_ACTION_PATH/scan.py" \
+          --ocm-component '${{ inputs.ocm-component }}' \
+          "${repos_args[@]}"
 
     - name: Upload SBOMs
       if: steps.check-status.outputs.already-released != 'true'
