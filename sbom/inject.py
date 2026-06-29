@@ -164,23 +164,18 @@ def _estimate_bytes(compressed_layer_bytes: int) -> tuple[int, int]:
     )
 
 
-def _resolve_single_arch_ref(
-    image_ref: str | om.OciImageReference,
-    oci_client: oc.Client,
-) -> str | None:
+def _compressed_layer_bytes(image_ref: str | om.OciImageReference, oci_client: oc.Client) -> int:
     '''
-    Resolve `image_ref` to a digest-addressed single-arch image ref (linux/amd64 preferred).
-
-    Handles manifest lists: fetches with prefer_multiarch Accept, then resolves to the
-    linux/amd64 platform entry (falling back to the first entry if amd64 is absent).
-
-    Returns the resolved digest ref string, or None on error.
+    Fetch the manifest (resolving multi-arch to linux/amd64) and return the sum of
+    compressed layer sizes.  Returns 0 on error (scan will still be admitted with force=True).
     '''
     try:
-        image_ref = om.OciImageReference.to_image_ref(image_ref)
-        repo = image_ref.ref_without_tag
-        manifest = oci_client.manifest(image_ref, accept=om.MimeTypes.prefer_multiarch)
+        manifest = oci_client.manifest(
+            image_ref,
+            accept=om.MimeTypes.prefer_multiarch,
+        )
         if isinstance(manifest, om.OciImageManifestList):
+            # pick linux/amd64 or fall back to first entry
             entries = [
                 e for e in manifest.manifests
                 if e.platform and e.platform.os == 'linux'
@@ -190,27 +185,10 @@ def _resolve_single_arch_ref(
                 manifest.manifests[0] if manifest.manifests else None
             )
             if entry is None:
-                return None
-            return f'{repo}@{entry.digest}'
-        # single-arch: compute digest from manifest bytes
-        manifest_bytes = oci_client.manifest_raw(image_ref).content
-        digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
-        return f'{repo}@{digest}'
-    except Exception as e:
-        logger.warning(f'cannot resolve single-arch ref for {image_ref}: {e}')
-        return None
-
-
-def _compressed_layer_bytes(image_ref: str | om.OciImageReference, oci_client: oc.Client) -> int:
-    '''
-    Fetch the manifest (resolving multi-arch to linux/amd64) and return the sum of
-    compressed layer sizes.  Returns 0 on error (scan will still be admitted with force=True).
-    '''
-    try:
-        resolved = _resolve_single_arch_ref(image_ref, oci_client)
-        if resolved is None:
-            return 0
-        manifest = oci_client.manifest(resolved)
+                return 0
+            manifest = oci_client.manifest(
+                f'{om.OciImageReference.to_image_ref(image_ref).ref_without_tag}@{entry.digest}',
+            )
         return sum(layer.size for layer in manifest.layers)
     except Exception:  # nosec
         return 0

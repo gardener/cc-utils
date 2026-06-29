@@ -13,6 +13,7 @@ on the next run, avoiding redundant scans.
 OCM component descriptors and OCI image manifests are not modified.
 '''
 import argparse
+import hashlib
 import os
 import sys
 import tempfile
@@ -20,7 +21,8 @@ import tempfile
 # ensure the cc-utils tree that contains this action is importable, so that
 # local edits to sbom/ take effect even when an older gardener-gha-libs is
 # already installed system-wide (the action dir is two levels below the root)
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+_cc_utils_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, _cc_utils_root)
 
 
 import cnudie.retrieve
@@ -30,6 +32,43 @@ import oci.model as om
 import ocm
 import ocm.iter as ocm_iter
 import sbom.inject as sinject
+
+
+def _resolve_single_arch_ref(
+    image_ref: str | om.OciImageReference,
+    oci_client: oci.client.Client,
+) -> str | None:
+    '''
+    Resolve `image_ref` to a digest-addressed single-arch image ref (linux/amd64 preferred).
+
+    Handles manifest lists: fetches with prefer_multiarch Accept, then resolves to the
+    linux/amd64 platform entry (falling back to the first entry if amd64 is absent).
+
+    Returns the resolved digest ref string, or None on error.
+    '''
+    try:
+        image_ref = om.OciImageReference.to_image_ref(image_ref)
+        repo = image_ref.ref_without_tag
+        manifest = oci_client.manifest(image_ref, accept=om.MimeTypes.prefer_multiarch)
+        if isinstance(manifest, om.OciImageManifestList):
+            entries = [
+                e for e in manifest.manifests
+                if e.platform and e.platform.os == 'linux'
+                and e.platform.architecture == 'amd64'
+            ]
+            entry = entries[0] if entries else (
+                manifest.manifests[0] if manifest.manifests else None
+            )
+            if entry is None:
+                return None
+            return f'{repo}@{entry.digest}'
+        # single-arch: compute digest from manifest bytes
+        manifest_bytes = oci_client.manifest_raw(image_ref).content
+        digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
+        return f'{repo}@{digest}'
+    except Exception as e:
+        print(f'warning: cannot resolve single-arch ref for {image_ref}: {e}', file=sys.stderr)
+        return None
 
 
 def main() -> None:
@@ -95,7 +134,7 @@ def main() -> None:
             continue
         image_ref = om.OciImageReference.to_image_ref(access.imageReference)
         # resolve manifest list → linux/amd64 single-arch digest ref
-        digest_ref = sinject._resolve_single_arch_ref(image_ref, oci_client)
+        digest_ref = _resolve_single_arch_ref(image_ref, oci_client)
         if digest_ref is None:
             print(f'warning: cannot resolve single-arch ref for {resource.name!r}', file=sys.stderr)
             continue
