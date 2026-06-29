@@ -204,10 +204,11 @@ def _retry_after(headers, attempt: int) -> float:
     return min(2 ** attempt, 120)
 
 
-def _gcs_list_prefix(bucket: str, gcs_token: str, prefix: str) -> set[str]:
+def _gcs_list_prefix(bucket: str, token_lookup, prefix: str) -> set[str]:
     '''Return set of object names already present under prefix.'''
     existing = set()
     page_token = None
+    refreshed = False
     while True:
         params = f'prefix={urllib.parse.quote(prefix, safe="")}'
         if page_token:
@@ -217,10 +218,17 @@ def _gcs_list_prefix(bucket: str, gcs_token: str, prefix: str) -> set[str]:
             f'{urllib.parse.quote(bucket, safe="")}/o?{params}'
         )
         req = urllib.request.Request(url, headers={
-            'Authorization': f'Bearer {gcs_token}',
+            'Authorization': f'Bearer {token_lookup()}',
         })
-        with urllib.request.urlopen(req) as r:  # nosec B310
-            body = json.load(r)
+        try:
+            with urllib.request.urlopen(req) as r:  # nosec B310
+                body = json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code == 401 and not refreshed:
+                token_lookup(refresh=True)
+                refreshed = True
+                continue
+            raise
         for item in body.get('items', []):
             existing.add(item['name'])
         page_token = body.get('nextPageToken')
@@ -377,7 +385,7 @@ def main() -> None:
     ).component
 
     throttle = _UploadThrottle()
-    existing_blobs = _gcs_list_prefix(bucket, token_lookup(), gcs_prefix + '/')
+    existing_blobs = _gcs_list_prefix(bucket, token_lookup, gcs_prefix + '/')
 
     # phase 1: discover SBOMs — OCI referrer calls are the dominant cost on first runs;
     # parallelise across resources, dedup serially from results.
