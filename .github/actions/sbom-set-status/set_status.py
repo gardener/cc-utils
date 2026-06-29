@@ -89,7 +89,7 @@ def _poll_sbom_locked(
     timeout: int,
 ) -> None:
     '''Poll a canary write to sbom/ until Cumulus applies the promoted lock (HTTP 403).'''
-    canary = f'{run_key}/.sbom-set-status-probe'
+    canary = f'{run_key}/sbom/.sbom-set-status-probe'
     url = (
         f'{_GCS_UPLOAD}/{urllib.parse.quote(bucket, safe="")}/o'
         f'?uploadType=media&name={urllib.parse.quote(canary, safe="")}'
