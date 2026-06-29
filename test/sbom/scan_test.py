@@ -70,9 +70,18 @@ def _manifest_list(*entries):
     return ml
 
 
-def _single_manifest():
+def _single_manifest(layers=None):
     import oci.model as om
-    return mock.MagicMock(spec=om.OciImageManifest)
+    m = mock.MagicMock(spec=om.OciImageManifest)
+    if layers is not None:
+        m.layers = layers
+    return m
+
+
+def _make_layer(size):
+    layer = mock.MagicMock()
+    layer.size = size
+    return layer
 
 
 # ---------------------------------------------------------------------------
@@ -80,39 +89,53 @@ def _single_manifest():
 # ---------------------------------------------------------------------------
 
 def test_single_arch_image_returns_digest_ref():
-    import oci.model as om
     manifest_bytes = b'{"schemaVersion":2}'
+    layers = [_make_layer(100), _make_layer(200)]
     client = mock.MagicMock()
-    client.manifest.return_value = _single_manifest()
+    client.manifest.return_value = _single_manifest(layers=layers)
     client.manifest_raw.return_value = mock.MagicMock(content=manifest_bytes)
 
-    result = _resolve('registry.example.com/repo:tag', client)
+    digest_ref, layer_count, compressed_bytes = _resolve('registry.example.com/repo:tag', client)
 
     import hashlib
     expected_digest = 'sha256:' + hashlib.sha256(manifest_bytes).hexdigest()
-    assert result == f'registry.example.com/repo@{expected_digest}'
+    assert digest_ref == f'registry.example.com/repo@{expected_digest}'
+    assert layer_count == 2
+    assert compressed_bytes == 300
 
 
 def test_manifest_list_prefers_linux_amd64():
+    layers = [_make_layer(512)]
     client = mock.MagicMock()
     arm = _make_entry('sha256:arm', 'linux', 'arm64')
     amd = _make_entry('sha256:amd64', 'linux', 'amd64')
-    client.manifest.return_value = _manifest_list(arm, amd)
+    client.manifest.side_effect = [
+        _manifest_list(arm, amd),       # first call: manifest list
+        _single_manifest(layers=layers), # second call: resolved single-arch
+    ]
 
-    result = _resolve('registry.example.com/repo:tag', client)
+    digest_ref, layer_count, compressed_bytes = _resolve('registry.example.com/repo:tag', client)
 
-    assert result == 'registry.example.com/repo@sha256:amd64'
+    assert digest_ref == 'registry.example.com/repo@sha256:amd64'
+    assert layer_count == 1
+    assert compressed_bytes == 512
 
 
 def test_manifest_list_falls_back_to_first_when_no_amd64():
+    layers = [_make_layer(1024)]
     client = mock.MagicMock()
     arm = _make_entry('sha256:arm', 'linux', 'arm64')
     win = _make_entry('sha256:win', 'windows', 'amd64')
-    client.manifest.return_value = _manifest_list(arm, win)
+    client.manifest.side_effect = [
+        _manifest_list(arm, win),
+        _single_manifest(layers=layers),
+    ]
 
-    result = _resolve('registry.example.com/repo:tag', client)
+    digest_ref, layer_count, compressed_bytes = _resolve('registry.example.com/repo:tag', client)
 
-    assert result == 'registry.example.com/repo@sha256:arm'
+    assert digest_ref == 'registry.example.com/repo@sha256:arm'
+    assert layer_count == 1
+    assert compressed_bytes == 1024
 
 
 def test_manifest_list_empty_returns_none():
@@ -123,18 +146,22 @@ def test_manifest_list_empty_returns_none():
     ml.manifests = []
     client.manifest.return_value = ml
 
-    result = _resolve('registry.example.com/repo:tag', client)
+    digest_ref, layer_count, compressed_bytes = _resolve('registry.example.com/repo:tag', client)
 
-    assert result is None
+    assert digest_ref is None
+    assert layer_count is None
+    assert compressed_bytes is None
 
 
 def test_client_error_returns_none(capsys):
     client = mock.MagicMock()
     client.manifest.side_effect = Exception('connection refused')
 
-    result = _resolve('registry.example.com/repo:tag', client)
+    digest_ref, layer_count, compressed_bytes = _resolve('registry.example.com/repo:tag', client)
 
-    assert result is None
+    assert digest_ref is None
+    assert layer_count is None
+    assert compressed_bytes is None
     assert 'warning' in capsys.readouterr().err.lower()
 
 
@@ -142,14 +169,17 @@ def test_digest_addressed_single_arch_preserves_repo():
     '''Digest refs that are already single-arch should still return repo@digest form.'''
     import hashlib
     manifest_bytes = b'{"schemaVersion":2,"layers":[]}'
+    layers = [_make_layer(64), _make_layer(128)]
     client = mock.MagicMock()
-    client.manifest.return_value = _single_manifest()
+    client.manifest.return_value = _single_manifest(layers=layers)
     client.manifest_raw.return_value = mock.MagicMock(content=manifest_bytes)
 
     ref = 'registry.example.com/foo/bar@sha256:' + 'a' * 64
-    result = _resolve(ref, client)
+    digest_ref, layer_count, compressed_bytes = _resolve(ref, client)
 
     expected = 'sha256:' + hashlib.sha256(manifest_bytes).hexdigest()
-    assert result is not None
-    assert result.startswith('registry.example.com/foo/bar@')
-    assert result.endswith(expected)
+    assert digest_ref is not None
+    assert digest_ref.startswith('registry.example.com/foo/bar@')
+    assert digest_ref.endswith(expected)
+    assert layer_count == 2
+    assert compressed_bytes == 192

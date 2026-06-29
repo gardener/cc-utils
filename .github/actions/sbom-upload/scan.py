@@ -34,17 +34,19 @@ import ocm.iter as ocm_iter
 import sbom.inject as sinject
 
 
+def _fmt_mb(n_bytes: int) -> str:
+    return f'{n_bytes / 1024 / 1024:.1f} MiB'
+
+
 def _resolve_single_arch_ref(
     image_ref: str | om.OciImageReference,
     oci_client: oci.client.Client,
-) -> str | None:
+) -> tuple[str, int, int] | tuple[None, None, None]:
     '''
     Resolve `image_ref` to a digest-addressed single-arch image ref (linux/amd64 preferred).
 
-    Handles manifest lists: fetches with prefer_multiarch Accept, then resolves to the
-    linux/amd64 platform entry (falling back to the first entry if amd64 is absent).
-
-    Returns the resolved digest ref string, or None on error.
+    Returns (digest_ref, layer_count, compressed_bytes) on success, or (None, None, None)
+    on error.  For manifest lists the linux/amd64 entry is preferred; falls back to first.
     '''
     try:
         image_ref = om.OciImageReference.to_image_ref(image_ref)
@@ -60,15 +62,32 @@ def _resolve_single_arch_ref(
                 manifest.manifests[0] if manifest.manifests else None
             )
             if entry is None:
-                return None
-            return f'{repo}@{entry.digest}'
-        # single-arch: compute digest from manifest bytes
-        manifest_bytes = oci_client.manifest_raw(image_ref).content
-        digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
-        return f'{repo}@{digest}'
+                return None, None, None
+            manifest = oci_client.manifest(f'{repo}@{entry.digest}')
+            digest_ref = f'{repo}@{entry.digest}'
+        else:
+            manifest_bytes = oci_client.manifest_raw(image_ref).content
+            digest = f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}'
+            digest_ref = f'{repo}@{digest}'
+
+        layer_count = len(manifest.layers)
+        compressed_bytes = sum(layer.size for layer in manifest.layers)
+        return digest_ref, layer_count, compressed_bytes
     except Exception as e:
         print(f'warning: cannot resolve single-arch ref for {image_ref}: {e}', file=sys.stderr)
-        return None
+        return None, None, None
+
+
+def _write_summary(
+    summary: str,
+    append: bool = True,
+) -> None:
+    path = os.environ.get('GITHUB_STEP_SUMMARY')
+    if not path:
+        return
+    mode = 'a' if append else 'w'
+    with open(path, mode) as f:
+        f.write(summary + '\n')
 
 
 def main() -> None:
@@ -123,20 +142,22 @@ def main() -> None:
     ).component
 
     all_nodes = list(ocm_iter.iter_resources(component=root_component, lookup=lookup))
-    print(f'discovered {len(all_nodes)} resources', file=sys.stderr)
+    print(f'discovered {len(all_nodes)} resources total', file=sys.stderr)
 
     # collect OCI image resources that have no existing referrers
+    # items: (resource_name, digest_ref, layer_count, compressed_bytes)
     missing = []
+    skipped = 0
     for node in all_nodes:
         resource = node.resource
         access = resource.access
         if not isinstance(access, ocm.OciAccess):
             continue
         image_ref = om.OciImageReference.to_image_ref(access.imageReference)
-        # resolve manifest list → linux/amd64 single-arch digest ref
-        digest_ref = _resolve_single_arch_ref(image_ref, oci_client)
+        digest_ref, layer_count, compressed_bytes = _resolve_single_arch_ref(image_ref, oci_client)
         if digest_ref is None:
-            print(f'warning: cannot resolve single-arch ref for {resource.name!r}', file=sys.stderr)
+            print(f'warning: skipping {resource.name!r} — cannot resolve single-arch ref',
+                  file=sys.stderr)
             continue
 
         existing = sinject.lookup_sbom_referrers(
@@ -144,26 +165,65 @@ def main() -> None:
             oci_client=oci_client,
         )
         if existing is not None:
-            print(f'skip (referrers present): {resource.name}', file=sys.stderr)
+            skipped += 1
+            print(f'skip (cached): {resource.name}', file=sys.stderr)
             continue
-        missing.append((resource.name, digest_ref))
+
+        print(
+            f'cache miss: {resource.name!r}  '
+            f'layers={layer_count}  compressed={_fmt_mb(compressed_bytes)}  '
+            f'ref={digest_ref}',
+            file=sys.stderr,
+        )
+        missing.append((resource.name, digest_ref, layer_count, compressed_bytes))
+
+    total_compressed = sum(cb for _, _, _, cb in missing)
+    print(
+        f'\n{len(missing)} resource(s) to scan '
+        f'(total compressed size: {_fmt_mb(total_compressed)}), '
+        f'{skipped} skipped (cached)',
+        file=sys.stderr,
+    )
 
     if not missing:
-        print('all resources have existing SBOM referrers — nothing to scan', file=sys.stderr)
+        msg = 'all resources have existing SBOM referrers — nothing to scan'
+        print(msg, file=sys.stderr)
+        _write_summary(f'## SBOM scan\n\n{msg}')
         return
 
-    print(f'{len(missing)} resource(s) to scan', file=sys.stderr)
+    # run_injections_resource_aware expects (name, ref) pairs
+    scan_items = [(name, ref) for name, ref, _, _ in missing]
 
     with tempfile.TemporaryDirectory() as tmpdir:
         results = sinject.run_injections_resource_aware(
-            items=missing,
+            items=scan_items,
             oci_client=oci_client,
             tmpdir=tmpdir,
         )
 
     scanned = sum(1 for r in results if r[-1] == 'scanned')
     failed  = sum(1 for r in results if r[-1] == 'failed')
-    print(f'scanned: {scanned}, failed: {failed}', file=sys.stderr)
+    failed_names = [r[0] for r in results if r[-1] == 'failed']
+
+    summary_lines = [
+        f'## SBOM scan — {name}:{version}',
+        '',
+        f'| | count |',
+        f'|---|---|',
+        f'| discovered resources | {len(all_nodes)} |',
+        f'| skipped (cached) | {skipped} |',
+        f'| scanned | {scanned} |',
+        f'| failed | {failed} |',
+        f'| total compressed (scanned) | {_fmt_mb(total_compressed)} |',
+    ]
+    if failed_names:
+        summary_lines += ['', '### Failed', '']
+        summary_lines += [f'- `{n}`' for n in failed_names]
+
+    summary = '\n'.join(summary_lines)
+    print(f'\n{summary}', file=sys.stderr)
+    _write_summary(summary)
+
     if failed:
         sys.exit(1)
 
