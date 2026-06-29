@@ -13,8 +13,15 @@ on the next run, avoiding redundant scans.
 OCM component descriptors and OCI image manifests are not modified.
 '''
 import argparse
+import os
 import sys
 import tempfile
+
+# ensure the cc-utils tree that contains this action is importable, so that
+# local edits to sbom/ take effect even when an older gardener-gha-libs is
+# already installed system-wide (the action dir is two levels below the root)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 
 import cnudie.retrieve
 import oci.auth
