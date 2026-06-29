@@ -87,11 +87,10 @@ def main() -> None:
         if not isinstance(access, ocm.OciAccess):
             continue
         image_ref = om.OciImageReference.to_image_ref(access.imageReference)
-        # resolve to digest so referrer lookup is unambiguous
-        try:
-            digest_ref = oci_client.to_digest_hash(image_ref)
-        except Exception as e:
-            print(f'warning: cannot resolve digest for {resource.name!r}: {e}', file=sys.stderr)
+        # resolve manifest list → linux/amd64 single-arch digest ref
+        digest_ref = sinject._resolve_single_arch_ref(image_ref, oci_client)
+        if digest_ref is None:
+            print(f'warning: cannot resolve single-arch ref for {resource.name!r}', file=sys.stderr)
             continue
 
         existing = sinject.lookup_sbom_referrers(
