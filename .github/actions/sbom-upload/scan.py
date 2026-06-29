@@ -210,8 +210,8 @@ def main() -> None:
     summary_lines = [
         f'## SBOM scan — {name}:{version}',
         '',
-        f'| | count |',
-        f'|---|---|',
+        '| | count |',
+        '|---|---|',
         f'| discovered resources | {len(all_nodes)} |',
         f'| skipped (cached) | {skipped} |',
         f'| scanned | {scanned} |',
