@@ -215,7 +215,7 @@ runs:
         ocm_tar.close()
         with open(ocm_tar.name, 'rb') as ocm_tar_fh:
           tarhash = hashlib.sha1()
-          while (chunk := ocm_tar_fh.read(4096)):
+          while (chunk := ocm_tar_fh.read(8192)):
             tarhash.update(chunk)
 
         ocm_tar_outfname = f'{tarhash.hexdigest()}.ocm-artefacts.tar.gz'

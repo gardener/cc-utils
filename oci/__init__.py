@@ -340,7 +340,7 @@ def replicate_artifact(
                 layer_hash = hashlib.sha256()
                 decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 16)
 
-                for chunk in blob_res.iter_content(chunk_size=4096):
+                for chunk in blob_res.iter_content(chunk_size=8192):
                     layer_hash.update(decompressor.decompress(chunk))
 
                 uncompressed_layer_digests.append(f'sha256:{layer_hash.hexdigest()}')
@@ -367,7 +367,7 @@ def replicate_artifact(
             decompressor = zlib.decompressobj(wbits=zlib.MAX_WBITS | 16)
 
             def intercept_chunks(blob_res):
-                for chunk in blob_res.iter_content(chunk_size=4096):
+                for chunk in blob_res.iter_content(chunk_size=8192):
                     uncompressed_layer_hash.update(decompressor.decompress(chunk))
                     yield chunk
 
@@ -453,7 +453,7 @@ def replicate_blobs(
             if hasattr(blob_overwrite_bytes, 'read'):
                 digest = hashlib.sha256()
                 blob_overwrite_bytes.seek(0)
-                while (chunk := blob_overwrite_bytes.read(4096)):
+                while (chunk := blob_overwrite_bytes.read(8192)):
                     digest.update(chunk)
                 digest = f'sha256:{digest.hexdigest()}'
                 octets_count = blob_overwrite_bytes.tell()

@@ -53,7 +53,7 @@ def content_address_blobs(
 
         fhash = hashlib.sha256()
         with open(fpath, 'rb') as f:
-            while chunk := f.read(4096):
+            while chunk := f.read(8192):
                 fhash.update(chunk)
 
         digest_name = f'sha256:{fhash.hexdigest()}'

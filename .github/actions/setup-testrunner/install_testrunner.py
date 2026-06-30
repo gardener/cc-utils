@@ -87,7 +87,7 @@ def main():
         blob = oci_client.blob(image_reference=image_ref, digest=layer.digest)
 
         with tarfile.open(
-            fileobj=tarutil.FilelikeProxy(generator=blob.iter_content(chunk_size=4096)),
+            fileobj=tarutil.FilelikeProxy(generator=blob.iter_content(chunk_size=8192)),
             mode='r|*',
         ) as tf:
             for info in tf:
@@ -104,7 +104,7 @@ def main():
             with open(outfile, 'wb') as f:
                 octects_left = info.size
                 while octects_left:
-                    read = min(octects_left, 4096)
+                    read = min(octects_left, 8192)
                     f.write(tf.fileobj.read(read))
                     octects_left -= read
 

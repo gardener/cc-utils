@@ -506,7 +506,7 @@ def download(parsed):
         digest=digest,
     )
 
-    for chunk in blob_rq.iter_content(chunk_size=4096):
+    for chunk in blob_rq.iter_content(chunk_size=8192):
         outfh.write(chunk)
     outfh.flush()
 

@@ -1326,7 +1326,7 @@ class Client:
                     for chunk in data:
                         tf.write(chunk)
                 elif data_is_requests_resp:
-                    while (chunk := data.raw.read(4096)):
+                    while (chunk := data.raw.read(8192)):
                         tf.write(chunk)
                 else:
                     # must only enter this codepath, if either generator or requests-response

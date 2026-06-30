@@ -256,7 +256,7 @@ def encode_request(
                 compressor = zlib.compressobj(wbits=31)
                 data.seek(0)
 
-                while (chunk := data.read(4096)):
+                while (chunk := data.read(8192)):
                     yield compressor.compress(chunk)
                 yield compressor.flush()
 

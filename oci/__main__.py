@@ -171,7 +171,7 @@ def blob(parsed, oci_client: oci.client.Client):
         stream=True,
     )
 
-    for chunk in blob.iter_content(chunk_size=4096):
+    for chunk in blob.iter_content(chunk_size=8192):
         outfh.write(chunk)
     outfh.flush()
 

@@ -912,10 +912,10 @@ class Client:
                     for chunk in data:
                         tf.write(chunk)
                 elif data_is_client_resp:
-                    async for chunk in data.content.iter_chunked(4096):
+                    async for chunk in data.content.iter_chunked(8192):
                         tf.write(chunk)
                 elif data_is_filelike:
-                    while chunk := data.read(4096):
+                    while chunk := data.read(8192):
                         tf.write(chunk)
                 else:
                     raise RuntimeError('this line must not be reached')

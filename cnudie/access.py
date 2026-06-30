@@ -10,7 +10,7 @@ import oci.model
 def s3_access_as_blob_descriptor(
     s3_client: 'botocore.client.S3',
     s3_access: ocm.S3Access | ocm.LegacyS3Access,
-    chunk_size: int=4096,
+    chunk_size: int=8192,
     name: str=None,
 ) -> ioutil.BlobDescriptor:
     if not s3_client:
@@ -39,7 +39,7 @@ def access_to_digest_lookup(
     access: ocm.Access,
     oci_client: oci.client.Client=None,
     s3_client: 'botocore.client.S3'=None,
-    chunk_size: int=4096,
+    chunk_size: int=8192,
 ) -> ocm.DigestSpec:
     if access.type is ocm.AccessType.OCI_REGISTRY:
         image_reference = oci.model.OciImageReference(

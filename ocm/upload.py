@@ -143,7 +143,7 @@ def upload_component_descriptor(
 
     raw_fobj = ocm.oci.component_descriptor_to_tarfileobj(component_descriptor)
     cd_digest = hashlib.sha256()
-    while (chunk := raw_fobj.read(4096)):
+    while (chunk := raw_fobj.read(8192)):
         cd_digest.update(chunk)
 
     cd_octets = raw_fobj.tell()

@@ -209,7 +209,7 @@ def upload_helmchart(
     with open(helmchart_archive_path, 'rb') as f:
         sha256 = hashlib.sha256()
         leng = 0
-        while (chunk := f.read(4096)):
+        while (chunk := f.read(8192)):
             leng += len(chunk)
             sha256.update(chunk)
 
