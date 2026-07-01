@@ -56,7 +56,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@56a9433a2a9b7717240b9e75239e7e1f90286abe
     - name: OCI Auth
       id: oci-auth
       shell: python
