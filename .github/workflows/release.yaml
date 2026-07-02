@@ -383,6 +383,15 @@ jobs:
           print(f'INFO: "automatic" version operation has been resolved to {next_version=}')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
             f.write(f'next-version={next_version}\n')
+      - name: save-release-commit-digest
+        id: save-release-commit-digest
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # save now: the release action will call version with commit-to-head for the bump-commit,
+          # which overwrites refs/capture-commit - so we must read it before that happens
+          echo "digest=$(git rev-parse refs/capture-commit)" >> $GITHUB_OUTPUT
       - uses: gardener/cc-utils/.github/actions/github-auth@master
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
@@ -482,11 +491,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          # note: only works if capture-commit action was only used to create the release-commit
-          commit_digest="$(git rev-parse refs/capture-commit)"
-
-          git reset --hard "$commit_digest"
+          git reset --hard "${{ steps.save-release-commit-digest.outputs.digest }}"
 
       - name: create-release-branch-bump-commit
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
