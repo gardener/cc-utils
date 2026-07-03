@@ -105,6 +105,7 @@ jobs:
         run: |
           images_path="${{ inputs.images-yaml-path }}"
           git add "$images_path"
+          git add .ocm/release-notes/ 2>/dev/null || true
           git commit -m "Chore: Auto-update image versions"
           git checkout -B ${{ inputs.branch-name }}
           git push origin ${{ inputs.branch-name }} --force

@@ -66,9 +66,16 @@ import semver
 from ruamel.yaml import YAML
 from ruamel.yaml import YAMLError
 
+import cnudie.retrieve
+import ocm
+import oci.auth
 from oci import client as oci_client
 from ocm import Label as OcmLabel
 from version import parse_to_semver, is_final, iter_upgrade_path
+import release_notes.ocm as rno
+import release_notes.tarutil as rnt
+
+GARDENER_OCM_REPOSITORY = 'europe-docker.pkg.dev/gardener-project/releases'
 
 
 # Type alias for directives map: (name, repository, tag) -> directives dict
@@ -1197,6 +1204,58 @@ def create_release_notes(
             f.write("\n")
 
 
+def write_ocm_release_notes(
+    updates: list[ImageUpdate],
+    images_data: ImagesData,
+    repo_dir: str = '.',
+    ocm_repository: str = GARDENER_OCM_REPOSITORY,
+) -> None:
+    oci_client_ = oci_client.client_with_dockerauth()
+    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(ocm_repository)
+    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm_repository_lookup,
+        oci_client=oci_client_,
+        cache_dir=None,
+    )
+    version_lookup = cnudie.retrieve.version_lookup(
+        ocm_repository_lookup=ocm_repository_lookup,
+        oci_client=oci_client_,
+    )
+
+    source_repo_by_name = {img.name: img.sourceRepository for img in images_data.images}
+
+    for update in updates:
+        source_repo = source_repo_by_name.get(update.image_name)
+        if not source_repo or not source_repo.startswith('github.com/gardener/'):
+            continue
+        if not update.old_tag:
+            continue
+
+        component_name = source_repo
+        whence = ocm.ComponentIdentity(name=component_name, version=update.old_tag)
+        whither = ocm.ComponentIdentity(name=component_name, version=update.new_tag)
+        upgrade_vector = ocm.gardener.UpgradeVector(whence=whence, whither=whither)
+
+        print(f"Fetching OCM release notes for {component_name} {update.old_tag} -> {update.new_tag}", file=sys.stderr)
+        try:
+            release_notes_docs = list(rno.release_notes_for_vector(
+                upgrade_vector=upgrade_vector,
+                component_descriptor_lookup=component_descriptor_lookup,
+                version_lookup=version_lookup,
+                oci_client=oci_client_,
+                version_filter=is_final,
+            ))
+        except Exception as e:
+            print(f"Warning: failed to fetch OCM release notes for {component_name}: {e}", file=sys.stderr)
+            continue
+
+        grouped = rno.group_release_notes_docs(release_notes_docs)
+        rnt.release_notes_docs_into_files(
+            release_notes_docs=grouped,
+            repo_dir=repo_dir,
+        )
+        print(f"Wrote OCM release notes for {component_name} {update.new_tag}", file=sys.stderr)
+
 # --- Main Execution ---
 def main() -> None:
     """Main execution function."""
@@ -1279,6 +1338,7 @@ def main() -> None:
             images_data.sort_images()
             write_yaml_file(images_data, args.images_yaml_path, updated_directives)
             print(f"\nUpdated {args.images_yaml_path} with {len(updates)} changes.", file=sys.stderr)
+            write_ocm_release_notes(updates, images_data)
 
         create_release_notes(updates, images_data, all_available_tags, args.release_notes_path)
         print(f"Created {args.release_notes_path}", file=sys.stderr)
