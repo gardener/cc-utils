@@ -157,7 +157,7 @@ runs:
 
     - name: Install gardener-gha-libs
       if: steps.check-status.outputs.already-released != 'true'
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@c8f2ed80d9f439a705621511fc9a227f21d5cb20
 
     - name: Install syft
       if: >
@@ -176,7 +176,7 @@ runs:
       if: >
         steps.check-status.outputs.already-released != 'true' &&
         inputs.scan-missing == 'true'
-      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@c8f2ed80d9f439a705621511fc9a227f21d5cb20
 
     - name: Scan missing SBOMs
       if: >
@@ -225,7 +225,7 @@ runs:
         steps.check-status.outputs.already-released != 'true' &&
         inputs.release-status != '' &&
         inputs.token-exchange-api-url != ''
-      uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@master
+      uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@c8f2ed80d9f439a705621511fc9a227f21d5cb20
       with:
         api-url: ${{ inputs.token-exchange-api-url }}
         oidc-audience: ${{ inputs.token-exchange-audience }}
