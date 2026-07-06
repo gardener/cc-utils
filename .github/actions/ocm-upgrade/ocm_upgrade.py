@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import traceback
 import typing
 
 try:
@@ -80,6 +81,13 @@ class MergePolicyConfig:
             if re.fullmatch(component, component_name):
                 return True
         return False
+
+
+@dataclasses.dataclass
+class UpgradeError:
+    upgrade_vector: 'ocm.gardener.UpgradeVector'
+    error: Exception
+    formatted_traceback: str
 
 
 def create_ocm_lookups(
@@ -497,20 +505,37 @@ def create_upgrade_pullrequests(
                 logger.info(f'upgrade-pullrequest for {uv=} already exists (skipping)')
                 continue
 
-            yield create_upgrade_pullrequest(
-                upgrade_vector=uv,
-                component_descriptor_lookup=component_descriptor_lookup,
-                version_lookup=version_lookup,
-                repo_dir=repo_dir,
-                repo_url=repo_url,
-                repository=repository,
-                merge_policy=current_merge_policy,
-                merge_method=current_merge_method,
-                branch=branch,
-                oci_client=oci_client,
-                component_reference_name=component_reference_name,
-                reference_component=component
-            )
+            try:
+                yield create_upgrade_pullrequest(
+                    upgrade_vector=uv,
+                    component_descriptor_lookup=component_descriptor_lookup,
+                    version_lookup=version_lookup,
+                    repo_dir=repo_dir,
+                    repo_url=repo_url,
+                    repository=repository,
+                    merge_policy=current_merge_policy,
+                    merge_method=current_merge_method,
+                    branch=branch,
+                    oci_client=oci_client,
+                    component_reference_name=component_reference_name,
+                    reference_component=component
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(
+                    f'callback failed for {uv=} with exit-code {e.returncode} - skipping'
+                )
+                yield UpgradeError(
+                    upgrade_vector=uv,
+                    error=e,
+                    formatted_traceback=traceback.format_exc(),
+                )
+            finally:
+                github.pullrequest.reset_worktree(
+                    gitutil.GitHelper(
+                        repo=repo_dir,
+                        git_cfg=gitutil.GitCfg(repo_url=repo_url),
+                    )
+                )
 
 
 def main():

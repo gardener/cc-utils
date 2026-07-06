@@ -234,8 +234,9 @@ runs:
           '${{ inputs.upstream-update-policy }}'.strip()
         )
 
-        created_upgrade_pullrequests = tuple(
-          ocm_upgrade.create_upgrade_pullrequests(
+        created_upgrade_pullrequests = []
+        upgrade_errors = []
+        for result in ocm_upgrade.create_upgrade_pullrequests(
             component=component,
             component_descriptor_lookup=component_descriptor_lookup,
             version_lookup=version_lookup,
@@ -252,8 +253,11 @@ runs:
             upstream_update_policy=upstream_update_policy,
             ignore_prerelease_versions=True,
             pr_naming_pattern='${{ inputs.pr-naming-pattern }}'
-          )
-        )
+          ):
+          if isinstance(result, ocm_upgrade.UpgradeError):
+            upgrade_errors.append(result)
+          else:
+            created_upgrade_pullrequests.append(result)
 
         upgrade_pullrequests.extend(created_upgrade_pullrequests)
 
@@ -272,5 +276,19 @@ runs:
         Created {len(created_upgrade_pullrequests)=}.
         '''
 
+        if upgrade_errors:
+          summary += '\n        ## Warnings: Failed Upgrade-Attempts\n\n'
+          for ue in upgrade_errors:
+            uv = ue.upgrade_vector
+            summary += (
+              f'        - **{uv.component_name}**: '
+              f'`{uv.whence.version}` → `{uv.whither.version}` '
+              f'— callback exited with {ue.error.returncode}\n'
+            )
+
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
           f.write(summary)
+
+        if upgrade_errors:
+          logger.error(f'{len(upgrade_errors)} upgrade(s) failed — see summary for details')
+          sys.exit(1)
