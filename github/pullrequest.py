@@ -412,6 +412,13 @@ def set_dependency_cmd_env(
     return cmd_env
 
 
+def reset_worktree(git_helper: gitutil.GitHelper):
+    git_helper.repo.git.reset('HEAD')  # also resets submodule gitlinks in index
+    git_helper.repo.git.submodule('update')  # checkout submodules to HEAD-recorded commit
+    git_helper.repo.git.checkout('.')
+    git_helper.repo.git.clean('-fd')
+
+
 @contextlib.contextmanager
 def commit_and_push_to_tmp_branch(
     repository: github3.repos.repo.Repository,
@@ -441,11 +448,6 @@ def commit_and_push_to_tmp_branch(
         logger.warning('an error occurred - removing now useless pr-branch')
         repository.ref(f'heads/{new_branch_name}').delete()
         raise
-
-    git_helper.repo.git.reset('HEAD')  # also resets submodule gitlinks in index
-    git_helper.repo.git.submodule('update')  # checkout submodules to HEAD-recorded commit
-    git_helper.repo.git.checkout('.')
-    git_helper.repo.git.clean('-fd')
 
     try:
         yield new_branch_name
