@@ -131,21 +131,13 @@ i.e. the actual changes proposed by a Pull-Request will not be visible to the pi
 action, which will circumvent this limitation, and explicitly checkout commits from trusted
 pullrequests. Pullrequests are considered to be trusted, if</p>
 <ul class="simple">
-<li><p>the fork’s owner is the same as the target-repository (i.e. a fork within the same organisation)</p></li>
+<li><p>the pullrequest-author is either of:
+- <code class="docutils literal notranslate"><span class="pre">COLLABORATOR</span></code>
+- <code class="docutils literal notranslate"><span class="pre">MEMBER</span></code> (org-member)
+- <code class="docutils literal notranslate"><span class="pre">OWNER</span></code> (repository-owner)</p></li>
 </ul>
 <p>OR
-- the pullrequest-author is either of:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">COLLABORATOR</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">CONTRIBUTOR</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MEMBER</span></code> (org-member)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">OWNER</span></code> (repository-owner)</p></li>
-</ul>
-</div></blockquote>
-<ul class="simple">
-<li><p>the pullrequest has a certain label (default: <code class="docutils literal notranslate"><span class="pre">ok-to-test</span></code>) set</p></li>
-</ul>
+- the pullrequest has a certain label (default: <code class="docutils literal notranslate"><span class="pre">ok-to-test</span></code>) set</p>
 <p>The preferred approach (because it will also work for first-time contributors) is using
 “label-based trust”.</p>
 <div class="admonition warning">

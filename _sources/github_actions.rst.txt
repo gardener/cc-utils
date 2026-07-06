@@ -68,13 +68,11 @@ For the latter case, there is the
 action, which will circumvent this limitation, and explicitly checkout commits from trusted
 pullrequests. Pullrequests are considered to be trusted, if
 
-- the fork's owner is the same as the target-repository (i.e. a fork within the same organisation)
-OR
 - the pullrequest-author is either of:
   - ``COLLABORATOR``
-  - ``CONTRIBUTOR``
   - ``MEMBER`` (org-member)
   - ``OWNER`` (repository-owner)
+OR
 - the pullrequest has a certain label (default: ``ok-to-test``) set
 
 The preferred approach (because it will also work for first-time contributors) is using
