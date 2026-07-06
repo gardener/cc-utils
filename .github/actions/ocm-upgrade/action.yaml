@@ -284,6 +284,9 @@ runs:
               f'        - **{uv.component_name}**: '
               f'`{uv.whence.version}` → `{uv.whither.version}` '
               f'— callback exited with {ue.error.returncode}\n'
+              f'        <details><summary>Traceback</summary>\n\n'
+              f'        ```\n{ue.formatted_traceback}```\n'
+              f'        </details>\n'
             )
 
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
