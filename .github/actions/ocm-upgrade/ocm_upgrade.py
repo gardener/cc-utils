@@ -529,6 +529,15 @@ def create_upgrade_pullrequests(
                     error=e,
                     formatted_traceback=traceback.format_exc(),
                 )
+            except Exception as e:
+                logger.error(
+                    f'failed to create upgrade-pullrequest for {uv=} - skipping'
+                )
+                yield UpgradeError(
+                    upgrade_vector=uv,
+                    error=e,
+                    formatted_traceback=traceback.format_exc(),
+                )
             finally:
                 github.pullrequest.reset_worktree(
                     gitutil.GitHelper(
