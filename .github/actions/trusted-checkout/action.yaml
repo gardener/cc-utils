@@ -10,11 +10,12 @@ description: |
   pullrequest). As this is generally considered to be unsafe, this will only be done under certain
   conditions:
 
-  - if the fork's owner is equal to the target's (i.e. fork within the same organisation)
   - if the author_association is one of:
     - COLLABORATOR
     - MEMBER
     - OWNER
+  OR
+  - the pullrequest has a certain label (default: ``ok-to-test``) set
 
 inputs:
   fetch-depth:
