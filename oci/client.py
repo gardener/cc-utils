@@ -591,7 +591,9 @@ class Client:
             if remaining_retries == 0:
                 raise
 
-            logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            logger.warning(
+                f'caught {type(e).__name__}, going to retry... ({remaining_retries=}); {e}'
+            )
             if sleep_before_retry_seconds > 0:
                 time.sleep(sleep_before_retry_seconds)
 
@@ -676,7 +678,9 @@ class Client:
             if remaining_retries == 0:
                 raise
 
-            logger.warning(f'caught ConnectionError, going to retry... ({remaining_retries=}); {e}')
+            logger.warning(
+                f'caught {type(e).__name__}, going to retry... ({remaining_retries=}); {e}'
+            )
             if sleep_before_retry_seconds > 0:
                 time.sleep(sleep_before_retry_seconds)
 
