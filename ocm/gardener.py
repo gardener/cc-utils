@@ -476,11 +476,17 @@ def image_dict_from_image_dict_and_resource(
     '''
     image_ref = oci.model.OciImageReference(resource.access.imageReference)
 
+    if image_ref.has_mixed_tag:
+        symbolic, digest = image_ref.parsed_mixed_tag
+        tag = f'{symbolic}@{digest}'
+    else:
+        tag = image_ref.tag
+
     image_dict = {
         'name': image['name'],
         'repository': image_ref.ref_without_tag,
         'sourceRepository': component_name,
-        'tag': image_ref.tag,
+        'tag': tag,
     }
 
     if (target_version := image.get('targetVersion')):
@@ -533,10 +539,16 @@ def oci_image_dict_from_resource(
     image_ref = oci.model.OciImageReference(resource.access.imageReference)
     repository = image_ref.ref_without_tag
 
+    if image_ref.has_mixed_tag:
+        symbolic, digest = image_ref.parsed_mixed_tag
+        tag = f'{symbolic}@{digest}'
+    else:
+        tag = image_ref.tag
+
     image_dict = {
         'name': name,
         'repository': repository,
-        'tag': image_ref.tag,
+        'tag': tag,
     }
 
     if (target_version_label := resource.find_label(
