@@ -43,6 +43,13 @@ on:
 
           Validation can be customised using `ocm-validation-cfg` input (currently, only
           OCM-Component-Descriptor validation is implemented).
+      ocm-validation-recursion-depth:
+        default: -1
+        type: number
+        description: |
+          How deep to recurse into componentReferences during OCM validation.
+          -1 = full transitive closure (default). 0 = top-level only.
+          See `ocm-validate` action for details.
       release-commit-objects:
         required: false
         type: string
@@ -436,6 +443,7 @@ jobs:
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           on-validation-errors: ${{ inputs.on-validation-errors }}
+          ocm-validation-recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.fed-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}

@@ -28,6 +28,23 @@ inputs:
       schema: fail
       access: fail
       artefact-uniqueness: fail
+  ocm-repositories:
+    description: |
+      Comma-separated list of OCM repository base-URLs used to resolve transitive component
+      references. Only needed when `recursion-depth` is non-zero and the component descriptor
+      has componentReferences that need to be followed.
+    type: string
+    required: false
+    default: ''
+  recursion-depth:
+    description: |
+      How deep to recurse into componentReferences when iterating the component descriptor.
+      -1 = unlimited (full transitive closure, default).
+       0 = only the top-level component (no lookup needed).
+      Positive integers limit depth accordingly.
+      When non-zero, `ocm-repositories` must be provided.
+    type: number
+    default: -1
   on-validation-errors:
     description: |
       Controls how this action should convey (fatal) findings (see `validation-cfg` input). If
@@ -83,6 +100,8 @@ runs:
         total, warnings, errors = validate.validate(
           component_descriptor_path='${{ inputs.component-descriptor-path }}',
           validation_cfg=validation_cfg,
+          ocm_repositories='${{ inputs.ocm-repositories }}',
+          recursion_depth=${{ inputs.recursion-depth }},
         )
 
         print(f'{total=} validation-results, thereof {len(warnings)=}, {len(errors)=}')

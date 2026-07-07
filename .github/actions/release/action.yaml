@@ -172,6 +172,12 @@ inputs:
     options:
       - fail
       - continue
+  ocm-validation-recursion-depth:
+    default: -1
+    type: number
+    description: |
+      Passed as `recursion-depth` to the `ocm-validate` action. -1 = full transitive closure
+      (default). 0 = top-level only. Requires `ocm-repositories` to be resolvable when non-zero.
   release-notes-path:
     required: false
     type: string
@@ -362,6 +368,8 @@ runs:
       with:
         component-descriptor-path: /tmp/component-descriptor.yaml
         on-validation-errors: ${{ inputs.on-validation-errors }}
+        ocm-repositories: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
+        recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
         validation-cfg: |
           schema: fail
           access: fail
