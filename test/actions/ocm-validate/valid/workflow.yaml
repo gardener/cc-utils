@@ -13,6 +13,7 @@ jobs:
             schema: fail
             access: skip
             artefact-uniqueness: fail
+          recursion-depth: 0
           on-validation-errors: fail
       - name: assert
         shell: bash

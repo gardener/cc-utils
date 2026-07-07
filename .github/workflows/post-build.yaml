@@ -196,6 +196,8 @@ jobs:
         with:
           component-descriptor-path: /tmp/ocm/component-descriptor.yaml
           on-validation-errors: ${{ inputs.on-validation-errors }}
+          ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
+          recursion-depth: 0
           validation-cfg: |
             schema: fail
             access: ${{ steps.prep.outputs.can-push == 'true' && 'fail' || 'skip' }}
