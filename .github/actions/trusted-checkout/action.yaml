@@ -30,7 +30,16 @@ inputs:
     type: string
     default: false
     description: |
-      passed to `actions/checkout` as `submodules` input.
+      Controls submodule checkout. Accepted values:
+
+      - `false` (default): no submodule checkout
+      - `recursive`: check out all submodules recursively, using federated tokens
+        (via `token-server`) or app credentials where available, so private submodules
+        across organisations are handled transparently
+      - any other value (e.g. `true`): ignored — no submodule checkout will occur
+
+      Note: unlike `actions/checkout`, this input is *not* passed through to the
+      underlying checkout action. Submodule handling is done by this action itself.
   auth-app-client-id:
     type: string
     default: ''
