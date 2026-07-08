@@ -3,6 +3,10 @@ description: |
   A wrapper around github.com/actions/checkout, with safety measures for pullrequests triggered
   from forks with `pull_request_target` event.
 
+  Also handles submodule checkout (set `submodules: recursive`), including private submodules
+  across organisations, by transparently obtaining federated tokens via the OIDC federation
+  service (when `token-server` is configured).
+
   It will by default behave identical to wrapped checkout-action. For pullrequests from forked
   repositories, which are triggered by the `pull_request_target` event (where wrapped checkout
   action will by default checkout receiving repository's contents), this action will instead
@@ -37,9 +41,6 @@ inputs:
         (via `token-server`) or app credentials where available, so private submodules
         across organisations are handled transparently
       - any other value (e.g. `true`): ignored — no submodule checkout will occur
-
-      Note: unlike `actions/checkout`, this input is *not* passed through to the
-      underlying checkout action. Submodule handling is done by this action itself.
   auth-app-client-id:
     type: string
     default: ''
