@@ -445,6 +445,9 @@ def replicate_blobs(
     Note that the uploaded artifact must be finalised after the upload by a "manifest-put".
     '''
     blob_overwrites = {k.digest:v for k,v in blob_overwrites.items()}
+    src_ref = om.OciImageReference(src_ref)
+    tgt_ref = om.OciImageReference(tgt_ref)
+    same_registry = src_ref.netloc == tgt_ref.netloc
 
     def replicate_blob(blob: om.OciBlobRef) -> om.OciBlobRef:
         if blob_overwrite_bytes := blob_overwrites.get(blob.digest):
@@ -475,6 +478,24 @@ def replicate_blobs(
             )
         else:
             digest = blob.digest
+
+            if oci_client.head_blob(image_reference=tgt_ref, digest=digest).ok:
+                return om.OciBlobRef(
+                    digest=digest,
+                    mediaType=blob.mediaType,
+                    size=blob.size,
+                )
+
+            if same_registry and oci_client.mount_blob(
+                image_reference=tgt_ref,
+                digest=digest,
+                from_reference=src_ref,
+            ):
+                return om.OciBlobRef(
+                    digest=digest,
+                    mediaType=blob.mediaType,
+                    size=blob.size,
+                )
 
             src_blob: requests.models.Response = oci_client.blob(
                 image_reference=src_ref,
