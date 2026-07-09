@@ -182,6 +182,19 @@ class OciRoutes:
             'uploads',
         ) + '/'
 
+    def mount_url(
+        self,
+        image_reference: str,
+        digest: str,
+        from_repo: str,
+    ) -> str:
+        '''
+        URL for cross-repository blob mount per OCI distribution spec:
+        POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<other-repo>
+        '''
+        query = urllib.parse.urlencode({'mount': digest, 'from': from_repo})
+        return self.uploads_url(image_reference=image_reference) + '?' + query
+
     def single_post_blob_url(self, image_reference: str, digest: str) -> str:
         '''
         used for "single-post" monolithic upload (not supported e.g. by registry-1.docker.io)
@@ -1270,6 +1283,56 @@ class Client:
         res.raise_for_status()
 
         return res
+
+    @initialise_repository_if_required
+    def mount_blob(
+        self,
+        image_reference: str | om.OciImageReference,
+        digest: str,
+        from_reference: str | om.OciImageReference,
+    ) -> bool:
+        '''
+        Attempts a cross-repository blob mount per OCI distribution spec
+        (POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repo>).
+
+        Returns True if the registry mounted the blob (HTTP 201), False if it
+        fell back to a normal upload session (HTTP 202 — caller must still upload
+        the blob via put_blob).
+
+        Using this before put_blob avoids a client-side download+re-upload when
+        source and target live on the same registry.
+        '''
+        image_reference = om.OciImageReference(image_reference)
+        from_reference = om.OciImageReference(from_reference)
+        scope = _scope(image_reference=image_reference, action='push,pull')
+
+        res = self._request(
+            url=self.routes.mount_url(
+                image_reference=str(image_reference),
+                digest=digest,
+                from_repo=from_reference.name,
+            ),
+            image_reference=image_reference,
+            scope=scope,
+            method='POST',
+            headers={'content-length': '0'},
+            raise_for_status=False,
+        )
+
+        if res.status_code == 201:
+            logger.debug(f'cross-repo mount succeeded {digest=} {from_reference=}')
+            return True
+
+        if res.status_code != 202:
+            # spec says 202 = mount unavailable, fall back to regular upload;
+            # non-compliant registries (e.g. keppel, nexus) may return errors instead —
+            # treat any non-201 as "mount not available" to stay robust
+            logger.warning(
+                f'unexpected response to mount attempt '
+                f'({res.status_code=}); falling back to regular upload'
+            )
+
+        return False
 
     def put_blob(
         self,
