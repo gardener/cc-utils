@@ -220,49 +220,19 @@ runs:
           --token-exchange-scope '${{ inputs.token-exchange-scope }}' \
           "${repos_args[@]}"
 
-    - name: Refresh GCS token before status write
-      if: >
-        steps.check-status.outputs.already-released != 'true' &&
-        inputs.release-status != '' &&
-        inputs.token-exchange-api-url != ''
-      uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@master
-      with:
-        api-url: ${{ inputs.token-exchange-api-url }}
-        oidc-audience: ${{ inputs.token-exchange-audience }}
-        pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
-        pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
-        scopes: ${{ inputs.token-exchange-scope }}
-        token-env-prefix: 'GCS_STATUS_'
-
     - name: Set release status
       if: >
         steps.check-status.outputs.already-released != 'true' &&
         inputs.release-status != ''
-      shell: bash
-      env:
-        BUCKET: ${{ inputs.gcs-bucket }}
-        GCS_TOKEN_INITIAL: ${{ inputs.gcs-token }}
-        TOKEN_EXCHANGE_SCOPE: ${{ inputs.token-exchange-scope }}
-        RUN_KEY: ${{ steps.resolve-run-key.outputs.run-key }}
-        RELEASE_STATUS: ${{ inputs.release-status }}
-      run: |
-        set -euo pipefail
-        scope_upper=$(echo "${TOKEN_EXCHANGE_SCOPE}" | tr '[:lower:]' '[:upper:]')
-        fresh_var="GCS_STATUS_${scope_upper}_TOKEN"
-        GCS_TOKEN="${!fresh_var:-${GCS_TOKEN_INITIAL}}"
-        ts=$(date -u +%s)
-        blob="${RUN_KEY}/.status-log/release/release-status-${ts}.json"
-        blob_enc="${blob//\//%2F}"
-        status=$(printf '{"releaseStatus":"%s"}' "$RELEASE_STATUS" | \
-          curl -s -o /tmp/gcs-status-resp.json -w '%{http_code}' \
-            -X POST \
-            "https://storage.googleapis.com/upload/storage/v1/b/${BUCKET}/o?uploadType=media&name=${blob_enc}" \
-            -H "Authorization: Bearer ${GCS_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            --data-binary @- \
-        )
-        echo "set-release-status: HTTP ${status}"
-        if [ "$status" != "200" ]; then
-          cat /tmp/gcs-status-resp.json || true
-          echo "Warning: failed to set release status (HTTP ${status})" >&2
-        fi
+      uses: gardener/cc-utils/.github/actions/sbom-set-status@master
+      with:
+        gcs-bucket: ${{ inputs.gcs-bucket }}
+        gcs-token: ${{ inputs.gcs-token }}
+        run-key: ${{ steps.resolve-run-key.outputs.run-key }}
+        release-status: ${{ inputs.release-status }}
+        on-already-released: ${{ inputs.on-already-released }}
+        token-exchange-api-url: ${{ inputs.token-exchange-api-url }}
+        token-exchange-audience: ${{ inputs.token-exchange-audience }}
+        token-exchange-pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
+        token-exchange-pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
+        token-exchange-scope: ${{ inputs.token-exchange-scope }}

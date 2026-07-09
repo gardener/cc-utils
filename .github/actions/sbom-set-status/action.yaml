@@ -56,6 +56,28 @@ inputs:
       A warning is printed if the timeout is reached; the released write still proceeds.
     required: false
     default: '600'
+  # token refresh — optional; when all four are supplied, set_status.py re-requests a
+  # fresh GCS token on HTTP 401, so a long-running poll cannot expire mid-flight.
+  token-exchange-api-url:
+    description: 'Base URL of the token exchange API (enables mid-run token refresh)'
+    required: false
+    default: ''
+  token-exchange-audience:
+    description: 'OIDC audience for token refresh'
+    required: false
+    default: ''
+  token-exchange-pipeline-id:
+    description: 'Pipeline identifier for token refresh'
+    required: false
+    default: ''
+  token-exchange-pipeline-group-id:
+    description: 'Pipeline group identifier for token refresh'
+    required: false
+    default: ''
+  token-exchange-scope:
+    description: 'Scope to re-request on token refresh (e.g. "cumulus")'
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -72,8 +94,23 @@ runs:
         ON_ABSENT: ${{ inputs.on-absent }}
         POLL_INTERVAL: ${{ inputs.poll-interval }}
         POLL_TIMEOUT: ${{ inputs.poll-timeout }}
+        TOKEN_EXCHANGE_API_URL: ${{ inputs.token-exchange-api-url }}
+        TOKEN_EXCHANGE_AUDIENCE: ${{ inputs.token-exchange-audience }}
+        TOKEN_EXCHANGE_PIPELINE_ID: ${{ inputs.token-exchange-pipeline-id }}
+        TOKEN_EXCHANGE_PIPELINE_GROUP_ID: ${{ inputs.token-exchange-pipeline-group-id }}
+        TOKEN_EXCHANGE_SCOPE: ${{ inputs.token-exchange-scope }}
       run: |
         set -euo pipefail
+        extra_args=()
+        if [ -n "${TOKEN_EXCHANGE_API_URL}" ]; then
+          extra_args+=(
+            --token-exchange-api-url           "$TOKEN_EXCHANGE_API_URL"
+            --token-exchange-audience          "$TOKEN_EXCHANGE_AUDIENCE"
+            --token-exchange-pipeline-id       "$TOKEN_EXCHANGE_PIPELINE_ID"
+            --token-exchange-pipeline-group-id "$TOKEN_EXCHANGE_PIPELINE_GROUP_ID"
+            --token-exchange-scope             "$TOKEN_EXCHANGE_SCOPE"
+          )
+        fi
         if [ -n "${RUN_KEYS}" ]; then
           python3 "$GITHUB_ACTION_PATH/set_status.py" \
             --gcs-bucket           "$GCS_BUCKET" \
@@ -83,7 +120,8 @@ runs:
             --on-already-released  "$ON_ALREADY_RELEASED" \
             --on-absent            "$ON_ABSENT" \
             --poll-interval        "$POLL_INTERVAL" \
-            --poll-timeout         "$POLL_TIMEOUT"
+            --poll-timeout         "$POLL_TIMEOUT" \
+            "${extra_args[@]}"
         else
           python3 "$GITHUB_ACTION_PATH/set_status.py" \
             --gcs-bucket           "$GCS_BUCKET" \
@@ -92,5 +130,6 @@ runs:
             --release-status       "$RELEASE_STATUS" \
             --on-already-released  "$ON_ALREADY_RELEASED" \
             --poll-interval        "$POLL_INTERVAL" \
-            --poll-timeout         "$POLL_TIMEOUT"
+            --poll-timeout         "$POLL_TIMEOUT" \
+            "${extra_args[@]}"
         fi
