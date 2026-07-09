@@ -64,6 +64,16 @@ def _fmt_bytes(n: int) -> str:
         v /= 1024
 
 
+_MAX_RESPONSE = 65536  # cap on raw response reads (tokens, write-ACKs)
+
+
+def _read_capped(r, label: str = 'response') -> bytes:
+    data = r.read(_MAX_RESPONSE + 1)
+    if len(data) > _MAX_RESPONSE:
+        raise RuntimeError(f'{label} exceeds {_MAX_RESPONSE} bytes — aborting')
+    return data
+
+
 @dataclasses.dataclass
 class _TokenRefreshConfig:
     api_url: str
@@ -74,7 +84,9 @@ class _TokenRefreshConfig:
 
 
 def _fetch_token(cfg: _TokenRefreshConfig) -> str:
-    '''Perform dual-token exchange against System Trust; return scoped GCS token.'''
+    '''Perform dual-token exchange against System Trust; return scoped GCS token.
+    NOTE: duplicated verbatim in sbom-set-status/set_status.py — keep in sync.
+    '''
     # Step 1: GitHub OIDC token
     actions_token_request_token = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN', '')
     actions_token_request_url = os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL', '')
@@ -99,7 +111,7 @@ def _fetch_token(cfg: _TokenRefreshConfig) -> str:
         headers={'Metadata-Flavor': 'Google'},
     )
     with urllib.request.urlopen(req) as r:  # nosec B310
-        gcp_token = r.read().decode()
+        gcp_token = _read_capped(r, 'GCP identity token').decode()
 
     # Step 3: System Trust /auth
     group_enc = urllib.parse.quote(cfg.pipeline_group_id, safe='')
