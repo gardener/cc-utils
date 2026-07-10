@@ -212,6 +212,14 @@ runs:
         buf = io.BytesIO(ocm_artefacts_yaml_bytes)
         ocm_tar.addfile(ocm_artefacts_info, buf)
 
+        # Sidecar with run-attempt so merge-ocm-fragments can prefer the highest
+        # attempt when the same resource identity appears across multiple attempts.
+        # Written as a separate file — NOT part of the .ocm-artefacts content.
+        meta_bytes = f'run-attempt: ${{ github.run_attempt }}\n'.encode()
+        meta_info = tarfile.TarInfo(name=f'{ocm_artefacts_fname}.meta')
+        meta_info.size = len(meta_bytes)
+        ocm_tar.addfile(meta_info, io.BytesIO(meta_bytes))
+
         ocm_tar.close()
         with open(ocm_tar.name, 'rb') as ocm_tar_fh:
           tarhash = hashlib.sha1()
