@@ -44,8 +44,17 @@ inputs:
       Action when a run-key has no status entries in the bucket:
         skip – silently ignore (default)
         fail – exit 1
+      Ignored unless mode is "update".
     required: false
     default: 'skip'
+  mode:
+    description: >
+      Write mode:
+        create           – fail if status entries already exist (exclusive first write).
+        update           – skip/fail if absent (on-absent applies); existence is fine.
+        create-or-update – write unconditionally; neither absence nor existence is an error.
+    required: false
+    default: 'create-or-update'
   poll-interval:
     description: 'Seconds between lock-poll attempts when transitioning to released (default: 30)'
     required: false
@@ -92,6 +101,7 @@ runs:
         RELEASE_STATUS: ${{ inputs.release-status }}
         ON_ALREADY_RELEASED: ${{ inputs.on-already-released }}
         ON_ABSENT: ${{ inputs.on-absent }}
+        MODE: ${{ inputs.mode }}
         POLL_INTERVAL: ${{ inputs.poll-interval }}
         POLL_TIMEOUT: ${{ inputs.poll-timeout }}
         TOKEN_EXCHANGE_API_URL: ${{ inputs.token-exchange-api-url }}
@@ -119,6 +129,7 @@ runs:
             --release-status       "$RELEASE_STATUS" \
             --on-already-released  "$ON_ALREADY_RELEASED" \
             --on-absent            "$ON_ABSENT" \
+            --mode                 "$MODE" \
             --poll-interval        "$POLL_INTERVAL" \
             --poll-timeout         "$POLL_TIMEOUT" \
             "${extra_args[@]}"
@@ -129,6 +140,8 @@ runs:
             --run-key              "$RUN_KEY" \
             --release-status       "$RELEASE_STATUS" \
             --on-already-released  "$ON_ALREADY_RELEASED" \
+            --on-absent            "$ON_ABSENT" \
+            --mode                 "$MODE" \
             --poll-interval        "$POLL_INTERVAL" \
             --poll-timeout         "$POLL_TIMEOUT" \
             "${extra_args[@]}"

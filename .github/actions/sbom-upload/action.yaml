@@ -231,6 +231,7 @@ runs:
         run-key: ${{ steps.resolve-run-key.outputs.run-key }}
         release-status: ${{ inputs.release-status }}
         on-already-released: ${{ inputs.on-already-released }}
+        mode: create-or-update
         token-exchange-api-url: ${{ inputs.token-exchange-api-url }}
         token-exchange-audience: ${{ inputs.token-exchange-audience }}
         token-exchange-pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
