@@ -30,8 +30,6 @@ try:
 except ImportError:
     _have_termcolor = False
 
-import ci.paths
-
 
 logger = logging.getLogger(__name__)
 
@@ -112,18 +110,6 @@ def existing_dir(path: str):
     if not is_dir:
         fail('not an existing directory: ' + str(path))
     return path
-
-
-def check_type(instance, type):
-    if not isinstance(instance, type):
-        fail('{i} is not an instance of {t}'.format(i=instance, t=type))
-    return instance
-
-
-def gardener_cicd_libs_version():
-    versionfile_file_path = ci.paths.version_file
-    with open(versionfile_file_path, 'rt') as f:
-        return f.readline()
 
 
 class CliHint:
