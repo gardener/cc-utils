@@ -10,12 +10,16 @@ description: |
   present). It will work well if repository was cloned as `shallow`. The repository should have the
   same state as it had when `capture-commit` was executed.
 
+  Under the hood, the imported payload is a git bundle (produced by `capture-commit`). Importing
+  uses `git fetch <bundle-file> +refs/capture-commit:refs/capture-commit`, which is race-free
+  w.r.t. gc/repack and preserves commit-digests exactly.
+
 inputs:
   commit-objects:
     required: false
     description: |
-      a base64-encoded tarfile containing the objects to import into git-repository. The expected
-      format matches the one output from `capture-commit` action.
+      a base64-encoded git bundle containing the objects to import into git-repository. The
+      expected format matches the one output from `capture-commit` action.
 
       Either this input, or `commit-objects-artefact` must be passed.
   commit-objects-artefact:
@@ -52,8 +56,7 @@ inputs:
       *noop*
       import commit, and leave follow-up steps to caller. This is useful in cases where callers
       need more control. Note that if not explicitly doing something w/ imported objects, this will
-      have _no_ visible effect to either worktree nor commit-history (+ imported objects will remain
-      loose).
+      have _no_ visible effect to either worktree nor commit-history.
     options:
       - rebase
       - cherry-pick
@@ -73,24 +76,27 @@ runs:
       if: ${{ inputs.commit-objects != '' }}
       shell: bash
       run: |
-        set -eu
-        echo "${{ inputs.commit-objects }}" | base64 -d | tar x -C "${GITHUB_WORKSPACE}"
+        set -euo pipefail
+        bundle_file="$(mktemp --suffix=.bundle)"
+        trap 'rm -f "${bundle_file}"' EXIT
+        echo "${{ inputs.commit-objects }}" | base64 -d > "${bundle_file}"
+        git fetch "${bundle_file}" '+refs/capture-commit:refs/capture-commit'
     - name: import-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
         name: ${{ inputs.commit-objects-artefact }}
-    - name: extract-commit-objects-from-artefact
+    - name: unbundle-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
       shell: bash
       run: |
-        set -eu
-        tar xf commit-objects.tar.gz -C "${GITHUB_WORKSPACE}"
-        unlink commit-objects.tar.gz
+        set -euo pipefail
+        git fetch "$PWD/commit-objects.bundle" '+refs/capture-commit:refs/capture-commit'
+        unlink commit-objects.bundle
     - name: import-commit
       shell: bash
       run: |
-        echo 'importing objects into .git-dir'
+        set -euo pipefail
         if [ -n "${{ inputs.commit-digest }}" ]; then
           commit_digest="${{ inputs.commit-digest }}"
         else

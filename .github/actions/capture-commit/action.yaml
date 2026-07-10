@@ -7,14 +7,12 @@ description: |
   persisting it, yet (as subsequent jobs might still fail).
 
   This action will only work if git-repository is cloned using `git` (i.e. git-repository must be
-  present). It will work well if repository was cloned as `shallow`. The action needs a reference
-  timestamp, which is passed via regular file. Said file *must* be created _prior_ to creating the
-  commit to serialise (/"capture"). It leverages git's internal organisation of objects, where new
-  objects will be created in separate files; such newly created object-files will be picked up, thus
-  containing both added/changed blobs, as well as tree-objects, and commit.
+  present). It will work well if repository was cloned as `shallow`. Under the hood a `git bundle`
+  is created, containing the captured commit (and any of its ancestors not yet on a remote-tracking
+  ref). The bundle is race-free w.r.t. concurrent gc/repack.
 
   As release-commits are commonly rather small (typically just changing some versions in a few
-  files), the resulting data is typically only a few kiBs in size, which allows it to be exported
+  files), the resulting bundle is typically only a few kiBs in size, which allows it to be exported
   as a (base64-encoded) output (thus making passing-around somewhat less cumbersome).
 
   Thus-exported commits can be imported, retaining the exact same commit-digest, provided the
@@ -27,14 +25,13 @@ description: |
   Caveat: if more than one commit is imported, importing steps relying on said ref will have to
   guard against overwrites which will otherwise happen.
 
-  Note: this action makes use of git-internals (mostly layout of object-db). It will only work if
-  those are not violated (e.g. no git-gc or repack must be done prior to calling this action).
-
 inputs:
   timestamp-reference:
     required: true
     description: |
-      a filepath pointing to a file that was created before the head-commit
+      historical: filepath pointing to a file created before the head-commit.
+      No longer used by the bundle-based implementation; kept as a required input
+      for backwards-compat with existing callers. May be dropped in a future release.
   commit:
     required: false
     description: |
@@ -42,9 +39,9 @@ inputs:
   to-artefact:
     required: false
     description: |
-      if specified, the captured commits will also be uploaded as an artefact of the specified
-      name. The artefact will contain a single TARchive w/ the same contents as the `commit-objects`
-      output. Its name will be `commit-objects.tar.gz`
+      if specified, the captured commit will also be uploaded as an artefact of the specified
+      name. The artefact will contain a single file named `commit-objects.bundle` (a git bundle
+      with the same contents as the `commit-objects` output).
   commit-summary:
     description: |
       controls the step-summary to be emitted by this action.
@@ -67,7 +64,7 @@ outputs:
     value: ${{ steps.capture.outputs.commit-digest }}
   commit-objects:
     description: |
-      a base64-encoded tarfile containing the objects required to restore the head-commit.
+      a base64-encoded git bundle containing the objects required to restore the head-commit.
     value: ${{ steps.capture.outputs.commit-objects }}
 
 runs:
@@ -76,37 +73,25 @@ runs:
     - name: capture-commit
       id: capture
       run: |
-        # darwin/macOS is not supported. differences that would need addressing:
-        # - `stat --format=%s` (GNU) -> `stat -f %z` (BSD)
-        # - `base64 -w0` (GNU) -> `base64 | tr -d '\n'` (BSD)
-        if [ "$(uname -s)" = 'Darwin' ]; then
-          echo 'error: darwin/macOS is not supported'
-          exit 1
-        fi
+        set -euo pipefail
 
-        ts_ref=${{ inputs.timestamp-reference }}
-        if [ ! -f ${ts_ref} ]; then
-          echo "no timestamp-reference-file at expected path: ${ts_ref}"
-          exit 1
-        fi
-        objects_out='commit-objects.tar'
+        objects_out='commit-objects.bundle'
         commit_out='commit-digest'
         GIT_DIR=$PWD/.git \
           ${GITHUB_ACTION_PATH}/capture-commit \
             ${objects_out} \
-            ${ts_ref} \
+            '${{ inputs.timestamp-reference }}' \
             ${commit_out} \
             ${{ inputs.commit }}
 
-        tar tf ${objects_out}
         objects_size=$(stat --format=%s ${objects_out})
         objects_max_size=65536 # 64 KiB
 
         echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
         if [ ${objects_size} -lt ${objects_max_size} ]; then
-          echo "commit-objects=$(cat ${objects_out} | base64 -w0)" >> ${GITHUB_OUTPUT}
+          echo "commit-objects=$(base64 -w0 < ${objects_out})" >> ${GITHUB_OUTPUT}
         else
-          echo "Warning: captured objects were too large (${objects_size} octets)"
+          echo "Warning: captured bundle too large (${objects_size} octets)"
           echo "commit-objects output will not be set"
         fi
 
@@ -120,8 +105,8 @@ runs:
           </summary>
 
         commit-digest: \`$(cat ${commit_out})\`
-        objects-listing (tarfile):
-        $(tar tf ${objects_out})
+        bundle-refs:
+        $(git bundle list-heads ${objects_out})
         commit-message:
         $(git show)
         </details>
@@ -135,8 +120,8 @@ runs:
           </summary>
 
         commit-digest: \`$(cat ${commit_out})\`
-        objects-listing (tarfile):
-        $(tar tf ${objects_out})
+        bundle-refs:
+        $(git bundle list-heads ${objects_out})
         </details>
         EOF
 
@@ -146,19 +131,17 @@ runs:
           echo "Error: unexpected summary-kind: ${summary_kind}"
           exit 1
         fi
-
-        gzip ${objects_out}
       shell: bash
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       if: ${{ inputs.to-artefact != '' }}
       with:
         name: ${{ inputs.to-artefact }}
-        path: commit-objects.tar.gz
+        path: commit-objects.bundle
 
     - name: clean-up-capture-commit-archive
       shell: bash
       run: |
         set -euo pipefail
 
-        # archive was uploaded already, avoid local collisions in filesystem
-        unlink commit-objects.tar.gz
+        # bundle was uploaded already, avoid local collisions in filesystem
+        unlink commit-objects.bundle
