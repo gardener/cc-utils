@@ -273,6 +273,17 @@ def main() -> None:
         help='"skip" ignores run-keys with no status entries, "fail" aborts (default: skip)',
     )
     parser.add_argument(
+        '--mode',
+        choices=('create', 'update', 'create-or-update'),
+        default='create-or-update',
+        metavar='MODE',
+        help=(
+            '"create": fail if status entries already exist; '
+            '"update": skip/fail if absent (on-absent applies); '
+            '"create-or-update": write unconditionally (default: create-or-update)'
+        ),
+    )
+    parser.add_argument(
         '--poll-interval',
         type=int,
         default=30,
@@ -325,11 +336,19 @@ def main() -> None:
         print(f'run-key: {run_key!r}  current: {current!r}  target: {target!r}', file=sys.stderr)
 
         if current is None:
-            if args.on_absent == 'fail':
-                print(f'error: run-key {run_key!r} has no status entries', file=sys.stderr)
-                sys.exit(1)
-            print(f'run-key {run_key!r} absent — skipping', file=sys.stderr)
-            continue
+            if args.mode == 'update':
+                if args.on_absent == 'fail':
+                    print(f'error: run-key {run_key!r} has no status entries', file=sys.stderr)
+                    sys.exit(1)
+                print(f'run-key {run_key!r} absent — skipping', file=sys.stderr)
+                continue
+            # create / create-or-update: absence is fine — fall through to write
+        elif args.mode == 'create':
+            print(
+                f'error: run-key {run_key!r} already has status {current!r}',
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
         if current == 'released':
             msg = f'run-key {run_key!r} is already in "released" state'
