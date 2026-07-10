@@ -143,3 +143,8 @@ jobs:
           on-absent: 'skip'
           poll-interval: ${{ inputs.poll-interval }}
           poll-timeout: ${{ inputs.poll-timeout }}
+          token-exchange-api-url: ${{ inputs.token-exchange-api-url }}
+          token-exchange-audience: ${{ inputs.token-exchange-audience }}
+          token-exchange-pipeline-id: ${{ inputs.token-exchange-pipeline-id }}
+          token-exchange-pipeline-group-id: ${{ inputs.token-exchange-pipeline-group-id }}
+          token-exchange-scope: ${{ inputs.token-exchange-scope }}
