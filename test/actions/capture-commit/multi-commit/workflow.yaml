@@ -1,0 +1,63 @@
+name: test-capture-import-multi-commit
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: make-timestamp-reference
+        shell: bash
+        run: touch /tmp/ts-ref
+      - name: make-two-commits
+        id: commits
+        shell: bash
+        run: |
+          echo 'A' >> hello.txt
+          git add hello.txt
+          git commit -m 'commit A'
+          echo "sha_a=$(git rev-parse HEAD)" >> ${GITHUB_OUTPUT}
+          echo 'B' >> hello.txt
+          git add hello.txt
+          git commit -m 'commit B'
+          echo "sha_b=$(git rev-parse HEAD)" >> ${GITHUB_OUTPUT}
+      - id: capture
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref
+      - name: assert-capture
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects'
+            exit 1
+          fi
+      - name: reset-two
+        shell: bash
+        run: git reset --hard HEAD~2
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture.outputs.commit-digest }}
+          after-import: rebase
+      - name: assert-import
+        shell: bash
+        run: |
+          head="$(git rev-parse HEAD)"
+          expected_b='${{ steps.commits.outputs.sha_b }}'
+          expected_a='${{ steps.commits.outputs.sha_a }}'
+          if [ "${head}" != "${expected_b}" ]; then
+            echo "Expected HEAD=${expected_b}, got: ${head}"
+            exit 1
+          fi
+          parent="$(git rev-parse HEAD~1)"
+          if [ "${parent}" != "${expected_a}" ]; then
+            echo "Expected HEAD~1=${expected_a}, got: ${parent}"
+            exit 1
+          fi
+          git fsck --no-dangling
+          echo "multi-commit import: HEAD=${head} HEAD~1=${parent} OK"
