@@ -333,7 +333,11 @@ def main() -> None:
 
     for run_key in run_keys:
         current = _current_status(bucket, token, run_key, refresh=refresh)
-        print(f'run-key: {run_key!r}  current: {current!r}  target: {target!r}', file=sys.stderr)
+        current_s = current if current is not None else '(none)'
+        print(
+            f'setting status for run-key={run_key!r} to {target!r} (was: {current_s})',
+            file=sys.stderr,
+        )
 
         if current is None:
             if args.mode == 'update':
