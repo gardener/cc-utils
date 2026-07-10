@@ -111,6 +111,12 @@ runs:
         TOKEN_EXCHANGE_SCOPE: ${{ inputs.token-exchange-scope }}
       run: |
         set -euo pipefail
+        if [ -n "${RUN_KEY}" ]; then
+          echo "set-release-status: run-key='${RUN_KEY}' target=${RELEASE_STATUS} mode=${MODE}" >&2
+        else
+          n=$(echo "${RUN_KEYS}" | grep -c '[^[:space:]]' || true)
+          echo "set-release-status: ${n} run-key(s) target=${RELEASE_STATUS} mode=${MODE}" >&2
+        fi
         extra_args=()
         if [ -n "${TOKEN_EXCHANGE_API_URL}" ]; then
           extra_args+=(
