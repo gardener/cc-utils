@@ -111,3 +111,89 @@ def test_merge_fragments_ignores_non_fragment_files():
         assert os.path.exists(other)
 
     assert descriptor['component']['resources'] == []
+
+
+def _write_meta(fragments_dir, fragment_fname, run_attempt):
+    meta = {'run-attempt': run_attempt}
+    with open(os.path.join(fragments_dir, f'{fragment_fname}.meta'), 'w') as f:
+        yaml.safe_dump(meta, f)
+
+
+def test_merge_fragments_deduplicates_same_attempt():
+    '''Two fragments with identical identity and same attempt: first one wins, no duplicate.'''
+    descriptor = _base_descriptor()
+    resource = {'name': 'img', 'version': '1.0', 'data': 'first'}
+    with tempfile.TemporaryDirectory() as d:
+        _write_fragment(d, 'a.ocm-artefacts', resources=[resource])
+        _write_meta(d, 'a.ocm-artefacts', run_attempt=2)
+        _write_fragment(d, 'b.ocm-artefacts', resources=[{**resource, 'data': 'second'}])
+        _write_meta(d, 'b.ocm-artefacts', run_attempt=2)
+
+        merge_ocm.merge_fragments(descriptor, d)
+
+    assert len(descriptor['component']['resources']) == 1
+
+
+def test_merge_fragments_higher_attempt_wins():
+    '''Same identity from two attempts: higher attempt replaces lower.'''
+    descriptor = _base_descriptor()
+    identity = {'name': 'img', 'version': '1.0', 'extraIdentity': {'architecture': 'arm64'}}
+    with tempfile.TemporaryDirectory() as d:
+        _write_fragment(d, 'a.ocm-artefacts', resources=[{**identity, 'access': 'old'}])
+        _write_meta(d, 'a.ocm-artefacts', run_attempt=1)
+        _write_fragment(d, 'b.ocm-artefacts', resources=[{**identity, 'access': 'new'}])
+        _write_meta(d, 'b.ocm-artefacts', run_attempt=2)
+
+        merge_ocm.merge_fragments(descriptor, d)
+
+    resources = descriptor['component']['resources']
+    assert len(resources) == 1
+    assert resources[0]['access'] == 'new'
+
+
+def test_merge_fragments_lower_attempt_does_not_overwrite():
+    '''Fragments processed in arbitrary order: lower attempt must not overwrite higher.'''
+    descriptor = _base_descriptor()
+    identity = {'name': 'img', 'version': '1.0'}
+    with tempfile.TemporaryDirectory() as d:
+        # write higher attempt first so it gets processed first (alphabetically)
+        _write_fragment(d, 'a.ocm-artefacts', resources=[{**identity, 'access': 'new'}])
+        _write_meta(d, 'a.ocm-artefacts', run_attempt=3)
+        _write_fragment(d, 'b.ocm-artefacts', resources=[{**identity, 'access': 'old'}])
+        _write_meta(d, 'b.ocm-artefacts', run_attempt=1)
+
+        merge_ocm.merge_fragments(descriptor, d)
+
+    resources = descriptor['component']['resources']
+    assert len(resources) == 1
+    assert resources[0]['access'] == 'new'
+
+
+def test_merge_fragments_no_meta_treated_as_attempt_zero():
+    '''Fragment without sidecar (old format) gets attempt=0, overridden by any attempt>=1.'''
+    descriptor = _base_descriptor()
+    identity = {'name': 'img', 'version': '1.0'}
+    with tempfile.TemporaryDirectory() as d:
+        _write_fragment(d, 'a.ocm-artefacts', resources=[{**identity, 'access': 'old'}])
+        # no .meta sidecar → attempt 0
+        _write_fragment(d, 'b.ocm-artefacts', resources=[{**identity, 'access': 'new'}])
+        _write_meta(d, 'b.ocm-artefacts', run_attempt=1)
+
+        merge_ocm.merge_fragments(descriptor, d)
+
+    resources = descriptor['component']['resources']
+    assert len(resources) == 1
+    assert resources[0]['access'] == 'new'
+
+
+def test_merge_fragments_meta_sidecar_consumed():
+    '''The .meta sidecar is deleted alongside its fragment.'''
+    descriptor = _base_descriptor()
+    with tempfile.TemporaryDirectory() as d:
+        _write_fragment(d, 'a.ocm-artefacts', resources=[{'name': 'r', 'version': '1.0'}])
+        _write_meta(d, 'a.ocm-artefacts', run_attempt=1)
+
+        merge_ocm.merge_fragments(descriptor, d)
+
+        assert not os.path.exists(os.path.join(d, 'a.ocm-artefacts'))
+        assert not os.path.exists(os.path.join(d, 'a.ocm-artefacts.meta'))
