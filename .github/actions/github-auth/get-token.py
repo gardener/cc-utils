@@ -5,25 +5,11 @@ import os
 import ssl
 import sys
 import time
-import urllib.error
-import urllib.request
+import urllib3
+import urllib3.exceptions
 
 
-class _MethodPreservingRedirectHandler(urllib.request.HTTPRedirectHandler):
-    '''Follow 307/308 redirects preserving method and body (urllib drops both by default).'''
-    def http_error_307(self, req, fp, code, msg, headers):
-        new_req = urllib.request.Request(
-            headers['Location'],
-            data=req.data,
-            headers=req.headers,
-            method=req.get_method(),
-        )
-        return self.parent.open(new_req)
-
-    http_error_308 = http_error_307
-
-
-def _ssl_ctx() -> ssl.SSLContext:
+def _make_pool() -> urllib3.PoolManager:
     # Explicitly load system CA bundle so custom CAs installed on the runner are trusted.
     # Python may otherwise use a bundled store that predates any runner-installed certs.
     cafile = (
@@ -31,90 +17,138 @@ def _ssl_ctx() -> ssl.SSLContext:
         or ssl.get_default_verify_paths().cafile
         or '/etc/ssl/certs/ca-certificates.crt'
     )
-    return ssl.create_default_context(cafile=cafile)
+    return urllib3.PoolManager(ssl_context=ssl.create_default_context(cafile=cafile))
 
 
-_opener = urllib.request.build_opener(
-    _MethodPreservingRedirectHandler,
-    urllib.request.HTTPSHandler(context=_ssl_ctx()),
-)
+_pool = _make_pool()
 
 
-def _open_with_retry(
-    req: urllib.request.Request,
-    timeout_seconds: int = 30,
+def _request_with_retry(
+    method: str,
+    url: str,
+    headers: dict | None = None,
+    body: bytes | None = None,
+    connect_timeout: int = 10,
+    read_timeout: int = 30,
     retries: int = 6,
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
 ) -> dict:
-    '''Open a request, retrying on transient errors with exponential backoff.
+    '''Send an HTTP request, retrying on transient errors with exponential backoff.
 
-    4xx responses are treated as systematic failures and are not retried.
+    TCP connect timeouts are not retried: if the connection cannot be established,
+    the runner is likely blocked by a firewall and retrying on the same runner is futile.
+    4xx responses (except 408/429) are also not retried.
     '''
-    url = req.full_url
+    timeout = urllib3.Timeout(connect=connect_timeout, read=read_timeout)
     for attempt in range(retries + 1):
         try:
-            with _opener.open(req, timeout=timeout_seconds) as resp:
-                return json.load(resp)
-        except urllib.error.HTTPError as e:
-            body = e.read().decode()
-            if e.code < 500 and e.code not in (408, 429):
+            resp = _pool.request(
+                method,
+                url,
+                headers=headers or {},
+                body=body,
+                timeout=timeout,
+            )
+        except urllib3.exceptions.ConnectTimeoutError:
+            print(
+                f'ERROR: Request to {url} failed: tcp connect timeout after {connect_timeout}s'
+                f' - likely a firewall/network issue on this runner, retrying is futile',
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        except urllib3.exceptions.ReadTimeoutError:
+            reason = f'http read timeout after {read_timeout}s'
+            if attempt == retries:
+                print(f'ERROR: Request to {url} failed: {reason}', file=sys.stderr)
+                sys.exit(1)
+            delay = min(backoff_base ** (attempt + 1), backoff_cap)
+            print(
+                f'WARNING: Request to {url} failed: {reason}, '
+                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+            continue
+        except urllib3.exceptions.RequestError as e:
+            if attempt == retries:
+                print(f'ERROR: Request to {url} failed: {e}', file=sys.stderr)
+                sys.exit(1)
+            delay = min(backoff_base ** (attempt + 1), backoff_cap)
+            print(
+                f'WARNING: Request to {url} failed: {e}, '
+                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+            continue
+
+        if resp.status >= 400:
+            body_str = resp.data.decode()
+            if resp.status < 500 and resp.status not in (408, 429):
                 # 4xx (except 408/429): systematic – retrying won't help
-                print(f'ERROR: HTTP {e.code} from {url}:\n{body}', file=sys.stderr)
+                print(f'ERROR: HTTP {resp.status} from {url}:\n{body_str}', file=sys.stderr)
                 sys.exit(1)
             if attempt == retries:
                 print(
-                    f'ERROR: HTTP {e.code} from {url} (gave up after {retries} retries):\n{body}',
+                    f'ERROR: HTTP {resp.status} from {url}'
+                    f' (gave up after {retries} retries):\n{body_str}',
                     file=sys.stderr,
                 )
                 sys.exit(1)
-            delay = min(backoff_base ** (attempt+1), backoff_cap)
+            delay = min(backoff_base ** (attempt + 1), backoff_cap)
             print(
-                f'WARNING: HTTP {e.code} from {url}, '
+                f'WARNING: HTTP {resp.status} from {url}, '
                 f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
                 file=sys.stderr,
             )
             time.sleep(delay)
-        except urllib.error.URLError as e:
-            if attempt == retries:
-                print(f'ERROR: Request to {url} failed: {e.reason}', file=sys.stderr)
-                sys.exit(1)
-            delay = min(backoff_base ** (attempt+1), backoff_cap)
-            print(
-                f'WARNING: Request to {url} failed: {e.reason}, '
-                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
-                file=sys.stderr,
-            )
-            time.sleep(delay)
+            continue
+
+        return json.loads(resp.data.decode())
 
 
 def http_get(
     url: str,
     headers: dict | None = None,
-    timeout_seconds: int = 30,
+    connect_timeout: int = 10,
+    read_timeout: int = 30,
     retries: int = 6,
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
 ) -> dict:
-    req = urllib.request.Request(url, headers=headers or {})
-    return _open_with_retry(req, timeout_seconds, retries, backoff_base, backoff_cap)
+    return _request_with_retry(
+        'GET',
+        url,
+        headers=headers,
+        connect_timeout=connect_timeout,
+        read_timeout=read_timeout,
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_cap=backoff_cap,
+    )
 
 
 def http_post(
     url: str,
     payload: dict,
-    timeout_seconds: int = 30,
+    connect_timeout: int = 10,
+    read_timeout: int = 30,
     retries: int = 6,
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
 ) -> dict:
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(
+    return _request_with_retry(
+        'POST',
         url,
-        data=data,
         headers={'Content-Type': 'application/json'},
+        body=json.dumps(payload).encode(),
+        connect_timeout=connect_timeout,
+        read_timeout=read_timeout,
+        retries=retries,
+        backoff_base=backoff_base,
+        backoff_cap=backoff_cap,
     )
-    return _open_with_retry(req, timeout_seconds, retries, backoff_base, backoff_cap)
 
 
 def get_oidc_token(
