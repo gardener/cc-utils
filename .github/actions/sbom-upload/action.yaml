@@ -157,7 +157,7 @@ runs:
 
     - name: Install gardener-gha-libs
       if: steps.check-status.outputs.already-released != 'true'
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@63505d02ec6ca5f8390e7ec90bb1f3cef6a9824b
 
     - name: Install syft
       if: >
@@ -176,7 +176,7 @@ runs:
       if: >
         steps.check-status.outputs.already-released != 'true' &&
         inputs.scan-missing == 'true'
-      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@63505d02ec6ca5f8390e7ec90bb1f3cef6a9824b
 
     - name: Scan missing SBOMs
       if: >
@@ -224,7 +224,7 @@ runs:
       if: >
         steps.check-status.outputs.already-released != 'true' &&
         inputs.release-status != ''
-      uses: gardener/cc-utils/.github/actions/sbom-set-status@master
+      uses: gardener/cc-utils/.github/actions/sbom-set-status@63505d02ec6ca5f8390e7ec90bb1f3cef6a9824b
       with:
         gcs-bucket: ${{ inputs.gcs-bucket }}
         gcs-token: ${{ inputs.gcs-token }}
