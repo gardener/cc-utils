@@ -40,13 +40,13 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - uses: gardener/cc-utils/.github/actions/oci-auth@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@63505d02ec6ca5f8390e7ec90bb1f3cef6a9824b
+    - uses: gardener/cc-utils/.github/actions/oci-auth@f2214ceaf3d68be532259979be4ba09a7d35fee2
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@63505d02ec6ca5f8390e7ec90bb1f3cef6a9824b
       with:
         name: ${{ inputs.component-descriptor-artifact }}
         path: /tmp/cd-artifact
