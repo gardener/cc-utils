@@ -227,10 +227,10 @@ def _poll_sbom_locked(
                 refreshed = True
                 continue
             code = e.code
-        print(f'poll sbom/ lock: attempt {attempt}, HTTP {code}', file=sys.stderr)
         if code == 403:
-            print('sbom/ locked — promoted registered with Cumulus', file=sys.stderr)
+            print(f'immutability confirmed for {probe} (attempt {attempt})', file=sys.stderr)
             return token
+        print(f'waiting for Cumulus hold on {probe}: attempt {attempt} ({code})', file=sys.stderr)
         if time.monotonic() >= deadline:
             print(
                 f'warning: sbom/ not locked after {timeout}s — proceeding anyway',
