@@ -28,6 +28,7 @@ def validate(
         ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*repos)
         lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repo_lookup,
+            oci_client=oci.client.client_with_dockerauth(),
         )
     else:
         lookup = None
