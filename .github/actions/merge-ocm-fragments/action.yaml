@@ -104,7 +104,13 @@ outputs:
       name of the GHA artifact containing the merged component-descriptor.
       The artifact holds a single file `component-descriptor.tar.gz` which
       in turn contains `component-descriptor.yaml`.
-    value: merged-component-descriptor
+
+      The name is made unique per workflow-run, run-attempt, and matrix-leg so
+      that multiple concurrent invocations of this action within the same
+      workflow-run (e.g. a helmchart-build matrix) do not collide on the
+      artifact name. Consumers must therefore read this output rather than
+      hardcoding `merged-component-descriptor`.
+    value: ${{ steps.artifact-name.outputs.name }}
   name:
     description: |
       the component-name (for convenience)
@@ -359,6 +365,20 @@ runs:
             force_rescan='${{ inputs.spdx-force-rescan }}' == 'true',
         )
 
+    - name: artifact-name
+      id: artifact-name
+      shell: bash
+      run: |
+        set -eu
+        # Make the artifact-name unique per workflow-run, run-attempt, and
+        # matrix-leg. Multiple concurrent invocations of this action within the
+        # same workflow-run (e.g. a helmchart-build matrix) would otherwise all
+        # upload an artifact named `merged-component-descriptor` and collide with
+        # a `(409) Conflict: an artifact with this name already exists` error
+        # (actions/upload-artifact@v4+ requires run-unique names).
+        name="merged-component-descriptor-${{ github.run_id }}-${{ github.run_attempt }}-${{ strategy.job-index }}"
+        echo "name=${name}" >> "${GITHUB_OUTPUT}"
+        echo "using artifact-name: ${name}"
     - name: upload-component-descriptor-artifact
       shell: bash
       run: |
@@ -367,5 +387,5 @@ runs:
           -C "${{ inputs.outdir }}" component-descriptor.yaml
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
-        name: merged-component-descriptor
+        name: ${{ steps.artifact-name.outputs.name }}
         path: /tmp/component-descriptor.tar.gz
