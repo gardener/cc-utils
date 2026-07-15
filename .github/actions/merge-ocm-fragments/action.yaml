@@ -98,13 +98,27 @@ inputs:
       When set to `true`, the SBOM cache is ignored and all external images are re-scanned.
       Useful when a newer syft version is desired. Defaults to `false`.
 
+  upload-artifact-name:
+    required: false
+    type: string
+    default: merged-component-descriptor
+    description: |
+      Name under which the merged component-descriptor is uploaded as a GHA artifact.
+      Set to an empty string to skip the upload (e.g. when the descriptor is only needed
+      within the same job, to avoid artifact-name collisions in matrix jobs).
+
 outputs:
   component-descriptor-artifact:
     description: |
       name of the GHA artifact containing the merged component-descriptor.
       The artifact holds a single file `component-descriptor.tar.gz` which
       in turn contains `component-descriptor.yaml`.
-    value: merged-component-descriptor
+      Empty if `upload-artifact-name` input is empty.
+    value: ${{ inputs.upload-artifact-name }}
+  component-descriptor-path:
+    description: |
+      Path to the merged component-descriptor.yaml on the runner filesystem.
+    value: ${{ inputs.outdir }}/component-descriptor.yaml
   name:
     description: |
       the component-name (for convenience)
@@ -360,12 +374,14 @@ runs:
         )
 
     - name: upload-component-descriptor-artifact
+      if: ${{ inputs.upload-artifact-name != '' }}
       shell: bash
       run: |
         set -eu
         tar czf /tmp/component-descriptor.tar.gz \
           -C "${{ inputs.outdir }}" component-descriptor.yaml
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      if: ${{ inputs.upload-artifact-name != '' }}
       with:
-        name: merged-component-descriptor
+        name: ${{ inputs.upload-artifact-name }}
         path: /tmp/component-descriptor.tar.gz

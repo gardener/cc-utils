@@ -151,6 +151,7 @@ jobs:
           component-descriptor: ${{ inputs.component-descriptor }}
           component-descriptor-artefact: base-component-descriptor
           ctx: ${{ inputs.ocm-ctx }}
+          upload-artifact-name: ''
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           remove-trusted-label: false
@@ -163,6 +164,6 @@ jobs:
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
           push: ${{ steps.check.outputs.push == 'true' }}
-          component-descriptor-artifact: ${{ steps.fetch-ocm.outputs.component-descriptor-artifact }}
+          component-descriptor-path: ${{ steps.fetch-ocm.outputs.component-descriptor-path }}
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}

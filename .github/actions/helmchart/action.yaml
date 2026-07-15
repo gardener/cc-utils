@@ -63,6 +63,13 @@ inputs:
     description: |
       Name of a GHA artifact containing the component-descriptor (preferred over inline input).
 
+  component-descriptor-path:
+    required: false
+    type: string
+    description: |
+      Path to a component-descriptor.yaml on the runner filesystem. Use when
+      merge-ocm-fragments is called in the same job with upload: false.
+
   mappings:
     required: true
     type: string
@@ -120,6 +127,10 @@ runs:
         cat <<'EOF' > /tmp/component-descriptor.yaml
         ${{ inputs.component-descriptor }}
         EOF
+    - name: copy-component-descriptor-from-path
+      if: ${{ inputs.component-descriptor-path != '' }}
+      shell: bash
+      run: cp '${{ inputs.component-descriptor-path }}' /tmp/component-descriptor.yaml
     - name: preprocess-inputs
       shell: bash
       run: |
