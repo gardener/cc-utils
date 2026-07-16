@@ -19,11 +19,7 @@ def validate(
 
     component_descriptor = ocm.ComponentDescriptor.from_dict(component_descriptor)
 
-    if recursion_depth != 0:
-        if not ocm_repositories:
-            raise ValueError(
-                '`ocm-repositories` must be provided when `recursion-depth` is non-zero'
-            )
+    if recursion_depth != 0 and ocm_repositories:
         repos = [r.strip() for r in ocm_repositories.split(',') if r.strip()]
         ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*repos)
         lookup = cnudie.retrieve.create_default_component_descriptor_lookup(

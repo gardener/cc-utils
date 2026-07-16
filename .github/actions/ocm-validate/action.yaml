@@ -31,8 +31,8 @@ inputs:
   ocm-repositories:
     description: |
       Comma-separated list of OCM repository base-URLs used to resolve transitive component
-      references. Only needed when `recursion-depth` is non-zero and the component descriptor
-      has componentReferences that need to be followed.
+      references. Used when `recursion-depth` is non-zero and the component descriptor has
+      componentReferences that need to be followed. If omitted, recursion is silently skipped.
     type: string
     required: false
     default: ''
@@ -42,7 +42,6 @@ inputs:
       -1 = unlimited (full transitive closure, default).
        0 = only the top-level component (no lookup needed).
       Positive integers limit depth accordingly.
-      When non-zero, `ocm-repositories` must be provided.
     type: number
     default: -1
   on-validation-errors:
