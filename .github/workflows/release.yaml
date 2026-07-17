@@ -304,7 +304,7 @@ jobs:
 
     steps:
       - name: fetch-prepare-values
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@994bba74f3988e87328b8df4cd924148ccfc7cd1
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -320,7 +320,7 @@ jobs:
           echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
       - name: collect-component-descriptor
         id: component-descriptor
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@f382e2a463a92811a55d1287608da07cc6b40225
         with:
           component-descriptor-artefact: base-component-descriptor
           component-descriptor: ${{ inputs.component-descriptor }}
@@ -399,7 +399,7 @@ jobs:
           # save now: the release action will call version with commit-to-head for the bump-commit,
           # which overwrites refs/capture-commit - so we must read it before that happens
           echo "digest=$(git rev-parse refs/capture-commit)" >> $GITHUB_OUTPUT
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@94844d54fc24d9d7f4b52ba5142923ead5808c29
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
@@ -407,7 +407,7 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
           permissions: ${{ inputs.github-auth-token-permissions }}
-      - uses: gardener/cc-utils/.github/actions/release-notes@master
+      - uses: gardener/cc-utils/.github/actions/release-notes@0ebfb0caa5c2d15508d6ba14ae88631831f16ffb
         id: release-notes
         with:
           component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
@@ -431,7 +431,7 @@ jobs:
               categories: ''
               recursion_depth: 0
               include_resources: true
-      - uses: gardener/cc-utils/.github/actions/release@master
+      - uses: gardener/cc-utils/.github/actions/release@dcb8c1b3f25cd633019879537cdc29e61aaa22db
         id: release
         with:
           component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
@@ -503,7 +503,7 @@ jobs:
 
       - name: create-release-branch-bump-commit
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
-        uses: gardener/cc-utils/.github/actions/version@master
+        uses: gardener/cc-utils/.github/actions/version@dc3e6095498d7854487a09a3b10b822d0ad6ef1a
         # must be kept in sync with version action called in release action (except "version-operation")
         with:
           versionfile: ${{ inputs.version-versionfile }}
@@ -554,7 +554,7 @@ jobs:
 
       - name: cleanup-stale-release-branches
         if: ${{ inputs.cleanup-release-branches }}
-        uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
+        uses: gardener/cc-utils/.github/actions/cleanup-release-branches@94844d54fc24d9d7f4b52ba5142923ead5808c29
         with:
           version: ${{ steps.component-descriptor.outputs.version }}
           github-token: ${{ steps.fed-token.outputs.token }}
