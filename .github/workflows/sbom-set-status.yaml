@@ -96,7 +96,7 @@ jobs:
 
     steps:
       - name: Exchange tokens
-        uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@master
+        uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@94844d54fc24d9d7f4b52ba5142923ead5808c29
         with:
           api-url: ${{ inputs.token-exchange-api-url }}
           oidc-audience: ${{ inputs.token-exchange-audience }}
@@ -133,7 +133,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Set release status
-        uses: gardener/cc-utils/.github/actions/sbom-set-status@master
+        uses: gardener/cc-utils/.github/actions/sbom-set-status@94844d54fc24d9d7f4b52ba5142923ead5808c29
         with:
           gcs-bucket: ${{ inputs.gcs-bucket }}
           gcs-token: ${{ steps.gcs-token.outputs.gcs-token }}
