@@ -3,14 +3,26 @@ import collections.abc
 import dataclasses
 import enum
 import json
+import logging
 import operator
 import os
+import shutil
+import subprocess
 
 import oci.util
 
+logger = logging.getLogger(__name__)
 
-class AuthType(enum.Enum):
+
+class AuthType(str, enum.Enum):
     BASIC_AUTH = 'basic_auth'
+
+
+class CredentialHelperPolicy(str, enum.Enum):
+    DISABLED     = 'disabled'      # skip helpers entirely — static auths only
+    STATIC_FIRST = 'static_first'  # static auths → helpers (safe default)
+    WARN         = 'warn'          # helpers → static; missing/broken helper → log warning
+    FAIL         = 'fail'          # helpers → static; missing/broken helper → raise
 
 
 class Privileges(enum.Enum):
@@ -145,20 +157,103 @@ def mk_credentials_lookup(
     return lookup_credentials
 
 
+def _invoke_credential_helper(
+    helper_name: str,
+    server_url: str,
+    policy: CredentialHelperPolicy,
+    timeout_seconds: int | None=60,
+) -> OciBasicAuthCredentials | None:
+    '''
+    Invokes a docker credential helper binary (`docker-credential-<helper_name> get`), passing
+    server_url on stdin. Returns OciBasicAuthCredentials on success, None if the helper reports
+    no credentials (exit 1 with "credentials not found" message).
+
+    Behaviour when the binary is not found on PATH, invocation fails, or timeout is exceeded is
+    governed by policy: WARN → log warning and return None; FAIL → raise RuntimeError.
+
+    timeout_seconds controls subprocess timeout (default: 60). Pass None to disable — useful
+    when helpers may trigger interactive flows (e.g. browser-based OAuth).
+    '''
+    binary = f'docker-credential-{helper_name}'
+
+    def _handle_unavailable(msg: str) -> None:
+        if policy is CredentialHelperPolicy.FAIL:
+            raise RuntimeError(msg)
+        logger.warning(msg)
+
+    if not shutil.which(binary):
+        _handle_unavailable(
+            f'credential helper {binary!r} configured in docker-cfg but not found on PATH'
+        )
+        return None
+
+    try:
+        result = subprocess.run(
+            [binary, 'get'],
+            input=server_url,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        _handle_unavailable(f'credential helper {binary!r} timed out after {timeout_seconds}s')
+        return None
+    except OSError as e:
+        _handle_unavailable(f'failed to invoke credential helper {binary!r}: {e}')
+        return None
+
+    if result.returncode != 0:
+        # helper signals "no credentials stored" via non-zero exit; not an error worth warning about
+        logger.debug(
+            f'credential helper {binary!r} returned {result.returncode}'
+            f' for {server_url!r}: {result.stderr.strip()}'
+        )
+        return None
+
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        _handle_unavailable(f'credential helper {binary!r} returned invalid JSON: {e}')
+        return None
+
+    username = payload.get('Username', '')
+    secret = payload.get('Secret', '')
+
+    if not username or not secret:
+        _handle_unavailable(f'credential helper {binary!r} returned incomplete credentials')
+        return None
+
+    return OciBasicAuthCredentials(username=username, password=secret)
+
+
 def docker_credentials_lookup(
     docker_cfg: str | None=None,
     absent_ok: bool=False,
+    credential_helper_policy: CredentialHelperPolicy=CredentialHelperPolicy.STATIC_FIRST,
+    credential_helper_timeout_seconds: int | None=60,
 ) -> collections.abc.Callable[[image_reference, Privileges, bool], OciConfig]:
     '''
     returns a credentials-lookup backed by docker's auth-config. By design, docker's auth-config
-    only allows configuring credentials per hostname. By default' docker-cfg is expected at
+    only allows configuring credentials per hostname. By default docker-cfg is expected at
     `$HOME/.docker/config.json`. Location of docker-cfg can be customised via docker_cfg parameter.
+
+    Supports credential helpers via `credHelpers` (per-registry) and `credsStore` (global fallback)
+    fields in docker-cfg. Resolution order depends on credential_helper_policy (see below).
+
+    Credential helper behaviour is governed by credential_helper_policy:
+      DISABLED     → skip helpers entirely, use only static auths
+      STATIC_FIRST → static auths first; helpers used only as fallback (default)
+      WARN         → helpers first; missing/broken binary emits a warning and falls through
+      FAIL         → helpers first; missing/broken binary raises RuntimeError
+
+    credential_helper_timeout_seconds sets the subprocess timeout in seconds (default: 60). Pass
+    None to disable — useful when helpers may trigger interactive flows (e.g. browser-based OAuth).
 
     if no docker-cfg is found, raises RuntimeError, unless absent_ok is truthy, in which case the
     returned lookup will never return any credentials (which might still be useful for readonly
     operations that for many registries allow anonymous access).
 
-    Note that docker does not offer to configure credentials by permissions, too (hence privileges
+    Note that docker does not offer to configure credentials by permissions (hence privileges
     parameter will be ignored)
     '''
     if not docker_cfg:
@@ -187,17 +282,9 @@ def docker_credentials_lookup(
         # re-read docker-cfg to reflect fs-updates
         with open(docker_cfg) as f:
             docker_auth = json.load(f)
-            auths = docker_auth.get('auths', None)
-
-        if not auths:
-            # docker-cfg might be empty - do not handle as an error; however, we can never serve
-            # anything useful
-            if not absent_ok:
-                raise ValueError(f'no auth-cfg found in {docker_cfg=} for {image_reference=}')
-            return None
 
         if image_reference.startswith('/'):
-            # if it is a relative reference, we have not means to find appropriate cfg.
+            # relative reference - no means to find appropriate cfg
             if not absent_ok:
                 raise ValueError(f'no auth-cfg found in {docker_cfg=} for {image_reference=}')
             return None
@@ -206,43 +293,89 @@ def docker_credentials_lookup(
         image_netloc = image_reference.split('/')[0]
         image_host = image_netloc.split(':')[0]
 
-        for netloc, auth_dict in auths.items():
-            host = netloc.split(':')[0]
-            if host == image_host:
-                break
-        else:
-            if not absent_ok:
-                raise ValueError(
-                    f'no matching auth-cfg found in {docker_cfg=} for {image_reference=}'
-                )
-            return None # no matching cfg was found
+        cred_helpers = docker_auth.get('credHelpers', {})
+        creds_store = docker_auth.get('credsStore')
+        helpers_enabled = credential_helper_policy is not CredentialHelperPolicy.DISABLED
 
-        if (
-            (access_key_id := auth_dict.get('access_key_id'))
-            and (secret_access_key := auth_dict.get('secret_access_key'))
-        ):
-            return OciAccessKeyCredentials(
-                access_key_id=access_key_id,
-                secret_access_key=secret_access_key,
-                session_token=auth_dict.get('session_token'),
-            )
-
-        # we found a cfg
-        # docker's auth-cfgs only have a single value `auth` (or so we hope / assume)
-        auth = auth_dict.get('auth', None)
-        if not auth:
-            if not absent_ok:
-                raise ValueError(
-                    f'did not find expected attr `auth` in {docker_cfg=} for {image_host=}'
-                )
-            return None # no matching cfg was found
-
-        auth = base64.b64decode(auth).decode('utf-8')
-        username, passwd = auth.split(':', 1)
-
-        return OciBasicAuthCredentials(
-            username=username,
-            password=passwd,
+        # prefer exact netloc match (host+port), fall back to host-only — consistent with auths
+        # lookup; pass configured key as server_url so helpers receive exactly what the user
+        # configured (e.g. 'localhost:5000')
+        matched_helper_key = next(
+            (k for k in cred_helpers if k == image_netloc),
+            None,
+        ) or next(
+            (k for k in cred_helpers if k.split(':')[0] == image_host),
+            None,
         )
+
+        def lookup_static():
+            auths = docker_auth.get('auths')
+            if not auths:
+                return None
+            for netloc, auth_dict in auths.items():
+                if netloc.split(':')[0] == image_host:
+                    break
+            else:
+                return None
+
+            if (
+                (access_key_id := auth_dict.get('access_key_id'))
+                and (secret_access_key := auth_dict.get('secret_access_key'))
+            ):
+                return OciAccessKeyCredentials(
+                    access_key_id=access_key_id,
+                    secret_access_key=secret_access_key,
+                    session_token=auth_dict.get('session_token'),
+                )
+
+            auth = auth_dict.get('auth')
+            if not auth:
+                if not absent_ok:
+                    raise ValueError(
+                        f'did not find expected attr `auth` in {docker_cfg=} for {image_host=}'
+                    )
+                return None
+
+            auth = base64.b64decode(auth).decode('utf-8')
+            username, passwd = auth.split(':', 1)
+            return OciBasicAuthCredentials(username=username, password=passwd)
+
+        def lookup_helpers():
+            if not helpers_enabled:
+                return None
+            if matched_helper_key is not None:
+                return _invoke_credential_helper(
+                    helper_name=cred_helpers[matched_helper_key],
+                    server_url=matched_helper_key,
+                    policy=credential_helper_policy,
+                    timeout_seconds=credential_helper_timeout_seconds,
+                )
+            if creds_store:
+                return _invoke_credential_helper(
+                    helper_name=creds_store,
+                    server_url=image_host,
+                    policy=credential_helper_policy,
+                    timeout_seconds=credential_helper_timeout_seconds,
+                )
+            return None
+
+        # STATIC_FIRST and DISABLED: static takes precedence
+        # WARN and FAIL: helpers take precedence (Docker-native order)
+        if credential_helper_policy in (
+            CredentialHelperPolicy.STATIC_FIRST,
+            CredentialHelperPolicy.DISABLED,
+        ):
+            creds = lookup_static() or lookup_helpers()
+        else:
+            creds = lookup_helpers() or lookup_static()
+
+        if creds is not None:
+            return creds
+
+        if not absent_ok:
+            raise ValueError(
+                f'no matching auth-cfg found in {docker_cfg=} for {image_reference=}'
+            )
+        return None
 
     return docker_auth_lookup
