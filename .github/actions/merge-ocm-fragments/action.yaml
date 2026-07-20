@@ -136,7 +136,7 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@9d2827d6e94583ec4e197d61d94f8f6b60aeede9
     - name: preprocess
       id: preprocess
       shell: bash
@@ -158,7 +158,7 @@ runs:
         EOF
     - name: import-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@9d51b81b192a15e2b4b4152d232c27a8cf3e860c
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-component-descriptor-artefact
@@ -190,7 +190,7 @@ runs:
            --out "${component_descriptor}"
         fi
     - name: import-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@9d51b81b192a15e2b4b4152d232c27a8cf3e860c
       with:
         pattern: ${{ steps.preprocess.outputs.artefact-name }}
         path: ${{ inputs.outdir }}
@@ -234,7 +234,7 @@ runs:
           f.write(f'component-version={name}:{version}\n')
 
     - name: checkout-for-postprocessing
-      uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      uses: gardener/cc-utils/.github/actions/trusted-checkout@0a84ca8d93a5bbff74467ac70ed3b1574a7dfd99
       if: ${{ inputs.post-process == 'component-cli' }}
       with:
         path: repo.d # avoid conflicts w/ component-descriptor
@@ -343,11 +343,11 @@ runs:
 
     - name: install-cbomkit-theia
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@9d2827d6e94583ec4e197d61d94f8f6b60aeede9
 
     - name: authenticate-for-spdx
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@72222c684c72d7560eae01f82d9885898cc38213
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
         gh-token: ${{ github.token }}
@@ -380,7 +380,7 @@ runs:
         set -eu
         tar czf /tmp/component-descriptor.tar.gz \
           -C "${{ inputs.outdir }}" component-descriptor.yaml
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@9d2827d6e94583ec4e197d61d94f8f6b60aeede9
       if: ${{ inputs.upload-artifact-name != '' }}
       with:
         name: ${{ inputs.upload-artifact-name }}
