@@ -70,8 +70,9 @@ runs:
         if [ -n "${server_ca_discovery_url}" ]; then
           server_ca=$(curl "${server_ca_discovery_url}" | jq -r .certs | base64 -w 0 | tr -d '\n')
         else
-          # normalise api-url: remove `https://` prefix and add `:443` suffix if required
+          # normalise api-url: remove `https://` prefix, trailing slash, and add `:443` suffix if required
           normalised_api_url="${server#https://}"
+          normalised_api_url="${normalised_api_url%/}"
           if [[ "${normalised_api_url}" != *:443 ]]; then
             normalised_api_url="${normalised_api_url}:443"
           fi
