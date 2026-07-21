@@ -41,6 +41,7 @@
   github_host: gh-tools
   github_orgs:
     - kubernetes
+    - kubernetes-cicd
     - open-delivery-gear
 
 # ghtools / delivery-readonly
