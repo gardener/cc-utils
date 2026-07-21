@@ -178,6 +178,13 @@ inputs:
     description: |
       Passed as `recursion-depth` to the `ocm-validate` action. -1 = full transitive closure
       (default). 0 = top-level only. Requires `ocm-repositories` to be resolvable when non-zero.
+  extra-oci-registries:
+    required: false
+    type: string
+    description: |
+      Optional newline-separated list of additional OCI image references (or registry prefixes) to
+      authenticate against before running OCM validation. Useful when transitive component
+      references or artefacts are stored in registries not covered by `ocm-repositories`.
   release-notes-path:
     required: false
     type: string
@@ -264,6 +271,10 @@ runs:
         tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
         ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
         rm -rf prepare-values.d prepare-workflow-values.tar
+        extra_oci_registries='${{ inputs.extra-oci-registries }}'
+        if [ -n "${extra_oci_registries}" ]; then
+          ocm_repositories="${ocm_repositories},$(printf '%s' "${extra_oci_registries}" | tr '\n' ',')"
+        fi
         echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry

@@ -50,6 +50,14 @@ on:
           How deep to recurse into componentReferences during OCM validation.
           -1 = full transitive closure (default). 0 = top-level only.
           See `ocm-validate` action for details.
+      extra-oci-registries:
+        required: false
+        type: string
+        description: |
+          Optional newline-separated list of additional OCI image references (or registry prefixes) to
+          authenticate against before running OCM validation. Passed through to the `release` action.
+          Useful when transitive component references or artefacts are stored in registries not
+          covered by `ocm-repositories`.
       release-commit-objects:
         required: false
         type: string
@@ -444,6 +452,7 @@ jobs:
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
           on-validation-errors: ${{ inputs.on-validation-errors }}
           ocm-validation-recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
+          extra-oci-registries: ${{ inputs.extra-oci-registries }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.fed-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
