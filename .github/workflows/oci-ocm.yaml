@@ -264,7 +264,7 @@ jobs:
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@81d1a3365b728c6fa2656caa19e0df687957ef2c
         with:
           name: prepare-workflow-values
       - name: check-params
@@ -439,24 +439,24 @@ jobs:
             cat /tmp/config.json >> "${GITHUB_OUTPUT}"
           fi
           echo EOF >> "${GITHUB_OUTPUT}"
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@16bcdf8e863450f9ec5d4740f003d49ca7899dc2
         continue-on-error: true # successful auth might not be required
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@afbb451b9d9e5dcb6f3fdf53325bfaf3d86f7ec0
         with:
           remove-trusted-label: false
       - name: import-release-commit
         if: ${{ inputs.commit-objects-artefact != '' }}
-        uses: gardener/cc-utils/.github/actions/import-commit@master
+        uses: gardener/cc-utils/.github/actions/import-commit@554867d2e28225f7cafec1c957cd49fe7feb641d
         with:
           commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
           after-import: rebase
       - name: retrieve build-ctx-artefact
         if: ${{ matrix.args.build-artefact != '' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@81d1a3365b728c6fa2656caa19e0df687957ef2c
         with:
           name: ${{ matrix.args.build-artefact }}
           merge-multiple: true
@@ -494,7 +494,7 @@ jobs:
         with:
           image-reference: ${{ matrix.args.image-reference }}
 
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@16bcdf8e863450f9ec5d4740f003d49ca7899dc2
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ matrix.args.image-reference }}
@@ -521,7 +521,7 @@ jobs:
 
       - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+        uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@8ae061155514b9bea9c345890ee7e20316652a38
 
       - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
@@ -546,7 +546,7 @@ jobs:
           version="$(cbomkit-theia version 2>/dev/null | awk '{print $NF}' || true)"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@8ae061155514b9bea9c345890ee7e20316652a38
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
 
       - name: 'push SBOM referrers / ${{ matrix.args.platform-name }}'
@@ -692,7 +692,7 @@ jobs:
 
       - name: 'export SBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@094222c1f89f597122b3ca5f6b7b3cbc6fd90cc2
         with:
           ocm-resources-file: sbom-ocm-resources.yaml
           blobs-directory: blobs.d
@@ -790,7 +790,7 @@ jobs:
 
       - name: 'export CBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@094222c1f89f597122b3ca5f6b7b3cbc6fd90cc2
         with:
           ocm-resources-file: cbom-ocm-resources.yaml
           blobs-directory: blobs.d
@@ -810,7 +810,7 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@8ae061155514b9bea9c345890ee7e20316652a38
       - name: inject-authtoken
         id: extra-auth
         shell: bash
@@ -823,7 +823,7 @@ jobs:
           hostname=$(echo ${{ needs.preprocess.outputs.target-image-ref }} | cut -d/ -f1 )
           echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" \
             >> $GITHUB_OUTPUT
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@16bcdf8e863450f9ec5d4740f003d49ca7899dc2
         if: ${{ needs.preprocess.outputs.push == 'true' }}
         with:
           oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
@@ -935,7 +935,7 @@ jobs:
             '''))
       - name: export-ocm-fragments
         if: ${{ !inputs.omit-ocm-fragment }}
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@094222c1f89f597122b3ca5f6b7b3cbc6fd90cc2
         with:
           ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
           ctx: ${{ inputs.ctx }}
