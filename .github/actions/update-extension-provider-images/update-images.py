@@ -1207,10 +1207,10 @@ def create_release_notes(
 def write_ocm_release_notes(
     updates: list[ImageUpdate],
     images_data: ImagesData,
+    oci_client_: oci_client.Client,
     repo_dir: str = '.',
     ocm_repository: str = GARDENER_OCM_REPOSITORY,
 ) -> None:
-    oci_client_ = oci_client.client_with_dockerauth()
     ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(ocm_repository)
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
@@ -1338,10 +1338,9 @@ def main() -> None:
             images_data.sort_images()
             write_yaml_file(images_data, args.images_yaml_path, updated_directives)
             print(f"\nUpdated {args.images_yaml_path} with {len(updates)} changes.", file=sys.stderr)
-            write_ocm_release_notes(updates, images_data)
-
-        create_release_notes(updates, images_data, all_available_tags, args.release_notes_path)
-        print(f"Created {args.release_notes_path}", file=sys.stderr)
+            write_ocm_release_notes(updates, images_data, oci_api)
+            create_release_notes(updates, images_data, all_available_tags, args.release_notes_path)
+            print(f"Created {args.release_notes_path}", file=sys.stderr)
 
         print("The following container images have been updated:")
         for update in updates:
