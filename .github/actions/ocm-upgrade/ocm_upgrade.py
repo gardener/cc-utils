@@ -505,6 +505,19 @@ def create_upgrade_pullrequests(
                 logger.info(f'upgrade-pullrequest for {uv=} already exists (skipping)')
                 continue
 
+            # live-check guards against duplicate creation when concurrent runs both passed the
+            # static check above before either had created a PR
+            if upgrade_pullrequest_exists(
+                upgrade_vector=uv,
+                upgrade_pullrequests=github.pullrequest.iter_upgrade_pullrequests(
+                    repository=repository,
+                    state='open',
+                ),
+                component_reference_name=component_reference_name,
+            ):
+                logger.info(f'upgrade-pullrequest for {uv=} already exists (live-check, skipping)')
+                continue
+
             try:
                 yield create_upgrade_pullrequest(
                     upgrade_vector=uv,
