@@ -68,7 +68,9 @@ from ruamel.yaml import YAMLError
 
 import cnudie.retrieve
 import ocm
-import oci.auth
+import requests.exceptions
+
+import oci.model as om
 from oci import client as oci_client
 from ocm import Label as OcmLabel
 from version import parse_to_semver, is_final, iter_upgrade_path
@@ -1231,12 +1233,11 @@ def write_ocm_release_notes(
         if not update.old_tag:
             continue
 
-        component_name = source_repo
-        whence = ocm.ComponentIdentity(name=component_name, version=update.old_tag)
-        whither = ocm.ComponentIdentity(name=component_name, version=update.new_tag)
+        whence = ocm.ComponentIdentity(name=source_repo, version=update.old_tag)
+        whither = ocm.ComponentIdentity(name=source_repo, version=update.new_tag)
         upgrade_vector = ocm.gardener.UpgradeVector(whence=whence, whither=whither)
 
-        print(f"Fetching OCM release notes for {component_name} {update.old_tag} -> {update.new_tag}", file=sys.stderr)
+        print(f"Fetching OCM release notes for {source_repo} {update.old_tag} -> {update.new_tag}", file=sys.stderr)
         try:
             release_notes_docs = list(rno.release_notes_for_vector(
                 upgrade_vector=upgrade_vector,
@@ -1245,8 +1246,14 @@ def write_ocm_release_notes(
                 oci_client=oci_client_,
                 version_filter=is_final,
             ))
-        except Exception as e:
-            print(f"Warning: failed to fetch OCM release notes for {component_name}: {e}", file=sys.stderr)
+        except (
+            om.OciImageNotFoundException,
+            requests.exceptions.HTTPError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+            ValueError,
+        ) as e:
+            print(f"Warning: failed to fetch OCM release notes for {source_repo}: {e}", file=sys.stderr)
             continue
 
         grouped = rno.group_release_notes_docs(release_notes_docs)
@@ -1254,7 +1261,7 @@ def write_ocm_release_notes(
             release_notes_docs=grouped,
             repo_dir=repo_dir,
         )
-        print(f"Wrote OCM release notes for {component_name} {update.new_tag}", file=sys.stderr)
+        print(f"Wrote OCM release notes for {source_repo} {update.new_tag}", file=sys.stderr)
 
 # --- Main Execution ---
 def main() -> None:
