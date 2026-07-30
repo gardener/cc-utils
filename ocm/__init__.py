@@ -712,6 +712,28 @@ class ComponentDescriptor:
         if not _have_dacite:
             raise RuntimeError('not available without dacite')
 
+        # Normalize null arrays to empty lists for dacite
+        def normalize_nulls(obj):
+            # Null values for these keys will be replaced by empty lists, null values for other keys
+            # will be kept as-is
+            null_allowed_for = (
+                'repositoryContexts',
+                'sources',
+                'componentReferences',
+                'resources',
+            )
+
+            if isinstance(obj, dict):
+                return {
+                    k: normalize_nulls(v) if v is not None else ([] if k in null_allowed_for else v)
+                    for k, v in obj.items()
+                }
+            elif isinstance(obj, list):
+                return [normalize_nulls(item) for item in obj]
+            return obj
+
+        component_descriptor_dict = normalize_nulls(component_descriptor_dict)
+
         component_descriptor = dacite.from_dict(
             data_class=ComponentDescriptor,
             data=component_descriptor_dict,
