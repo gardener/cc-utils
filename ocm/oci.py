@@ -7,10 +7,12 @@ Note: None of the Symbols defined in this module is intended as a stable API
 
 import dataclasses
 import io
+import json
 import logging
 import os
 import tarfile
 import typing
+
 import yaml
 
 import ocm
@@ -24,7 +26,8 @@ component_descriptor_mimetype = \
     'application/vnd.gardener.cloud.cnudie.component-descriptor.v2+yaml+tar'
 component_descriptor_mimetypes = (
     component_descriptor_mimetype,
-    'application/vnd.ocm.software.component-descriptor.v2+yaml+tar'
+    'application/vnd.ocm.software.component-descriptor.v2+yaml+tar',
+    'application/vnd.ocm.software.component-descriptor.v2+json',
 )
 # mimetype for component-descriptor-oci-cfg-blobs
 component_descriptor_cfg_mimetype = \
@@ -101,6 +104,8 @@ def component_descriptor_from_blob(
 
     if '+yaml' in layer_mimetype:
         component_descriptor_dict = yaml.safe_load(component_descriptor_blob)
+    elif '+json' in layer_mimetype:
+        component_descriptor_dict = json.loads(component_descriptor_blob)
     else:
         raise ValueError(f'Unsupported component descriptor {layer_mimetype=}')
 
