@@ -81,16 +81,32 @@ def component_descriptor_to_tarfileobj(
     return tf.fileobj
 
 
-def component_descriptor_from_tarfileobj(
-    fileobj: io.BytesIO,
-):
-    with tarfile.open(fileobj=fileobj, mode='r') as tf:
-        component_descriptor_info = tf.getmember(component_descriptor_fname)
-        raw_dict = yaml.safe_load(tf.extractfile(component_descriptor_info).read())
+def component_descriptor_from_blob(
+    component_descriptor_blob: bytes,
+    layer_mimetype: str,
+    target_ref: str | None=None,
+    component_id: ocm.ComponentIdentity | None=None,
+) -> ocm.ComponentDescriptor:
+    if not layer_mimetype in component_descriptor_mimetypes:
+        logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
 
-        logger.debug(raw_dict)
+    if '+tar' in layer_mimetype:
+        try:
+            with tarfile.open(fileobj=io.BytesIO(component_descriptor_blob), mode='r') as tf:
+                component_descriptor_info = tf.getmember(component_descriptor_fname)
+                component_descriptor_blob = tf.extractfile(component_descriptor_info).read()
+        except tarfile.ReadError as tre:
+            tre.add_note(f'{component_id=}')
+            raise tre
 
-        if raw_dict is None:
-          raise ValueError('Component Descriptor appears to be empty')
+    if '+yaml' in layer_mimetype:
+        component_descriptor_dict = yaml.safe_load(component_descriptor_blob)
+    else:
+        raise ValueError(f'Unsupported component descriptor {layer_mimetype=}')
 
-        return ocm.ComponentDescriptor.from_dict(raw_dict)
+    logger.debug(component_descriptor_dict)
+
+    if component_descriptor_dict is None:
+        raise ValueError('Component Descriptor appears to be empty')
+
+    return ocm.ComponentDescriptor.from_dict(component_descriptor_dict)

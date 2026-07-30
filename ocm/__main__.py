@@ -333,7 +333,16 @@ def download(parsed):
             digest=layer_digest,
             stream=False, # manifests are typically small - do not bother w/ streaming
         ).content
-        return ocm.oci.component_descriptor_from_tarfileobj(fileobj=io.BytesIO(raw))
+
+        return ocm.oci.component_descriptor_from_blob(
+            component_descriptor_blob=raw,
+            layer_mimetype=layer_mimetype,
+            target_ref=target_ref,
+            component_id=ocm.ComponentIdentity(
+                name=name,
+                version=version,
+            ),
+        )
 
     root_component_descriptor = _fetch_component_descriptor(
         name=cname,
