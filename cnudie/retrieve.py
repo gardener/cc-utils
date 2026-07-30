@@ -412,7 +412,7 @@ def component_descriptor_from_oci(
         )
 
         # by contract, there must be exactly one layer (tar w/ component-descriptor)
-        if not (layers_count := len(manifest.layers) == 1):
+        if (layers_count := len(manifest.layers)) != 1:
             logger.warning(f'XXX unexpected amount of {layers_count=}')
 
         layer_digest = manifest.layers[0].digest
