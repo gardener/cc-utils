@@ -1,12 +1,10 @@
 import collections.abc
 import dataclasses
-import io
 import itertools
 import json
 import logging
 import os
 import shutil
-import tarfile
 import tempfile
 
 import cachetools
@@ -358,12 +356,12 @@ def delivery_service_component_descriptor_lookup(
     return lookup
 
 
-def _raw_component_descriptor_from_oci(
+def component_descriptor_from_oci(
     component_id: ocm.ComponentIdentity,
     ocm_repos: collections.abc.Iterable[ocm.OciOcmRepository | str],
     oci_client: oc.Client,
     absent_ok: bool=False,
-) -> bytes | None:
+) -> ocm.ComponentDescriptor | None:
     for ocm_repo in ocm_repos:
         if isinstance(ocm_repo, str):
             ocm_repo = ocm.OciOcmRepository(
@@ -420,15 +418,18 @@ def _raw_component_descriptor_from_oci(
         layer_digest = manifest.layers[0].digest
         layer_mimetype = manifest.layers[0].mediaType
 
-    if not layer_mimetype in ocm.oci.component_descriptor_mimetypes:
-        logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
-        # XXX: check for non-tar-variant
-
-    return oci_client.blob(
+    component_descriptor_blob = oci_client.blob(
         image_reference=target_ref,
         digest=layer_digest,
         stream=False, # manifests are typically small - do not bother w/ streaming
     ).content
+
+    return ocm.oci.component_descriptor_from_blob(
+        component_descriptor_blob=component_descriptor_blob,
+        layer_mimetype=layer_mimetype,
+        target_ref=target_ref,
+        component_id=component_id,
+    )
 
 
 def oci_component_descriptor_lookup(
@@ -477,7 +478,7 @@ def oci_component_descriptor_lookup(
                     baseUrl=ocm_repo,
                 )
 
-            if raw := _raw_component_descriptor_from_oci(
+            if component_descriptor := component_descriptor_from_oci(
                 component_id=component_id,
                 ocm_repos=(ocm_repo,),
                 oci_client=local_oci_client,
@@ -485,22 +486,12 @@ def oci_component_descriptor_lookup(
             ):
                 break
         else:
-            raw = None
+            component_descriptor = None
 
-        if not raw and absent_ok:
+        if not component_descriptor and absent_ok:
             return
-        elif not raw and not absent_ok:
+        elif not component_descriptor and not absent_ok:
             raise om.OciImageNotFoundException(component_id)
-
-        # wrap in fobj
-        blob_fobj = io.BytesIO(raw)
-        try:
-            component_descriptor = ocm.oci.component_descriptor_from_tarfileobj(
-                fileobj=blob_fobj,
-            )
-        except tarfile.ReadError as tre:
-            tre.add_note(f'{component_id=}')
-            raise tre
 
         # ensure OCM repository in which component descriptor was found is the current OCM repository
         component_descriptor.component.set_current_ocm_repo(ocm_repo)
