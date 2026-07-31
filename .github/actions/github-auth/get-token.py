@@ -23,6 +23,10 @@ def _make_pool() -> urllib3.PoolManager:
 _pool = _make_pool()
 
 
+def _is_transient_status(status: int) -> bool:
+    return status >= 500 or status in (408, 429)
+
+
 def _request_with_retry(
     method: str,
     url: str,
@@ -33,12 +37,12 @@ def _request_with_retry(
     retries: int = 6,
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
-) -> dict:
+) -> urllib3.HTTPResponse:
     '''Send an HTTP request, retrying on transient errors with exponential backoff.
 
-    TCP connect timeouts are not retried: if the connection cannot be established,
-    the runner is likely blocked by a firewall and retrying on the same runner is futile.
-    4xx responses (except 408/429) are also not retried.
+    Transient errors (5xx, 408, 429, network failures) are retried up to `retries` times.
+    Non-transient 4xx responses (except 401) cause an immediate exit.
+    2xx and 401 responses are returned to the caller.
     '''
     timeout = urllib3.Timeout(connect=connect_timeout, read=read_timeout)
     for attempt in range(retries + 1):
@@ -51,12 +55,18 @@ def _request_with_retry(
                 timeout=timeout,
             )
         except urllib3.exceptions.ConnectTimeoutError:
+            reason = f'tcp connect timeout after {connect_timeout}s'
+            if attempt == retries:
+                print(f'ERROR: Request to {url} failed: {reason}', file=sys.stderr)
+                sys.exit(1)
+            delay = min(backoff_base ** (attempt + 1), backoff_cap)
             print(
-                f'ERROR: Request to {url} failed: tcp connect timeout after {connect_timeout}s'
-                f' - likely a firewall/network issue on this runner, retrying is futile',
+                f'WARNING: Request to {url} failed: {reason}, '
+                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
                 file=sys.stderr,
             )
-            sys.exit(1)
+            time.sleep(delay)
+            continue
         except urllib3.exceptions.ReadTimeoutError:
             reason = f'http read timeout after {read_timeout}s'
             if attempt == retries:
@@ -83,29 +93,28 @@ def _request_with_retry(
             time.sleep(delay)
             continue
 
-        if resp.status >= 400:
-            body_str = resp.data.decode()
-            if resp.status < 500 and resp.status not in (408, 429):
-                # 4xx (except 408/429): systematic – retrying won't help
-                print(f'ERROR: HTTP {resp.status} from {url}:\n{body_str}', file=sys.stderr)
-                sys.exit(1)
-            if attempt == retries:
-                print(
-                    f'ERROR: HTTP {resp.status} from {url}'
-                    f' (gave up after {retries} retries):\n{body_str}',
-                    file=sys.stderr,
-                )
-                sys.exit(1)
-            delay = min(backoff_base ** (attempt + 1), backoff_cap)
+        if resp.status < 400 or resp.status == 401:
+            return resp
+
+        if not _is_transient_status(resp.status):
+            print(f'ERROR: HTTP {resp.status} from {url}:\n{resp.data.decode()}', file=sys.stderr)
+            sys.exit(1)
+
+        if attempt == retries:
             print(
-                f'WARNING: HTTP {resp.status} from {url}, '
-                f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
+                f'ERROR: HTTP {resp.status} from {url}'
+                f' (gave up after {retries} retries):\n{resp.data.decode()}',
                 file=sys.stderr,
             )
-            time.sleep(delay)
-            continue
+            sys.exit(1)
 
-        return json.loads(resp.data.decode())
+        delay = min(backoff_base ** (attempt + 1), backoff_cap)
+        print(
+            f'WARNING: HTTP {resp.status} from {url}, '
+            f'retrying in {delay:.0f}s ({attempt + 1}/{retries})...',
+            file=sys.stderr,
+        )
+        time.sleep(delay)
 
 
 def http_get(
@@ -117,7 +126,7 @@ def http_get(
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
 ) -> dict:
-    return _request_with_retry(
+    resp = _request_with_retry(
         'GET',
         url,
         headers=headers,
@@ -127,28 +136,10 @@ def http_get(
         backoff_base=backoff_base,
         backoff_cap=backoff_cap,
     )
-
-
-def http_post(
-    url: str,
-    payload: dict,
-    connect_timeout: int = 10,
-    read_timeout: int = 30,
-    retries: int = 6,
-    backoff_base: float = 3.0,
-    backoff_cap: float = 60.0,
-) -> dict:
-    return _request_with_retry(
-        'POST',
-        url,
-        headers={'Content-Type': 'application/json'},
-        body=json.dumps(payload).encode(),
-        connect_timeout=connect_timeout,
-        read_timeout=read_timeout,
-        retries=retries,
-        backoff_base=backoff_base,
-        backoff_cap=backoff_cap,
-    )
+    if resp.status != 200:
+        print(f'ERROR: HTTP {resp.status} from {url}:\n{resp.data.decode()}', file=sys.stderr)
+        sys.exit(1)
+    return json.loads(resp.data.decode())
 
 
 def get_oidc_token(
@@ -174,9 +165,11 @@ def exchange_token(
     token_server: str,
     host: str,
     organization: str,
-    id_token: str,
     repositories: str,
     permissions: str,
+    request_url: str,
+    request_token: str,
+    audience: str,
     retries: int = 6,
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
@@ -185,19 +178,37 @@ def exchange_token(
     payload = {
         'host': host,
         'organization': organization,
-        'token': id_token,
         'repositories': json.loads(repositories),
         'permissions': json.loads(permissions),
     }
-    print(f'Payload: {json.dumps(payload)}')
-    data = http_post(
-        f'{token_server}/token-exchange',
-        payload,
-        retries=retries,
-        backoff_base=backoff_base,
-        backoff_cap=backoff_cap,
-    )
-    return data['token']
+    url = f'{token_server}/token-exchange'
+    retry_kwargs = {'retries': retries, 'backoff_base': backoff_base, 'backoff_cap': backoff_cap}
+
+    for oidc_attempt in range(2):
+        payload['token'] = get_oidc_token(request_url, request_token, audience, **retry_kwargs)
+        print(f'Payload: {json.dumps(payload)}', file=sys.stderr)
+        resp = _request_with_retry(
+            'POST',
+            url,
+            headers={'Content-Type': 'application/json'},
+            body=json.dumps(payload).encode(),
+            **retry_kwargs,
+        )
+        if resp.status == 200:
+            return json.loads(resp.data.decode())['token']
+        if resp.status == 401:
+            if oidc_attempt == 1:
+                print(
+                    'ERROR: token exchange returned 401 after re-fetching OIDC token',
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            print(
+                'WARNING: 401 on token exchange — OIDC token likely expired, re-fetching...',
+                file=sys.stderr,
+            )
+            continue
+        sys.exit(1)  # non-transient 4xx: _request_with_retry already exited; unreachable
 
 
 def require_env(
@@ -235,21 +246,18 @@ def main():
     if '://' not in token_server:
         token_server = f'https://{token_server}'
 
-    retry_kwargs = {
-        'retries': args.retries,
-        'backoff_base': args.backoff_base,
-        'backoff_cap': args.backoff_cap,
-    }
-
-    id_token = get_oidc_token(request_url, request_token, args.audience, **retry_kwargs)
     token = exchange_token(
         token_server,
         args.host,
         args.organization,
-        id_token,
         args.repositories,
         args.permissions,
-        **retry_kwargs,
+        request_url=request_url,
+        request_token=request_token,
+        audience=args.audience,
+        retries=args.retries,
+        backoff_base=args.backoff_base,
+        backoff_cap=args.backoff_cap,
     )
 
     github_output = os.environ.get('GITHUB_OUTPUT', '')
