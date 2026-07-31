@@ -1237,7 +1237,10 @@ def write_ocm_release_notes(
         whither = ocm.ComponentIdentity(name=source_repo, version=update.new_tag)
         upgrade_vector = ocm.gardener.UpgradeVector(whence=whence, whither=whither)
 
-        print(f"Fetching OCM release notes for {source_repo} {update.old_tag} -> {update.new_tag}", file=sys.stderr)
+        print(
+            f"Fetching OCM release notes for {source_repo} {update.old_tag} -> {update.new_tag}",
+            file=sys.stderr,
+        )
         try:
             release_notes_docs = list(rno.release_notes_for_vector(
                 upgrade_vector=upgrade_vector,
@@ -1253,7 +1256,10 @@ def write_ocm_release_notes(
             requests.exceptions.Timeout,
             ValueError,
         ) as e:
-            print(f"Warning: failed to fetch OCM release notes for {source_repo}: {e}", file=sys.stderr)
+            print(
+                f"Warning: failed to fetch OCM release notes for {source_repo}: {e}",
+                file=sys.stderr,
+            )
             continue
 
         grouped = rno.group_release_notes_docs(release_notes_docs)
@@ -1262,6 +1268,7 @@ def write_ocm_release_notes(
             repo_dir=repo_dir,
         )
         print(f"Wrote OCM release notes for {source_repo} {update.new_tag}", file=sys.stderr)
+
 
 # --- Main Execution ---
 def main() -> None:
