@@ -174,7 +174,6 @@ def exchange_token(
     backoff_base: float = 3.0,
     backoff_cap: float = 60.0,
 ) -> str:
-    time.sleep(1)  # ensure token's iat is not in the future
     payload = {
         'host': host,
         'organization': organization,
@@ -186,6 +185,7 @@ def exchange_token(
 
     for oidc_attempt in range(2):
         payload['token'] = get_oidc_token(request_url, request_token, audience, **retry_kwargs)
+        time.sleep(1)  # ensure token's iat is not in the future
         print(f'Payload: {json.dumps(payload)}', file=sys.stderr)
         resp = _request_with_retry(
             'POST',
