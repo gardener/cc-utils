@@ -107,7 +107,7 @@ runs:
   using: composite
   steps:
     - id: repo-metadata
-      uses: gardener/cc-utils/.github/actions/repo-metadata@master
+      uses: gardener/cc-utils/.github/actions/repo-metadata@6dd60fbbe6811cc42afc3790336feb081a75b719
       with:
         gh-token: ${{ inputs.gh-token }}
     - name: params
