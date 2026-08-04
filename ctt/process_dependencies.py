@@ -75,6 +75,20 @@ class PruningMode(enum.StrEnum):
     FORCE_OVERWRITE_DESCRIPTORS = 'force-overwrite-descriptors'  # overwrite descriptors, skip images
 
 
+class LocalBlobsMode(enum.StrEnum):
+    '''
+    Controls how local blobs (inlined into the component descriptor OCI artifact as layers) are
+    handled when replicating to a target registry.
+
+    COPY_BY_VALUE (default): replicate blob data as layers into the target manifest.
+    COPY_BY_REFERENCE: omit local blob layers from the target manifest and instead populate
+        globalAccess on each LocalBlobAccess resource, pointing back to the source artifact.
+        Use this for registries that impose a layer limit (e.g. AWS ECR).
+    '''
+    COPY_BY_VALUE = 'copy_by_value'
+    COPY_BY_REFERENCE = 'copy_by_reference'
+
+
 @functools.cache
 def create_component_descriptor_lookup_for_ocm_repo(
     ocm_repo_url: str,
@@ -660,6 +674,8 @@ def process_images(
         logger.warning('dry-run: not downloading or uploading any images')
 
     registries_by_ocm_repository: dict[str, set[str]] = collections.defaultdict(set)
+    local_blobs_by_ocm_repository: dict[str, LocalBlobsMode] = {}
+
     for target_cfg in processing_cfg['targets'].values():
         target_cfg = target_cfg['kwargs']
 
@@ -685,6 +701,9 @@ def process_images(
             ))
 
         registries_by_ocm_repository[ocm_repository].update(registries)
+        local_blobs_by_ocm_repository[ocm_repository] = LocalBlobsMode(
+            target_cfg.get('local_blobs', LocalBlobsMode.COPY_BY_VALUE)
+        )
 
     replication_plan = ctt.model.ReplicationPlan()
 
@@ -719,6 +738,11 @@ def process_images(
             oci_client=oci_client,
         )
 
+        local_blobs_mode = local_blobs_by_ocm_repository.get(
+            replication_plan_step.target_ocm_repository,
+            LocalBlobsMode.COPY_BY_VALUE,
+        )
+
         yield from process_replication_plan_step(
             replication_plan_step=replication_plan_step,
             root_component_descriptor=root_component_descriptor,
@@ -735,6 +759,7 @@ def process_images(
             overwrite_descriptors=pruning_mode is PruningMode.FORCE_OVERWRITE_DESCRIPTORS,
             max_workers=max_workers,
             inject_s3_sboms=inject_s3_sboms,
+            local_blobs_mode=local_blobs_mode,
         )
 
 
@@ -754,6 +779,7 @@ def process_replication_plan_step(
     overwrite_descriptors: bool=False,
     max_workers: int=16,
     inject_s3_sboms: bool=False,
+    local_blobs_mode: LocalBlobsMode=LocalBlobsMode.COPY_BY_VALUE,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     def process_replication_resource_element(
         replication_resource_element: ctt.model.ReplicationResourceElement,
@@ -1192,6 +1218,7 @@ def process_replication_plan_step(
             src_ocm_repo=orig_ocm_repo,
             oci_client=oci_client,
             overwrite=overwrite_descriptors,
+            rewrite_local_blobs=local_blobs_mode is LocalBlobsMode.COPY_BY_REFERENCE,
         )
 
     if processing_mode is ProcessingMode.DRY_RUN:
