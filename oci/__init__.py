@@ -436,6 +436,7 @@ def replicate_blobs(
     tgt_ref: str,
     oci_client: oc.Client,
     blob_overwrites: dict[om.OciBlobRef, bytes | io.BytesIO],
+    blobs_to_skip: frozenset[str]=frozenset(),
 ) -> om.OciImageManifest:
     '''
     replicates blobs from given oci-image-ref to the specified target-ref, optionally replacing
@@ -518,5 +519,9 @@ def replicate_blobs(
 
     return om.OciImageManifest(
         config=replicate_blob(src_oci_manifest.config),
-        layers=[replicate_blob(blob) for blob in src_oci_manifest.layers],
+        layers=[
+            replicate_blob(blob)
+            for blob in src_oci_manifest.layers
+            if blob.digest not in blobs_to_skip
+        ],
     )
