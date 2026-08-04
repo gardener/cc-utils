@@ -124,12 +124,6 @@ git submodule status | while read -r s; do
 
   echo "git-cmd to run: git config get submodule.$path.url"
   sm_url=$(git config submodule.$path.url)
-  if [[ $sm_url == http* ]]; then
-    echo "submodule at $path not configured to use SSH"
-    continue
-  fi
-  echo "submodule at $path configured to use SSH - will reconfigure to https"
-
   if [[ -z "${TOKEN_SERVER:-}" && ( -z "${APP_ID:-}" || -z "${APP_KEY:-}" ) ]]; then
     echo "Neither a fed-server (inputs.token-server) nor a GitHub App (inputs.auth-app-private-key"
     echo "and inputs.auth-app-client-id) is specified, will try to fetch submodule anonymously"
@@ -137,16 +131,23 @@ git submodule status | while read -r s; do
     continue
   fi
 
-  # XXX: assume submodules-URL is of SSH-Type. Also assume submodule resides on same GH-Instance
-  # strip prefixes (allow either of long/short form (ssh://git@ or just git@)
-  sm_repo=${sm_url#ssh://}
-  # strip git@-prefix
-  sm_repo=${sm_repo#git@}
-  # strip hostname (we do not know where we have long or short form, yet)
-  sm_repo=${sm_repo#$github_host}
-  # strip either / or : (depends on ssh-url-type)
-  sm_repo=${sm_repo#:}
-  sm_repo=${sm_repo#/}
+  if [[ $sm_url == http* ]]; then
+    echo "submodule at $path configured to use HTTPS - will fetch with scoped token"
+    # strip scheme and host to get org/repo path
+    sm_repo=${sm_url#*://}
+    sm_repo=${sm_repo#$github_host/}
+  else
+    echo "submodule at $path configured to use SSH - will reconfigure to https"
+    # strip prefixes (allow either of long/short form (ssh://git@ or just git@)
+    sm_repo=${sm_url#ssh://}
+    # strip git@-prefix
+    sm_repo=${sm_repo#git@}
+    # strip hostname (we do not know where we have long or short form, yet)
+    sm_repo=${sm_repo#$github_host}
+    # strip either / or : (depends on ssh-url-type)
+    sm_repo=${sm_repo#:}
+    sm_repo=${sm_repo#/}
+  fi
 
   # git does not seem to honour http.<url>.extraheaders, so we have to jump through some (more)
   # hoops
