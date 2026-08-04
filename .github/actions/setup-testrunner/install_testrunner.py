@@ -21,6 +21,7 @@ except ImportError:
     )
     import cnudie.retrieve
 
+import ocm
 import oci.auth
 import oci.client
 import oci.platform
@@ -65,7 +66,7 @@ def main():
     logger.info(f'found {greatest_version=}')
 
     for resource in component.resources:
-        if resource.name == parsed.ocm_resource:
+        if resource.name == parsed.ocm_resource and isinstance(resource.access, ocm.OciAccess):
             break
     else:
         logger.error(f'did not find {parsed.ocm_resource=} in {component_name}:{greatest_version}')
