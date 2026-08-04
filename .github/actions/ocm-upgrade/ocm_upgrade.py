@@ -512,6 +512,7 @@ def create_upgrade_pullrequests(
                 upgrade_pullrequests=github.pullrequest.iter_upgrade_pullrequests(
                     repository=repository,
                     state='open',
+                    reference_component=component
                 ),
                 component_reference_name=component_reference_name,
             ):
