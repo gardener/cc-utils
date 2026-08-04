@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
 # a (slightly hacky) script to be used as a workaround for allowing to checkout submodules
-# referenced with an SSH-URL with GitHub-Action's checkout-Action (using https / token-auth).
+# referenced with an SSH-URL or HTTPS-URL with GitHub-Action's checkout-Action (using https / token-auth).
 #
 # Will only work for submodules on same GitHub-Instance. Only needed on GHE (checkout-action
 # does have special-handling for github.com in place - or so they claim).
 #
 # This script is intended to be run after actions/checkout (which should be run w/o telling it
-# to checkout submodules). This script assumes checkout's token is still present as
-# http.<github-api>.extraHeader, and furthermore assumes this token is valid to retrieve each
-# submodule (i.e.: no support for cross-github-submodules, and (obviously) no support for
-# submodules not hosted in github).
+# to checkout submodules). For each submodule, it fetches a scoped token (via a token-server or
+# GitHub App) and uses it directly. If neither is configured, it falls back to a plain
+# `git submodule update`, which may still authenticate via the extraHeader left by
+# actions/checkout. No support for submodules not hosted on the same GitHub instance.
 
 set -euo pipefail
 
@@ -126,7 +126,7 @@ git submodule status | while read -r s; do
   sm_url=$(git config submodule.$path.url)
   if [[ -z "${TOKEN_SERVER:-}" && ( -z "${APP_ID:-}" || -z "${APP_KEY:-}" ) ]]; then
     echo "Neither a fed-server (inputs.token-server) nor a GitHub App (inputs.auth-app-private-key"
-    echo "and inputs.auth-app-client-id) is specified, will try to fetch submodule anonymously"
+    echo "and inputs.auth-app-client-id) is specified, will try to fetch submodule without scoped token"
     git submodule update $path
     continue
   fi
