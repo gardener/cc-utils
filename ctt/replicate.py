@@ -24,6 +24,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     src_ocm_repo: ocm.OciOcmRepository,
     oci_client: oci.client.Client,
     overwrite: bool=False,
+    rewrite_local_blobs: bool=False,
 ):
     if isinstance(src_ocm_repo, str):
         src_ocm_repo = ocm.OciOcmRepository(baseUrl=src_ocm_repo)
@@ -47,6 +48,31 @@ def replicate_oci_artifact_with_patched_component_descriptor(
     src_manifest = oci_client.manifest(
         image_reference=src_ref,
     )
+
+    layer_sizes = {layer.digest: layer.size for layer in src_manifest.layers}
+    blobs_to_skip = frozenset()
+
+    if rewrite_local_blobs:
+        skip = set()
+        for artefact in component.iter_artefacts():
+            access = artefact.access
+            if not isinstance(access, ocm.LocalBlobAccess):
+                continue
+            digest = access.localReference
+            if digest not in layer_sizes:
+                logger.warning(
+                    f'{digest=} not found in src manifest layers - skipping globalAccess patch'
+                )
+                continue
+            access.globalAccess = ocm.LocalBlobGlobalAccess(
+                digest=digest,
+                mediaType=access.mediaType,
+                ref=str(src_ref),
+                size=layer_sizes[digest],
+                type=ocm.AccessType.OCI_BLOB,
+            )
+            skip.add(digest)
+        blobs_to_skip = frozenset(skip)
 
     raw_fobj = ocm.oci.component_descriptor_to_tarfileobj(patched_component_descriptor)
 
@@ -85,6 +111,7 @@ def replicate_oci_artifact_with_patched_component_descriptor(
             src_component_descriptor_oci_blob_ref: raw_fobj,
             src_manifest.config: cfg_raw,
         },
+        blobs_to_skip=blobs_to_skip,
     )
 
     target_manifest_dict = target_manifest.as_dict()
