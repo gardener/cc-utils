@@ -226,13 +226,18 @@ def parse_processing_cfg(path: str):
     return raw_cfg
 
 
+_TARGET_ONLY_KWARGS = {'local_blobs'}
+
+
 def _target(target_cfg: dict):
     target_type = target_cfg['type']
     target_ctor = getattr(targets, target_type, None)
     if not target_ctor:
         logger.critical(f'no such target: {target_type}')
         exit(1)
-    target = target_ctor(**target_cfg.get('kwargs', {}))
+    kwargs = {k: v for k, v in target_cfg.get('kwargs', {}).items()
+              if k not in _TARGET_ONLY_KWARGS}
+    target = target_ctor(**kwargs)
     return target
 
 

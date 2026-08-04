@@ -7,6 +7,24 @@ import sbom.inject as sbom_inject
 import ocm
 
 
+def test_target_with_local_blobs_kwarg():
+    '''
+    RegistriesTarget does not accept local_blobs as a constructor argument.
+    _target() must strip it (and other target-only kwargs) before instantiation.
+    '''
+    target_cfg = {
+        'type': 'RegistriesTarget',
+        'kwargs': {
+            'registries': ['registry.example.com'],
+            'local_blobs': 'copy_by_reference',
+        },
+    }
+
+    # must not raise TypeError
+    target = process_dependencies._target(target_cfg)
+    assert target is not None
+
+
 def test_processor_instantiation(tmpdir):
     tmpfile = tmpdir.join('a_file')
     tmpfile.write('')  # touch
