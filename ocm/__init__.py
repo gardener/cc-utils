@@ -68,18 +68,27 @@ class AccessType(enum.StrEnum):
 # accepted for deserialisation
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 AccessType._value2member_map_ |= {
-    'github': AccessType.GITHUB,
-    'github/v1': AccessType.GITHUB,
-    'localBlob': AccessType.LOCAL_BLOB,
+    'GitHub': AccessType.GITHUB,
+    'gitHub': AccessType.GITHUB, # deprecated
+    'github': AccessType.GITHUB, # deprecated
+    'github/v1': AccessType.GITHUB, # deprecated
+    'LocalBlob': AccessType.LOCAL_BLOB,
+    'localBlob': AccessType.LOCAL_BLOB, # deprecated
     'localFilesystemBlob': AccessType.LOCAL_BLOB,
     'none': AccessType.NONE,
-    'OCIRegistry': AccessType.OCI_REGISTRY,
-    'OCIRegistry/v1': AccessType.OCI_REGISTRY,
-    'ociArtefact': AccessType.OCI_REGISTRY,
-    'ociArtifact': AccessType.OCI_REGISTRY,
-    'ociArtifact/v1': AccessType.OCI_REGISTRY,
-    's3': AccessType.S3,
-    's3/v1': AccessType.S3,
+    'OCIImage': AccessType.OCI_REGISTRY,
+    'ociArtifact': AccessType.OCI_REGISTRY, # deprecated
+    'ociArtifact/v1': AccessType.OCI_REGISTRY, # deprecated
+    'ociArtefact': AccessType.OCI_REGISTRY, # deprecated
+    'OCIRegistry': AccessType.OCI_REGISTRY, # deprecated
+    'OCIRegistry/v1': AccessType.OCI_REGISTRY, # deprecated
+    'ociRegistry': AccessType.OCI_REGISTRY, # deprecated
+    'ociImage': AccessType.OCI_REGISTRY, # deprecated
+    'OCIImageLayer': AccessType.OCI_BLOB,
+    'ociBlob': AccessType.OCI_BLOB, # deprecated
+    'S3': AccessType.S3,
+    's3': AccessType.S3, # deprecated
+    's3/v1': AccessType.S3, # deprecated
 }
 
 AccessTypeOrStr = AccessType | str
@@ -209,11 +218,14 @@ class ArtefactType(enum.StrEnum):
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 ArtefactType._value2member_map_ |= {
     'blob': ArtefactType.BLOB,
+    'directoryTree': ArtefactType.DIRECTORY_TREE,
+    'filesystem': ArtefactType.DIRECTORY_TREE,
     'git': ArtefactType.GIT,
     'git/v1': ArtefactType.GIT,
+    'helmChart': ArtefactType.HELM_CHART,
+    'ociArtifact': ArtefactType.OCI_ARTEFACT,
     'ociImage': ArtefactType.OCI_IMAGE,
     'ociImage/v1': ArtefactType.OCI_IMAGE,
-    'helmChart': ArtefactType.HELM_CHART,
 }
 
 
