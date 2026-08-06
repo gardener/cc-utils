@@ -322,10 +322,21 @@ async def component_descriptor_from_oci(
         manifest = await oci_client.manifest(
             image_reference=target_ref,
             absent_ok=True,
+            accept=f'{om.OCI_MANIFEST_SCHEMA_V2_MIME}, {om.OCI_IMAGE_INDEX_MIME}',
         )
 
-        if manifest:
-            break
+        if not manifest:
+            continue
+
+        if manifest.mediaType == om.OCI_IMAGE_INDEX_MIME:
+            digest = ocm.oci.find_component_descriptor_manifest_digest(manifest)
+
+            manifest = await oci_client.manifest(
+                image_reference=om.OciImageReference(target_ref).with_tag(digest),
+                accept=om.OCI_MANIFEST_SCHEMA_V2_MIME,
+            )
+
+        break
     else:
         manifest = None
 
