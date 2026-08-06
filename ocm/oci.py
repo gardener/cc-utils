@@ -26,8 +26,10 @@ component_descriptor_mimetype = \
     'application/vnd.gardener.cloud.cnudie.component-descriptor.v2+yaml+tar'
 component_descriptor_mimetypes = (
     component_descriptor_mimetype,
+    'application/vnd.ocm.software.component-descriptor.v2+yaml',
     'application/vnd.ocm.software.component-descriptor.v2+yaml+tar',
     'application/vnd.ocm.software.component-descriptor.v2+json',
+    'application/vnd.ocm.software.component-descriptor.v2+json+tar',
 )
 # mimetype for component-descriptor-oci-cfg-blobs
 component_descriptor_cfg_mimetype = \
