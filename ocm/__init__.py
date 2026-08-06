@@ -55,12 +55,15 @@ class SchemaVersion(enum.StrEnum):
 
 class AccessType(enum.StrEnum):
     GITHUB = 'github' # XXX: new: gitHub/v1
+    HELM = 'Helm/v1'
     LOCAL_BLOB = 'localBlob/v1'
     NONE = 'None'  # the resource is only declared informally (e.g. generic)
+    NPM = 'NPM/v1'
     OCI_BLOB = 'ociBlob/v1'
     OCI_REGISTRY = 'ociRegistry' # XXX: new: ociArtifact/v1
     RELATIVE_OCI_REFERENCE = 'relativeOciReference'
     S3 = 's3' # XXX: new: s3/v1
+    WGET = 'Wget/v1'
 
 
 # hack: patch enum to accept "aliases"
@@ -71,10 +74,14 @@ AccessType._value2member_map_ |= {
     'GitHub': AccessType.GITHUB,
     'gitHub': AccessType.GITHUB, # deprecated
     'github': AccessType.GITHUB, # deprecated
+    'Helm': AccessType.HELM,
+    'helm': AccessType.HELM, # deprecated
     'LocalBlob': AccessType.LOCAL_BLOB,
     'localBlob': AccessType.LOCAL_BLOB, # deprecated
     'localFilesystemBlob': AccessType.LOCAL_BLOB,
     'none': AccessType.NONE,
+    'NPM': AccessType.NPM,
+    'npm': AccessType.NPM, # deprecated
     'OCIImage': AccessType.OCI_REGISTRY,
     'ociArtifact': AccessType.OCI_REGISTRY, # deprecated
     'ociArtefact': AccessType.OCI_REGISTRY, # deprecated
@@ -85,6 +92,8 @@ AccessType._value2member_map_ |= {
     'ociBlob': AccessType.OCI_BLOB, # deprecated
     'S3': AccessType.S3,
     's3': AccessType.S3, # deprecated
+    'Wget': AccessType.WGET,
+    'wget': AccessType.WGET, # deprecated
 }
 
 AccessTypeOrStr = AccessType | str
@@ -198,14 +207,45 @@ class LegacyS3Access(Access):
     region: str | None = None
 
 
+@dc(kw_only=True)
+class HelmAccess(Access):
+    type: AccessTypeOrStr = AccessType.HELM
+    helmRepository: str
+    helmChart: str
+    caCert: str | None = None
+    keyring: str | None = None
+
+
+@dc(kw_only=True)
+class NPMAccess(Access):
+    type: AccessTypeOrStr = AccessType.NPM
+    registry: str
+    package: str
+    version: str
+
+
+@dc(kw_only=True)
+class WgetAccess(Access):
+    type: AccessTypeOrStr = AccessType.WGET
+    url: str
+    mediaType: str | None = None
+    header: dict[str, str] | None = None
+    verb: str | None = None
+    body: bytes | None = None
+    noredirect: bool | None = None
+
+
 class ArtefactType(enum.StrEnum):
-    COSIGN_SIGNATURE = 'cosignSignature'
-    GIT = 'git'
-    OCI_IMAGE = 'ociImage'
-    OCI_ARTEFACT = 'ociArtifact/v1'
-    HELM_CHART = 'helmChart/v1'
     BLOB = 'blob/v1'
+    COSIGN_SIGNATURE = 'cosignSignature'
     DIRECTORY_TREE = 'directoryTree'
+    EXECUTABLE = 'executable'
+    GIT = 'git'
+    HELM_CHART = 'helmChart/v1'
+    NPM_PACKAGE = 'npmPackage'
+    OCI_ARTEFACT = 'ociArtifact/v1'
+    OCI_IMAGE = 'ociImage'
+    SBOM = 'sbom'
 
 
 # hack: patch enum to accept "aliases"
@@ -214,12 +254,15 @@ class ArtefactType(enum.StrEnum):
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 ArtefactType._value2member_map_ |= {
     'blob': ArtefactType.BLOB,
+    'executable': ArtefactType.EXECUTABLE,
     'directoryTree': ArtefactType.DIRECTORY_TREE,
     'filesystem': ArtefactType.DIRECTORY_TREE,
     'git': ArtefactType.GIT,
     'helmChart': ArtefactType.HELM_CHART,
+    'npmPackage': ArtefactType.NPM_PACKAGE,
     'ociArtifact': ArtefactType.OCI_ARTEFACT,
     'ociImage': ArtefactType.OCI_IMAGE,
+    'sbom': ArtefactType.SBOM,
 }
 
 
@@ -512,6 +555,9 @@ class Resource(Artifact, LabelMethodsMixin):
         | RelativeOciAccess
         | S3Access
         | LegacyS3Access
+        | HelmAccess
+        | NPMAccess
+        | WgetAccess
         | dict
         | None
     )
