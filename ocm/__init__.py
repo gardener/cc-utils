@@ -68,16 +68,14 @@ class AccessType(enum.StrEnum):
 # accepted for deserialisation
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 AccessType._value2member_map_ |= {
-    'github/v1': AccessType.GITHUB,
+    'github': AccessType.GITHUB,
     'localBlob': AccessType.LOCAL_BLOB,
     'localFilesystemBlob': AccessType.LOCAL_BLOB,
     'none': AccessType.NONE,
     'OCIRegistry': AccessType.OCI_REGISTRY,
-    'OCIRegistry/v1': AccessType.OCI_REGISTRY,
     'ociArtefact': AccessType.OCI_REGISTRY,
     'ociArtifact': AccessType.OCI_REGISTRY,
-    'ociArtifact/v1': AccessType.OCI_REGISTRY,
-    's3/v1': AccessType.S3,
+    's3': AccessType.S3,
 }
 
 AccessTypeOrStr = AccessType | str
@@ -207,8 +205,7 @@ class ArtefactType(enum.StrEnum):
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 ArtefactType._value2member_map_ |= {
     'blob': ArtefactType.BLOB,
-    'git/v1': ArtefactType.GIT,
-    'ociImage/v1': ArtefactType.OCI_IMAGE,
+    'git': ArtefactType.GIT,
     'ociImage': ArtefactType.OCI_IMAGE,
     'helmChart': ArtefactType.HELM_CHART,
 }
@@ -657,9 +654,18 @@ def _read_schema_file(schema_file_path: str):
         return yaml.safe_load(f)
 
 
-def enum_or_string(v, enum_type: enum.Enum):
+def enum_or_string(
+    v,
+    enum_type: enum.Enum,
+    strip_version: bool=False,
+):
+    if strip_version:
+        stripped_value = str(v).split('/')[0]
+    else:
+        stripped_value = None
+
     try:
-        return enum_type(v)
+        return enum_type(stripped_value or v)
     except ValueError:
         return str(v)
 
@@ -744,16 +750,16 @@ class ComponentDescriptor:
                 ],
                 type_hooks={
                     AccessType | str: functools.partial(
-                        enum_or_string, enum_type=AccessType
+                        enum_or_string, enum_type=AccessType, strip_version=True
                     ),
                     ArtefactType | str: functools.partial(
-                        enum_or_string, enum_type=ArtefactType
+                        enum_or_string, enum_type=ArtefactType, strip_version=True
                     ),
                     ArtifactIdentity | str: functools.partial(
-                        enum_or_string, enum_type=ArtefactType
+                        enum_or_string, enum_type=ArtefactType, strip_version=True
                     ),
                     AccessType: functools.partial(
-                        enum_or_string, enum_type=AccessType
+                        enum_or_string, enum_type=AccessType, strip_version=True
                     ),
                     datetime.datetime: dateparse,
                 },
