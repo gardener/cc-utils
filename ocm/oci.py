@@ -115,3 +115,35 @@ def component_descriptor_from_blob(
         raise ValueError('Component Descriptor appears to be empty')
 
     return ocm.ComponentDescriptor.from_dict(component_descriptor_dict)
+
+
+def find_component_descriptor_manifest_digest(
+    index_manifest: oci.model.OciImageManifestList,
+) -> str:
+    if not index_manifest.manifests:
+        raise ValueError(f'Index manifest appears to be empty: {index_manifest}')
+
+    component_descriptor_manifest_digest = None
+    for manifest in index_manifest.manifests:
+        if (
+            not manifest.annotations
+            or not any((
+                manifest.annotations.get('software.ocm.component.name'),
+                manifest.annotations.get('software.ocm.component.version'),
+                manifest.annotations.get('software.ocm.componentversion'), # deprecated
+            ))
+        ):
+            continue
+
+        if component_descriptor_manifest_digest:
+            raise ValueError(
+                f'Index manifest contains multiple descriptor manifests: {index_manifest}'
+            )
+
+        component_descriptor_manifest_digest = manifest.digest
+
+    if not component_descriptor_manifest_digest:
+        # If no annotation is found, use first manifest as fallback (compatibility rule)
+        component_descriptor_manifest_digest = index_manifest.manifests[0].digest
+
+    return component_descriptor_manifest_digest
