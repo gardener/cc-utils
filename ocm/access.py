@@ -69,7 +69,10 @@ def access_to_digest_lookup(
             value=digest,
         )
 
-    elif access.type is ocm.AccessType.S3:
+    elif access.type in (
+        ocm.AccessType.S3,
+        ocm.AccessType.S3_V2,
+    ):
         if isinstance(access, ocm.LegacyS3Access):
             bucket = access.bucketName
             key = access.objectKey

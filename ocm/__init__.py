@@ -63,6 +63,7 @@ class AccessType(enum.StrEnum):
     OCI_REGISTRY = 'ociRegistry' # XXX: new: ociArtifact/v1
     RELATIVE_OCI_REFERENCE = 'relativeOciReference'
     S3 = 's3' # XXX: new: s3/v1
+    S3_V2 = 's3/v2'
 
 
 # hack: patch enum to accept "aliases"
@@ -95,6 +96,8 @@ AccessType._value2member_map_ |= {
     'S3': AccessType.S3,
     's3': AccessType.S3, # deprecated
     's3/v1': AccessType.S3, # deprecated
+    'S3/v2': AccessType.S3_V2,
+    's3/v2': AccessType.S3_V2, # deprecated
 }
 
 AccessTypeOrStr = AccessType | str
@@ -196,15 +199,19 @@ class GithubAccess(Access):
 
 @dc(kw_only=True)
 class S3Access(Access):
+    type: AccessTypeOrStr | None = AccessType.S3
     bucket: str
     key: str
+    mediaType: str | None = None
     region: str | None = None
 
 
 @dc(kw_only=True)
 class LegacyS3Access(Access):
+    type: AccessTypeOrStr | None = AccessType.S3_V2
     bucketName: str
     objectKey: str
+    mediaType: str | None = None
     region: str | None = None
 
 
