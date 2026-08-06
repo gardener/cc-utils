@@ -195,15 +195,19 @@ class GithubAccess(Access):
 
 @dc(kw_only=True)
 class S3Access(Access):
+    type: AccessTypeOrStr | None = f'{AccessType.S3}/v1'
     bucket: str
     key: str
+    mediaType: str | None = None
     region: str | None = None
 
 
 @dc(kw_only=True)
 class LegacyS3Access(Access):
+    type: AccessTypeOrStr | None = f'{AccessType.S3}/v2'
     bucketName: str
     objectKey: str
+    mediaType: str | None = None
     region: str | None = None
 
 
