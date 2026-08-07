@@ -28,6 +28,7 @@ import oci.client as oc
 import oci.model as om
 import ocm
 import sbom.cbom as scbom
+import sbom.gobinary as sgob
 import sbom.oci as soci
 import sbom.s3 as ss3
 
@@ -333,6 +334,30 @@ def scan_image(
         oci_client=oci_client,
         tool_version=cbom_tool_ver,
     )
+
+    # Go module inference — complements cbomkit-theia for scratch/distroless images and
+    # Debian-based images where cbomkit-theia only finds OS CA-bundle certs.
+    # Uses the CycloneDX SBOM already in memory; no extra I/O.
+    inference = sgob.infer_from_cdx(cdx_bytes)
+    if inference:
+        inferred_cbom_bytes = sgob.build_inferred_cbom(
+            image_ref=image_ref,
+            inference=inference,
+        )
+        scbom.push_cbom_referrer(
+            cbom_bytes=inferred_cbom_bytes,
+            image_reference=image_ref,
+            oci_client=oci_client,
+            tool_version=sgob.TOOL_NAME,
+            extra_annotations={sgob.ANALYSIS_METHOD_ANNOTATION: sgob.ANALYSIS_METHOD_VALUE},
+        )
+        logger.info(
+            '%s: pushed go-module-inferred CBOM (%d modules → %d algorithms, %d protocols)',
+            image_ref,
+            inference['module_count'],
+            len(inference['algorithms']),
+            len(inference['protocols']),
+        )
 
     return (
         spdx_bytes, cdx_bytes, cbom_bytes,

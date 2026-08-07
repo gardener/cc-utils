@@ -739,6 +739,47 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'cbom-referrer-ref={cbom_ref}\n')
 
+      - name: 'push go-module CBOM referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import oci.auth
+          import oci.client
+          import oci.model
+          import sbom.cbom as scbom
+          import sbom.gobinary as sgob
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+          image_ref = oci.model.OciImageReference.to_image_ref(
+              '${{ matrix.args.image-reference }}',
+          )
+
+          with open('sbom.cdx.json', 'rb') as f:
+              cdx_bytes = f.read()
+
+          inference = sgob.infer_from_cdx(cdx_bytes)
+          if not inference:
+              print('no Go modules found — skipping go-module CBOM')
+          else:
+              cbom_bytes = sgob.build_inferred_cbom(image_ref=image_ref, inference=inference)
+              scbom.push_cbom_referrer(
+                  cbom_bytes=cbom_bytes,
+                  image_reference=image_ref,
+                  oci_client=oci_client,
+                  tool_version=sgob.TOOL_NAME,
+                  extra_annotations={sgob.ANALYSIS_METHOD_ANNOTATION: sgob.ANALYSIS_METHOD_VALUE},
+              )
+              print(
+                  f'pushed go-module CBOM: '
+                  f'{inference["module_count"]} modules, '
+                  f'{len(inference["algorithms"])} algorithms, '
+                  f'{len(inference["protocols"])} protocols'
+              )
+
       - name: 'build CBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
         shell: python
