@@ -8,6 +8,7 @@ import hashlib
 import io
 import logging
 import re
+import time
 import typing
 import urllib.parse
 
@@ -46,6 +47,7 @@ class SigningserverClientCfg:
     client_certificate_key: str
     server_certificate_ca: str
     validate_tls_certificate: bool = True
+    connect_timeout: int = 12
 
 
 @dataclasses.dataclass
@@ -158,7 +160,7 @@ class SigningserverClient:
                     'Accept': 'application/x-pem-file',
                 },
                 data=digest,
-                timeout=(4, 31),
+                timeout=(self.cfg.connect_timeout, 31),
                 cert=(self.cfg.client_certificate, self.cfg.client_certificate_key,),
                 **kwargs,
             )
@@ -168,6 +170,7 @@ class SigningserverClient:
                 raise SigningserverException(e)
 
             logger.warning(f'caught http error, going to retry... ({remaining_retries=}); {e}')
+            time.sleep(2 ** (3 - remaining_retries))
             return self.sign(
                 digest=digest,
                 hash_algorithm=hash_algorithm,
@@ -175,7 +178,17 @@ class SigningserverClient:
                 remaining_retries=remaining_retries - 1,
             )
         except Exception as e:
-            raise SigningserverException(e)
+            if remaining_retries == 0:
+                raise SigningserverException(e)
+
+            logger.warning(f'caught connection error, going to retry... ({remaining_retries=}); {e}')
+            time.sleep(2 ** (3 - remaining_retries))
+            return self.sign(
+                digest=digest,
+                hash_algorithm=hash_algorithm,
+                signing_algorithm=signing_algorithm,
+                remaining_retries=remaining_retries - 1,
+            )
 
         return SigningResponse(
             raw=resp.text,
