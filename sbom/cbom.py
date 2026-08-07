@@ -19,6 +19,7 @@ import sbom.oci as _oci
 logger = logging.getLogger(__name__)
 
 CBOM_ARTIFACT_TYPE = 'application/vnd.cyclonedx+json;profile=cbom'
+ANALYSIS_METHOD_ANNOTATION = 'gardener.cloud/cbom/analysis-method'
 # layer media-type is plain CycloneDX JSON (profile is an artifact-level distinction only)
 CBOM_LAYER_MEDIA_TYPE = _oci.CYCLONEDX_JSON_MEDIA_TYPE
 
@@ -28,6 +29,7 @@ def push_cbom_referrer(
     image_reference: str | om.OciImageReference,
     oci_client: oc.Client,
     tool_version: str | None = None,
+    extra_annotations: dict | None = None,
 ) -> str:
     '''
     Push a CBOM document as an OCI referrer manifest for the given image.
@@ -37,6 +39,10 @@ def push_cbom_referrer(
     subject_digest, subject_media_type, subject_size, repo_ref = _oci._resolve_subject(
         image_reference, oci_client,
     )
+    annotations = {
+        **(extra_annotations or {}),
+        **({'gardener.cloud/cbom/tool-version': tool_version} if tool_version else {}),
+    }
     return _oci._push_referrer(
         doc_bytes=cbom_bytes,
         doc_media_type=CBOM_LAYER_MEDIA_TYPE,
@@ -46,9 +52,7 @@ def push_cbom_referrer(
         subject_media_type=subject_media_type,
         subject_size=subject_size,
         oci_client=oci_client,
-        annotations=(
-            {'gardener.cloud/cbom/tool-version': tool_version} if tool_version else None
-        ),
+        annotations=annotations or None,
     )
 
 
