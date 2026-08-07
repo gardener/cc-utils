@@ -91,7 +91,8 @@ def component_descriptor_from_blob(
     layer_mimetype: str,
     target_ref: str | None=None,
     component_id: ocm.ComponentIdentity | None=None,
-) -> ocm.ComponentDescriptor:
+    skip_serialisation: bool=False,
+) -> ocm.ComponentDescriptor | str:
     if not layer_mimetype in component_descriptor_mimetypes:
         logger.warning(f'{target_ref=} {layer_mimetype=} was unexpected')
 
@@ -103,6 +104,9 @@ def component_descriptor_from_blob(
         except tarfile.ReadError as tre:
             tre.add_note(f'{component_id=}')
             raise tre
+
+    if skip_serialisation:
+        return component_descriptor_blob.decode()
 
     if '+yaml' in layer_mimetype:
         component_descriptor_dict = yaml.safe_load(component_descriptor_blob)
