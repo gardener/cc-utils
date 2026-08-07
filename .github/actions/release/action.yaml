@@ -198,6 +198,10 @@ outputs:
       name of the GHA artifact containing the published component-descriptor
       (same artifact as uploaded by the `release` action: `component-descriptor`).
     value: component-descriptor
+  release-commit-digest:
+    description: |
+      the digest of the release commit (as imported from release-commit-objects)
+    value: ${{ steps.save-release-commit-digest.outputs.digest }}
 
 defaults:
   run:
@@ -231,6 +235,12 @@ runs:
         commit-objects: ${{ inputs.release-commit-objects }}
         commit-digest: ${{ inputs.release-commit-digest }}
         after-import: rebase
+    - name: save-release-commit-digest
+      id: save-release-commit-digest
+      shell: bash
+      run: |
+        # capture before create-bump-commit overwrites refs/capture-commit
+        echo "digest=$(git rev-parse refs/capture-commit)" >> $GITHUB_OUTPUT
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
     - name: write-component-descriptor-from-input
       if: ${{ inputs.component-descriptor-artifact == '' }}
