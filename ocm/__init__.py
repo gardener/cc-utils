@@ -55,12 +55,15 @@ class SchemaVersion(enum.StrEnum):
 
 class AccessType(enum.StrEnum):
     GITHUB = 'github' # XXX: new: gitHub/v1
+    HELM = 'Helm/v1'
     LOCAL_BLOB = 'localBlob/v1'
     NONE = 'None'  # the resource is only declared informally (e.g. generic)
+    NPM = 'NPM/v1'
     OCI_BLOB = 'ociBlob/v1'
     OCI_REGISTRY = 'ociRegistry' # XXX: new: ociArtifact/v1
     RELATIVE_OCI_REFERENCE = 'relativeOciReference'
     S3 = 's3' # XXX: new: s3/v1
+    WGET = 'Wget/v1'
 
 
 # hack: patch enum to accept "aliases"
@@ -68,16 +71,29 @@ class AccessType(enum.StrEnum):
 # accepted for deserialisation
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 AccessType._value2member_map_ |= {
-    'github/v1': AccessType.GITHUB,
-    'localBlob': AccessType.LOCAL_BLOB,
+    'GitHub': AccessType.GITHUB,
+    'gitHub': AccessType.GITHUB, # deprecated
+    'github': AccessType.GITHUB, # deprecated
+    'Helm': AccessType.HELM,
+    'helm': AccessType.HELM, # deprecated
+    'LocalBlob': AccessType.LOCAL_BLOB,
+    'localBlob': AccessType.LOCAL_BLOB, # deprecated
     'localFilesystemBlob': AccessType.LOCAL_BLOB,
     'none': AccessType.NONE,
-    'OCIRegistry': AccessType.OCI_REGISTRY,
-    'OCIRegistry/v1': AccessType.OCI_REGISTRY,
-    'ociArtefact': AccessType.OCI_REGISTRY,
-    'ociArtifact': AccessType.OCI_REGISTRY,
-    'ociArtifact/v1': AccessType.OCI_REGISTRY,
-    's3/v1': AccessType.S3,
+    'NPM': AccessType.NPM,
+    'npm': AccessType.NPM, # deprecated
+    'OCIImage': AccessType.OCI_REGISTRY,
+    'ociArtifact': AccessType.OCI_REGISTRY, # deprecated
+    'ociArtefact': AccessType.OCI_REGISTRY, # deprecated
+    'OCIRegistry': AccessType.OCI_REGISTRY, # deprecated
+    'ociRegistry': AccessType.OCI_REGISTRY, # deprecated
+    'ociImage': AccessType.OCI_REGISTRY, # deprecated
+    'OCIImageLayer': AccessType.OCI_BLOB,
+    'ociBlob': AccessType.OCI_BLOB, # deprecated
+    'S3': AccessType.S3,
+    's3': AccessType.S3, # deprecated
+    'Wget': AccessType.WGET,
+    'wget': AccessType.WGET, # deprecated
 }
 
 AccessTypeOrStr = AccessType | str
@@ -179,26 +195,61 @@ class GithubAccess(Access):
 
 @dc(kw_only=True)
 class S3Access(Access):
+    type: AccessTypeOrStr | None = f'{AccessType.S3}/v1'
     bucket: str
     key: str
+    mediaType: str | None = None
     region: str | None = None
 
 
 @dc(kw_only=True)
 class LegacyS3Access(Access):
+    type: AccessTypeOrStr | None = f'{AccessType.S3}/v2'
     bucketName: str
     objectKey: str
+    mediaType: str | None = None
     region: str | None = None
 
 
+@dc(kw_only=True)
+class HelmAccess(Access):
+    type: AccessTypeOrStr = AccessType.HELM
+    helmRepository: str
+    helmChart: str
+    caCert: str | None = None
+    keyring: str | None = None
+
+
+@dc(kw_only=True)
+class NPMAccess(Access):
+    type: AccessTypeOrStr = AccessType.NPM
+    registry: str
+    package: str
+    version: str
+
+
+@dc(kw_only=True)
+class WgetAccess(Access):
+    type: AccessTypeOrStr = AccessType.WGET
+    url: str
+    mediaType: str | None = None
+    header: dict[str, str] | None = None
+    verb: str | None = None
+    body: bytes | None = None
+    noredirect: bool | None = None
+
+
 class ArtefactType(enum.StrEnum):
-    COSIGN_SIGNATURE = 'cosignSignature'
-    GIT = 'git'
-    OCI_IMAGE = 'ociImage'
-    OCI_ARTEFACT = 'ociArtifact/v1'
-    HELM_CHART = 'helmChart/v1'
     BLOB = 'blob/v1'
+    COSIGN_SIGNATURE = 'cosignSignature'
     DIRECTORY_TREE = 'directoryTree'
+    EXECUTABLE = 'executable'
+    GIT = 'git'
+    HELM_CHART = 'helmChart/v1'
+    NPM_PACKAGE = 'npmPackage'
+    OCI_ARTEFACT = 'ociArtifact/v1'
+    OCI_IMAGE = 'ociImage'
+    SBOM = 'sbom'
 
 
 # hack: patch enum to accept "aliases"
@@ -207,10 +258,15 @@ class ArtefactType(enum.StrEnum):
 # note: the `/v1` suffix is _always_ optional (if absent, /v1 is implied)
 ArtefactType._value2member_map_ |= {
     'blob': ArtefactType.BLOB,
-    'git/v1': ArtefactType.GIT,
-    'ociImage/v1': ArtefactType.OCI_IMAGE,
-    'ociImage': ArtefactType.OCI_IMAGE,
+    'executable': ArtefactType.EXECUTABLE,
+    'directoryTree': ArtefactType.DIRECTORY_TREE,
+    'filesystem': ArtefactType.DIRECTORY_TREE,
+    'git': ArtefactType.GIT,
     'helmChart': ArtefactType.HELM_CHART,
+    'npmPackage': ArtefactType.NPM_PACKAGE,
+    'ociArtifact': ArtefactType.OCI_ARTEFACT,
+    'ociImage': ArtefactType.OCI_IMAGE,
+    'sbom': ArtefactType.SBOM,
 }
 
 
@@ -503,6 +559,9 @@ class Resource(Artifact, LabelMethodsMixin):
         | RelativeOciAccess
         | S3Access
         | LegacyS3Access
+        | HelmAccess
+        | NPMAccess
+        | WgetAccess
         | dict
         | None
     )
@@ -657,9 +716,18 @@ def _read_schema_file(schema_file_path: str):
         return yaml.safe_load(f)
 
 
-def enum_or_string(v, enum_type: enum.Enum):
+def enum_or_string(
+    v,
+    enum_type: enum.Enum,
+    strip_version: bool=False,
+):
+    if strip_version:
+        stripped_value = str(v).split('/')[0]
+    else:
+        stripped_value = None
+
     try:
-        return enum_type(v)
+        return enum_type(stripped_value or v)
     except ValueError:
         return str(v)
 
@@ -744,16 +812,16 @@ class ComponentDescriptor:
                 ],
                 type_hooks={
                     AccessType | str: functools.partial(
-                        enum_or_string, enum_type=AccessType
+                        enum_or_string, enum_type=AccessType, strip_version=True
                     ),
                     ArtefactType | str: functools.partial(
-                        enum_or_string, enum_type=ArtefactType
+                        enum_or_string, enum_type=ArtefactType, strip_version=True
                     ),
                     ArtifactIdentity | str: functools.partial(
-                        enum_or_string, enum_type=ArtefactType
+                        enum_or_string, enum_type=ArtefactType, strip_version=True
                     ),
                     AccessType: functools.partial(
-                        enum_or_string, enum_type=AccessType
+                        enum_or_string, enum_type=AccessType, strip_version=True
                     ),
                     datetime.datetime: dateparse,
                 },

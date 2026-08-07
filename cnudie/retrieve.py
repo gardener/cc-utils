@@ -361,7 +361,8 @@ def component_descriptor_from_oci(
     ocm_repos: collections.abc.Iterable[ocm.OciOcmRepository | str],
     oci_client: oc.Client,
     absent_ok: bool=False,
-) -> ocm.ComponentDescriptor | None:
+    skip_serialisation: bool=False,
+) -> ocm.ComponentDescriptor | str | None:
     for ocm_repo in ocm_repos:
         if isinstance(ocm_repo, str):
             ocm_repo = ocm.OciOcmRepository(
@@ -380,10 +381,21 @@ def component_descriptor_from_oci(
         manifest = oci_client.manifest(
             image_reference=target_ref,
             absent_ok=True,
+            accept=f'{om.OCI_MANIFEST_SCHEMA_V2_MIME}, {om.OCI_IMAGE_INDEX_MIME}',
         )
 
-        if manifest:
-            break
+        if not manifest:
+            continue
+
+        if manifest.mediaType == om.OCI_IMAGE_INDEX_MIME:
+            digest = ocm.oci.find_component_descriptor_manifest_digest(manifest)
+
+            manifest = oci_client.manifest(
+                image_reference=om.OciImageReference(target_ref).with_tag(digest),
+                accept=om.OCI_MANIFEST_SCHEMA_V2_MIME,
+            )
+
+        break
     else:
         manifest = None
 
@@ -429,6 +441,7 @@ def component_descriptor_from_oci(
         layer_mimetype=layer_mimetype,
         target_ref=target_ref,
         component_id=component_id,
+        skip_serialisation=skip_serialisation,
     )
 
 
