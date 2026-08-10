@@ -737,22 +737,20 @@ def process_images(
 
     logger.info(replication_plan)
 
-    for replication_plan_step in replication_plan.steps:
-        tgt_component_descriptor_lookup = create_component_descriptor_lookup_for_ocm_repo(
-            ocm_repo_url=replication_plan_step.target_ocm_repository,
+    def _exec_step(step):
+        tgt_lookup = create_component_descriptor_lookup_for_ocm_repo(
+            ocm_repo_url=step.target_ocm_repository,
             oci_client=oci_client,
         )
-
         local_blobs_mode = local_blobs_by_ocm_repository.get(
-            replication_plan_step.target_ocm_repository,
+            step.target_ocm_repository,
             LocalBlobsMode.COPY_BY_VALUE,
         )
-
-        yield from process_replication_plan_step(
-            replication_plan_step=replication_plan_step,
+        return list(process_replication_plan_step(
+            replication_plan_step=step,
             root_component_descriptor=root_component_descriptor,
             oci_client=oci_client,
-            tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
+            tgt_component_descriptor_lookup=tgt_lookup,
             processing_mode=processing_mode,
             replication_mode=replication_mode,
             inject_ocm_coordinates_into_oci_manifests=inject_ocm_coordinates_into_oci_manifests,
@@ -765,7 +763,13 @@ def process_images(
             max_workers=max_workers,
             inject_s3_sboms=inject_s3_sboms,
             local_blobs_mode=local_blobs_mode,
-        )
+        ))
+
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=len(replication_plan.steps),
+    ) as step_executor:
+        for nodes in step_executor.map(_exec_step, replication_plan.steps):
+            yield from nodes
 
 
 def process_replication_plan_step(
