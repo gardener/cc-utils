@@ -162,22 +162,37 @@ _FIPS_ALGS = frozenset({
 # Inference helpers
 # ---------------------------------------------------------------------------
 
-def _infer_crypto(modules: list) -> tuple:
-    '''Return (alg_set, proto_set) inferred from the given module path list.'''
-    algs = set()
-    protos = set()
-    for mod in modules:
+def _infer_crypto(module_paths: dict) -> tuple:
+    '''
+    Return (alg_paths, proto_paths) inferred from module_paths.
+
+    module_paths maps module_path -> [binary_paths] (from syft evidence.occurrences).
+    alg_paths / proto_paths map each inferred name -> set of binary paths from all
+    modules that contributed it.
+    '''
+    alg_paths = {}
+    proto_paths = {}
+    for mod, bin_paths in module_paths.items():
         for prefix, (rule_algs, rule_protos, _) in _RULE_INDEX.items():
             if mod == prefix or mod.startswith(prefix + '/') or mod.startswith(prefix + '@'):
-                algs.update(rule_algs)
-                protos.update(rule_protos)
+                for alg in rule_algs:
+                    alg_paths.setdefault(alg, set()).update(bin_paths)
+                for proto in rule_protos:
+                    proto_paths.setdefault(proto, set()).update(bin_paths)
                 break
-    return algs, protos
+    return alg_paths, proto_paths
 
 
-def _modules_from_cdx(doc: dict) -> list:
-    '''Extract Go module paths from a parsed CycloneDX SBOM document.'''
-    modules = []
+def _modules_from_cdx(doc: dict) -> dict:
+    '''
+    Extract Go module paths from a parsed CycloneDX SBOM document.
+
+    Returns a dict mapping module_path -> list[binary_path] where binary_path
+    is taken from each component's evidence.occurrences (populated by syft when
+    it finds a Go module compiled into a specific binary).  The list is empty
+    when no occurrence data is present.
+    '''
+    modules = {}
     for comp in doc.get('components', []):
         purl = comp.get('purl', '')
         if not purl.startswith(_PURL_GOLANG_PREFIX):
@@ -185,7 +200,12 @@ def _modules_from_cdx(doc: dict) -> list:
         mod_path = purl[len(_PURL_GOLANG_PREFIX):]
         if '@' in mod_path:
             mod_path = mod_path[:mod_path.index('@')]
-        modules.append(mod_path)
+        bin_paths = [
+            occ['location']
+            for occ in (comp.get('evidence') or {}).get('occurrences') or []
+            if occ.get('location')
+        ]
+        modules[mod_path] = bin_paths
     return modules
 
 
@@ -231,9 +251,15 @@ def infer_from_cdx(cdx_bytes: bytes) -> dict | None:
     rules.  No network I/O, no subprocess calls, no binary access.
 
     Returns an inference dict:
-      { 'algorithms': [...], 'protocols': [...], 'boringcrypto': False,
-        'source': 'cdx-sbom', 'module_count': N }
+      { 'algorithms': [...], 'protocols': [...],
+        'algorithm_paths': {alg: [path, ...]}, 'protocol_paths': {proto: [path, ...]},
+        'boringcrypto': False, 'source': 'cdx-sbom', 'module_count': N }
     or None when no Go modules are present in the SBOM.
+
+    algorithm_paths / protocol_paths map each inferred name to the sorted list of
+    binary file paths (from syft evidence.occurrences) of the Go binaries in which
+    the contributing module was found.  The lists are empty when the SBOM carries no
+    occurrence data.
 
     Note: BoringCrypto detection is not possible from the SBOM; the flag is always
     False.  Binary-level scanning is needed for FIPS certification annotations.
@@ -248,13 +274,15 @@ def infer_from_cdx(cdx_bytes: bytes) -> dict | None:
     if not modules:
         return None
 
-    algs, protos = _infer_crypto(modules)
+    alg_paths, proto_paths = _infer_crypto(modules)
     return {
-        'algorithms':   sorted(algs),
-        'protocols':    sorted(protos),
-        'boringcrypto': False,
-        'source':       'cdx-sbom',
-        'module_count': len(modules),
+        'algorithms':      sorted(alg_paths),
+        'protocols':       sorted(proto_paths),
+        'algorithm_paths': {k: sorted(v) for k, v in alg_paths.items()},
+        'protocol_paths':  {k: sorted(v) for k, v in proto_paths.items()},
+        'boringcrypto':    False,
+        'source':          'cdx-sbom',
+        'module_count':    len(modules),
     }
 
 
@@ -314,11 +342,14 @@ def build_inferred_cbom(
         if inference.get('boringcrypto') and alg_name in _FIPS_ALGS:
             comp['cryptoProperties']['nistQuantumSecurityLevel'] = 0
             comp['cryptoProperties']['certificationLevel'] = ['FIPS140-2', 'FIPS140-3']
+        paths = inference.get('algorithm_paths', {}).get(alg_name, [])
+        if paths:
+            comp['evidence'] = {'occurrences': [{'location': p} for p in paths]}
         components.append(comp)
 
     for proto in inference.get('protocols', []):
         proto_type, proto_ver = _parse_proto(proto)
-        components.append({
+        comp = {
             'type': 'cryptographic-asset',
             'name': proto,
             'cryptoProperties': {
@@ -328,7 +359,11 @@ def build_inferred_cbom(
                     'version': proto_ver,
                 },
             },
-        })
+        }
+        paths = inference.get('protocol_paths', {}).get(proto, [])
+        if paths:
+            comp['evidence'] = {'occurrences': [{'location': p} for p in paths]}
+        components.append(comp)
 
     now = datetime.datetime.now(tz=datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     properties = [
