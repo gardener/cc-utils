@@ -22,7 +22,6 @@ import cryptography.hazmat.primitives.hashes
 import cryptography.x509
 import dacite
 
-import cnudie.retrieve
 import ctt.__main__
 import oci.client
 import oci.model
@@ -32,6 +31,7 @@ import ocm.gardener
 import ocm.helm
 import ocm.iter
 import ocm.oci
+import ocm.retrieve
 import ocm.sign
 import ocm.upload
 
@@ -548,8 +548,8 @@ def _traverse(parsed):
         ),
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
     component = component_descriptor_lookup(parsed.name)
@@ -685,8 +685,8 @@ def imagevector(parsed):
         ),
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
     root_component = component_descriptor_lookup(parsed.root_name).component
@@ -802,8 +802,8 @@ def helm_values(parsed):
         ),
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
 
@@ -835,8 +835,8 @@ def _normalise(parsed) -> tuple[ocm.ComponentDescriptor, str]:
         ),
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repository),
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.ocm_repository),
         oci_client=oci_client,
     )
 

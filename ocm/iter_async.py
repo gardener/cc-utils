@@ -1,14 +1,14 @@
 import collections.abc
 
-import cnudie.retrieve_async
 import ocm
 import ocm.gardener
 import ocm.iter
+import ocm.retrieve_async
 
 
 async def iter(
     component: ocm.Component,
-    lookup: cnudie.retrieve_async.ComponentDescriptorLookupById=None,
+    lookup: ocm.retrieve_async.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
     node_filter: collections.abc.Callable[[ocm.iter.Node], bool]=None,
@@ -19,7 +19,7 @@ async def iter(
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
 
-    See `cnudie.retrieve_async` for retrieving components/component descriptors.
+    See `ocm.retrieve_async` for retrieving components/component descriptors.
 
     @param component:    root component for iteration
     @param lookup:       used to lookup referenced components descriptors
@@ -48,7 +48,7 @@ async def iter(
     # need to nest actual iterator to keep global state of seen component-IDs
     async def inner_iter(
         component: ocm.Component,
-        lookup: cnudie.retrieve_async.ComponentDescriptorLookupById,
+        lookup: ocm.retrieve_async.ComponentDescriptorLookupById,
         recursion_depth,
         path: tuple[ocm.iter.NodePathEntry]=(),
         reftype: ocm.iter.NodeReferenceType=ocm.iter.NodeReferenceType.COMPONENT_REFERENCE,
@@ -146,7 +146,7 @@ async def iter(
 
 def iter_resources(
     component: ocm.Component,
-    lookup: cnudie.retrieve_async.ComponentDescriptorLookupById=None,
+    lookup: ocm.retrieve_async.ComponentDescriptorLookupById=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
