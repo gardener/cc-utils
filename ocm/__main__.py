@@ -22,12 +22,12 @@ import cryptography.hazmat.primitives.hashes
 import cryptography.x509
 import dacite
 
-import cnudie.access
 import cnudie.retrieve
 import ctt.__main__
 import oci.client
 import oci.model
 import ocm
+import ocm.access
 import ocm.gardener
 import ocm.helm
 import ocm.iter
@@ -843,7 +843,7 @@ def _normalise(parsed) -> tuple[ocm.ComponentDescriptor, str]:
     component_descriptor = component_descriptor_lookup(parsed.name)
 
     access_to_digest_lookup = functools.partial(
-        cnudie.access.access_to_digest_lookup,
+        ocm.access.access_to_digest_lookup,
         oci_client=oci_client,
     )
 

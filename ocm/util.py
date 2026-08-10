@@ -1,6 +1,7 @@
-import urllib.parse
+import warnings
 
 import ocm
+import ocm.access
 
 
 def as_component(
@@ -52,52 +53,21 @@ def artifact_url(
     component: ocm.Component,
     artifact: ocm.Resource | ocm.Source,
 ) -> str:
-    access = artifact.access
-
-    if isinstance(access, ocm.GithubAccess):
-        return access.repoUrl
-
-    elif isinstance(access, ocm.LocalBlobAccess):
-        image_reference = component.current_ocm_repo.component_oci_ref(component.name)
-        return f'{image_reference}@{access.localReference}'
-
-    elif isinstance(access, ocm.OciAccess):
-        return access.imageReference
-
-    elif isinstance(access, ocm.RelativeOciAccess):
-        return access.reference
-
-    elif isinstance(access, ocm.S3Access):
-        return f'http://{access.bucket}.s3.amazonaws.com/{access.key}'
-
-    elif isinstance(access, ocm.LegacyS3Access):
-        return f'http://{access.bucketName}.s3.amazonaws.com/{access.objectKey}'
-
-    elif isinstance(access, ocm.LocalBlobGlobalAccess):
-        return access.ref
-
-    else:
-        raise ValueError(access)
+    warnings.warn(
+        'ocm.util.artifact_url is deprecated - use ocm.access.artifact_url',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return ocm.access.artifact_url(component, artifact)
 
 
 def to_absolute_oci_access(
     access: ocm.OciAccess | ocm.RelativeOciAccess,
     ocm_repo: ocm.OciOcmRepository | None=None,
 ) -> ocm.OciAccess:
-    if access.type is ocm.AccessType.OCI_REGISTRY:
-        pass
-
-    elif access.type is ocm.AccessType.RELATIVE_OCI_REFERENCE:
-        if not '://' in ocm_repo.baseUrl:
-            base_url = urllib.parse.urlparse(f'x://{ocm_repo.baseUrl}').netloc
-        else:
-            base_url = urllib.parse.urlparse(ocm_repo.baseUrl).netloc
-
-        access = ocm.OciAccess(
-            imageReference=f'{base_url.rstrip('/')}/{access.reference.lstrip('/')}',
-        )
-
-    else:
-        raise ValueError(f'Unsupported access type: {access.type}')
-
-    return access
+    warnings.warn(
+        'ocm.util.to_absolute_oci_access is deprecated - use ocm.access.to_absolute_oci_access',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return ocm.access.to_absolute_oci_access(access, ocm_repo)
