@@ -881,7 +881,6 @@ class Client:
                     scope=scope,
                     method='HEAD',
                     stream=False,
-                    timeout=None,
                 )
                 if (mediaType := res.headers['Content-Type']) == 'application/octet-stream':
                     # legacy container-images declare application/octet-stream as content-type,
@@ -1250,7 +1249,6 @@ class Client:
             scope=scope,
             method='GET',
             stream=stream,
-            timeout=None,
             raise_for_status=False,
         )
 
