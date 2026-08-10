@@ -24,14 +24,19 @@ useful as the pipeline integration runs on new images, and can be retired once a
 images in the target landscape have been re-scanned.
 '''
 import argparse
+import hashlib
+import json
 import os
+import subprocess
 import sys
+import time
+import urllib.parse
+import urllib.request
 
 _cc_utils_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, _cc_utils_root)
 
 import cnudie.retrieve
-import hashlib
 import oci.auth
 import oci.client
 import oci.model as om
@@ -39,6 +44,51 @@ import ocm
 import ocm.iter as ocm_iter
 import sbom.cbom as scbom
 import sbom.gobinary as sgob
+
+
+_gcloud_token_cache = {'token': None, 'expires_at': 0.0}
+
+
+def _gcloud_token():
+    if _gcloud_token_cache['token'] and time.time() < _gcloud_token_cache['expires_at']:
+        return _gcloud_token_cache['token']
+    adc_path = os.path.join(
+        os.environ.get('HOME', ''),
+        '.config', 'gcloud', 'application_default_credentials.json',
+    )
+    try:
+        with open(adc_path) as f:
+            creds = json.load(f)
+        if creds.get('type') == 'authorized_user':
+            data = urllib.parse.urlencode({
+                'client_id':     creds['client_id'],
+                'client_secret': creds['client_secret'],
+                'refresh_token': creds['refresh_token'],
+                'grant_type':    'refresh_token',
+            }).encode()
+            req = urllib.request.Request(
+                'https://oauth2.googleapis.com/token', data=data, method='POST',
+            )
+            with urllib.request.urlopen(req) as resp:  # nosec B310
+                result = json.loads(resp.read())
+            _gcloud_token_cache['token']      = result['access_token']
+            _gcloud_token_cache['expires_at'] = time.time() + result['expires_in'] - 30
+            return _gcloud_token_cache['token']
+    except Exception:  # nosec B110
+        pass
+    try:
+        result = subprocess.run(
+            ['gcloud', 'auth', 'print-access-token'],  # nosec B607
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        token = result.stdout.strip()
+        _gcloud_token_cache['token']      = token
+        _gcloud_token_cache['expires_at'] = time.time() + 3300
+        return token
+    except Exception:
+        return None
 
 
 def _resolve_single_arch_ref(
@@ -101,8 +151,21 @@ def main() -> None:
     name, version = args.ocm_component.rsplit(':', 1)
     ocm_repositories = [r for r in args.ocm_repositories if r.strip()]
 
+    docker_lookup = oci.auth.docker_credentials_lookup(absent_ok=True)
+
+    def credentials_lookup(image_reference, privileges=None, absent_ok=True):
+        ref = om.OciImageReference.to_image_ref(image_reference)
+        if ref.registry_type is om.OciRegistryType.GAR:
+            token = _gcloud_token()
+            if token:
+                return oci.auth.OciBasicAuthCredentials(
+                    username='oauth2accesstoken',
+                    password=token,
+                )
+        return docker_lookup(image_reference, privileges, absent_ok)
+
     oci_client = oci.client.Client(
-        credentials_lookup=oci.auth.docker_credentials_lookup(absent_ok=True),
+        credentials_lookup=credentials_lookup,
     )
 
     ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*ocm_repositories)
@@ -124,23 +187,30 @@ def main() -> None:
     ).component
 
     all_nodes = list(ocm_iter.iter_resources(component=root_component, lookup=lookup))
-    print(f'discovered {len(all_nodes)} resources total', file=sys.stderr)
+    oci_images = [
+        n for n in all_nodes
+        if isinstance(n.resource.access, ocm.OciAccess)
+        and n.resource.type is ocm.ArtefactType.OCI_IMAGE
+    ]
+    total = len(oci_images)
+    print(f'discovered {len(all_nodes)} resources total ({total} OCI images)', file=sys.stderr)
 
     scanned = skipped_cached = skipped_no_sbom = skipped_no_go = failed = 0
+    idx = 0
+    t_start = time.monotonic()
 
-    for node in all_nodes:
+    for node in oci_images:
+        idx += 1
         resource = node.resource
         access = resource.access
-        if not isinstance(access, ocm.OciAccess):
-            continue
-        if resource.type is not ocm.ArtefactType.OCI_IMAGE:
-            continue
+        t0 = time.monotonic()
+        prefix = f'[{idx}/{total}]'
 
         image_ref = om.OciImageReference.to_image_ref(access.imageReference)
         digest_ref = _resolve_single_arch_ref(image_ref, oci_client)
         if digest_ref is None:
             print(
-                f'warning: skipping {resource.name!r} — cannot resolve single-arch ref',
+                f'{prefix} warning: skipping {resource.name!r} — cannot resolve single-arch ref',
                 file=sys.stderr,
             )
             continue
@@ -148,27 +218,31 @@ def main() -> None:
         # Skip cheaply if an inferred CBOM referrer already exists.
         if sgob.has_inferred_cbom(digest_ref, oci_client):
             skipped_cached += 1
-            print(f'skip (cached): {resource.name}', file=sys.stderr)
+            elapsed = time.monotonic() - t0
+            print(f'{prefix} skip (cached): {resource.name}  ({elapsed:.1f}s)', file=sys.stderr)
             continue
 
         # Fetch the existing CycloneDX SBOM — no layer download needed.
         cdx_bytes = sgob.fetch_cdx_sbom(digest_ref, oci_client)
         if cdx_bytes is None:
             skipped_no_sbom += 1
-            print(f'skip (no CycloneDX SBOM): {resource.name}', file=sys.stderr)
+            elapsed = time.monotonic() - t0
+            print(
+                f'{prefix} skip (no CycloneDX SBOM): {resource.name}  ({elapsed:.1f}s)',
+                file=sys.stderr,
+            )
             continue
 
         inference = sgob.infer_from_cdx(cdx_bytes)
         if inference is None:
             skipped_no_go += 1
-            print(f'skip (no Go modules): {resource.name}', file=sys.stderr)
+            elapsed = time.monotonic() - t0
+            print(
+                f'{prefix} skip (no Go modules): {resource.name}  ({elapsed:.1f}s)',
+                file=sys.stderr,
+            )
             continue
 
-        print(
-            f'scanning: {resource.name}  '
-            f'modules={inference["module_count"]}  ref={digest_ref}',
-            file=sys.stderr,
-        )
         inferred_cbom_bytes = sgob.build_inferred_cbom(
             image_ref=digest_ref,
             inference=inference,
@@ -184,14 +258,24 @@ def main() -> None:
                 },
             )
         except Exception as exc:
-            print(f'error: {resource.name}: push failed: {exc}', file=sys.stderr)
+            elapsed = time.monotonic() - t0
+            print(
+                f'{prefix} error: {resource.name}: push failed: {exc}  ({elapsed:.1f}s)',
+                file=sys.stderr,
+            )
             failed += 1
             continue
 
+        elapsed = time.monotonic() - t0
+        done = skipped_cached + skipped_no_sbom + skipped_no_go + scanned + failed + 1
+        elapsed_total = time.monotonic() - t_start
+        eta = (elapsed_total / done) * (total - done) if done < total else 0
         print(
-            f'ok: {resource.name}  '
+            f'{prefix} ok: {resource.name}  '
+            f'modules={inference["module_count"]}  '
             f'algorithms={len(inference["algorithms"])}  '
-            f'protocols={len(inference["protocols"])}',
+            f'protocols={len(inference["protocols"])}  '
+            f'({elapsed:.1f}s, ETA {eta:.0f}s)',
             file=sys.stderr,
         )
         scanned += 1
