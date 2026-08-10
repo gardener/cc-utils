@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 import logging
+import random
 import tempfile
 import threading
 import time
@@ -717,12 +718,14 @@ class Client:
 
         if res.status_code == 429 and remaining_retries > 0:
             retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
+            jitter = random.uniform(0, max(1.0, retry_after_seconds * 0.1))
 
             logger.warning(
-                f'quota was exceeded, will {retry_after_seconds=} ({remaining_retries=})'
+                f'quota was exceeded, will retry after {retry_after_seconds + jitter:.1f}s '
+                f'({remaining_retries=})'
             )
 
-            time.sleep(retry_after_seconds)
+            time.sleep(retry_after_seconds + jitter)
 
             return self._request(
                 url=url,
@@ -733,6 +736,7 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
+                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
 
