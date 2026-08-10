@@ -99,6 +99,25 @@ on:
         type: string
         description: strictly-follow | accept-hotfixes
         default: strictly-follow
+      component-policies:
+        required: false
+        type: string
+        description: |
+          A YAML-formatted list of per-component policies controlling upstream-gating. Each entry
+          requires a `components` selector (list of component names / regexes) and an optional
+          `upstream-component-name` (empty string disables upstream-gating, falling back to
+          greatest-version lookup) and an optional `upstream-update-policy` override.
+
+          Example:
+          ```
+          - components:
+              - acme.org/my-extra-component
+            upstream-component-name: ''
+          - components:
+              - acme.org/my-other-component
+            upstream-component-name: acme.org/other-upstream
+            upstream-update-policy: accept-hotfixes
+          ```
       github-environment:
         required: false
         default: ""
@@ -161,3 +180,4 @@ jobs:
           pr-naming-pattern: ${{ inputs.pr-naming-pattern }}
           upstream-component-name: ${{ inputs.upstream-component-name }}
           upstream-update-policy: ${{ inputs.upstream-update-policy }}
+          component-policies: ${{ inputs.component-policies }}
