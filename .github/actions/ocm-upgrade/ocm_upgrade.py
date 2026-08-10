@@ -84,6 +84,44 @@ class MergePolicyConfig:
 
 
 @dataclasses.dataclass
+class ComponentPolicy:
+    '''
+    Per-component upstream-gating policy. Matched by component name (regex).
+
+    upstream_component_name:
+      - absent (None): inherit global upstream_component_name
+      - empty string '': disable upstream-gating for this component (use find-latest)
+      - non-empty: gate against this specific upstream component
+    upstream_update_policy:
+      - absent (None): inherit global upstream_update_policy
+    '''
+    components: list[str] | str
+    upstream_component_name: str | None = None
+    upstream_update_policy: UpstreamUpdatePolicy | None = None
+
+    def __post_init__(self):
+        if isinstance(self.components, str):
+            self.components = [self.components]
+
+    @staticmethod
+    def from_dict(raw: dict) -> typing.Self:
+        return dacite.from_dict(
+            data_class=ComponentPolicy,
+            data=raw,
+            config=dacite.Config(
+                cast=[enum.Enum],
+                convert_key=lambda key: key.replace('_', '-'),
+            ),
+        )
+
+    def matches(self, component_name: str) -> bool:
+        for component in self.components:
+            if re.fullmatch(component, component_name):
+                return True
+        return False
+
+
+@dataclasses.dataclass
 class UpgradeError:
     upgrade_vector: 'ocm.gardener.UpgradeVector'
     error: Exception
@@ -396,6 +434,7 @@ def create_upgrade_pullrequests(
     upstream_component_name: str | None=None,
     upstream_update_policy: UpstreamUpdatePolicy = UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=True,
+    component_policies: list[ComponentPolicy] | None=None,
 ) -> collections.abc.Iterable[github.pullrequest.UpgradePullRequest]:
     for cref in ocm.gardener.iter_greatest_component_references(
         references=ocm.gardener.iter_component_references(component=component),
@@ -412,19 +451,29 @@ def create_upgrade_pullrequests(
             current_merge_policy = merge_policy
             current_merge_method = merge_method
 
-        if upstream_component_name:
+        effective_upstream_component_name = upstream_component_name
+        effective_upstream_update_policy = upstream_update_policy
+        for component_policy in (component_policies or ()):
+            if component_policy.matches(cref.componentName):
+                if component_policy.upstream_component_name is not None:
+                    effective_upstream_component_name = component_policy.upstream_component_name
+                if component_policy.upstream_update_policy is not None:
+                    effective_upstream_update_policy = component_policy.upstream_update_policy
+                break
+
+        if effective_upstream_component_name:
             upstream_version = version.greatest_version(
-                versions=version_lookup(upstream_component_name),
+                versions=version_lookup(effective_upstream_component_name),
                 ignore_prerelease_versions=ignore_prerelease_versions
             )
 
             if not upstream_version:
-                logger.warning(f'no versions for upstream {upstream_component_name=}')
+                logger.warning(f'no versions for upstream {effective_upstream_component_name=}')
                 continue
 
             upstream_cd: ocm.ComponentDescriptor = component_descriptor_lookup(
                 ocm.ComponentIdentity(
-                    name=upstream_component_name,
+                    name=effective_upstream_component_name,
                     version=upstream_version,
                 )
             )
@@ -436,9 +485,9 @@ def create_upgrade_pullrequests(
                 logger.info(f'upstream has no reference for {cref.componentName}')
                 continue
 
-            if upstream_update_policy  is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
+            if effective_upstream_update_policy is UpstreamUpdatePolicy.STRICTLY_FOLLOW:
                 candidates = (upstream_target_version,)
-            elif upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
+            elif effective_upstream_update_policy is UpstreamUpdatePolicy.ACCEPT_HOTFIXES:
                 cref_versions = version_lookup(cref.componentName)
                 hotfix = version.greatest_version_with_matching_minor(
                     reference_version=cref.version,
@@ -450,7 +499,7 @@ def create_upgrade_pullrequests(
                 else:
                     candidates = (upstream_target_version,)
             else:
-                raise ValueError(f'unknown {upstream_update_policy=}')
+                raise ValueError(f'unknown {effective_upstream_update_policy=}')
 
             for target in candidates:
                 tv = version.parse_to_semver(target)

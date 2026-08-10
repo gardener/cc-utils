@@ -93,6 +93,26 @@ inputs:
       - strictly-follow
       - accept-hotfixes
     default: strictly-follow
+  component-policies:
+    description: |
+      A YAML-formatted list of per-component policies controlling upstream-gating. Each entry
+      requires a `components` selector (list of component names / regexes) and an optional
+      `upstream-component-name` (empty string disables upstream-gating for that component,
+      causing it to fall back to greatest-version lookup) and an optional
+      `upstream-update-policy` override.
+
+      Example:
+      ```
+      - components:
+          - acme.org/my-extra-component
+        upstream-component-name: ''
+      - components:
+          - acme.org/my-other-component
+        upstream-component-name: acme.org/other-upstream
+        upstream-update-policy: accept-hotfixes
+      ```
+    type: string
+    required: false
   pr-naming-pattern:
     description: |
       Pattern to use for naming the created pull requests. Allowed values are:
@@ -209,6 +229,14 @@ runs:
           for merge_policy_config_raw in merge_policy_configs_raw
         ]
 
+        component_policies_raw = yaml.safe_load('''\
+        ${{ inputs.component-policies }}
+        ''') or []
+        component_policies = [
+          ocm_upgrade.ComponentPolicy.from_dict(component_policy_raw)
+          for component_policy_raw in component_policies_raw
+        ]
+
         with open('/tmp/github-token') as f:
           github_token = f.read().strip()
 
@@ -252,7 +280,8 @@ runs:
             upstream_component_name=upstream_component,
             upstream_update_policy=upstream_update_policy,
             ignore_prerelease_versions=True,
-            pr_naming_pattern='${{ inputs.pr-naming-pattern }}'
+            pr_naming_pattern='${{ inputs.pr-naming-pattern }}',
+            component_policies=component_policies,
           ):
           if isinstance(result, ocm_upgrade.UpgradeError):
             upgrade_errors.append(result)
