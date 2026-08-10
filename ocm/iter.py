@@ -114,7 +114,7 @@ def iter(
     '''
     returns a generator yielding the transitive closure of nodes accessible from the given component.
 
-    See `cnudie.retrieve` for retrieving components/component descriptors.
+    See `ocm.retrieve` for retrieving components/component descriptors.
 
     @param component:    root component for iteration
     @param lookup:       used to lookup referenced components descriptors
