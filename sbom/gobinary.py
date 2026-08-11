@@ -165,11 +165,6 @@ _CRYPTO_MODULE_RULES = [
      ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256', 'HMAC-SHA256'],
      ['TLS/1.2', 'TLS/1.3'],
      'alibabacloud-go: Alibaba Cloud service clients (TLS)'),
-
-    ('github.com/gardener/egress-filter-refresher',
-     ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256'],
-     ['TLS/1.2', 'TLS/1.3'],
-     'egress-filter-refresher: HTTPS to Gardener/Kubernetes API'),
 ]
 
 # Deduplicated rule index: prefix → (alg_set, proto_set, first_description)
