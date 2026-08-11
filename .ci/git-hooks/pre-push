@@ -3,5 +3,6 @@
 set -e
 
 repo_dir=$(readlink -f $(dirname $0)/../..)
+work_dir=$(git rev-parse --show-toplevel)
 
-${repo_dir}/.ci/lint
+${repo_dir}/.ci/lint ${work_dir}
