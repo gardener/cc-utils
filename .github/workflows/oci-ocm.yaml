@@ -718,6 +718,18 @@ jobs:
               f.write(cbom_bytes)
 
       - name: 'push CBOM referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: cbom-push
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import os
+
+          import oci.auth
+          import oci.client
+          import oci.model
+          import sbom.cbom
 
           oci_client = oci.client.Client(
               credentials_lookup=oci.auth.docker_credentials_lookup(),
