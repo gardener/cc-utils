@@ -52,11 +52,6 @@ runs:
     # cc-utils' own pipelines always reference this action from master, even
     # when running on non-master branches.
     # removed on pinned branches (github.com path)
-    - uses: actions/checkout@v6
-      if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' && github.server_url == 'https://github.com' }}
-      with:
-        repository: gardener/cc-utils
-        path: cc-utils
     - name: install-prerequisites-on-ghe
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       shell: bash
@@ -66,29 +61,3 @@ runs:
         # import runner's trust-bundle (might differ from python's default bundle)
         ln -sf /etc/ssl/certs/ca-certificates.crt "$(python -m certifi)"
     # removed on pinned branches (GHE path)
-    - name: checkout-fallback
-      if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' && github.server_url != 'https://github.com' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        # fallback if running on GHE
-        git clone https://github.com/gardener/cc-utils
-    # removed on pinned branches
-    - name: install-gardener-gha-libs
-      if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        tmpdir="$(mktemp -d)"
-        mv cc-utils "${tmpdir}"
-        cc_utils="${tmpdir}/cc-utils"
-        pip install -q setuptools
-        version=$(CC_UTILS_ROOT="${cc_utils}" python3 "${{ github.action_path }}/normalise_version.py")
-        cd "${cc_utils}"
-        for setup_file in setup.gha.py setup.oci.py setup.ocm.py; do
-          python3 "${cc_utils}/${setup_file}" bdist_wheel --dist-dir "${cc_utils}/dist"
-        done
-        pip install --find-links "${cc_utils}/dist" \
-          "gardener-oci==${version}" \
-          "gardener-ocm==${version}" \
-          "gardener-gha-libs==${version}"
