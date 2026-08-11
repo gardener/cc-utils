@@ -1,0 +1,188 @@
+# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import os
+import sys
+
+# test/__init__.py already adds repo_root to sys.path;
+# add the action directory so cleanup_branches is importable
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..', '..', '..', '.github', 'actions',
+                     'cleanup-release-branches')
+    ),
+)
+
+import collections.abc
+import dataclasses
+import pytest
+
+import ocm.branch_info
+import version
+
+import cleanup_branches
+
+
+@dataclasses.dataclass
+class DummyBranch:
+    name: str
+
+
+@dataclasses.dataclass
+class DummyRelease:
+    name: str
+    draft: bool = False
+
+
+@pytest.fixture
+def branches() -> list[DummyBranch]:
+    return [
+        DummyBranch('release-v1.0'),
+        DummyBranch('release-v1.1'),
+        DummyBranch('release-v2.0'),
+        DummyBranch('release-v2.0.1'),
+        DummyBranch('feature-x'),
+    ]
+
+
+@pytest.fixture
+def releases() -> list[DummyRelease]:
+    return [
+        DummyRelease('v1.0'),
+        DummyRelease('v1.1'),
+        DummyRelease('v2.0-draft', draft=True),
+        DummyRelease('v2.0.1-draft', draft=True),
+        DummyRelease('v2.0.2-draft', draft=True),
+        DummyRelease('v2.0.3-draft'),
+        DummyRelease('feature-x'),
+        DummyRelease('feature-x', draft=True),
+    ]
+
+
+def get_branch_info(
+    significant_part: ocm.branch_info.VersionParts,
+    release_branch_template: str='release-v$major.$minor',
+) -> ocm.branch_info.BranchInfo:
+    return ocm.branch_info.BranchInfo(
+        release_branch_template=release_branch_template,
+        branch_policy=ocm.branch_info.BranchPolicy(
+            significant_part=significant_part,
+            supported_versions_count=2,
+        ),
+    )
+
+
+def test_stale_major_branches(
+    branches: collections.abc.Iterable[DummyBranch],
+):
+    branch_info = get_branch_info(significant_part=ocm.branch_info.VersionParts.MAJOR)
+
+    empty_stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('v1.1.0'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert not empty_stale_branches
+
+    stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('3.1.0'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert 'release-v1.0' in stale_branches
+    assert 'release-v1.1' in stale_branches
+    assert len(stale_branches) == 2
+
+
+def test_stale_minor_branches(
+    branches: collections.abc.Iterable[DummyBranch],
+):
+    branch_info = get_branch_info(significant_part=ocm.branch_info.VersionParts.MINOR)
+
+    empty_stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('v2.1'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert not empty_stale_branches
+
+    stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('v2.2'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert 'release-v2.0' in stale_branches
+    assert len(stale_branches) == 1
+
+
+def test_stale_patch_branches(
+    branches: collections.abc.Iterable[DummyBranch],
+):
+    branch_info = get_branch_info(significant_part=ocm.branch_info.VersionParts.PATCH)
+
+    empty_stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('v1.1.0'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert not empty_stale_branches
+
+    branch_info = get_branch_info(
+        significant_part=ocm.branch_info.VersionParts.PATCH,
+        release_branch_template='release-v$major.$minor.$patch',
+    )
+
+    empty_stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('v2.0.1'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert not empty_stale_branches
+
+    stale_branches = tuple(cleanup_branches.iter_stale_release_branches(
+        version_semver=version.parse_to_semver('v2.0.3'),
+        branch_info=branch_info,
+        branches=branches,
+    ))
+
+    assert 'release-v2.0.1' in stale_branches
+    assert len(stale_branches) == 1
+
+
+def test_stale_draft_releases(
+    releases: collections.abc.Iterable[DummyRelease],
+):
+    branch_info = get_branch_info(significant_part=ocm.branch_info.VersionParts.MINOR)
+
+    empty_stale_draft_releases = tuple(
+        stale_draft_release.name
+        for stale_draft_release in cleanup_branches.iter_stale_draft_releases(
+            branch='release-v1.0',
+            branch_info=branch_info,
+            releases=releases,
+        )
+    )
+
+    assert not empty_stale_draft_releases
+
+    stale_draft_releases = tuple(
+        stale_draft_release.name
+        for stale_draft_release in cleanup_branches.iter_stale_draft_releases(
+            branch='release-v2.0',
+            branch_info=branch_info,
+            releases=releases,
+        )
+    )
+
+    assert len(stale_draft_releases) == 3
+    assert 'v2.0-draft' in stale_draft_releases
+    assert 'v2.0.1-draft' in stale_draft_releases
+    assert 'v2.0.2-draft' in stale_draft_releases
