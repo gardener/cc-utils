@@ -358,6 +358,45 @@ def client_with_dockerauth(
     )
 
 
+class _PerHostThrottle:
+    '''
+    Adaptive per-host concurrency gate (AIMD).
+
+    Starts at `initial_limit` concurrent in-flight requests.  On each 429 the
+    limit is halved (minimum 1).  On each non-429/non-5xx success it grows by
+    one, up to `initial_limit`.  The slot is released *before* any retry sleep,
+    so waiting threads make forward progress while the caller backs off.
+    '''
+
+    def __init__(self, initial_limit: int):
+        self._initial_limit = initial_limit
+        self._limit = initial_limit
+        self._active = 0
+        self._cond = threading.Condition()
+
+    def __enter__(self):
+        with self._cond:
+            while self._active >= self._limit:
+                self._cond.wait()
+            self._active += 1
+        return self
+
+    def __exit__(self, *_):
+        with self._cond:
+            self._active -= 1
+            self._cond.notify_all()
+
+    def on_429(self):
+        with self._cond:
+            self._limit = max(1, self._limit // 2)
+
+    def on_success(self):
+        with self._cond:
+            if self._limit < self._initial_limit:
+                self._limit += 1
+                self._cond.notify()
+
+
 class Client:
     def __init__(
         self,
@@ -370,6 +409,7 @@ class Client:
         tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
         max_retries: int=5,
         default_backoff_base_seconds: float=1.0,
+        max_concurrent_per_host: int=8,
     ):
         '''
         :param Callable credentials_lookup:
@@ -388,6 +428,11 @@ class Client:
             how many times to retry a failed request (connection errors, 429, 5xx)
         :param float default_backoff_base_seconds:
             initial sleep before first retry; doubles on each subsequent attempt
+        :param int max_concurrent_per_host:
+            initial maximum number of simultaneous in-flight requests to any single registry host.
+            The limit is adaptive (AIMD): halved on each 429 response (minimum 1), incremented by
+            one on each successful non-429/non-5xx response, up to this initial value.  Prevents
+            burst concurrency from triggering per-client rate limits on registries such as Keppel.
         '''
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
@@ -401,10 +446,25 @@ class Client:
         self.tag_postprocessing_callback = tag_postprocessing_callback
         self.max_retries = max_retries
         self.default_backoff_base_seconds = default_backoff_base_seconds
+        self._max_concurrent_per_host = max_concurrent_per_host
+        self._host_throttles: dict[str, '_PerHostThrottle'] = {}
+        self._host_throttles_lock = threading.Lock()
 
         if timeout_seconds:
             timeout_seconds = int(timeout_seconds)
         self.timeout_seconds = timeout_seconds
+
+    def _throttle_for(self, host: str) -> '_PerHostThrottle':
+        try:
+            return self._host_throttles[host]
+        except KeyError:
+            pass
+        with self._host_throttles_lock:
+            if host not in self._host_throttles:
+                self._host_throttles[host] = _PerHostThrottle(
+                    initial_limit=self._max_concurrent_per_host,
+                )
+            return self._host_throttles[host]
 
     def _authenticate(
         self,
@@ -679,21 +739,28 @@ class Client:
         except KeyError:
             timeout = (31, 121)
 
-        try:
-            res = self.session.request(
-                method=method,
-                url=url,
-                auth=auth,
-                headers=headers,
-                timeout=timeout,
-                **kwargs,
-            )
-        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+        throttle = self._throttle_for(urllib.parse.urlparse(url).netloc)
+        conn_exc = None
+        with throttle:
+            try:
+                res = self.session.request(
+                    method=method,
+                    url=url,
+                    auth=auth,
+                    headers=headers,
+                    timeout=timeout,
+                    **kwargs,
+                )
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                conn_exc = e
+
+        if conn_exc is not None:
             if remaining_retries == 0:
-                raise
+                raise conn_exc
 
             logger.warning(
-                f'caught {type(e).__name__}, going to retry... ({remaining_retries=}); {e}'
+                f'caught {type(conn_exc).__name__}, going to retry... '
+                f'({remaining_retries=}); {conn_exc}'
             )
             if sleep_before_retry_seconds > 0:
                 time.sleep(sleep_before_retry_seconds)
@@ -719,6 +786,8 @@ class Client:
         if res.status_code == 429 and remaining_retries > 0:
             retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
             jitter = random.uniform(0, max(1.0, retry_after_seconds * 0.1))
+
+            throttle.on_429()
 
             logger.warning(
                 f'quota was exceeded, will retry after {retry_after_seconds + jitter:.1f}s '
@@ -762,6 +831,8 @@ class Client:
                 sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
                 **kwargs,
             )
+
+        throttle.on_success()
 
         if raise_for_status:
             if res.status_code != 404 and not res.ok:
