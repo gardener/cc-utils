@@ -29,7 +29,9 @@ import oci.model as om
 import ocm
 import sbom.cbom as scbom
 import sbom.cbomenrich as scbe
+import sbom.elfcrypto as selfc
 import sbom.gobinary as sgob
+import sbom.nodecrypto as snodec
 import sbom.oci as soci
 import sbom.s3 as ss3
 
@@ -360,6 +362,58 @@ def scan_image(
             inference['module_count'],
             len(inference['algorithms']),
             len(inference['protocols']),
+        )
+
+    # ELF symbol inference — detects crypto in C/C++ images (envoy, fluent-bit, etc.)
+    # that cbomkit-theia only covers as CA-bundle noise.
+    elf_inference = selfc.infer_from_elf(
+        image_reference=str(image_ref),
+        oci_client=oci_client,
+    )
+    if elf_inference:
+        elf_cbom_bytes = selfc.build_inferred_cbom(
+            image_ref=image_ref,
+            inference=elf_inference,
+        )
+        scbom.push_cbom_referrer(
+            cbom_bytes=elf_cbom_bytes,
+            image_reference=image_ref,
+            oci_client=oci_client,
+            tool_version=selfc.TOOL_NAME,
+            extra_annotations={selfc.ANALYSIS_METHOD_ANNOTATION: selfc.ANALYSIS_METHOD_VALUE},
+        )
+        logger.info(
+            '%s: pushed elf-inferred CBOM (%d binaries → %d algorithms, %d protocols%s)',
+            image_ref,
+            elf_inference['binary_count'],
+            len(elf_inference['algorithms']),
+            len(elf_inference['protocols']),
+            ', BoringSSL' if elf_inference.get('boringssl') else '',
+        )
+
+    # Node.js inference — detects crypto in Node.js images (gardener-dashboard, etc.)
+    node_inference = snodec.infer_from_node(
+        image_reference=str(image_ref),
+        oci_client=oci_client,
+    )
+    if node_inference:
+        node_cbom_bytes = snodec.build_inferred_cbom(
+            image_ref=image_ref,
+            inference=node_inference,
+        )
+        scbom.push_cbom_referrer(
+            cbom_bytes=node_cbom_bytes,
+            image_reference=image_ref,
+            oci_client=oci_client,
+            tool_version=snodec.TOOL_NAME,
+            extra_annotations={snodec.ANALYSIS_METHOD_ANNOTATION: snodec.ANALYSIS_METHOD_VALUE},
+        )
+        logger.info(
+            '%s: pushed node-inferred CBOM (%d packages → %d algorithms, %d protocols)',
+            image_ref,
+            node_inference['package_count'],
+            len(node_inference['algorithms']),
+            len(node_inference['protocols']),
         )
 
     return (
