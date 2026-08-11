@@ -698,19 +698,26 @@ jobs:
           blobs-directory: blobs.d
           ctx: ${{ inputs.ctx }}
 
-      - name: 'push CBOM referrer / ${{ matrix.args.platform-name }}'
+      - name: 'enrich CBOM with key sizes / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        id: cbom-push
         shell: python
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          import os
+          import sbom.cbomenrich as scbe
 
-          import oci.auth
-          import oci.client
-          import oci.model
-          import sbom.cbom
+          with open('cbom.cdx.json', 'rb') as f:
+              cbom_bytes = f.read()
+
+          cbom_bytes = scbe.enrich(
+              cbom_bytes,
+              image_reference='${{ matrix.args.image-reference }}',
+          )
+
+          with open('cbom.cdx.json', 'wb') as f:
+              f.write(cbom_bytes)
+
+      - name: 'push CBOM referrer / ${{ matrix.args.platform-name }}'
 
           oci_client = oci.client.Client(
               credentials_lookup=oci.auth.docker_credentials_lookup(),

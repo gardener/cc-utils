@@ -28,6 +28,7 @@ import oci.client as oc
 import oci.model as om
 import ocm
 import sbom.cbom as scbom
+import sbom.cbomenrich as scbe
 import sbom.gobinary as sgob
 import sbom.oci as soci
 import sbom.s3 as ss3
@@ -317,6 +318,8 @@ def scan_image(
         )
         with open(cbom_path, 'rb') as f:
             cbom_bytes = f.read()
+
+        cbom_bytes = scbe.enrich(cbom_bytes, image_reference=str(image_ref))
 
     resolved_tool_ver = tool_ver or _syft_version_from_spdx(spdx_bytes)
     cbom_tool_ver = _cbomkit_theia_version()
