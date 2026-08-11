@@ -360,12 +360,13 @@ def client_with_dockerauth(
 
 class _PerHostThrottle:
     '''
-    Adaptive per-host concurrency gate (AIMD).
+    Adaptive per-host concurrency gate (AIMD) with rate-limit awareness.
 
     Starts at `initial_limit` concurrent in-flight requests.  On each 429 the
-    limit is halved (minimum 1).  On each non-429/non-5xx success it grows by
-    one, up to `initial_limit`.  The slot is released *before* any retry sleep,
-    so waiting threads make forward progress while the caller backs off.
+    limit is halved (minimum 1) AND all new slot acquisitions are blocked until
+    the `Retry-After` window expires — preventing other threads from hammering
+    the host while one thread backs off.  On each success the limit grows by
+    one, up to `initial_limit`.
     '''
 
     def __init__(self, host: str, initial_limit: int):
@@ -373,12 +374,20 @@ class _PerHostThrottle:
         self._initial_limit = initial_limit
         self._limit = initial_limit
         self._active = 0
+        self._resume_at: float = 0.0  # time.monotonic() timestamp; 0 = no pause
         self._cond = threading.Condition()
 
     def __enter__(self):
         with self._cond:
-            while self._active >= self._limit:
-                self._cond.wait()
+            while True:
+                now = time.monotonic()
+                pause_remaining = self._resume_at - now
+                if self._active < self._limit and pause_remaining <= 0:
+                    break
+                if pause_remaining > 0:
+                    self._cond.wait(timeout=pause_remaining)
+                else:
+                    self._cond.wait()
             self._active += 1
         return self
 
@@ -387,13 +396,16 @@ class _PerHostThrottle:
             self._active -= 1
             self._cond.notify_all()
 
-    def on_429(self):
+    def on_429(self, retry_after: float = 1.0):
         with self._cond:
             prev = self._limit
             self._limit = max(1, self._limit // 2)
+            self._resume_at = max(self._resume_at, time.monotonic() + retry_after)
+            self._cond.notify_all()
             logger.warning(
                 f'per-host concurrency limit for {self._host} '
-                f'reduced {prev} -> {self._limit} after 429'
+                f'reduced {prev} -> {self._limit} after 429; '
+                f'blocking new requests for {retry_after:.1f}s'
             )
 
     def on_success(self):
@@ -798,7 +810,7 @@ class Client:
             retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
             jitter = random.uniform(0, max(1.0, retry_after_seconds * 0.1))
 
-            throttle.on_429()
+            throttle.on_429(retry_after=retry_after_seconds)
 
             logger.warning(
                 f'quota was exceeded, will retry after {retry_after_seconds + jitter:.1f}s '

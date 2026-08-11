@@ -1,5 +1,6 @@
 import base64
 import threading
+import time
 import unittest.mock
 
 import requests
@@ -70,6 +71,26 @@ def test_per_host_throttle_blocks_at_limit():
     assert results == ['acquired'], 'second thread should acquire after first releases'
 
 
+def test_per_host_throttle_resume_at_blocks():
+    '''on_429 with retry_after > 0 prevents new __enter__ calls until the window elapses.'''
+    t = co._PerHostThrottle(host='test.example.com', initial_limit=4)
+    t.on_429(retry_after=0.15)
+
+    acquired_at = []
+
+    def acquire():
+        with t:
+            acquired_at.append(time.monotonic())
+
+    before = time.monotonic()
+    thread = threading.Thread(target=acquire)
+    thread.start()
+    thread.join(timeout=2.0)
+
+    assert len(acquired_at) == 1
+    assert acquired_at[0] - before >= 0.10, 'thread should have been blocked for at least ~0.1s'
+
+
 def _mock_response(status_code, headers=None):
     r = unittest.mock.Mock(spec=requests.Response)
     r.status_code = status_code
@@ -95,7 +116,9 @@ def test_client_calls_throttle_on_429():
     def fake_request(*args, **kwargs):
         nonlocal call_count
         call_count += 1
-        return _mock_response(429) if call_count == 1 else _mock_response(200)
+        if call_count == 1:
+            return _mock_response(429, headers={'Retry-After': '0'})
+        return _mock_response(200)
 
     throttle = co._PerHostThrottle(host='registry.example.com', initial_limit=4)
     client._throttle_for = lambda host: throttle
