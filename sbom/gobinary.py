@@ -140,6 +140,31 @@ _CRYPTO_MODULE_RULES = [
       'ChaCha20-Poly1305', 'SHA-256', 'HMAC-SHA256'],
      ['SSH/2'],
      'golang.org/x/net/ssh: SSH protocol'),
+
+    ('github.com/aws/aws-sdk-go-v2',
+     ['RSA', 'ECDSA', 'AES-128-GCM', 'AES-256-GCM', 'SHA-256', 'SHA-384', 'HMAC-SHA256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'AWS SDK v2: HTTPS + SigV4 signing'),
+
+    ('github.com/aws/aws-sdk-go',
+     ['RSA', 'ECDSA', 'AES-128-GCM', 'AES-256-GCM', 'SHA-256', 'SHA-384', 'HMAC-SHA256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'AWS SDK v1: HTTPS + SigV4 signing'),
+
+    ('github.com/aws/smithy-go',
+     ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256', 'HMAC-SHA256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'smithy-go: AWS service client transport (TLS)'),
+
+    ('github.com/aliyun/alibaba-cloud-sdk-go',
+     ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256', 'HMAC-SHA256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'Alibaba Cloud SDK: HTTPS + request signing'),
+
+    ('github.com/alibabacloud-go',
+     ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256', 'HMAC-SHA256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'alibabacloud-go: Alibaba Cloud service clients (TLS)'),
 ]
 
 # Deduplicated rule index: prefix → (alg_set, proto_set, first_description)

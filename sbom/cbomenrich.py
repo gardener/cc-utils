@@ -145,6 +145,78 @@ def _propagate_key_sizes(components):
     return patched
 
 
+def _enrich_orphan_algorithms(components):
+    '''
+    Fill parameterSetIdentifier for algorithm components not reachable via related-crypto-material.
+
+    cbomkit-theia creates per-cert-file summary algorithm components (one RSA entry, one ECDSA
+    entry per file) in addition to per-cert algorithm components linked by the key-material graph.
+    The summary components share the same evidence locations as the per-cert ones but have no
+    algorithmRef pointing to them, so _propagate_key_sizes cannot resolve them.
+
+    After _propagate_key_sizes has run, the per-cert algorithm components at each location
+    already carry parameterSetIdentifier.  Collect those resolved values and propagate to any
+    orphan at the same location with the same algorithm family (using the minimum — most
+    conservative — when multiple key sizes are present).
+
+    Returns the number of algorithm components patched.
+    '''
+    from collections import defaultdict
+
+    # location → algo_name → set of int sizes (from already-resolved algo components)
+    resolved_by_loc = defaultdict(lambda: defaultdict(set))
+    for comp in components:
+        cp = comp.get('cryptoProperties') or {}
+        if cp.get('assetType') != 'algorithm':
+            continue
+        ap = cp.get('algorithmProperties') or {}
+        param_id = ap.get('parameterSetIdentifier')
+        if not param_id:
+            continue
+        try:
+            size = int(param_id)
+        except (ValueError, TypeError):
+            continue
+        name = comp.get('name', '')
+        for occ in (comp.get('evidence') or {}).get('occurrences') or []:
+            loc = occ.get('location', '')
+            if loc:
+                resolved_by_loc[loc][name].add(size)
+
+    if not resolved_by_loc:
+        return 0
+
+    patched = 0
+    for comp in components:
+        cp = comp.get('cryptoProperties') or {}
+        if cp.get('assetType') != 'algorithm':
+            continue
+        ap = cp.get('algorithmProperties') or {}
+        if ap.get('parameterSetIdentifier'):
+            continue
+        name = comp.get('name', '')
+        for occ in (comp.get('evidence') or {}).get('occurrences') or []:
+            loc = occ.get('location', '')
+            if not loc:
+                continue
+            loc_sizes = resolved_by_loc.get(loc)
+            if not loc_sizes:
+                continue
+            # Direct name match first, then substring (RSA ∈ SHA256withRSA, etc.)
+            sizes = loc_sizes.get(name)
+            if not sizes:
+                for rname, rset in loc_sizes.items():
+                    if name in rname or rname in name:
+                        sizes = rset
+                        break
+            if not sizes:
+                continue
+            ap['parameterSetIdentifier'] = str(min(sizes))
+            patched += 1
+            break  # one location match per component is sufficient
+    return patched
+
+
 def _enrich_apk_keys(components, file_reader):
     '''
     Inject algorithm + related-crypto-material components for APK signing keys.
@@ -240,6 +312,13 @@ def enrich(cbom_bytes, image_reference=None):
 
     patched = _propagate_key_sizes(components)
     logger.info('CBOM enrichment: set parameterSetIdentifier on %d algorithm(s)', patched)
+
+    orphaned = _enrich_orphan_algorithms(components)
+    if orphaned:
+        logger.info(
+            'CBOM enrichment: resolved %d orphan algorithm component(s) from siblings',
+            orphaned,
+        )
 
     if image_reference:
         file_reader, cleanup = _docker_file_reader(image_reference)
