@@ -139,6 +139,11 @@ def main() -> None:
         dest='ocm_repositories',
         metavar='URL',
     )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Re-push even when an inferred CBOM referrer already exists.',
+    )
     args = parser.parse_args()
 
     if ':' not in args.ocm_component:
@@ -216,7 +221,7 @@ def main() -> None:
             continue
 
         # Skip cheaply if an inferred CBOM referrer already exists.
-        if sgob.has_inferred_cbom(digest_ref, oci_client):
+        if not args.force and sgob.has_inferred_cbom(digest_ref, oci_client):
             skipped_cached += 1
             elapsed = time.monotonic() - t0
             print(f'{prefix} skip (cached): {resource.name}  ({elapsed:.1f}s)', file=sys.stderr)
