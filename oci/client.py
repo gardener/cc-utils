@@ -368,7 +368,8 @@ class _PerHostThrottle:
     so waiting threads make forward progress while the caller backs off.
     '''
 
-    def __init__(self, initial_limit: int):
+    def __init__(self, host: str, initial_limit: int):
+        self._host = host
         self._initial_limit = initial_limit
         self._limit = initial_limit
         self._active = 0
@@ -388,13 +389,22 @@ class _PerHostThrottle:
 
     def on_429(self):
         with self._cond:
+            prev = self._limit
             self._limit = max(1, self._limit // 2)
+            logger.warning(
+                f'per-host concurrency limit for {self._host} '
+                f'reduced {prev} -> {self._limit} after 429'
+            )
 
     def on_success(self):
         with self._cond:
             if self._limit < self._initial_limit:
                 self._limit += 1
                 self._cond.notify()
+                logger.debug(
+                    f'per-host concurrency limit for {self._host} '
+                    f'recovered to {self._limit}/{self._initial_limit}'
+                )
 
 
 class Client:
@@ -462,6 +472,7 @@ class Client:
         with self._host_throttles_lock:
             if host not in self._host_throttles:
                 self._host_throttles[host] = _PerHostThrottle(
+                    host=host,
                     initial_limit=self._max_concurrent_per_host,
                 )
             return self._host_throttles[host]

@@ -21,7 +21,7 @@ def test_append_b64_padding_if_missing():
 
 
 def test_per_host_throttle_aimd():
-    t = co._PerHostThrottle(initial_limit=8)
+    t = co._PerHostThrottle(host='test.example.com', initial_limit=8)
     assert t._limit == 8
 
     t.on_429()
@@ -50,7 +50,7 @@ def test_per_host_throttle_aimd():
 
 
 def test_per_host_throttle_blocks_at_limit():
-    t = co._PerHostThrottle(initial_limit=1)
+    t = co._PerHostThrottle(host='test.example.com', initial_limit=1)
 
     results = []
 
@@ -97,7 +97,7 @@ def test_client_calls_throttle_on_429():
         call_count += 1
         return _mock_response(429) if call_count == 1 else _mock_response(200)
 
-    throttle = co._PerHostThrottle(initial_limit=4)
+    throttle = co._PerHostThrottle(host='registry.example.com', initial_limit=4)
     client._throttle_for = lambda host: throttle
 
     with unittest.mock.patch.object(client.session, 'request', side_effect=fake_request):
