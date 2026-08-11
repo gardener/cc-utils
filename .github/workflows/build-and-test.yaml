@@ -69,33 +69,23 @@ jobs:
           v = version.parse_to_semver('1.2.3')
           assert v.major == 1 and v.minor == 2 and v.patch == 3, v
 
-  setuptools-version:
-    runs-on: ubuntu-latest
-    permissions: {}
-    needs:
-      - prepare
-    outputs:
-      setuptools-version: ${{ steps.version-setuptools.outputs.setuptools-version }}
-    steps:
-      - name: version-setuptools
-        id: version-setuptools
-        run: |
-          set -eu
-          version=${{ needs.prepare.outputs.version }}
-          if [[ "${version}" == *-* ]]; then
-            # version was non-final - add suffix compliant w/ pep-440
-            version="${version%%-*}-dev0"
-          fi
-          echo "setuptools-version=${version}" >> ${GITHUB_OUTPUT}
-
   package:
     runs-on: ubuntu-latest
     environment: build
     needs:
-      - setuptools-version
+      - prepare
     permissions:
       contents: read
     steps:
+      - name: compute-setuptools-version
+        id: version
+        run: |
+          set -eu
+          version=${{ needs.prepare.outputs.version }}
+          if [[ "${version}" == *-* ]]; then
+            version="${version%%-*}-dev0"
+          fi
+          echo "setuptools-version=${version}" >> "${GITHUB_OUTPUT}"
       - name: Install setuptools
         run: |
           pip3 install --root-user-action ignore \
@@ -106,7 +96,7 @@ jobs:
         id: package
         run: |
           set -eu
-          version=${{ needs.setuptools-version.outputs.setuptools-version }}
+          version=${{ steps.version.outputs.setuptools-version }}
           echo "version: ${version}"
           echo "${version}" | .ci/write-version
           pkg_dir=dist
