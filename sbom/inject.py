@@ -17,11 +17,14 @@ Scan admission mirrors a resource-aware approach:
 Minimum headroom: 2 GiB disk, 1 GiB memory.  At least one scan is always admitted.
 '''
 import concurrent.futures
+import gzip
 import hashlib
+import io
 import json
 import logging
 import os
 import subprocess
+import tarfile
 import tempfile
 
 import oci.client as oc
@@ -271,6 +274,83 @@ def _syft_docker_config_dir(tmpdir: str) -> str:
     return cfg_dir
 
 
+def _oci_file_reader(image_ref, oci_client):
+    '''
+    Return (read_file, cleanup) using OCI layer extraction.
+
+    Fetches image layers on demand and searches them for the requested path.
+    Layers are scanned top-to-bottom (most recent overlay first); results are
+    cached per layer so each blob is downloaded at most once.
+
+    read_file(path: str) -> bytes | None
+    cleanup() -> None  — no-op
+    '''
+    try:
+        ref = om.OciImageReference.to_image_ref(image_ref)
+        repo_ref = ref.ref_without_tag
+        manifest = oci_client.manifest(image_ref)
+        if isinstance(manifest, om.OciImageManifestList):
+            entries = [
+                e for e in manifest.manifests
+                if e.platform and e.platform.os == 'linux'
+                and e.platform.architecture == 'amd64'
+            ]
+            entry = entries[0] if entries else (
+                manifest.manifests[0] if manifest.manifests else None
+            )
+            if entry is None:
+                return None, lambda: None
+            manifest = oci_client.manifest(f'{repo_ref}@{entry.digest}')
+        layers = list(reversed(manifest.layers))
+    except Exception:
+        logger.debug('CBOM enrichment: failed to fetch manifest for OCI file reader')
+        return None, lambda: None
+
+    layer_cache = {}  # digest -> bytes | None  (decompressed tar content)
+
+    def _load_layer(layer):
+        digest = layer.digest
+        if digest in layer_cache:
+            return layer_cache[digest]
+        try:
+            resp = oci_client.blob(
+                image_reference=repo_ref,
+                digest=digest,
+                stream=False,
+            )
+            if resp is None:
+                layer_cache[digest] = None
+                return None
+            raw = resp.content
+            # detect gzip by magic bytes; also covers Docker manifest media types
+            if raw[:2] == b'\x1f\x8b':
+                data = gzip.decompress(raw)
+            else:
+                data = raw
+            layer_cache[digest] = data
+        except Exception:
+            layer_cache[digest] = None
+        return layer_cache[digest]
+
+    def read_file(path):
+        norm = path.lstrip('/')
+        for layer in layers:
+            data = _load_layer(layer)
+            if data is None:
+                continue
+            try:
+                with tarfile.open(fileobj=io.BytesIO(data)) as tf:
+                    for member in tf.getmembers():
+                        if member.name.lstrip('./') == norm and member.isfile():
+                            fobj = tf.extractfile(member)
+                            return fobj.read() if fobj else None
+            except Exception:  # nosec B112
+                continue
+        return None
+
+    return read_file, lambda: None
+
+
 def scan_image(
     image_ref: str | om.OciImageReference,
     oci_client: oc.Client,
@@ -319,7 +399,11 @@ def scan_image(
         with open(cbom_path, 'rb') as f:
             cbom_bytes = f.read()
 
-        cbom_bytes = scbe.enrich(cbom_bytes, image_reference=str(image_ref))
+        cbom_bytes = scbe.enrich(
+            cbom_bytes,
+            image_reference=str(image_ref),
+            file_reader=_oci_file_reader(image_ref, oci_client)[0],
+        )
 
     resolved_tool_ver = tool_ver or _syft_version_from_spdx(spdx_bytes)
     cbom_tool_ver = _cbomkit_theia_version()

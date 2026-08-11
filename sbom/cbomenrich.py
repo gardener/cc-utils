@@ -290,15 +290,19 @@ def _enrich_apk_keys(components, file_reader):
     return new_comps
 
 
-def enrich(cbom_bytes, image_reference=None):
+def enrich(cbom_bytes, image_reference=None, file_reader=None):
     '''
     Return enriched CBOM bytes.
 
     Enrichment applied:
     1. Propagate key sizes from related-crypto-material components to their referenced
        algorithm components' parameterSetIdentifier (works without image access).
-    2. If image_reference is given and Docker is available, inject RSA algorithm and
-       key-material components for APK signing keys (.rsa.pub files).
+    2. If image_reference is given, inject RSA algorithm and key-material components for
+       APK signing keys (.rsa.pub files) — using file_reader if provided, otherwise Docker
+       if available.
+
+    file_reader, if given, must be a callable: path: str -> bytes | None.
+    When provided, Docker is not attempted.
     '''
     doc = json.loads(cbom_bytes)
     components = doc.get('components') or []
@@ -321,10 +325,14 @@ def enrich(cbom_bytes, image_reference=None):
         )
 
     if image_reference:
-        file_reader, cleanup = _docker_file_reader(image_reference)
+        if file_reader is not None:
+            active_reader = file_reader
+            cleanup = lambda: None
+        else:
+            active_reader, cleanup = _docker_file_reader(image_reference)
         try:
-            if file_reader:
-                new_comps = _enrich_apk_keys(components, file_reader)
+            if active_reader:
+                new_comps = _enrich_apk_keys(components, active_reader)
                 if new_comps:
                     components.extend(new_comps)
                     doc['components'] = components
@@ -333,7 +341,9 @@ def enrich(cbom_bytes, image_reference=None):
                         len(new_comps),
                     )
             else:
-                logger.debug('CBOM enrichment: Docker unavailable, skipping APK key enrichment')
+                logger.debug(
+                    'CBOM enrichment: no file reader available, skipping APK key enrichment',
+                )
         finally:
             cleanup()
 
