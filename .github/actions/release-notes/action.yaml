@@ -71,21 +71,21 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@16b1589f3d74e6032a4745762d73b5cebfe1bb7a
     - name: checkout
       uses: actions/checkout@v6
       with:
         fetch-depth: 0 # release-notes code needs full commit-history and tags
         fetch-tags: 0
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@16b1589f3d74e6032a4745762d73b5cebfe1bb7a
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@905fa0fd0f9ba7dc4d378c46962c74fb2e0ef348
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
 
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@16b1589f3d74e6032a4745762d73b5cebfe1bb7a
       with:
         name: ${{ inputs.component-descriptor-artifact }}
         path: /tmp/cd-artifact
@@ -167,7 +167,7 @@ runs:
         echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
         cat local-release-notes.md >> ${GITHUB_STEP_SUMMARY}
 
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@16b1589f3d74e6032a4745762d73b5cebfe1bb7a
       with:
         name: release-notes
         path: release-notes.tar
