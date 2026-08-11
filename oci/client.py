@@ -843,7 +843,8 @@ class Client:
                 **kwargs,
             )
 
-        throttle.on_success()
+        if res.ok:
+            throttle.on_success()
 
         if raise_for_status:
             if res.status_code != 404 and not res.ok:
