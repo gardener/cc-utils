@@ -165,6 +165,31 @@ _CRYPTO_MODULE_RULES = [
      ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256', 'HMAC-SHA256'],
      ['TLS/1.2', 'TLS/1.3'],
      'alibabacloud-go: Alibaba Cloud service clients (TLS)'),
+
+    ('github.com/weaveworks/common',
+     ['AES-128-GCM', 'AES-256-GCM', 'ChaCha20-Poly1305', 'RSA', 'ECDSA', 'SHA-256', 'HMAC-SHA256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'weaveworks/common: gRPC/HTTP server+client, TLS, JWT auth'),
+
+    ('github.com/cortexproject/cortex',
+     ['AES-128-GCM', 'AES-256-GCM', 'ChaCha20-Poly1305', 'RSA', 'ECDSA', 'SHA-256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'cortex: gRPC TLS for inter-component communication'),
+
+    ('github.com/credativ/vali',
+     ['AES-128-GCM', 'AES-256-GCM', 'ChaCha20-Poly1305', 'RSA', 'ECDSA', 'SHA-256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'vali: Loki-fork log aggregation — gRPC TLS'),
+
+    ('github.com/grafana/loki',
+     ['AES-128-GCM', 'AES-256-GCM', 'ChaCha20-Poly1305', 'RSA', 'ECDSA', 'SHA-256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'Loki: gRPC TLS for log aggregation'),
+
+    ('github.com/fluent/fluent-operator',
+     ['RSA', 'ECDSA', 'AES-128-GCM', 'SHA-256'],
+     ['TLS/1.2', 'TLS/1.3'],
+     'fluent-operator: k8s webhook TLS'),
 ]
 
 # Deduplicated rule index: prefix → (alg_set, proto_set, first_description)
