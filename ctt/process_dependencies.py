@@ -18,6 +18,7 @@ import os
 import requests
 import threading
 import tempfile
+import urllib.parse
 
 import dacite
 import yaml
@@ -226,7 +227,7 @@ def parse_processing_cfg(path: str):
     return raw_cfg
 
 
-_TARGET_ONLY_KWARGS = {'local_blobs'}
+_TARGET_ONLY_KWARGS = {'local_blobs', 'max_concurrency'}
 
 
 def _target(target_cfg: dict):
@@ -709,6 +710,12 @@ def process_images(
         local_blobs_by_ocm_repository[ocm_repository] = LocalBlobsMode(
             target_cfg.get('local_blobs', LocalBlobsMode.COPY_BY_VALUE)
         )
+
+        if max_concurrency := target_cfg.get('max_concurrency'):
+            for reg in registries:
+                host = urllib.parse.urlparse(f'//{reg}').netloc
+                oci_client.set_host_initial_limit(host, int(max_concurrency))
+                logger.info(f'per-target max_concurrency for {host} set to {max_concurrency}')
 
     replication_plan = ctt.model.ReplicationPlan()
 
