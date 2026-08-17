@@ -431,7 +431,7 @@ class Client:
         tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
         max_retries: int=5,
         default_backoff_base_seconds: float=1.0,
-        max_concurrent_per_host: int=8,
+        max_concurrency_per_host: int=8,
     ):
         '''
         :param Callable credentials_lookup:
@@ -450,7 +450,7 @@ class Client:
             how many times to retry a failed request (connection errors, 429, 5xx)
         :param float default_backoff_base_seconds:
             initial sleep before first retry; doubles on each subsequent attempt
-        :param int max_concurrent_per_host:
+        :param int max_concurrency_per_host:
             initial maximum number of simultaneous in-flight requests to any single registry host.
             The limit is adaptive (AIMD): halved on each 429 response (minimum 1), incremented by
             one on each successful non-429/non-5xx response, up to this initial value.  Prevents
@@ -468,7 +468,8 @@ class Client:
         self.tag_postprocessing_callback = tag_postprocessing_callback
         self.max_retries = max_retries
         self.default_backoff_base_seconds = default_backoff_base_seconds
-        self._max_concurrent_per_host = max_concurrent_per_host
+        self._max_concurrency_per_host = max_concurrency_per_host
+        self._per_host_initial_limits: dict[str, int] = {}
         self._host_throttles: dict[str, '_PerHostThrottle'] = {}
         self._host_throttles_lock = threading.Lock()
 
@@ -485,9 +486,24 @@ class Client:
             if host not in self._host_throttles:
                 self._host_throttles[host] = _PerHostThrottle(
                     host=host,
-                    initial_limit=self._max_concurrent_per_host,
+                    initial_limit=self._per_host_initial_limits.get(
+                        host,
+                        self._max_concurrency_per_host,
+                    ),
                 )
             return self._host_throttles[host]
+
+    def set_host_initial_limit(self, host: str, limit: int):
+        '''Set the initial (max) per-host concurrency limit for `host`.
+
+        Must be called before the first request to `host`.  If the throttle was
+        already created (i.e. requests already in flight), the initial cap is
+        updated but the current active count is not disturbed.
+        '''
+        with self._host_throttles_lock:
+            self._per_host_initial_limits[host] = limit
+            if host in self._host_throttles:
+                self._host_throttles[host]._initial_limit = limit
 
     def _authenticate(
         self,

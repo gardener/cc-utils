@@ -63,6 +63,15 @@ def configure_parser(parser):
         help='initial sleep before first retry; doubles on each subsequent attempt',
     )
     parser.add_argument(
+        '--max-concurrency-per-host',
+        type=int,
+        default=8,
+        help=(
+            'initial maximum number of simultaneous in-flight requests to any single registry '
+            'host. Per-target overrides in processing.cfg (max_concurrency) take precedence.'
+        ),
+    )
+    parser.add_argument(
         '--pruning-mode',
         type=ctt.process_dependencies.PruningMode,
         choices=ctt.process_dependencies.PruningMode,
@@ -99,6 +108,7 @@ def replicate(parsed):
         ),
         max_retries=parsed.retries,
         default_backoff_base_seconds=parsed.retry_backoff_seconds,
+        max_concurrency_per_host=parsed.max_concurrency_per_host,
     )
 
     component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(

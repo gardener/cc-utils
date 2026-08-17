@@ -103,7 +103,7 @@ def _mock_response(status_code, headers=None):
 
 def test_client_calls_throttle_on_429():
     '''on_429() halves the limit on 429; on_success() recovers it after the retry succeeds.'''
-    client = co.Client(max_concurrent_per_host=4)
+    client = co.Client(max_concurrency_per_host=4)
 
     # pre-populate auth cache so _authenticate() exits early without network I/O
     client.token_cache.set_auth_method(
