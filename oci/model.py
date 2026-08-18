@@ -49,6 +49,7 @@ class OciRegistryType(enum.Enum):
     ARTIFACTORY = 'artifactory'
     GHCR = 'ghcr'
     ALIYUN = 'aliyun'
+    KEPPEL = 'keppel'
     UNKNOWN = 'unknown'
 
     @staticmethod
@@ -67,6 +68,8 @@ class OciRegistryType(enum.Enum):
             return OciRegistryType.GHCR
         if 'cr.aliyuncs.com' in netloc:
             return OciRegistryType.ALIYUN
+        if 'keppel.' in netloc:
+            return OciRegistryType.KEPPEL
         if 'amazonaws.com' in netloc: # AWS ECR private
             return OciRegistryType.AWS
         if 'public.ecr.aws' in netloc: # AWS ECR public
