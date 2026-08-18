@@ -98,3 +98,31 @@ def test_full_registry_only_enumerates_target_account(monkeypatch):
             f'full-registry enumeration reached source registry: {prefix!r}'
         )
     assert any('keppel.example.com' in p for p in enumerated_prefixes)
+
+
+def test_full_registry_repo_refs_include_account(monkeypatch):
+    '''Keppel API returns repo names without the account prefix; the constructed
+    OCI refs must include it (e.g. keppel.../account/repo, not keppel.../repo).'''
+    collected_repos = []
+
+    def fake_iter_repositories(client, image_reference, raise_if_unsupported):
+        # simulate Keppel returning bare names without the account prefix
+        return iter(['component-descriptors/foo', 'some-image'])
+
+    def fake_discover(repos, retain_set, oci_client, jobs):
+        collected_repos.extend(repos)
+        return []
+
+    monkeypatch.setattr(prune.oci.nonstd, 'iter_repositories', fake_iter_repositories)
+    monkeypatch.setattr(prune, '_discover_candidates', fake_discover)
+
+    prune.iter_candidates_full_registry(
+        retain_set=RETAIN_SET,
+        oci_client=None,
+        ocm_repo=_ocm_repo(),
+    )
+
+    for repo in collected_repos:
+        assert repo.startswith(TARGET_BASE + '/'), (
+            f'repo {repo!r} is missing the account prefix {TARGET_BASE!r}'
+        )
