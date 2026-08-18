@@ -5,11 +5,12 @@ Registry-vendor APIs are used where necessary; not all registry types are
 supported. Pass `raise_if_unsupported=False` to silently skip unsupported
 registries instead of raising.
 
-Currently supported: Keppel.
+Currently supported: Keppel, Google Artifact Registry (GAR).
 '''
 import typing
 import urllib.parse
 
+import oci.auth as oa
 import oci.client as oc
 import oci.model as om
 
@@ -34,6 +35,8 @@ def iter_repositories(
     False an empty iterator is returned instead.
 
     Paging is handled transparently; callers receive a flat stream of names.
+
+    Currently supported registry types: Keppel, GAR.
     '''
     image_reference = om.OciImageReference.to_image_ref(image_reference)
     if registry_type is None:
@@ -41,6 +44,8 @@ def iter_repositories(
 
     if registry_type is om.OciRegistryType.KEPPEL:
         return _iter_repositories_keppel(client, image_reference)
+    if registry_type is om.OciRegistryType.GAR:
+        return _iter_repositories_gar(client, image_reference)
 
     if raise_if_unsupported:
         raise ValueError(
@@ -76,3 +81,50 @@ def _iter_repositories_keppel(
         if not data.get('truncated') or not repos:
             break
         marker = repos[-1]['name']
+
+
+def _iter_repositories_gar(
+    client: oc.Client,
+    image_reference: om.OciImageReference,
+) -> typing.Iterator[str]:
+    host = image_reference.netloc
+    # host format: {location}-docker.pkg.dev
+    location = host.removesuffix('-docker.pkg.dev')
+    path_parts = image_reference.urlparsed.path.lstrip('/').split('/')
+    project = path_parts[0]
+    repository = path_parts[1]
+
+    # for GAR, credentials_lookup yields username='oauth2accesstoken', password=<google_access_token>
+    creds = client.credentials_lookup(
+        image_reference=str(image_reference),
+        privileges=oa.Privileges.READONLY,
+        absent_ok=False,
+    )
+    access_token = creds.password
+
+    base_url = (
+        f'https://artifactregistry.googleapis.com/v1'
+        f'/projects/{project}/locations/{location}'
+        f'/repositories/{repository}/packages'
+    )
+    page_token = None
+    while True:
+        params = {'pageToken': page_token} if page_token else {}
+        throttle = client._throttle_for('artifactregistry.googleapis.com')
+        with throttle:
+            res = client.session.get(
+                base_url,
+                headers={'Authorization': f'Bearer {access_token}'},
+                params=params,
+            )
+        res.raise_for_status()
+        data = res.json()
+
+        for pkg in data.get('packages', []):
+            # pkg['name'] = 'projects/.../repositories/.../packages/<name>'
+            # <name> may be URL-encoded if it contains slashes
+            yield urllib.parse.unquote(pkg['name'].split('/packages/', 1)[1])
+
+        page_token = data.get('nextPageToken')
+        if not page_token:
+            break
