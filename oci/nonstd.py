@@ -93,6 +93,10 @@ def _iter_repositories_gar(
     # host format: {location}-docker.pkg.dev
     location = host.removesuffix('-docker.pkg.dev')
     path_parts = image_reference.urlparsed.path.lstrip('/').split('/')
+    if len(path_parts) < 2:
+        raise ValueError(
+            f'GAR image reference must include project and repository: {image_reference!r}'
+        )
     project = path_parts[0]
     repository = path_parts[1]
 
