@@ -193,15 +193,22 @@ def _discover_candidates(
 def iter_candidates_known_repositories(
     retain_set: frozenset[str],
     oci_client: oc.Client,
+    ocm_repo: ocm.OciOcmRepository,
     jobs: int = 8,
 ) -> list[str]:
-    repos = {om.OciImageReference(r).ref_without_tag for r in retain_set}
+    base = oci.util.normalise_image_reference(ocm_repo.oci_ref).rstrip('/')
+    repos = {
+        om.OciImageReference(r).ref_without_tag
+        for r in retain_set
+        if oci.util.normalise_image_reference(r).startswith(base + '/')
+    }
     return list(_discover_candidates(repos, retain_set, oci_client, jobs))
 
 
 def iter_candidates_full_registry(
     retain_set: frozenset[str],
     oci_client: oc.Client,
+    ocm_repo: ocm.OciOcmRepository,
     jobs: int = 8,
 ) -> list[str]:
     logger.warning(
@@ -209,25 +216,21 @@ def iter_candidates_full_registry(
         'ocm/ctt replicate'
     )
 
-    prefixes = set()
-    for ref_str in retain_set:
-        ref = om.OciImageReference(ref_str)
-        parts = ref.name.split('/')
-        account = parts[0] if parts else ''
-        prefixes.add(f'{ref.netloc}/{account}' if account else ref.netloc)
+    ref = om.OciImageReference(ocm_repo.oci_ref)
+    parts = ref.name.split('/')
+    account = parts[0] if parts else ''
+    prefix = f'{ref.netloc}/{account}' if account else ref.netloc
 
     all_repos = set()
-    for prefix in prefixes:
-        try:
-            netloc = om.OciImageReference(prefix).netloc
-            for repo_name in oci.nonstd.iter_repositories(
-                client=oci_client,
-                image_reference=prefix,
-                raise_if_unsupported=False,
-            ):
-                all_repos.add(f'{netloc}/{repo_name}')
-        except Exception as e:
-            logger.warning(f'{prefix!r}: repository enumeration failed: {e}')
+    try:
+        for repo_name in oci.nonstd.iter_repositories(
+            client=oci_client,
+            image_reference=prefix,
+            raise_if_unsupported=False,
+        ):
+            all_repos.add(f'{ref.netloc}/{repo_name}')
+    except Exception as e:
+        logger.warning(f'{prefix!r}: repository enumeration failed: {e}')
 
     return list(_discover_candidates(all_repos, retain_set, oci_client, jobs))
 
@@ -452,12 +455,14 @@ def prune(
         candidates = iter_candidates_full_registry(
             retain_set=retain_set,
             oci_client=oci_client,
+            ocm_repo=ocm_repo,
             jobs=jobs,
         )
     else:
         candidates = iter_candidates_known_repositories(
             retain_set=retain_set,
             oci_client=oci_client,
+            ocm_repo=ocm_repo,
             jobs=jobs,
         )
 
