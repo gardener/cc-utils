@@ -31,6 +31,7 @@ import ocm.gardener
 import ocm.helm
 import ocm.iter
 import ocm.oci
+import ocm.prune
 import ocm.retrieve
 import ocm.sign
 import ocm.upload
@@ -1394,6 +1395,111 @@ def main():
     edit_parser.add_argument(
         '--docker-cfg',
         required=False,
+        help='path to dockerd\'s `config.json` file',
+    )
+
+    prune_parser = maincmd_parsers.add_parser(
+        'prune',
+        aliases=('p',),
+        help='prune stale OCI artefacts from target registries',
+    )
+
+    def _prune(parsed):
+        oci_client = oci.client.Client(
+            credentials_lookup=oci.auth.docker_credentials_lookup(
+                docker_cfg=parsed.docker_cfg,
+            ),
+            max_retries=parsed.retries,
+        )
+        ocm_repo = ocm.OciOcmRepository(
+            type=ocm.OciAccess,
+            baseUrl=parsed.ocm_repo,
+        )
+        ocm.prune.prune(
+            component_refs=parsed.ocm_component,
+            ocm_repo=ocm_repo,
+            oci_client=oci_client,
+            keep_versions=parsed.keep_versions,
+            enumeration_mode=parsed.enumeration_mode,
+            dry_run=parsed.dry_run,
+            jobs=parsed.jobs,
+            retained_outfile=parsed.retained_outfile,
+            candidates_outfile=parsed.candidates_outfile,
+        )
+
+    prune_parser.set_defaults(callable=_prune)
+    prune_parser.add_argument(
+        '--ocm-repo', '-O',
+        required=True,
+        help='OCM repository base URL (target registry)',
+    )
+    prune_parser.add_argument(
+        '--ocm-component', '-c',
+        required=True,
+        action='append',
+        dest='ocm_component',
+        metavar='NAME[:VERSION]',
+        help=(
+            'root component to retain (repeatable); '
+            'omit version to use the greatest available'
+        ),
+    )
+    prune_parser.add_argument(
+        '--keep-versions',
+        type=int,
+        default=1,
+        metavar='N',
+        help=(
+            'number of versions to retain per root component '
+            '(anchor + N-1 next-older); default: 1'
+        ),
+    )
+    prune_parser.add_argument(
+        '--enumeration-mode',
+        choices=('known-repositories', 'full-registry'),
+        default='known-repositories',
+        help=(
+            'known-repositories (default): inspect only repositories already '
+            'referenced by the retain set; '
+            'full-registry: enumerate all repositories via vendor API (Keppel) '
+            '— may purge artefacts not managed by ocm/ctt replicate'
+        ),
+    )
+    prune_parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=False,
+        help='print candidates without removing anything',
+    )
+    prune_parser.add_argument(
+        '--retained-outfile',
+        metavar='FILE',
+        default=None,
+        help='write the retain set to FILE (one reference per line)',
+    )
+    prune_parser.add_argument(
+        '--candidates-outfile',
+        metavar='FILE',
+        default=None,
+        help='write the candidate list to FILE (one reference per line)',
+    )
+    prune_parser.add_argument(
+        '--retries',
+        type=int,
+        default=5,
+        metavar='N',
+        help='OCI request retry count (default: 5)',
+    )
+    prune_parser.add_argument(
+        '--jobs', '-j',
+        type=int,
+        default=8,
+        metavar='N',
+        help='parallelism for tag listing and deletion (default: 8)',
+    )
+    prune_parser.add_argument(
+        '--docker-cfg',
+        default=None,
         help='path to dockerd\'s `config.json` file',
     )
 
