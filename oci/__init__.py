@@ -346,21 +346,11 @@ def replicate_artifact(
                 uncompressed_layer_digests.append(f'sha256:{layer_hash.hexdigest()}')
                 continue # we may still skip the upload, of course
 
-        # todo: consider silencing warning if we do v1->v2-conversion (cfg-blob will never exist
-        #       in this case
         blob_res = client.blob(
             image_reference=src_image_reference,
             digest=layer.digest,
-            absent_ok=is_cfg_blob,
+            absent_ok=False,
         )
-        if not blob_res and is_cfg_blob:
-            # fallback to non-verbatim replication; synthesise cfg
-            logger.warning(
-                'falling back to non-verbatim replication '
-                f'{src_image_reference=} {tgt_image_reference=}'
-            )
-            need_to_synthesise_cfg_blob = True
-            continue
 
         if need_uncompressed_layer_digests:
             uncompressed_layer_hash = hashlib.sha256()
