@@ -14,11 +14,11 @@ import oci.util
 logger = logging.getLogger(__name__)
 
 
-class AuthType(str, enum.Enum):
+class AuthType(enum.StrEnum):
     BASIC_AUTH = 'basic_auth'
 
 
-class CredentialHelperPolicy(str, enum.Enum):
+class CredentialHelperPolicy(enum.StrEnum):
     DISABLED     = 'disabled'      # skip helpers entirely — static auths only
     STATIC_FIRST = 'static_first'  # static auths → helpers (safe default)
     WARN         = 'warn'          # helpers → static; missing/broken helper → log warning

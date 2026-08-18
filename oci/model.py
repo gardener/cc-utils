@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import collections.abc
 import dataclasses
 import enum
 import functools
 import json
-import typing
 import urllib.parse
 
 import dacite
@@ -54,7 +55,7 @@ class OciRegistryType(enum.Enum):
 
     @staticmethod
     def from_image_ref(
-        image_reference: typing.Union[str, 'OciImageReference'],
+        image_reference: str | 'OciImageReference',
     ) -> 'OciRegistryType':
         netloc = OciImageReference.to_image_ref(image_reference=image_reference).netloc
 
@@ -83,7 +84,7 @@ class OciRegistryType(enum.Enum):
 class OciImageReference:
     @staticmethod
     def to_image_ref(
-        image_reference: typing.Union[str, 'OciImageReference'],
+        image_reference: str | 'OciImageReference',
         normalise: bool=True,
     ):
         if isinstance(image_reference, OciImageReference):
@@ -96,7 +97,7 @@ class OciImageReference:
 
     def __init__(
         self,
-        image_reference: typing.Union[str, 'OciImageReference'],
+        image_reference: str | 'OciImageReference',
         normalise: bool=True,
     ):
         if isinstance(image_reference, OciImageReference):
