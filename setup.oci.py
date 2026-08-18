@@ -30,7 +30,7 @@ setuptools.setup(
     description='Gardener OCI lib',
     long_description='Gardener OCI lib',
     long_description_content_type='text/markdown',
-    python_requires='>=3.10',
+    python_requires='>=3.11',
     py_modules=modules(),
     packages=['oci'],
     package_data={
