@@ -228,7 +228,7 @@ def iter_candidates_full_registry(
             image_reference=prefix,
             raise_if_unsupported=False,
         ):
-            all_repos.add(f'{ref.netloc}/{repo_name}')
+            all_repos.add(f'{prefix}/{repo_name}')
     except Exception as e:
         logger.warning(f'{prefix!r}: repository enumeration failed: {e}')
 
