@@ -513,11 +513,86 @@ jobs:
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
         shell: bash
         run: |
+          set -eu
+
           install_dir="${HOME}/.local/bin"
           mkdir -p "${install_dir}"
-          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-            | sh -s -- -b "${install_dir}"
-          echo "${install_dir}" >> "${GITHUB_PATH}"
+
+          warn=false
+          summary=""
+
+          # 1. try to determine greatest version (retry 3x, non-fatal)
+          greatest_version=""
+          for attempt in 1 2 3; do
+            greatest_version=$(
+              curl -sSf --max-time 10 \
+                'https://api.github.com/repos/anchore/syft/releases/latest' \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"].lstrip("v"))' \
+              2>/dev/null
+            ) && break
+            greatest_version=""
+            [ "${attempt}" -lt 3 ] && sleep $((attempt * 5))
+          done
+
+          if [ -z "${greatest_version}" ]; then
+            warn=true
+            summary="Could not determine greatest syft version from GitHub API."
+          fi
+
+          # 2. check pre-installed syft
+          installed_version=""
+          if which syft >/dev/null 2>&1; then
+            installed_version=$(
+              syft version --output json 2>/dev/null \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' \
+              2>/dev/null
+            ) || true
+          fi
+
+          # 3. decide whether installation is needed
+          needs_install=false
+          if [ -z "${installed_version}" ]; then
+            needs_install=true
+          elif [ -z "${greatest_version}" ]; then
+            warn=true
+            summary="${summary} Pre-installed syft ${installed_version} found but cannot verify it is the greatest version."
+          else
+            is_current=$(python3 -c "v1=tuple(int(x) for x in '${installed_version}'.split('.'));v2=tuple(int(x) for x in '${greatest_version}'.split('.'));print('yes' if v1>=v2 else 'no')")
+            if [ "${is_current}" = "yes" ]; then
+              echo "syft ${installed_version} >= ${greatest_version} (greatest) — skipping install"
+            else
+              echo "syft ${installed_version} < ${greatest_version} (greatest) — attempting upgrade"
+              needs_install=true
+            fi
+          fi
+
+          # 4. attempt installation if needed
+          if ${needs_install}; then
+            install_ok=false
+            if curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+              | sh -s -- -b "${install_dir}"; then
+              echo "${install_dir}" >> "${GITHUB_PATH}"
+              install_ok=true
+            fi
+
+            if ! ${install_ok}; then
+              if [ -n "${installed_version}" ]; then
+                warn=true
+                summary="${summary} Failed to upgrade syft to ${greatest_version:-latest}; using pre-installed version ${installed_version}."
+              else
+                echo "::error::Failed to install syft and no pre-installed version is available."
+                exit 1
+              fi
+            fi
+          fi
+
+          # 5. emit warnings
+          if ${warn}; then
+            echo "::warning::${summary}"
+            if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+              printf '> [!WARNING]\n> %s\n' "${summary}" >> "${GITHUB_STEP_SUMMARY}"
+            fi
+          fi
 
       - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
