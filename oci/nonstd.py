@@ -5,7 +5,7 @@ Registry-vendor APIs are used where necessary; not all registry types are
 supported. Pass `raise_if_unsupported=False` to silently skip unsupported
 registries instead of raising.
 
-Currently supported: Keppel, Google Artifact Registry (GAR).
+Currently supported: Keppel, Google Artifact Registry (GAR), AWS ECR, Azure ACR.
 '''
 import typing
 import urllib.parse
@@ -36,7 +36,7 @@ def iter_repositories(
 
     Paging is handled transparently; callers receive a flat stream of names.
 
-    Currently supported registry types: Keppel, GAR.
+    Currently supported registry types: Keppel, GAR, AWS ECR, Azure ACR.
     '''
     image_reference = om.OciImageReference.to_image_ref(image_reference)
     if registry_type is None:
@@ -46,6 +46,8 @@ def iter_repositories(
         return _iter_repositories_keppel(client, image_reference)
     if registry_type is om.OciRegistryType.GAR:
         return _iter_repositories_gar(client, image_reference)
+    if registry_type in (om.OciRegistryType.AWS, om.OciRegistryType.AZURE):
+        return _iter_repositories_catalog(client, image_reference)
 
     if raise_if_unsupported:
         raise ValueError(
@@ -128,3 +130,27 @@ def _iter_repositories_gar(
         page_token = data.get('nextPageToken')
         if not page_token:
             break
+
+
+def _parse_catalog_next_url(link_header: str) -> str | None:
+    for part in link_header.split(','):
+        url_part, *params = part.strip().split(';')
+        if any('rel="next"' in p for p in params):
+            return url_part.strip().strip('<>')
+    return None
+
+
+def _iter_repositories_catalog(
+    client: oc.Client,
+    image_reference: om.OciImageReference,
+    page_size: int = 100,
+) -> typing.Iterator[str]:
+    # standard Docker Distribution V2 catalog endpoint; supported by ECR and Azure ACR
+    host = image_reference.netloc
+    scope = 'registry:catalog:*'
+    url = f'https://{host}/v2/_catalog?n={page_size}'
+
+    while url:
+        res = client._request(url=url, image_reference=image_reference, scope=scope)
+        yield from res.json().get('repositories', [])
+        url = _parse_catalog_next_url(res.headers.get('Link', ''))
