@@ -103,7 +103,7 @@ def _mock_response(status_code, headers=None):
 
 def test_client_calls_throttle_on_429():
     '''on_429() halves the limit on 429; on_success() recovers it after the retry succeeds.'''
-    client = co.Client(max_concurrency_per_host=4)
+    client = co.Client(max_write_concurrency_per_host=4)
 
     # pre-populate auth cache so _authenticate() exits early without network I/O
     client.token_cache.set_auth_method(
@@ -120,18 +120,15 @@ def test_client_calls_throttle_on_429():
             return _mock_response(429, headers={'Retry-After': '0'})
         return _mock_response(200)
 
-    throttle = co._PerHostThrottle(host='registry.example.com', initial_limit=4)
-    client._throttle_for = lambda host: throttle
-
     with unittest.mock.patch.object(client.session, 'request', side_effect=fake_request):
-        with unittest.mock.patch('oci.client.time.sleep'):
-            client._request(
-                url='https://registry.example.com/v2/repo/blobs/uploads/',
-                image_reference='registry.example.com/repo:tag',
-                scope='repository:repo:push',
-                method='POST',
-            )
+        client._request(
+            url='https://registry.example.com/v2/repo/blobs/uploads/',
+            image_reference='registry.example.com/repo:tag',
+            scope='repository:repo:push',
+            method='POST',
+        )
 
+    throttle = client._host_write_throttles['registry.example.com']
     # 4 → 2 from on_429, then 2 → 3 from on_success on the successful retry
     assert throttle._limit == 3
     assert call_count == 2

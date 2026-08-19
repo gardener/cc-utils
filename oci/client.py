@@ -858,7 +858,7 @@ class Client:
 
         if res.status_code == 429 and remaining_retries > 0:
             retry_after_seconds = _retry_after_seconds(res=res, fallback=sleep_before_retry_seconds)
-            jitter = random.uniform(0, max(1.0, retry_after_seconds * 0.1))
+            jitter = random.uniform(0, retry_after_seconds * 0.1)
 
             throttle.on_429(retry_after=retry_after_seconds)
 
