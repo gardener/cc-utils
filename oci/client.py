@@ -819,7 +819,7 @@ class Client:
 
         if not res.ok and warn_if_not_ok:
             logger.warning(
-                f'rq against {url=} failed {res.status_code=} {res.reason=} {method=} {res.content}'
+                f'rq against {method=} {url=} failed {res.status_code=} {res.reason=} {res.content}'
             )
 
         if res.status_code == 429 and remaining_retries > 0:
