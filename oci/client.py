@@ -429,9 +429,11 @@ class Client:
         session: requests.Session=None,
         tag_preprocessing_callback: collections.abc.Callable[[str], str]=None,
         tag_postprocessing_callback: collections.abc.Callable[[str], str]=None,
-        max_retries: int=5,
+        max_retries: int=12,
         default_backoff_base_seconds: float=1.0,
+        max_backoff_seconds: float=60.0,
         max_concurrency_per_host: int=8,
+        max_write_concurrency_per_host: int=4,
     ):
         '''
         :param Callable credentials_lookup:
@@ -449,12 +451,18 @@ class Client:
         :param int max_retries:
             how many times to retry a failed request (connection errors, 429, 5xx)
         :param float default_backoff_base_seconds:
-            initial sleep before first retry; doubles on each subsequent attempt
+            initial sleep before first retry; doubles on each subsequent attempt, capped at
+            `max_backoff_seconds`
+        :param float max_backoff_seconds:
+            ceiling for the exponential backoff sleep between retries
         :param int max_concurrency_per_host:
-            initial maximum number of simultaneous in-flight requests to any single registry host.
-            The limit is adaptive (AIMD): halved on each 429 response (minimum 1), incremented by
-            one on each successful non-429/non-5xx response, up to this initial value.  Prevents
-            burst concurrency from triggering per-client rate limits on registries such as Keppel.
+            initial maximum number of simultaneous in-flight read requests to any single registry
+            host.  The limit is adaptive (AIMD): halved on each 429 (minimum 1), incremented by one
+            on each success, up to this value.
+        :param int max_write_concurrency_per_host:
+            same as `max_concurrency_per_host` but applies only to mutating requests (PUT, POST,
+            PATCH, DELETE).  A separate throttle is kept per host so that write-429s do not reduce
+            read concurrency.
         '''
         self.credentials_lookup = credentials_lookup
         self.token_cache = OauthTokenCache()
@@ -468,9 +476,12 @@ class Client:
         self.tag_postprocessing_callback = tag_postprocessing_callback
         self.max_retries = max_retries
         self.default_backoff_base_seconds = default_backoff_base_seconds
+        self.max_backoff_seconds = max_backoff_seconds
         self._max_concurrency_per_host = max_concurrency_per_host
+        self._max_write_concurrency_per_host = max_write_concurrency_per_host
         self._per_host_initial_limits: dict[str, int] = {}
         self._host_throttles: dict[str, '_PerHostThrottle'] = {}
+        self._host_write_throttles: dict[str, '_PerHostThrottle'] = {}
         self._host_throttles_lock = threading.Lock()
 
         if timeout_seconds:
@@ -492,6 +503,19 @@ class Client:
                     ),
                 )
             return self._host_throttles[host]
+
+    def _write_throttle_for(self, host: str) -> '_PerHostThrottle':
+        try:
+            return self._host_write_throttles[host]
+        except KeyError:
+            pass
+        with self._host_throttles_lock:
+            if host not in self._host_write_throttles:
+                self._host_write_throttles[host] = _PerHostThrottle(
+                    host=host,
+                    initial_limit=self._max_write_concurrency_per_host,
+                )
+            return self._host_write_throttles[host]
 
     def set_host_initial_limit(self, host: str, limit: int):
         '''Set the initial (max) per-host concurrency limit for `host`.
@@ -719,7 +743,10 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
-                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                sleep_before_retry_seconds=min(
+                    sleep_before_retry_seconds * 2,
+                    self.max_backoff_seconds,
+                ),
                 **kwargs,
             )
 
@@ -778,7 +805,11 @@ class Client:
         except KeyError:
             timeout = (31, 121)
 
-        throttle = self._throttle_for(urllib.parse.urlparse(url).netloc)
+        throttle = (
+            self._write_throttle_for(urllib.parse.urlparse(url).netloc)
+            if method.upper() in ('PUT', 'POST', 'PATCH', 'DELETE')
+            else self._throttle_for(urllib.parse.urlparse(url).netloc)
+        )
         conn_exc = None
         with throttle:
             try:
@@ -813,7 +844,10 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
-                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                sleep_before_retry_seconds=min(
+                    sleep_before_retry_seconds * 2,
+                    self.max_backoff_seconds,
+                ),
                 **kwargs,
             )
 
@@ -844,7 +878,10 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
-                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                sleep_before_retry_seconds=min(
+                    sleep_before_retry_seconds * 2,
+                    self.max_backoff_seconds,
+                ),
                 **kwargs,
             )
 
@@ -867,7 +904,10 @@ class Client:
                 raise_for_status=raise_for_status,
                 warn_if_not_ok=warn_if_not_ok,
                 remaining_retries=remaining_retries - 1,
-                sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                sleep_before_retry_seconds=min(
+                    sleep_before_retry_seconds * 2,
+                    self.max_backoff_seconds,
+                ),
                 **kwargs,
             )
 
