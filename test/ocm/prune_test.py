@@ -7,6 +7,8 @@ iter_candidates_full_registry derived their repo sets from the entire retain
 set, which can contain source-registry refs (e.g. europe-docker.pkg.dev) that
 must never be touched by pruning.
 '''
+import types
+
 import ocm
 import ocm.prune as prune
 
@@ -126,3 +128,65 @@ def test_full_registry_repo_refs_include_account(monkeypatch):
         assert repo.startswith(TARGET_BASE + '/'), (
             f'repo {repo!r} is missing the account prefix {TARGET_BASE!r}'
         )
+
+
+# --- RESTRICT_TO_OCM_REPO flag ------------------------------------------------
+
+def _make_resource_node(image_ref):
+    access = ocm.OciAccess(imageReference=image_ref)
+    resource = types.SimpleNamespace(access=access)
+    return types.SimpleNamespace(resource=resource)
+
+
+def test_delete_skips_out_of_scope_oci_access(monkeypatch):
+    '''With RESTRICT_TO_OCM_REPO set, resources pointing to external registries
+    must not be submitted for deletion.'''
+    deleted = []
+    monkeypatch.setattr(prune, '_delete_one', lambda ref, client: deleted.append(ref))
+
+    node = _make_resource_node(f'{SOURCE_BASE}/some-image:v1')
+    ocm_repo = _ocm_repo()
+
+    # simulate _coordinate logic for a single resource node
+    mode = prune.EnumerationMode.RESTRICT_TO_OCM_REPO
+    for ref in prune._iter_resource_refs(node, ocm_repo):
+        base = prune.oci.util.normalise_image_reference(ocm_repo.oci_ref).rstrip('/')
+        if mode & prune.EnumerationMode.RESTRICT_TO_OCM_REPO:
+            if not prune.oci.util.normalise_image_reference(ref).startswith(base + '/'):
+                continue
+        deleted.append(ref)
+
+    assert deleted == [], f'expected no deletions, got {deleted}'
+
+
+def test_delete_includes_in_scope_oci_access(monkeypatch):
+    in_scope = f'{TARGET_BASE}/some-image:v1'
+    node = _make_resource_node(in_scope)
+    ocm_repo = _ocm_repo()
+
+    collected = []
+    mode = prune.EnumerationMode.RESTRICT_TO_OCM_REPO
+    for ref in prune._iter_resource_refs(node, ocm_repo):
+        base = prune.oci.util.normalise_image_reference(ocm_repo.oci_ref).rstrip('/')
+        if mode & prune.EnumerationMode.RESTRICT_TO_OCM_REPO:
+            if not prune.oci.util.normalise_image_reference(ref).startswith(base + '/'):
+                continue
+        collected.append(ref)
+
+    assert collected == [in_scope]
+
+
+def test_delete_without_restriction_includes_external_refs():
+    node = _make_resource_node(f'{SOURCE_BASE}/some-image:v1')
+    ocm_repo = _ocm_repo()
+
+    collected = []
+    mode = prune.EnumerationMode(0)  # no RESTRICT_TO_OCM_REPO
+    for ref in prune._iter_resource_refs(node, ocm_repo):
+        if mode & prune.EnumerationMode.RESTRICT_TO_OCM_REPO:
+            base = prune.oci.util.normalise_image_reference(ocm_repo.oci_ref).rstrip('/')
+            if not prune.oci.util.normalise_image_reference(ref).startswith(base + '/'):
+                continue
+        collected.append(ref)
+
+    assert len(collected) == 1
