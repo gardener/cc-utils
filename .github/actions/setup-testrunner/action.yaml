@@ -17,7 +17,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@1f4a475ff165ba8946db6e4c111d9784e7c02dc9
     - name: install-testrunner
       id: install
       shell: bash
