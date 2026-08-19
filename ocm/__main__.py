@@ -1420,17 +1420,43 @@ def main():
             mode |= ocm.prune.EnumerationMode.KNOWN_REPOSITORIES
         if parsed.restrict_to_ocm_repo:
             mode |= ocm.prune.EnumerationMode.RESTRICT_TO_OCM_REPO
-        ocm.prune.prune(
-            component_refs=parsed.ocm_component,
-            ocm_repo=ocm_repo,
-            oci_client=oci_client,
-            keep_versions=parsed.keep_versions,
-            enumeration_mode=mode,
-            dry_run=parsed.dry_run,
-            jobs=parsed.jobs,
-            retained_outfile=parsed.retained_outfile,
-            candidates_outfile=parsed.candidates_outfile,
-        )
+
+        ctx = ocm.prune.PruneCtx(ocm_repo=ocm_repo, oci_client=oci_client, mode=mode)
+
+        print(f'Building retain set from {len(parsed.ocm_component)} root component(s)...')
+        for component_ref in parsed.ocm_component:
+            name, anchor = ocm.prune.parse_component_ref(component_ref)
+            for ver in ocm.prune.resolve_versions(
+                name, anchor, ocm_repo, oci_client, parsed.keep_versions,
+            ):
+                ocm.prune.prune(ocm.ComponentIdentity(name=name, version=ver), ctx)
+        print(f'Retain set: {len(ctx.retain_set)} OCI reference(s)')
+
+        if parsed.retained_outfile:
+            with open(parsed.retained_outfile, 'w') as fh:
+                for ref in sorted(ctx.retain_set):
+                    fh.write(ref + '\n')
+            print(f'Retain set written to {parsed.retained_outfile!r}')
+
+        print('Enumerating candidates...')
+        ocm.prune.enumerate_candidates(ctx, jobs=parsed.jobs)
+        to_delete = ctx.candidates - ctx.retain_set
+        print(f'Found {len(to_delete)} candidate(s) to prune')
+
+        if parsed.candidates_outfile:
+            with open(parsed.candidates_outfile, 'w') as fh:
+                for ref in sorted(to_delete):
+                    fh.write(ref + '\n')
+            print(f'Candidate list written to {parsed.candidates_outfile!r}')
+
+        if parsed.dry_run:
+            print('Dry run — nothing removed')
+            for ref in sorted(to_delete):
+                print(f'  would remove: {ref}')
+            return
+
+        ocm.prune.delete_all(to_delete, oci_client, jobs=parsed.jobs)
+        print(f'Pruned {len(to_delete)} artefact(s)')
 
     prune_parser.set_defaults(callable=_prune)
     prune_parser.add_argument(
