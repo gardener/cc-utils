@@ -88,7 +88,11 @@ def _iter_resource_refs(
 ) -> collections.abc.Iterator[str]:
     access = node.resource.access
     if isinstance(access, ocm.OciAccess):
-        yield access.imageReference
+        # only yield refs that live within the target OCM repository; absolute
+        # OciAccess refs pointing to external registries must not be touched
+        base = oci.util.normalise_image_reference(ocm_repo.oci_ref).rstrip('/')
+        if oci.util.normalise_image_reference(access.imageReference).startswith(base + '/'):
+            yield access.imageReference
     elif isinstance(access, ocm.RelativeOciAccess):
         base = ocm_repo.oci_ref.rstrip('/')
         yield f'{base}/{access.reference.lstrip("/")}'

@@ -1,12 +1,9 @@
 '''
-Regression tests for ocm.prune — specifically the scoping fix that ensures
-candidate discovery never reaches outside the target OCm repository.
-
-Before the fix, both iter_candidates_known_repositories and
-iter_candidates_full_registry derived their repo sets from the entire retain
-set, which can contain source-registry refs (e.g. europe-docker.pkg.dev) that
-must never be touched by pruning.
+Regression tests for ocm.prune — scoping fixes that ensure pruning never
+touches artefacts outside the target OCM repository.
 '''
+import types
+
 import ocm
 import ocm.prune as prune
 
@@ -126,3 +123,27 @@ def test_full_registry_repo_refs_include_account(monkeypatch):
         assert repo.startswith(TARGET_BASE + '/'), (
             f'repo {repo!r} is missing the account prefix {TARGET_BASE!r}'
         )
+
+
+# --- _iter_resource_refs scoping ---------------------------------------------
+
+def _make_resource_node(image_ref):
+    '''Build a minimal ResourceNode-like object with OciAccess.'''
+    access = ocm.OciAccess(imageReference=image_ref)
+    resource = types.SimpleNamespace(access=access)
+    return types.SimpleNamespace(resource=resource)
+
+
+def test_iter_resource_refs_skips_out_of_scope_oci_access():
+    '''OciAccess refs outside ocm_repo must not be yielded.'''
+    node = _make_resource_node(f'{SOURCE_BASE}/some-image:v1')
+    refs = list(prune._iter_resource_refs(node, _ocm_repo()))
+    assert refs == [], f'expected no refs, got: {refs}'
+
+
+def test_iter_resource_refs_yields_in_scope_oci_access():
+    '''OciAccess refs within ocm_repo must be yielded.'''
+    in_scope = f'{TARGET_BASE}/some-image:v1'
+    node = _make_resource_node(in_scope)
+    refs = list(prune._iter_resource_refs(node, _ocm_repo()))
+    assert refs == [in_scope]
