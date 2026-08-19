@@ -19,6 +19,7 @@ Two enumeration modes are supported:
 '''
 import collections.abc
 import concurrent.futures
+import enum
 import logging
 import threading
 
@@ -32,6 +33,14 @@ import ocm.retrieve
 import version as version_mod
 
 logger = logging.getLogger(__name__)
+
+
+class EnumerationMode(enum.IntFlag):
+    KNOWN_REPOSITORIES = 1  # unset → full-registry enumeration via vendor API
+    RESTRICT_TO_OCM_REPO = 2  # unset → allow external OCI refs outside OCM repo prefix
+
+
+_DEFAULT_MODE = EnumerationMode.KNOWN_REPOSITORIES | EnumerationMode.RESTRICT_TO_OCM_REPO
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +270,7 @@ def _delete_component_subtree(
     deleted: set,
     lock: threading.Lock,
     executor: concurrent.futures.ThreadPoolExecutor,
+    mode: EnumerationMode = _DEFAULT_MODE,
 ) -> threading.Event | None:
     '''
     Recursively delete a component subtree, resources-first, bottom-up.
@@ -319,6 +329,7 @@ def _delete_component_subtree(
                     deleted=deleted,
                     lock=lock,
                     executor=executor,
+                    mode=mode,
                 )
                 if ev is not None:
                     child_events.append(ev)
@@ -336,6 +347,10 @@ def _delete_component_subtree(
                 if not isinstance(node, ocm_iter.ResourceNode):
                     continue
                 for ref in _iter_resource_refs(node, ocm_repo):
+                    if mode & EnumerationMode.RESTRICT_TO_OCM_REPO:
+                        base = oci.util.normalise_image_reference(ocm_repo.oci_ref).rstrip('/')
+                        if not oci.util.normalise_image_reference(ref).startswith(base + '/'):
+                            continue
                     norm_ref = oci.util.normalise_image_reference(ref)
                     if norm_ref in retain_set:
                         continue
@@ -361,6 +376,7 @@ def delete_candidates(
     oci_client: oc.Client,
     retain_set: frozenset[str],
     jobs: int = 8,
+    mode: EnumerationMode = _DEFAULT_MODE,
 ):
     '''
     Delete all candidates.
@@ -396,6 +412,7 @@ def delete_candidates(
                 deleted=deleted,
                 lock=lock,
                 executor=executor,
+                mode=mode,
             )
             if ev is not None:
                 completion_events.append(ev)
@@ -427,7 +444,7 @@ def prune(
     ocm_repo: ocm.OciOcmRepository,
     oci_client: oc.Client,
     keep_versions: int = 1,
-    enumeration_mode: str = 'known-repositories',
+    enumeration_mode: EnumerationMode = _DEFAULT_MODE,
     dry_run: bool = False,
     jobs: int = 8,
     retained_outfile: str | None = None,
@@ -451,7 +468,7 @@ def prune(
                 fh.write(ref + '\n')
         print(f'Retain set written to {retained_outfile!r}')
 
-    if enumeration_mode == 'full-registry':
+    if not (enumeration_mode & EnumerationMode.KNOWN_REPOSITORIES):
         candidates = iter_candidates_full_registry(
             retain_set=retain_set,
             oci_client=oci_client,
@@ -487,6 +504,7 @@ def prune(
         oci_client=oci_client,
         retain_set=retain_set,
         jobs=jobs,
+        mode=enumeration_mode,
     )
 
     print(f'Pruned {len(candidates)} artefact(s)')

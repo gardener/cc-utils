@@ -1415,12 +1415,17 @@ def main():
             type=ocm.OciAccess,
             baseUrl=parsed.ocm_repo,
         )
+        mode = ocm.prune.EnumerationMode(0)
+        if not parsed.full_registry:
+            mode |= ocm.prune.EnumerationMode.KNOWN_REPOSITORIES
+        if parsed.restrict_to_ocm_repo:
+            mode |= ocm.prune.EnumerationMode.RESTRICT_TO_OCM_REPO
         ocm.prune.prune(
             component_refs=parsed.ocm_component,
             ocm_repo=ocm_repo,
             oci_client=oci_client,
             keep_versions=parsed.keep_versions,
-            enumeration_mode=parsed.enumeration_mode,
+            enumeration_mode=mode,
             dry_run=parsed.dry_run,
             jobs=parsed.jobs,
             retained_outfile=parsed.retained_outfile,
@@ -1455,14 +1460,21 @@ def main():
         ),
     )
     prune_parser.add_argument(
-        '--enumeration-mode',
-        choices=('known-repositories', 'full-registry'),
-        default='known-repositories',
+        '--full-registry',
+        action=argparse.BooleanOptionalAction,
+        default=False,
         help=(
-            'known-repositories (default): inspect only repositories already '
-            'referenced by the retain set; '
-            'full-registry: enumerate all repositories via vendor API (Keppel) '
-            '— may purge artefacts not managed by ocm/ctt replicate'
+            'enumerate all repositories via vendor API (Keppel/GAR); '
+            'default: inspect only repositories referenced by the retain set'
+        ),
+    )
+    prune_parser.add_argument(
+        '--restrict-to-ocm-repo',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            'skip OCI resource refs outside the target OCM repository prefix; '
+            'default: true'
         ),
     )
     prune_parser.add_argument(
