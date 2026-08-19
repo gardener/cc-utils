@@ -132,7 +132,7 @@ runs:
           exit 1
         fi
       shell: bash
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@1f4a475ff165ba8946db6e4c111d9784e7c02dc9
       if: ${{ inputs.to-artefact != '' }}
       with:
         name: ${{ inputs.to-artefact }}
