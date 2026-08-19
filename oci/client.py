@@ -1278,7 +1278,7 @@ class Client:
         tags referencing the same manifest.
         '''
         image_reference = om.OciImageReference(image_reference)
-        scope = _scope(image_reference=image_reference, action='push,pull')
+        scope = _scope(image_reference=image_reference, action='push,pull,delete')
 
         if not purge or image_reference.has_digest_tag:
             if accept:
