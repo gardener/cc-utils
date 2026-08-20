@@ -225,7 +225,8 @@ def _delete_one(ref: str, oci_client: oc.Client):
         oci_client.delete_manifest(image_reference=ref, purge=True, absent_ok=True)
         logger.info(f'removed {ref}')
     except Exception as e:
-        logger.warning(f'failed to remove {ref!r}: {e}')
+        logger.error(f'failed to remove {ref!r}: {e}')
+        raise
 
 
 def delete_all(
@@ -236,3 +237,6 @@ def delete_all(
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         futs = [pool.submit(_delete_one, ref, oci_client) for ref in refs]
         concurrent.futures.wait(futs)
+
+    if failed := [f for f in futs if f.exception()]:
+        raise RuntimeError(f'{len(failed)} deletion(s) failed')
