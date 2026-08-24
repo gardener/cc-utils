@@ -1,7 +1,9 @@
+import collections
 import collections.abc
 import concurrent.futures
 import dataclasses
 import enum
+import hashlib
 import logging
 import threading
 
@@ -220,13 +222,41 @@ def enumerate_candidates(ctx: PruneCtx, jobs: int = 8):
 # phase II: deletion
 # ---------------------------------------------------------------------------
 
-def _delete_one(ref: str, oci_client: oc.Client):
-    try:
-        oci_client.delete_manifest(image_reference=ref, purge=True, absent_ok=True)
-        logger.info(f'removed {ref}')
-    except Exception as e:
-        logger.error(f'failed to remove {ref!r}: {e}')
-        raise
+def _resolve_digest(ref: str, oci_client: oc.Client) -> str | None:
+    raw = oci_client.manifest_raw(image_reference=ref, absent_ok=True)
+    if raw is None:
+        return None
+    return 'sha256:' + hashlib.sha256(raw.content).hexdigest()
+
+
+def _group_by_digest(
+    refs: collections.abc.Iterable[str],
+    oci_client: oc.Client,
+    jobs: int = 8,
+) -> dict[str, list[str]]:
+    '''Returns {digest_ref: [tag_refs]}, grouping refs that resolve to the same manifest.'''
+    groups = collections.defaultdict(list)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
+        futs = {pool.submit(_resolve_digest, ref, oci_client): ref for ref in refs}
+        for fut in concurrent.futures.as_completed(futs):
+            ref = futs[fut]
+            digest = fut.result()
+            if digest is None:
+                logger.warning(f'{ref!r}: manifest absent — skipping')
+                continue
+            digest_ref = f'{om.OciImageReference(ref).ref_without_tag}@{digest}'
+            groups[digest_ref].append(ref)
+    return dict(groups)
+
+
+def _delete_group(digest_ref: str, tag_refs: list[str], oci_client: oc.Client):
+    for tag_ref in tag_refs:
+        try:
+            oci_client.delete_manifest(image_reference=tag_ref, purge=False, absent_ok=True)
+        except Exception as e:
+            logger.warning(f'untag {tag_ref!r} failed: {e}')
+    oci_client.delete_manifest(image_reference=digest_ref, purge=False, absent_ok=True)
+    logger.info(f'removed {digest_ref} ({len(tag_refs)} tag(s))')
 
 
 def delete_all(
@@ -234,8 +264,17 @@ def delete_all(
     oci_client: oc.Client,
     jobs: int = 8,
 ):
+    groups = _group_by_digest(refs, oci_client, jobs=jobs)
+    logger.info(
+        f'pruning {len(groups)} unique manifest(s) '
+        f'({sum(len(t) for t in groups.values())} tag(s) total)'
+    )
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-        futs = [pool.submit(_delete_one, ref, oci_client) for ref in refs]
+        futs = [
+            pool.submit(_delete_group, digest_ref, tag_refs, oci_client)
+            for digest_ref, tag_refs in groups.items()
+        ]
         concurrent.futures.wait(futs)
 
     if failed := [f for f in futs if f.exception()]:
