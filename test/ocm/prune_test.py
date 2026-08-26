@@ -3,7 +3,6 @@ import unittest.mock
 
 import ocm
 import ocm.prune as prune
-import oci.model as om
 
 
 TARGET_BASE = 'keppel.example.com/my-account'
