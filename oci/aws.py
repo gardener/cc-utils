@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class AwsAction(enum.StrEnum):
+    BATCH_DELETE_IMAGE = 'BatchDeleteImage'
     CREATE_REPOSITORY = 'CreateRepository'
     GET_AUTHORIZATION_TOKEN = 'GetAuthorizationToken'
 
@@ -316,3 +317,43 @@ def create_repository(
             # ignore it if the repository has been created in the meantime anyways
             return
         raise
+
+
+def batch_delete_images(
+    image_reference: oci.model.OciImageReference | str,
+    image_ids: list[dict],
+    credentials: oci.auth.OciAccessKeyCredentials,
+    session: requests.Session | None=None,
+) -> list[dict]:
+    '''
+    Deletes images from a private ECR repository in chunks of 100 (ECR API limit).
+    image_ids: list of dicts, each {'imageTag': str} or {'imageDigest': str}
+    Returns the aggregated failures list from all chunks; empty means full success.
+    Raises ValueError for public ECR targets.
+    '''
+    if is_public_registry(image_reference):
+        raise ValueError('BatchDeleteImage is not available for public ECR registries')
+
+    image_reference = oci.model.OciImageReference(image_reference)
+    registry_id, _, _ = _parse_aws_private_registry(image_reference)
+    repository_name = image_reference.name
+
+    failures = []
+    for i in range(0, len(image_ids), 100):
+        chunk = image_ids[i:i + 100]
+        body = json.dumps({
+            'registryId': registry_id,
+            'repositoryName': repository_name,
+            'imageIds': chunk,
+        }).encode()
+        res = request(
+            action=AwsAction.BATCH_DELETE_IMAGE,
+            body=body,
+            image_reference=image_reference,
+            method='POST',
+            credentials=credentials,
+            session=session,
+        )
+        failures.extend(res.json().get('failures', []))
+
+    return failures
