@@ -406,6 +406,94 @@ def _tag_trust_store_components(components):
     return tagged
 
 
+def _parse_os_release(data):
+    '''Parse /etc/os-release bytes into a dict of key→value (quotes stripped).'''
+    result = {}
+    for line in data.decode('utf-8', errors='replace').splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if '=' not in line:
+            continue
+        key, _, val = line.partition('=')
+        result[key.strip()] = val.strip().strip('"\'')
+    return result
+
+
+_OS_PURL_PREFIXES = (
+    'pkg:apk/alpine/',
+    'pkg:deb/debian/',
+    'pkg:deb/ubuntu/',
+    'pkg:rpm/rhel/',
+)
+
+
+def _has_os_purl(components):
+    '''Return True if any component already carries an OS purl.'''
+    for comp in components:
+        purl = comp.get('purl', '')
+        if any(purl.startswith(p) for p in _OS_PURL_PREFIXES):
+            return True
+    return False
+
+
+def _synthesise_os_purl(fields):
+    '''
+    Derive (purl, name, version) from /etc/os-release fields, or None.
+
+    Returns None when VERSION_ID is absent, empty, non-numeric, or the distro
+    ID is not in the recognised set.
+    '''
+    distro_id = fields.get('ID', '').lower()
+    version_id = fields.get('VERSION_ID', '')
+    if not version_id or not version_id[0].isdigit():
+        return None
+    if distro_id == 'alpine':
+        return f'pkg:apk/alpine/alpine@{version_id}', 'alpine', version_id
+    if distro_id in ('debian', 'ubuntu'):
+        return f'pkg:deb/{distro_id}/base-files@{version_id}', 'base-files', version_id
+    if distro_id in ('rhel', 'centos') or distro_id.startswith('ubi'):
+        return f'pkg:rpm/rhel/redhat-release@{version_id}', 'redhat-release', version_id
+    return None
+
+
+def enrich_sbom(cdx_bytes, file_reader):
+    '''
+    Inject a synthetic OS purl component into cdx_bytes if one is missing.
+
+    Reads /etc/os-release via file_reader, parses ID and VERSION_ID, and appends
+    a single "library" component tagged with gardener.cloud/sbom/source:
+    os-release-injection.  Returns unchanged bytes when the purl already exists,
+    /etc/os-release is unreadable, or the distro/version is unrecognised.
+    '''
+    doc = json.loads(cdx_bytes)
+    components = doc.setdefault('components', [])
+
+    if _has_os_purl(components):
+        return cdx_bytes
+
+    data = file_reader('/etc/os-release')
+    if not data:
+        return cdx_bytes
+
+    result = _synthesise_os_purl(_parse_os_release(data))
+    if not result:
+        return cdx_bytes
+
+    purl, name, version = result
+    components.append({
+        'type': 'library',
+        'name': name,
+        'version': version,
+        'purl': purl,
+        'properties': [
+            {'name': 'gardener.cloud/sbom/source', 'value': 'os-release-injection'},
+        ],
+    })
+    logger.info('SBOM enrichment: injected OS purl %s from /etc/os-release', purl)
+    return json.dumps(doc, ensure_ascii=False).encode()
+
+
 def enrich(cbom_bytes, image_reference=None, file_reader=None, oci_client=None):
     '''
     Return enriched CBOM bytes.

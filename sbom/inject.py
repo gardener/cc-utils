@@ -506,6 +506,10 @@ def scan_image(
         with open(cdx_path, 'rb') as f:
             cdx_bytes = f.read()
 
+        _fr, _ = _oci_file_reader(image_ref, oci_client)
+        if _fr is not None:
+            cdx_bytes = scbe.enrich_sbom(cdx_bytes, _fr)
+
         _run_cbomkit_theia(
             image_ref=str(image_ref),
             cdx_bom_path=cdx_path,
