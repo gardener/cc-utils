@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 '''Enrich cbomkit-theia CBOMs with key-size information not extracted during scanning.'''
+import gzip
 import io
 import json
 import logging
 import shutil
 import subprocess
 import tarfile
+import tempfile
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -46,22 +48,19 @@ def _docker_file_reader(image_reference):
         return None, lambda: None
 
     def read_file(path):
-        try:
-            result = subprocess.run(
-                ['docker', 'cp', f'{container_id}:{path}', '-'],
-                capture_output=True,
-                check=False,
-            )
-            if result.returncode != 0:
-                return None
-            # docker cp to stdout produces a single-file tar archive
-            with tarfile.open(fileobj=io.BytesIO(result.stdout)) as tf:
-                for member in tf.getmembers():
-                    if member.isfile():
-                        fobj = tf.extractfile(member)
-                        return fobj.read() if fobj else None
-        except Exception:  # nosec B110
-            pass
+        result = subprocess.run(
+            ['docker', 'cp', f'{container_id}:{path}', '-'],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        # docker cp to stdout produces a single-file tar archive
+        with tarfile.open(fileobj=io.BytesIO(result.stdout)) as tf:
+            for member in tf.getmembers():
+                if member.isfile():
+                    fobj = tf.extractfile(member)
+                    return fobj.read() if fobj else None
         return None
 
     def cleanup():
@@ -72,6 +71,87 @@ def _docker_file_reader(image_reference):
         )
 
     return read_file, cleanup
+
+
+def _oci_file_reader(image_reference, oci_client):
+    '''Return a read_file callable backed by OCI layer downloads, or None on failure.'''
+    try:
+        import oci.model as om
+        ref = om.OciImageReference.to_image_ref(image_reference)
+        repo_ref = ref.ref_without_tag
+        manifest = oci_client.manifest(image_reference)
+        if isinstance(manifest, om.OciImageManifestList):
+            entries = [
+                e for e in manifest.manifests
+                if e.platform and e.platform.os == 'linux'
+                and e.platform.architecture == 'amd64'
+            ]
+            entry = entries[0] if entries else (
+                manifest.manifests[0] if manifest.manifests else None
+            )
+            if entry is None:
+                return None
+            manifest = oci_client.manifest(f'{repo_ref}@{entry.digest}')
+        if manifest is None:
+            return None
+    except Exception as exc:
+        logger.debug('CBOM enrichment: OCI manifest fetch failed for %s: %s', image_reference, exc)
+        raise
+
+    # newest layer first — read_file returns the topmost (container-visible) version of a file
+    layers = list(reversed(manifest.layers))
+    layer_cache = {}  # digest -> TemporaryFile (seekable, decompressed)
+
+    def _load_layer(layer):
+        digest = layer.digest
+        if digest in layer_cache:
+            return layer_cache[digest]
+        resp = oci_client.blob(
+            image_reference=repo_ref,
+            digest=digest,
+            stream=True,
+        )
+        if resp is None:
+            layer_cache[digest] = None
+            return None
+        tmp = tempfile.TemporaryFile()
+        first_bytes = b''
+        for chunk in resp.iter_content(chunk_size=65536):
+            if not first_bytes:
+                first_bytes = chunk[:2]
+            tmp.write(chunk)
+        tmp.seek(0)
+        if first_bytes[:2] == b'\x1f\x8b':
+            # gzip: decompress into a second tempfile so tarfile can seek
+            decompressed = tempfile.TemporaryFile()
+            with gzip.open(tmp) as gz:
+                while True:
+                    block = gz.read(65536)
+                    if not block:
+                        break
+                    decompressed.write(block)
+            tmp.close()
+            decompressed.seek(0)
+            layer_cache[digest] = decompressed
+        else:
+            layer_cache[digest] = tmp
+        return layer_cache[digest]
+
+    def read_file(path):
+        norm = path.lstrip('/')
+        for layer in layers:
+            tmp = _load_layer(layer)
+            if tmp is None:
+                continue
+            tmp.seek(0)
+            with tarfile.open(fileobj=tmp) as tf:
+                for member in tf.getmembers():
+                    if member.name.lstrip('./') == norm and member.isfile():
+                        fobj = tf.extractfile(member)
+                        return fobj.read() if fobj else None
+        return None
+
+    return read_file
 
 
 def _compute_sizes_from_values(components):
@@ -290,7 +370,7 @@ def _enrich_apk_keys(components, file_reader):
     return new_comps
 
 
-def enrich(cbom_bytes, image_reference=None, file_reader=None):
+def enrich(cbom_bytes, image_reference=None, file_reader=None, oci_client=None):
     '''
     Return enriched CBOM bytes.
 
@@ -298,11 +378,11 @@ def enrich(cbom_bytes, image_reference=None, file_reader=None):
     1. Propagate key sizes from related-crypto-material components to their referenced
        algorithm components' parameterSetIdentifier (works without image access).
     2. If image_reference is given, inject RSA algorithm and key-material components for
-       APK signing keys (.rsa.pub files) — using file_reader if provided, otherwise Docker
-       if available.
+       APK signing keys (.rsa.pub files) — using file_reader if provided, then Docker
+       if available, then OCI layer download if oci_client is provided.
 
     file_reader, if given, must be a callable: path: str -> bytes | None.
-    When provided, Docker is not attempted.
+    When provided, Docker and OCI paths are not attempted.
     '''
     doc = json.loads(cbom_bytes)
     components = doc.get('components') or []
@@ -330,6 +410,9 @@ def enrich(cbom_bytes, image_reference=None, file_reader=None):
             cleanup = lambda: None
         else:
             active_reader, cleanup = _docker_file_reader(image_reference)
+            if active_reader is None and oci_client is not None:
+                active_reader = _oci_file_reader(image_reference, oci_client)
+                cleanup = lambda: None
         try:
             if active_reader:
                 new_comps = _enrich_apk_keys(components, active_reader)
