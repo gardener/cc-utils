@@ -20,7 +20,6 @@ Public interface
 import datetime
 import json
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +41,6 @@ _SEARCH_DIRS = frozenset({
     '/usr/local/bin', '/usr/bin', '/usr/sbin',
     '/bin', '/sbin', '/usr/local/sbin',
 })
-
-_MAX_BINARY_BYTES = 256 * 1024 * 1024  # 256 MiB
 
 _SCAN_CHUNK = 65536
 # Overlap ensures patterns that span a chunk boundary are still found.

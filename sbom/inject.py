@@ -460,13 +460,6 @@ def _iter_boring_candidates(image_ref, oci_client):
                         continue
                     if not (member.mode & 0o111):
                         continue
-                    if member.size > sboring._MAX_BINARY_BYTES:
-                        logger.debug(
-                            'boringcrypto: skipping oversized binary %s (%d bytes)',
-                            path, member.size,
-                        )
-                        seen_paths.add(path)
-                        continue
                     fobj = tf.extractfile(member)
                     if fobj is None:
                         continue
@@ -622,33 +615,26 @@ def scan_image(
         )
 
     # BoringCrypto scan — detects whether Go binaries were built with -tags boringcrypto.
-    try:
-        boring_result = sboring.scan_binaries(
-            _iter_boring_candidates(str(image_ref), oci_client)
-        )
-    except Exception as exc:
-        logger.warning('%s: boringcrypto scan failed: %s', image_ref, exc)
-        boring_result = None
+    boring_result = sboring.scan_binaries(
+        _iter_boring_candidates(str(image_ref), oci_client)
+    )
     if boring_result is not None:
         boring_cbom = sboring.build_inferred_cbom(str(image_ref), boring_result)
-        try:
-            scbom.push_cbom_referrer(
-                cbom_bytes=boring_cbom,
-                image_reference=image_ref,
-                oci_client=oci_client,
-                tool_version=sboring.TOOL_NAME,
-                extra_annotations={
-                    sboring.ANALYSIS_METHOD_ANNOTATION: sboring.ANALYSIS_METHOD_VALUE,
-                },
-            )
-            logger.info(
-                '%s: pushed boringcrypto CBOM (%d Go binaries, boring_fips_module=%s)',
-                image_ref,
-                boring_result['go_binaries_scanned'],
-                boring_result['boring_fips_module'],
-            )
-        except Exception as exc:
-            logger.error('%s: failed to push boringcrypto CBOM: %s', image_ref, exc)
+        scbom.push_cbom_referrer(
+            cbom_bytes=boring_cbom,
+            image_reference=image_ref,
+            oci_client=oci_client,
+            tool_version=sboring.TOOL_NAME,
+            extra_annotations={
+                sboring.ANALYSIS_METHOD_ANNOTATION: sboring.ANALYSIS_METHOD_VALUE,
+            },
+        )
+        logger.info(
+            '%s: pushed boringcrypto CBOM (%d Go binaries, boring_fips_module=%s)',
+            image_ref,
+            boring_result['go_binaries_scanned'],
+            boring_result['boring_fips_module'],
+        )
 
     return (
         spdx_bytes, cdx_bytes, cbom_bytes,
