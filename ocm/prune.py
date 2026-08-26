@@ -259,16 +259,43 @@ def _delete_group(digest_ref: str, tag_refs: list[str], oci_client: oc.Client):
     logger.info(f'removed {digest_ref} ({len(tag_refs)} tag(s))')
 
 
+def _batch_delete_all_aws(groups: dict, oci_client: oc.Client):
+    all_refs = []
+    for digest_ref, tag_refs in groups.items():
+        all_refs.extend(tag_refs)
+        all_refs.append(digest_ref)
+
+    if not all_refs:
+        return
+
+    oci_client.batch_delete_manifests(
+        image_reference=all_refs[0],
+        refs=all_refs,
+    )
+    logger.info(
+        f'batch-deleted {len(groups)} manifest(s) '
+        f'({sum(len(t) for t in groups.values())} tag(s) total)'
+    )
+
+
 def delete_all(
     refs: collections.abc.Iterable[str],
     oci_client: oc.Client,
     jobs: int = 8,
 ):
+    refs = list(refs)
+    if not refs:
+        return
+
     groups = _group_by_digest(refs, oci_client, jobs=jobs)
     logger.info(
         f'pruning {len(groups)} unique manifest(s) '
         f'({sum(len(t) for t in groups.values())} tag(s) total)'
     )
+
+    if om.OciRegistryType.from_image_ref(refs[0]) is om.OciRegistryType.AWS:
+        _batch_delete_all_aws(groups, oci_client)
+        return
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         futs = [
