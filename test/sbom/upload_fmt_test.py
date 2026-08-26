@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+# SPDX-FileCopyrightText: Copyright Contributors to the Gardener project
 #
 # SPDX-License-Identifier: Apache-2.0
 '''Unit tests for upload.py _fmt_id / _filename for CBOM resources.'''
