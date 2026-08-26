@@ -725,6 +725,17 @@ def infer_from_elf(
         return _infer_via_docker(image_reference, binary_paths, tmpdir)
 
 
+def _deployment_context(inference: dict) -> str | None:
+    '''Map ELF inference output to a deployment-context string.'''
+    protocols = inference.get('protocols', [])
+    has_tls = any(p.startswith('TLS') or p.startswith('DTLS') for p in protocols)
+    if has_tls:
+        return 'tls-termination'
+    if inference.get('algorithms'):
+        return 'data-encryption'
+    return None
+
+
 def build_inferred_cbom(image_ref: str, inference: dict) -> bytes:
     '''
     Build a CycloneDX 1.6 CBOM from an ELF inference result dict.
@@ -775,6 +786,9 @@ def build_inferred_cbom(image_ref: str, inference: dict) -> bytes:
         properties.append({'name': 'gardener.cloud/cbom/boringssl-detected', 'value': 'true'})
     if inference.get('boringssl_fips'):
         properties.append({'name': 'gardener.cloud/cbom/boringssl-fips-detected', 'value': 'true'})
+    ctx = _deployment_context(inference)
+    if ctx is not None:
+        properties.append({'name': 'gardener.cloud/cbom/deployment-context', 'value': ctx})
 
     doc = {
         'bomFormat':   'CycloneDX',
