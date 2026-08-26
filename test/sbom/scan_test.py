@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright Contributors to the Gardener project
+# SPDX-FileCopyrightText: Contributors to the Gardener project
 #
 # SPDX-License-Identifier: Apache-2.0
 '''Unit tests for scan.py (_resolve_single_arch_ref and resource-type filter).'''
