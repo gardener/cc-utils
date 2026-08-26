@@ -5,6 +5,7 @@ import unittest.mock
 
 import requests
 
+import oci.auth
 import oci.client as co
 
 
@@ -132,3 +133,50 @@ def test_client_calls_throttle_on_429():
     # 4 → 2 from on_429, then 2 → 3 from on_success on the successful retry
     assert throttle._limit == 3
     assert call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# batch_delete_manifests
+# ---------------------------------------------------------------------------
+
+ECR_REF = '123456789012.dkr.ecr.eu-west-1.amazonaws.com/my-repo:latest'
+ECR_REFS = [
+    '123456789012.dkr.ecr.eu-west-1.amazonaws.com/my-repo:v1',
+    '123456789012.dkr.ecr.eu-west-1.amazonaws.com/my-repo:v2',
+    '123456789012.dkr.ecr.eu-west-1.amazonaws.com/my-repo@sha256:abcdef',
+]
+
+
+def test_batch_delete_manifests_rejects_non_aws():
+    client = co.Client()
+    raised = False
+    try:
+        client.batch_delete_manifests(
+            image_reference='gcr.io/project/repo:latest',
+            refs=[],
+        )
+    except ValueError:
+        raised = True
+    assert raised
+
+
+def test_batch_delete_manifests_aws():
+    mock_creds = oci.auth.OciAccessKeyCredentials(
+        access_key_id='AKIATEST',
+        secret_access_key='secret',
+        session_token=None,
+    )
+
+    def mock_credentials_lookup(image_reference, privileges, absent_ok):
+        return mock_creds
+
+    client = co.Client(credentials_lookup=mock_credentials_lookup)
+
+    with unittest.mock.patch('oci.aws.batch_delete_images', return_value=[]) as mock_batch:
+        client.batch_delete_manifests(image_reference=ECR_REF, refs=ECR_REFS)
+
+    mock_batch.assert_called_once()
+    image_ids = mock_batch.call_args.kwargs['image_ids']
+    assert {'imageTag': 'v1'} in image_ids
+    assert {'imageTag': 'v2'} in image_ids
+    assert {'imageDigest': 'sha256:abcdef'} in image_ids

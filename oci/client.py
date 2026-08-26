@@ -1366,6 +1366,58 @@ class Client:
         else:
             raise RuntimeError('this case should not occur (this is a bug)')
 
+    def batch_delete_manifests(
+        self,
+        image_reference: om.OciImageReference | str,
+        refs: collections.abc.Iterable[str],
+    ):
+        '''
+        Bulk-delete manifests on a private AWS ECR registry.
+        Raises ValueError for non-ECR or public-ECR targets.
+        refs: iterable of image-reference strings (tagged or digest-pinned), all in the same repo.
+        IMAGE_NOT_FOUND failures from ECR are ignored (absent_ok semantics).
+        '''
+        image_reference = om.OciImageReference(image_reference)
+        if image_reference.registry_type is not om.OciRegistryType.AWS:
+            raise ValueError(
+                f'batch_delete_manifests requires a private AWS ECR target, got: {image_reference}'
+            )
+        if oci.aws.is_public_registry(image_reference):
+            raise ValueError(
+                f'batch_delete_manifests is not available for public ECR: {image_reference}'
+            )
+
+        image_ids = []
+        for ref in refs:
+            ref_obj = om.OciImageReference(ref)
+            if ref_obj.has_digest_tag:
+                image_ids.append({'imageDigest': ref_obj.tag})
+            else:
+                image_ids.append({'imageTag': ref_obj.tag})
+
+        if not image_ids:
+            return
+
+        credentials = self.credentials_lookup(
+            image_reference=str(image_reference),
+            privileges=oa.Privileges.READWRITE,
+            absent_ok=False,
+        )
+
+        failures = oci.aws.batch_delete_images(
+            image_reference=image_reference,
+            image_ids=image_ids,
+            credentials=credentials,
+            session=self.session,
+        )
+
+        # IMAGE_NOT_FOUND is expected when a prior untag already removed the manifest
+        non_trivial = [f for f in failures if f.get('failureCode') != 'ImageNotFoundException']
+        if non_trivial:
+            raise RuntimeError(
+                f'batch delete had {len(non_trivial)} unexpected failure(s): {non_trivial}'
+            )
+
     def delete_blob(
         self,
         image_reference: om.OciImageReference | str,
