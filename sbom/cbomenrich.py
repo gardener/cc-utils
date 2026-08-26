@@ -370,6 +370,42 @@ def _enrich_apk_keys(components, file_reader):
     return new_comps
 
 
+_CA_BUNDLE_PATHS = (
+    '/etc/ssl/',
+    '/etc/pki/tls/',
+    '/usr/share/ca-certificates/',
+    '/usr/local/share/ca-certificates/',
+)
+
+
+def _tag_trust_store_components(components):
+    '''
+    Tag cryptographic-asset components whose every occurrence location is under a
+    well-known OS CA-bundle path with gardener.cloud/cbom/source: os-trust-store.
+
+    Returns the number of components tagged.
+    '''
+    tagged = 0
+    for comp in components:
+        if comp.get('type') != 'cryptographic-asset':
+            continue
+        occs = (comp.get('evidence') or {}).get('occurrences') or []
+        locs = [occ.get('location', '') for occ in occs if occ.get('location')]
+        if not locs:
+            continue
+        if not all(
+            any(loc.startswith(prefix) for prefix in _CA_BUNDLE_PATHS)
+            for loc in locs
+        ):
+            continue
+        props = comp.setdefault('properties', [])
+        if any(p.get('name') == 'gardener.cloud/cbom/source' for p in props):
+            continue
+        props.append({'name': 'gardener.cloud/cbom/source', 'value': 'os-trust-store'})
+        tagged += 1
+    return tagged
+
+
 def enrich(cbom_bytes, image_reference=None, file_reader=None, oci_client=None):
     '''
     Return enriched CBOM bytes.
@@ -402,6 +438,13 @@ def enrich(cbom_bytes, image_reference=None, file_reader=None, oci_client=None):
         logger.info(
             'CBOM enrichment: resolved %d orphan algorithm component(s) from siblings',
             orphaned,
+        )
+
+    trust_store_tagged = _tag_trust_store_components(components)
+    if trust_store_tagged:
+        logger.info(
+            'CBOM enrichment: tagged %d component(s) as os-trust-store source',
+            trust_store_tagged,
         )
 
     if image_reference:

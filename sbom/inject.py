@@ -564,10 +564,16 @@ def scan_image(
 
     # ELF symbol inference — detects crypto in C/C++ images (envoy, fluent-bit, etc.)
     # that cbomkit-theia only covers as CA-bundle noise.
-    elf_inference = selfc.infer_from_elf(
-        image_reference=str(image_ref),
-        oci_client=oci_client,
-    )
+    # Skipped for Go images (inference is non-None when pkg:golang/ purls are present);
+    # dynamic imports carry no useful signal for pure Go binaries.
+    # Known limitation: mixed Go+C/C++ images (CGo + OpenSSL) are also skipped.
+    if not inference:
+        elf_inference = selfc.infer_from_elf(
+            image_reference=str(image_ref),
+            oci_client=oci_client,
+        )
+    else:
+        elf_inference = None
     if elf_inference:
         elf_cbom_bytes = selfc.build_inferred_cbom(
             image_ref=image_ref,
