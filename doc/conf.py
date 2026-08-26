@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: 2024 SAP SE or an SAP affiliate company and Gardener contributors
+# SPDX-FileCopyrightText: Copyright Contributors to the Gardener project
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -30,7 +30,7 @@ sys.path.append(os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 
 project = 'cc-utils'
-copyright = '2019-2020, SAP SE or an SAP affiliate company.'
+copyright = 'Contributors to the Gardener project'
 author = 'The Gardener Team'
 
 # The short X.Y version
