@@ -23,13 +23,16 @@ import io
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tarfile
 import tempfile
+import zlib
 
 import oci.client as oc
 import oci.model as om
 import ocm
+import sbom.boringcrypto as sboring
 import sbom.cbom as scbom
 import sbom.cbomenrich as scbe
 import sbom.elfcrypto as selfc
@@ -353,6 +356,124 @@ def _oci_file_reader(image_ref, oci_client):
     return read_file, lambda: None
 
 
+class _ChainReader:
+    '''Prepends `head` bytes before delegating reads to `tail`.'''
+    __slots__ = ('_head', '_tail')
+
+    def __init__(self, head, tail):
+        self._head = head
+        self._tail = tail
+
+    def read(self, n=-1):
+        if self._head:
+            if n < 0:
+                data = self._head + self._tail.read()
+                self._head = b''
+                return data
+            chunk = self._head[:n]
+            self._head = self._head[n:]
+            return chunk
+        return self._tail.read(n) if n >= 0 else self._tail.read()
+
+    def close(self):
+        pass
+
+
+def _decompress_layer(resp, dst):
+    '''
+    Stream-decompress an OCI layer blob into dst (writable file-like).
+
+    Detects gzip (magic 1f 8b), zstd (magic 28 b5 2f fd), or plain tar
+    from the first four bytes; requires neither resp.content nor a
+    second full-size buffer.
+    '''
+    header = resp.raw.read(4)
+    if not header:
+        return
+    if header[:4] == b'\x28\xb5\x2f\xfd':
+        import zstandard
+        with zstandard.ZstdDecompressor().stream_reader(_ChainReader(header, resp.raw)) as r:
+            shutil.copyfileobj(r, dst, 65536)
+    elif header[:2] == b'\x1f\x8b':
+        d = zlib.decompressobj(wbits=47)  # 47 = auto-detect gzip
+        dst.write(d.decompress(header))
+        while True:
+            chunk = resp.raw.read(65536)
+            if not chunk:
+                break
+            dst.write(d.decompress(chunk))
+        dst.write(d.flush())
+    else:
+        dst.write(header)
+        shutil.copyfileobj(resp.raw, dst, 65536)
+
+
+def _iter_boring_candidates(image_ref, oci_client):
+    '''
+    Yield (path, fobj) pairs for executable candidates in Go binary search dirs.
+
+    Streams each layer to a TemporaryFile to avoid double-buffering the full
+    decompressed content in memory.  Yields in overlay order (topmost layer first)
+    so the caller sees the correct file for each path without needing to understand
+    the overlay structure.  Raises on manifest fetch or layer I/O failure.
+    '''
+    import oci.model as om
+    ref = om.OciImageReference.to_image_ref(image_ref)
+    repo_ref = ref.ref_without_tag
+    manifest = oci_client.manifest(image_ref)
+    if isinstance(manifest, om.OciImageManifestList):
+        entries = [
+            e for e in manifest.manifests
+            if e.platform and e.platform.os == 'linux'
+            and e.platform.architecture == 'amd64'
+        ]
+        entry = entries[0] if entries else (
+            manifest.manifests[0] if manifest.manifests else None
+        )
+        if entry is None:
+            return
+        manifest = oci_client.manifest(f'{repo_ref}@{entry.digest}')
+
+    seen_paths = set()
+
+    for layer in reversed(manifest.layers):
+        with tempfile.TemporaryFile() as tmp_f:
+            resp = oci_client.blob(
+                image_reference=repo_ref,
+                digest=layer.digest,
+                stream=True,
+            )
+            try:
+                _decompress_layer(resp, tmp_f)
+            finally:
+                resp.close()
+            tmp_f.seek(0)
+            with tarfile.open(fileobj=tmp_f) as tf:
+                for member in tf:
+                    if not member.isfile():
+                        continue
+                    path = '/' + member.name.lstrip('./')
+                    if path in seen_paths:
+                        continue
+                    dir_part = os.path.dirname(path)
+                    if dir_part not in sboring._SEARCH_DIRS:
+                        continue
+                    if not (member.mode & 0o111):
+                        continue
+                    if member.size > sboring._MAX_BINARY_BYTES:
+                        logger.debug(
+                            'boringcrypto: skipping oversized binary %s (%d bytes)',
+                            path, member.size,
+                        )
+                        seen_paths.add(path)
+                        continue
+                    fobj = tf.extractfile(member)
+                    if fobj is None:
+                        continue
+                    seen_paths.add(path)
+                    yield path, fobj
+
+
 def scan_image(
     image_ref: str | om.OciImageReference,
     oci_client: oc.Client,
@@ -499,6 +620,35 @@ def scan_image(
             len(node_inference['algorithms']),
             len(node_inference['protocols']),
         )
+
+    # BoringCrypto scan — detects whether Go binaries were built with -tags boringcrypto.
+    try:
+        boring_result = sboring.scan_binaries(
+            _iter_boring_candidates(str(image_ref), oci_client)
+        )
+    except Exception as exc:
+        logger.warning('%s: boringcrypto scan failed: %s', image_ref, exc)
+        boring_result = None
+    if boring_result is not None:
+        boring_cbom = sboring.build_inferred_cbom(str(image_ref), boring_result)
+        try:
+            scbom.push_cbom_referrer(
+                cbom_bytes=boring_cbom,
+                image_reference=image_ref,
+                oci_client=oci_client,
+                tool_version=sboring.TOOL_NAME,
+                extra_annotations={
+                    sboring.ANALYSIS_METHOD_ANNOTATION: sboring.ANALYSIS_METHOD_VALUE,
+                },
+            )
+            logger.info(
+                '%s: pushed boringcrypto CBOM (%d Go binaries, boring_fips_module=%s)',
+                image_ref,
+                boring_result['go_binaries_scanned'],
+                boring_result['boring_fips_module'],
+            )
+        except Exception as exc:
+            logger.error('%s: failed to push boringcrypto CBOM: %s', image_ref, exc)
 
     return (
         spdx_bytes, cdx_bytes, cbom_bytes,
