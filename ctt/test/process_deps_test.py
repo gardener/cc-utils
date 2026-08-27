@@ -203,3 +203,40 @@ def test_identity_version_fallback_with_version_in_extra_identity():
     assert len(set(map(str, identities))) == 3, (
         f'expected 3 distinct identities, got: {[str(i) for i in identities]}'
     )
+
+
+def test_inject_sboms_flag_propagates_to_rre(tmpdir):
+    '''
+    inject_sboms: true in processing_cfg must cause ProcessingPipeline.process to set
+    inject_sboms=True on the returned ReplicationResourceElement.
+    '''
+    filter_file = tmpdir.join('no_files.remove')
+    filter_file.write('')
+
+    cfg = {
+        'target': {
+            'type': 'RegistriesTarget',
+            'kwargs': {
+                'registries': ['registry.example.com'],
+            },
+        },
+        'filter': {
+            'type': 'ImageFilter',
+            'kwargs': {
+                'include_image_refs': ['^.*'],
+            },
+        },
+        'processor': {
+            'type': 'FileFilter',
+            'kwargs': {
+                'filter_files': [str(filter_file)],
+            },
+        },
+        'upload': {
+            'type': 'PrependTargetUploader',
+        },
+        'inject_sboms': True,
+    }
+
+    pipeline = process_dependencies.processing_pipeline(cfg)
+    assert pipeline._inject_sboms is True

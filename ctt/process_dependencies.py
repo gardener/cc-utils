@@ -109,12 +109,14 @@ class ProcessingPipeline:
         filters: list[filters.FilterBase],
         processor: processors.ProcessorBase,
         uploaders: list[uploaders.UploaderBase],
+        inject_sboms: bool=False,
     ):
         self._name = name
         self._targets = targets
         self._filters = filters
         self._processor = processor
         self._uploaders = uploaders
+        self._inject_sboms = inject_sboms
 
     def matches_filter(
         self,
@@ -181,6 +183,9 @@ class ProcessingPipeline:
                 target_as_source=not first,
             )
             first = False
+
+        if self._inject_sboms:
+            replication_resource_element.inject_sboms = True
 
         ctt_label = create_ctt_label(
             processing_rules=[
@@ -313,12 +318,15 @@ def processing_pipeline(
 
     uploaders = [instantiate_uploader(upload_cfg) for upload_cfg in upload_cfgs]
 
+    inject_sboms = bool(processing_cfg.get('inject_sboms', False))
+
     pipeline = ProcessingPipeline(
         name=name,
         targets=targets,
         filters=filters,
         processor=proc,
         uploaders=uploaders,
+        inject_sboms=inject_sboms,
     )
     return pipeline
 
@@ -1176,7 +1184,15 @@ def process_replication_plan_step(
         ]
 
         # append any SBOM resources injected for this component
-        for sbom_resource in sbom_extra_resources.get(component.identity(), ()):
+        fresh = sbom_extra_resources.get(component.identity(), ())
+        if fresh:
+            # strip stale SBOM/CBOM resources so fresh ones are the only source of truth
+            component.resources = [
+                r for r in component.resources
+                if 'cbom-format' not in (r.extraIdentity or {})
+                and 'sbom-format' not in (r.extraIdentity or {})
+            ]
+        for sbom_resource in fresh:
             component.resources.append(sbom_resource)
 
         # Validate the patched component-descriptor and exit on fail
