@@ -167,6 +167,7 @@ def _compute_sizes_from_values(components):
     try:
         import base64
         import cryptography.hazmat.primitives.serialization as ser
+        import cryptography.x509 as x509
     except ImportError:
         return 0
 
@@ -183,7 +184,12 @@ def _compute_sizes_from_values(components):
             continue
         try:
             der = base64.b64decode(value)
-            pk = ser.load_der_public_key(der)
+            try:
+                pk = ser.load_der_public_key(der)
+            except Exception:  # nosec B110
+                # cbomkit-theia may store full X.509 cert DER instead of SubjectPublicKeyInfo
+                cert = x509.load_der_x509_certificate(der)
+                pk = cert.public_key()
             size = pk.key_size
             if size:
                 rcm['size'] = size
