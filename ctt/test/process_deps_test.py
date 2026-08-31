@@ -205,6 +205,80 @@ def test_identity_version_fallback_with_version_in_extra_identity():
     )
 
 
+def _fake_component_descriptor(name, version, component_references=None):
+    return ocm.ComponentDescriptor(
+        meta=ocm.Metadata(),
+        component=ocm.Component(
+            name=name,
+            version=version,
+            repositoryContexts=[],
+            provider='sap',
+            sources=[],
+            componentReferences=component_references or [],
+            resources=[],
+        ),
+    )
+
+
+def test_determine_changed_components_diamond_dependency_visited_once():
+    '''
+    root -> a, b; a -> c; b -> c. Without de-duplication, "c" would be yielded twice
+    (once via "a", once via "b"), causing its resources (e.g. injected SBOM/CBOM
+    resources) to be processed - and appended - more than once downstream. This is the
+    scenario that caused the "Dev Release" testmachinery failure with duplicate
+    "etcdbrctl" SBOM/CBOM resources (github.com/gardener/etcd-backup-restore:v0.44.1).
+    '''
+    component_c = _fake_component_descriptor('example.org/c', '1.0')
+    component_a = _fake_component_descriptor(
+        'example.org/a',
+        '1.0',
+        component_references=[
+            ocm.ComponentReference(name='c', componentName='example.org/c', version='1.0'),
+        ],
+    )
+    component_b = _fake_component_descriptor(
+        'example.org/b',
+        '1.0',
+        component_references=[
+            ocm.ComponentReference(name='c', componentName='example.org/c', version='1.0'),
+        ],
+    )
+    component_root = _fake_component_descriptor(
+        'example.org/root',
+        '1.0',
+        component_references=[
+            ocm.ComponentReference(name='a', componentName='example.org/a', version='1.0'),
+            ocm.ComponentReference(name='b', componentName='example.org/b', version='1.0'),
+        ],
+    )
+
+    component_descriptors_by_id = {
+        component_a.component.identity(): component_a,
+        component_b.component.identity(): component_b,
+        component_c.component.identity(): component_c,
+    }
+
+    def component_descriptor_lookup(component_id):
+        return component_descriptors_by_id[component_id]
+
+    def tgt_component_descriptor_lookup(component_id, absent_ok=False):
+        return None
+
+    changed_components = list(process_dependencies.determine_changed_components(
+        component_descriptor=component_root,
+        tgt_ocm_repo_url='registry.example.com',
+        component_descriptor_lookup=component_descriptor_lookup,
+        tgt_component_descriptor_lookup=tgt_component_descriptor_lookup,
+        pruning_mode=process_dependencies.PruningMode.REPLICATE_ALL,
+    ))
+
+    identities = [cd.component.identity() for cd in changed_components]
+    assert len(identities) == len(set(identities)), (
+        f'expected each component to be yielded once, got: {identities}'
+    )
+    assert component_c.component.identity() in identities
+
+
 def test_inject_sboms_flag_propagates_to_rre(tmpdir):
     '''
     inject_sboms: true in processing_cfg must cause ProcessingPipeline.process to set
