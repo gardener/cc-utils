@@ -356,8 +356,20 @@ def determine_changed_components(
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool]=None,
     pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
+    _visited: set[ocm.ComponentIdentity] | None=None,
 ) -> collections.abc.Generator[ocm.ComponentDescriptor, None, None]:
     component = component_descriptor.component
+
+    # the component-reference graph is not necessarily a tree (diamond dependencies, where the
+    # same component is referenced via more than one path, are common) - without this guard, a
+    # shared component would be yielded once per path leading to it, which in turn causes its
+    # resources (e.g. injected SBOM/CBOM resources) to be processed - and appended - more than
+    # once downstream, resulting in duplicate OCM resource identities.
+    if _visited is None:
+        _visited = set()
+    if component.identity() in _visited:
+        return
+    _visited.add(component.identity())
 
     if component_filter and component_filter(component):
         return
@@ -389,6 +401,7 @@ def determine_changed_components(
             component_filter=component_filter,
             reftype_filter=reftype_filter,
             pruning_mode=pruning_mode,
+            _visited=_visited,
         )
 
     if not (
@@ -412,6 +425,7 @@ def determine_changed_components(
                 component_filter=component_filter,
                 reftype_filter=reftype_filter,
                 pruning_mode=pruning_mode,
+                _visited=_visited,
             )
 
     yield component_descriptor
