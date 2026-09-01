@@ -358,6 +358,32 @@ def client_with_dockerauth(
     )
 
 
+def client_with_gar_oidc_auth(
+    oidc_cfg,
+    http_connection_pool_size: int=10,
+) -> 'Client':
+    '''
+    Creates an oci.client.Client that authenticates against GAR/GCR using a refreshable
+    OIDC-based credentials lookup.  On each credentials call the lookup checks whether
+    the cached GAR access token is within prefetch_margin_seconds of expiry and, if so,
+    transparently re-runs the OIDC exchange before returning credentials.
+
+    ACTIONS_ID_TOKEN_REQUEST_TOKEN and ACTIONS_ID_TOKEN_REQUEST_URL must be set in the
+    environment at the time credentials are first needed (and at each subsequent refresh).
+    '''
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(
+        pool_connections=http_connection_pool_size,
+        pool_maxsize=http_connection_pool_size,
+    )
+    session.mount('https://', adapter)
+
+    return Client(
+        credentials_lookup=oa.make_refreshable_gar_credentials_lookup(oidc_cfg=oidc_cfg),
+        session=session,
+    )
+
+
 class _PerHostThrottle:
     '''
     Adaptive per-host concurrency gate (AIMD) with rate-limit awareness.
@@ -535,6 +561,7 @@ class Client:
         scope: str,
         remaining_retries: int=None,
         sleep_before_retry_seconds: float=None,
+        _gar_refreshed: bool=False,
     ):
         if remaining_retries is None:
             remaining_retries = self.max_retries
@@ -675,6 +702,21 @@ class Client:
                     scope=scope,
                     remaining_retries=remaining_retries - 1,
                     sleep_before_retry_seconds=sleep_before_retry_seconds * 2,
+                )
+
+            if (
+                res.status_code == 401
+                and not _gar_refreshed
+                and hasattr(self.credentials_lookup, 'invalidate_cache')
+            ):
+                logger.warning('bearer realm 401 - invalidating cached GAR token and retrying')
+                self.credentials_lookup.invalidate_cache()
+                return self._authenticate(
+                    image_reference=image_reference,
+                    scope=scope,
+                    remaining_retries=remaining_retries,
+                    sleep_before_retry_seconds=sleep_before_retry_seconds,
+                    _gar_refreshed=True,
                 )
 
         res.raise_for_status()

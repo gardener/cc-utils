@@ -9,6 +9,7 @@ import dacite
 import requests
 import yaml
 
+import oci.auth
 import oci.model
 
 own_dir = os.path.dirname(__file__)
@@ -322,54 +323,14 @@ def authenticate_against_gar(
     '''
     See https://github.com/google-github-actions/auth for reference.
     '''
-    session = requests.Session()
-
-    res = _fetch_with_retries(
-        url=f'{gh_token_url}&audience={oidc_cfg.audience}',
-        session=session,
-        headers={
-            'Authorization': f'Bearer {gh_token}',
-        },
+    access_token = oci.auth.exchange_gar_token(
+        oidc_cfg=oidc_cfg,
+        gh_token=gh_token,
+        gh_token_url=gh_token_url,
+        lifetime_seconds=lifetime_seconds,
     )
-    gh_oidc_token = res.json()['value']
-
-    body = {
-        'audience': oidc_cfg.audience,
-        'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
-        'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
-        'scope': 'https://www.googleapis.com/auth/cloud-platform',
-        'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt',
-        'subjectToken': gh_oidc_token,
-    }
-    res = _fetch_with_retries(
-        url='https://sts.googleapis.com/v1/token',
-        session=session,
-        method='POST',
-        json=body,
-    )
-    auth_token = res.json()['access_token']
-
-    gar_access_token_url = (
-        'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/'
-        f'{oidc_cfg.service_account}:generateAccessToken'
-    )
-    body = {
-        'scope': 'https://www.googleapis.com/auth/cloud-platform',
-        'lifetime': f'{lifetime_seconds}s',
-    }
-    res = _fetch_with_retries(
-        url=gar_access_token_url,
-        session=session,
-        method='POST',
-        json=body,
-        headers={
-            'Authorization': f'Bearer {auth_token}',
-        },
-    )
-    access_token = res.json()['accessToken']
 
     username = 'oauth2accesstoken'
-
     token = base64.b64encode(f'{username}:{access_token}'.encode()).decode()
 
     return {

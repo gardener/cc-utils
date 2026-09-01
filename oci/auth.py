@@ -8,6 +8,10 @@ import operator
 import os
 import shutil
 import subprocess
+import threading
+import time
+
+import requests
 
 import oci.util
 
@@ -379,3 +383,126 @@ def docker_credentials_lookup(
         return None
 
     return docker_auth_lookup
+
+
+def exchange_gar_token(
+    oidc_cfg,
+    gh_token: str,
+    gh_token_url: str,
+    lifetime_seconds: int=3600,
+) -> str:
+    '''
+    Exchange a GitHub OIDC token for a GAR/GCR access token via GCP STS and IAM.
+
+    oidc_cfg must have .audience and .service_account attributes
+    (compatible with GarOidcConfiguration from .github/actions/oci-auth/oidc.py).
+
+    Returns the raw GAR access token string.
+    '''
+    session = requests.Session()
+
+    def _fetch(url, method='GET', json_body=None, headers=None, remaining=3):
+        res = session.request(
+            method=method,
+            url=url,
+            json=json_body,
+            headers=headers,
+        )
+        if not res.ok and remaining > 0:
+            return _fetch(url, method, json_body, headers, remaining - 1)
+        res.raise_for_status()
+        return res
+
+    res = _fetch(
+        url=f'{gh_token_url}&audience={oidc_cfg.audience}',
+        headers={'Authorization': f'Bearer {gh_token}'},
+    )
+    gh_oidc_token = res.json()['value']
+
+    res = _fetch(
+        url='https://sts.googleapis.com/v1/token',
+        method='POST',
+        json_body={
+            'audience': oidc_cfg.audience,
+            'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
+            'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
+            'scope': 'https://www.googleapis.com/auth/cloud-platform',
+            'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt',
+            'subjectToken': gh_oidc_token,
+        },
+    )
+    sts_token = res.json()['access_token']
+
+    res = _fetch(
+        url=(
+            'https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/'
+            f'{oidc_cfg.service_account}:generateAccessToken'
+        ),
+        method='POST',
+        json_body={
+            'scope': 'https://www.googleapis.com/auth/cloud-platform',
+            'lifetime': f'{lifetime_seconds}s',
+        },
+        headers={'Authorization': f'Bearer {sts_token}'},
+    )
+    return res.json()['accessToken']
+
+
+class _RefreshableGarCredentialsLookup:
+    def __init__(self, oidc_cfg, prefetch_margin_seconds: int=300):
+        self._oidc_cfg = oidc_cfg
+        self._prefetch_margin_seconds = prefetch_margin_seconds
+        self._token: str | None = None
+        self._expires_at: float = 0.0  # time.monotonic() timestamp
+        self._lock = threading.Lock()
+
+    def _needs_refresh(self) -> bool:
+        return (
+            self._token is None
+            or time.monotonic() >= self._expires_at - self._prefetch_margin_seconds
+        )
+
+    def _refresh(self):
+        # caller must hold _lock
+        gh_token = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
+        gh_token_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+        self._token = exchange_gar_token(
+            oidc_cfg=self._oidc_cfg,
+            gh_token=gh_token,
+            gh_token_url=gh_token_url,
+        )
+        # exchange_gar_token requests a 3600 s token by default
+        self._expires_at = time.monotonic() + 3600
+
+    def invalidate_cache(self):
+        with self._lock:
+            self._token = None
+            self._expires_at = 0.0
+
+    def __call__(
+        self,
+        image_reference: str,
+        privileges: 'Privileges'=None,
+        absent_ok: bool=False,
+    ) -> OciBasicAuthCredentials | None:
+        import oci.model as om
+        ref = om.OciImageReference(image_reference)
+        if ref.registry_type not in (om.OciRegistryType.GAR, om.OciRegistryType.GCR):
+            return None
+
+        with self._lock:
+            if self._needs_refresh():
+                self._refresh()
+            token = self._token
+
+        return OciBasicAuthCredentials(username='oauth2accesstoken', password=token)
+
+
+def make_refreshable_gar_credentials_lookup(
+    oidc_cfg,
+    prefetch_margin_seconds: int=300,
+) -> _RefreshableGarCredentialsLookup:
+    return _RefreshableGarCredentialsLookup(
+        oidc_cfg=oidc_cfg,
+        prefetch_margin_seconds=prefetch_margin_seconds,
+    )
