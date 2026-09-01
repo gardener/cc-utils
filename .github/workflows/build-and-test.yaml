@@ -153,11 +153,11 @@ jobs:
           find "${pkg_dir}"
           tar czf distribution-packages.tar.gz dist
       - name: export-ocm-fragments
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@808f3d287eda77a072e9b9c33b9784130cbb5a6c
         with:
           ocm-resources-file: dist/ocm_resources.yaml
           blobs-directory: dist/blobs.d
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@79f55cc186351577994fb8bd8ce64df3d2df6c3d
         with:
           name: distribution-packages
           path: distribution-packages.tar.gz
@@ -172,7 +172,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Retrieve Distribution Packages
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@7d967a4c7a0232a3b300d1921351b1aa7fa7df2c
         with:
           name: distribution-packages
       - name: lint
@@ -236,7 +236,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Retrieve Distribution Packages
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@7d967a4c7a0232a3b300d1921351b1aa7fa7df2c
         with:
           name: distribution-packages
       - name: run-tests
@@ -289,7 +289,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@a8d7d4536e9b7111e52034e15964a60fd1b9e888
         with:
           remove-trusted-label: false
       - name: run
@@ -300,7 +300,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@a8d7d4536e9b7111e52034e15964a60fd1b9e888
         with:
           remove-trusted-label: false
       - name: install-act
@@ -327,7 +327,7 @@ jobs:
           mkdir documentation-out.d
           GH_PAGES_PATH=$PWD/documentation-out.d .ci/generate_documentation
           ls documentation-out.d
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@79f55cc186351577994fb8bd8ce64df3d2df6c3d
         with:
           name: documentation
           path: documentation-out.d
@@ -348,11 +348,11 @@ jobs:
         with:
           ref: refs/heads/gh-pages
       - name: Retrieve Documentation
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@7d967a4c7a0232a3b300d1921351b1aa7fa7df2c
         with:
           name: documentation
           path: /tmp/documentation-out.d
-      - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@79f55cc186351577994fb8bd8ce64df3d2df6c3d
       - name: Publish Documentation
         run: |
           tar c -C /tmp/documentation-out.d . | tar x -C.
@@ -375,10 +375,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@a8d7d4536e9b7111e52034e15964a60fd1b9e888
         with:
           remove-trusted-label: false
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@79f55cc186351577994fb8bd8ce64df3d2df6c3d
       - name: install-syft
         shell: bash
         run: |
@@ -389,7 +389,7 @@ jobs:
           echo "${install_dir}" >> "${GITHUB_PATH}"
       - name: install-cbomkit-theia
         uses: ./.github/actions/install-cbomkit-theia
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@37c1964072627246c203b9994fda1391f022a445
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
           gh-token: ${{ github.token }}
@@ -412,10 +412,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@a8d7d4536e9b7111e52034e15964a60fd1b9e888
         with:
           remove-trusted-label: false
-      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@79f55cc186351577994fb8bd8ce64df3d2df6c3d
       - name: install-syft
         shell: bash
         run: |
@@ -426,7 +426,7 @@ jobs:
           echo "${install_dir}" >> "${GITHUB_PATH}"
       - name: install-cbomkit-theia
         uses: ./.github/actions/install-cbomkit-theia
-      - uses: gardener/cc-utils/.github/actions/oci-auth@master
+      - uses: gardener/cc-utils/.github/actions/oci-auth@37c1964072627246c203b9994fda1391f022a445
         with:
           oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
           gh-token: ${{ github.token }}
