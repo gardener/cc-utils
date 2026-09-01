@@ -11,7 +11,6 @@ import shutil
 import subprocess
 import threading
 import time
-import warnings
 
 import requests
 
@@ -422,10 +421,8 @@ def _fetch_with_retries(
 
 def exchange_gar_token(
     oidc_cfg: GarOidcConfiguration,
-    subject_token: str | None=None,
+    subject_token: str,
     lifetime_seconds: int=3600,
-    gh_token: str | None=None,
-    gh_token_url: str | None=None,
 ) -> str:
     '''
     Exchange an OIDC subject-token for a GAR/GCR access token via GCP STS token-exchange followed
@@ -434,33 +431,8 @@ def exchange_gar_token(
     `subject_token` is the already-acquired OIDC JWT of the calling workload; how it is obtained
     is the caller's concern (no CI-environment specifics are read here). Returns the raw GAR
     access token string.
-
-    DEPRECATED compatibility: `gh_token`/`gh_token_url` (GitHub Actions id-token credentials) may
-    be passed instead of `subject_token`, in which case the subject-token is fetched from GitHub's
-    id-token endpoint. This path exists only to tolerate action/library version skew during
-    rollout (composite actions are resolved `@master`); it will be removed once consumers pin the
-    oci-auth action to a released ref.
     '''
-    session = requests.Session()
-
-    if subject_token is None:
-        if not (gh_token and gh_token_url):
-            raise ValueError('either subject_token or gh_token/gh_token_url must be passed')
-        warnings.warn(
-            'exchange_gar_token(gh_token=..., gh_token_url=...) is deprecated - pass an '
-            'explicitly obtained OIDC subject_token instead',
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        # note: gh_token_url already carries query params, hence '&audience=' concatenation
-        res = _fetch_with_retries(
-            session=session,
-            url=f'{gh_token_url}&audience={oidc_cfg.audience}',
-            headers={'Authorization': f'Bearer {gh_token}'},
-        )
-        subject_token = res.json()['value']
-
-    _fetch = functools.partial(_fetch_with_retries, session)
+    _fetch = functools.partial(_fetch_with_retries, requests.Session())
 
     res = _fetch(
         url='https://sts.googleapis.com/v1/token',
@@ -564,42 +536,5 @@ def refreshable_gar_credentials_lookup(
         oidc_cfg=oidc_cfg,
         subject_token_supplier=subject_token_supplier,
         lifetime_seconds=lifetime_seconds,
-        prefetch_margin_seconds=prefetch_margin_seconds,
-    )
-
-
-def make_refreshable_gar_credentials_lookup(
-    oidc_cfg: GarOidcConfiguration,
-    prefetch_margin_seconds: int=300,
-) -> _RefreshableGarCredentialsLookup:
-    '''
-    DEPRECATED — kept for backwards-compatibility. Reads GitHub Actions'
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN / ACTIONS_ID_TOKEN_REQUEST_URL from the environment.
-    Use `refreshable_gar_credentials_lookup` with an explicit `subject_token_supplier` instead.
-    '''
-    warnings.warn(
-        'oci.auth.make_refreshable_gar_credentials_lookup is deprecated - use '
-        'oci.auth.refreshable_gar_credentials_lookup with an explicit subject_token_supplier',
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-    def _subject_token_supplier() -> str:
-        # note: token-request-url already carries query params, hence '&audience=' concatenation
-        res = _fetch_with_retries(
-            session=requests.Session(),
-            url=(
-                f'{os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]}'
-                f'&audience={oidc_cfg.audience}'
-            ),
-            headers={
-                'Authorization': f'Bearer {os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]}',
-            },
-        )
-        return res.json()['value']
-
-    return _RefreshableGarCredentialsLookup(
-        oidc_cfg=oidc_cfg,
-        subject_token_supplier=_subject_token_supplier,
         prefetch_margin_seconds=prefetch_margin_seconds,
     )

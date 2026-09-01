@@ -13,7 +13,6 @@ import tempfile
 import threading
 import time
 import urllib.parse
-import warnings
 
 import dacite
 import dateutil.parser
@@ -355,45 +354,6 @@ def client_with_dockerauth(
         credentials_lookup=oa.docker_credentials_lookup(
             absent_ok=True,
         ),
-        session=session,
-    )
-
-
-def client_with_gar_oidc_auth(
-    oidc_cfg,
-    http_connection_pool_size: int=10,
-) -> 'Client':
-    '''
-    DEPRECATED — kept for backwards-compatibility. Reads GitHub Actions'
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN / ACTIONS_ID_TOKEN_REQUEST_URL from the environment (via
-    oci.auth.make_refreshable_gar_credentials_lookup). Prefer constructing the Client directly
-    with a credentials_lookup obtained from oci.auth.refreshable_gar_credentials_lookup and an
-    explicit subject-token-supplier, passing its `invalidate_cache` as credentials_invalidate.
-
-    Creates an oci.client.Client that authenticates against GAR/GCR using a refreshable
-    OIDC-based credentials lookup. On each credentials call the lookup checks whether the cached
-    GAR access token is within prefetch_margin_seconds of expiry and, if so, transparently
-    re-runs the OIDC exchange before returning credentials.
-    '''
-    warnings.warn(
-        'oci.client.client_with_gar_oidc_auth is deprecated - construct the Client directly with '
-        'oci.auth.refreshable_gar_credentials_lookup (explicit subject_token_supplier) and pass '
-        'its invalidate_cache as credentials_invalidate',
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    session = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(
-        pool_connections=http_connection_pool_size,
-        pool_maxsize=http_connection_pool_size,
-    )
-    session.mount('https://', adapter)
-
-    credentials_lookup = oa.make_refreshable_gar_credentials_lookup(oidc_cfg=oidc_cfg)
-
-    return Client(
-        credentials_lookup=credentials_lookup,
-        credentials_invalidate=credentials_lookup.invalidate_cache,
         session=session,
     )
 
