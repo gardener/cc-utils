@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import threading
 import time
+import warnings
 
 import requests
 
@@ -385,21 +386,57 @@ def docker_credentials_lookup(
     return docker_auth_lookup
 
 
+@dataclasses.dataclass(frozen=True)
+class GarOidcConfiguration:
+    '''
+    Configuration for OIDC-based authentication against Google Artifact Registry (GAR) / GCR.
+
+    Registry- and identity-provider-specific, but free of any CI-/GitHub-Actions specifics.
+    `audience` identifies the workload-identity-provider, `service_account` the GCP service
+    account to impersonate.
+    '''
+    audience: str
+    service_account: str
+
+
 def exchange_gar_token(
-    oidc_cfg,
-    gh_token: str,
-    gh_token_url: str,
+    oidc_cfg: GarOidcConfiguration,
+    subject_token: str | None=None,
     lifetime_seconds: int=3600,
+    gh_token: str | None=None,
+    gh_token_url: str | None=None,
 ) -> str:
     '''
-    Exchange a GitHub OIDC token for a GAR/GCR access token via GCP STS and IAM.
+    Exchange an OIDC subject-token for a GAR/GCR access token via GCP STS token-exchange followed
+    by service-account impersonation (IAM `generateAccessToken`).
 
-    oidc_cfg must have .audience and .service_account attributes
-    (compatible with GarOidcConfiguration from .github/actions/oci-auth/oidc.py).
+    `subject_token` is the already-acquired OIDC JWT of the calling workload; how it is obtained
+    is the caller's concern (no CI-environment specifics are read here). Returns the raw GAR
+    access token string.
 
-    Returns the raw GAR access token string.
+    DEPRECATED compatibility: `gh_token`/`gh_token_url` (GitHub Actions id-token credentials) may
+    be passed instead of `subject_token`, in which case the subject-token is fetched from GitHub's
+    id-token endpoint. This path exists only to tolerate action/library version skew during
+    rollout (composite actions are resolved `@master`); it will be removed once consumers pin the
+    oci-auth action to a released ref.
     '''
     session = requests.Session()
+
+    if subject_token is None:
+        if not (gh_token and gh_token_url):
+            raise ValueError('either subject_token or gh_token/gh_token_url must be passed')
+        warnings.warn(
+            'exchange_gar_token(gh_token=..., gh_token_url=...) is deprecated - pass an '
+            'explicitly obtained OIDC subject_token instead',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        res = session.get(
+            url=f'{gh_token_url}&audience={oidc_cfg.audience}',
+            headers={'Authorization': f'Bearer {gh_token}'},
+        )
+        res.raise_for_status()
+        subject_token = res.json()['value']
 
     def _fetch(url, method='GET', json_body=None, headers=None, remaining=3):
         res = session.request(
@@ -414,12 +451,6 @@ def exchange_gar_token(
         return res
 
     res = _fetch(
-        url=f'{gh_token_url}&audience={oidc_cfg.audience}',
-        headers={'Authorization': f'Bearer {gh_token}'},
-    )
-    gh_oidc_token = res.json()['value']
-
-    res = _fetch(
         url='https://sts.googleapis.com/v1/token',
         method='POST',
         json_body={
@@ -428,7 +459,7 @@ def exchange_gar_token(
             'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
             'scope': 'https://www.googleapis.com/auth/cloud-platform',
             'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt',
-            'subjectToken': gh_oidc_token,
+            'subjectToken': subject_token,
         },
     )
     sts_token = res.json()['access_token']
@@ -449,8 +480,24 @@ def exchange_gar_token(
 
 
 class _RefreshableGarCredentialsLookup:
-    def __init__(self, oidc_cfg, prefetch_margin_seconds: int=300):
+    '''
+    Credentials-lookup that yields a GAR/GCR access token, transparently re-running the
+    OIDC exchange shortly before the cached token expires.
+
+    `subject_token_supplier` is a zero-arg callable returning a fresh OIDC subject-token; all
+    environment-/CI-specifics live behind it. `invalidate_cache` force-expires the cached token
+    (used by oci.client on 401 to retry once with a fresh token).
+    '''
+    def __init__(
+        self,
+        oidc_cfg: GarOidcConfiguration,
+        subject_token_supplier: collections.abc.Callable[[], str],
+        lifetime_seconds: int=3600,
+        prefetch_margin_seconds: int=300,
+    ):
         self._oidc_cfg = oidc_cfg
+        self._subject_token_supplier = subject_token_supplier
+        self._lifetime_seconds = lifetime_seconds
         self._prefetch_margin_seconds = prefetch_margin_seconds
         self._token: str | None = None
         self._expires_at: float = 0.0  # time.monotonic() timestamp
@@ -464,15 +511,12 @@ class _RefreshableGarCredentialsLookup:
 
     def _refresh(self):
         # caller must hold _lock
-        gh_token = os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']
-        gh_token_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
         self._token = exchange_gar_token(
             oidc_cfg=self._oidc_cfg,
-            gh_token=gh_token,
-            gh_token_url=gh_token_url,
+            subject_token=self._subject_token_supplier(),
+            lifetime_seconds=self._lifetime_seconds,
         )
-        # exchange_gar_token requests a 3600 s token by default
-        self._expires_at = time.monotonic() + 3600
+        self._expires_at = time.monotonic() + self._lifetime_seconds
 
     def invalidate_cache(self):
         with self._lock:
@@ -498,11 +542,52 @@ class _RefreshableGarCredentialsLookup:
         return OciBasicAuthCredentials(username='oauth2accesstoken', password=token)
 
 
-def make_refreshable_gar_credentials_lookup(
-    oidc_cfg,
+def refreshable_gar_credentials_lookup(
+    oidc_cfg: GarOidcConfiguration,
+    subject_token_supplier: collections.abc.Callable[[], str],
+    lifetime_seconds: int=3600,
     prefetch_margin_seconds: int=300,
 ) -> _RefreshableGarCredentialsLookup:
     return _RefreshableGarCredentialsLookup(
         oidc_cfg=oidc_cfg,
+        subject_token_supplier=subject_token_supplier,
+        lifetime_seconds=lifetime_seconds,
+        prefetch_margin_seconds=prefetch_margin_seconds,
+    )
+
+
+def make_refreshable_gar_credentials_lookup(
+    oidc_cfg: GarOidcConfiguration,
+    prefetch_margin_seconds: int=300,
+) -> _RefreshableGarCredentialsLookup:
+    '''
+    DEPRECATED — kept for backwards-compatibility. Reads GitHub Actions'
+    ACTIONS_ID_TOKEN_REQUEST_TOKEN / ACTIONS_ID_TOKEN_REQUEST_URL from the environment.
+    Use `refreshable_gar_credentials_lookup` with an explicit `subject_token_supplier` instead.
+    '''
+    warnings.warn(
+        'oci.auth.make_refreshable_gar_credentials_lookup is deprecated - use '
+        'oci.auth.refreshable_gar_credentials_lookup with an explicit subject_token_supplier',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    def _subject_token_supplier() -> str:
+        session = requests.Session()
+        res = session.get(
+            url=(
+                f'{os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]}'
+                f'&audience={oidc_cfg.audience}'
+            ),
+            headers={
+                'Authorization': f'Bearer {os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]}',
+            },
+        )
+        res.raise_for_status()
+        return res.json()['value']
+
+    return _RefreshableGarCredentialsLookup(
+        oidc_cfg=oidc_cfg,
+        subject_token_supplier=_subject_token_supplier,
         prefetch_margin_seconds=prefetch_margin_seconds,
     )
