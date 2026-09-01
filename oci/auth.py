@@ -2,6 +2,7 @@ import base64
 import collections.abc
 import dataclasses
 import enum
+import functools
 import json
 import logging
 import operator
@@ -399,6 +400,26 @@ class GarOidcConfiguration:
     service_account: str
 
 
+def _fetch_with_retries(
+    session: requests.Session,
+    url: str,
+    method: str='GET',
+    json_body: dict | None=None,
+    headers: dict | None=None,
+    remaining: int=3,
+) -> requests.Response:
+    res = session.request(
+        method=method,
+        url=url,
+        json=json_body,
+        headers=headers,
+    )
+    if not res.ok and remaining > 0:
+        return _fetch_with_retries(session, url, method, json_body, headers, remaining - 1)
+    res.raise_for_status()
+    return res
+
+
 def exchange_gar_token(
     oidc_cfg: GarOidcConfiguration,
     subject_token: str | None=None,
@@ -431,24 +452,15 @@ def exchange_gar_token(
             DeprecationWarning,
             stacklevel=2,
         )
-        res = session.get(
+        # note: gh_token_url already carries query params, hence '&audience=' concatenation
+        res = _fetch_with_retries(
+            session=session,
             url=f'{gh_token_url}&audience={oidc_cfg.audience}',
             headers={'Authorization': f'Bearer {gh_token}'},
         )
-        res.raise_for_status()
         subject_token = res.json()['value']
 
-    def _fetch(url, method='GET', json_body=None, headers=None, remaining=3):
-        res = session.request(
-            method=method,
-            url=url,
-            json=json_body,
-            headers=headers,
-        )
-        if not res.ok and remaining > 0:
-            return _fetch(url, method, json_body, headers, remaining - 1)
-        res.raise_for_status()
-        return res
+    _fetch = functools.partial(_fetch_with_retries, session)
 
     res = _fetch(
         url='https://sts.googleapis.com/v1/token',
@@ -573,8 +585,9 @@ def make_refreshable_gar_credentials_lookup(
     )
 
     def _subject_token_supplier() -> str:
-        session = requests.Session()
-        res = session.get(
+        # note: token-request-url already carries query params, hence '&audience=' concatenation
+        res = _fetch_with_retries(
+            session=requests.Session(),
             url=(
                 f'{os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]}'
                 f'&audience={oidc_cfg.audience}'
@@ -583,7 +596,6 @@ def make_refreshable_gar_credentials_lookup(
                 'Authorization': f'Bearer {os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]}',
             },
         )
-        res.raise_for_status()
         return res.json()['value']
 
     return _RefreshableGarCredentialsLookup(
