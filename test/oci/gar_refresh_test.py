@@ -151,10 +151,16 @@ def test_make_refreshable_gar_credentials_lookup_reads_gh_oidc_from_env(monkeypa
 
     captured = {}
     session = unittest.mock.MagicMock()
-    res = unittest.mock.MagicMock()
-    res.ok = True
-    res.json.return_value = {'value': 'gh-oidc-token'}
-    session.get.return_value = res
+
+    # subject-token fetch routes through the retrying helper -> session.request
+    def request(method, url, json=None, headers=None):
+        captured['url'] = url
+        response = unittest.mock.MagicMock()
+        response.ok = True
+        response.json.return_value = {'value': 'gh-oidc-token'}
+        return response
+
+    session.request = request
     monkeypatch.setattr(oa.requests, 'Session', lambda: session)
 
     def fake_exchange(oidc_cfg, subject_token, lifetime_seconds=3600):
@@ -166,9 +172,8 @@ def test_make_refreshable_gar_credentials_lookup_reads_gh_oidc_from_env(monkeypa
     lookup = oa.make_refreshable_gar_credentials_lookup(oidc_cfg=_GAR_OID_CFG)
     creds = lookup(image_reference=_GAR_REF)
 
-    called_url = session.get.call_args.kwargs['url']
-    assert called_url.startswith('https://tok.example.com')
-    assert f'audience={_GAR_OID_CFG.audience}' in called_url
+    assert captured['url'].startswith('https://tok.example.com')
+    assert f'audience={_GAR_OID_CFG.audience}' in captured['url']
     assert captured['subject_token'] == 'gh-oidc-token'
     assert creds.password == 'gar-token'
 
@@ -177,20 +182,17 @@ def test_exchange_gar_token_legacy_gh_kwargs(monkeypatch):
     '''Deprecated gh_token/gh_token_url path: the subject-token is fetched from the GitHub
     id-token endpoint before running the STS exchange (tolerates action/library version skew).'''
     session = unittest.mock.MagicMock()
-    gh_res = unittest.mock.MagicMock()
-    gh_res.ok = True
-    gh_res.json.return_value = {'value': 'gh-oidc-token'}
-    session.get.return_value = gh_res
     monkeypatch.setattr(oa.requests, 'Session', lambda: session)
 
     captured = {}
 
-    # intercept the internal requests at session-level; subject-token fetch uses session.get,
-    # STS/IAM exchanges route through session.request via the internal _fetch
+    # all fetches (subject-token + STS/IAM) route through session.request via the retry helper
     def request(method, url, json=None, headers=None):
         response = unittest.mock.MagicMock()
         response.ok = True
-        if url == 'https://sts.googleapis.com/v1/token':
+        if 'tok.example.com' in url:
+            response.json.return_value = {'value': 'gh-oidc-token'}
+        elif url == 'https://sts.googleapis.com/v1/token':
             captured['sts_body'] = json
             response.json.return_value = {'access_token': 'sts-token'}
         else:

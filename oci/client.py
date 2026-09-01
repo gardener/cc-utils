@@ -13,6 +13,7 @@ import tempfile
 import threading
 import time
 import urllib.parse
+import warnings
 
 import dacite
 import dateutil.parser
@@ -374,6 +375,13 @@ def client_with_gar_oidc_auth(
     GAR access token is within prefetch_margin_seconds of expiry and, if so, transparently
     re-runs the OIDC exchange before returning credentials.
     '''
+    warnings.warn(
+        'oci.client.client_with_gar_oidc_auth is deprecated - construct the Client directly with '
+        'oci.auth.refreshable_gar_credentials_lookup (explicit subject_token_supplier) and pass '
+        'its invalidate_cache as credentials_invalidate',
+        DeprecationWarning,
+        stacklevel=2,
+    )
     session = requests.Session()
     adapter = requests.adapters.HTTPAdapter(
         pool_connections=http_connection_pool_size,
