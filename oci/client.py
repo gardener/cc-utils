@@ -363,13 +363,16 @@ def client_with_gar_oidc_auth(
     http_connection_pool_size: int=10,
 ) -> 'Client':
     '''
-    Creates an oci.client.Client that authenticates against GAR/GCR using a refreshable
-    OIDC-based credentials lookup.  On each credentials call the lookup checks whether
-    the cached GAR access token is within prefetch_margin_seconds of expiry and, if so,
-    transparently re-runs the OIDC exchange before returning credentials.
+    DEPRECATED — kept for backwards-compatibility. Reads GitHub Actions'
+    ACTIONS_ID_TOKEN_REQUEST_TOKEN / ACTIONS_ID_TOKEN_REQUEST_URL from the environment (via
+    oci.auth.make_refreshable_gar_credentials_lookup). Prefer constructing the Client directly
+    with a credentials_lookup obtained from oci.auth.refreshable_gar_credentials_lookup and an
+    explicit subject-token-supplier, passing its `invalidate_cache` as credentials_invalidate.
 
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN and ACTIONS_ID_TOKEN_REQUEST_URL must be set in the
-    environment at the time credentials are first needed (and at each subsequent refresh).
+    Creates an oci.client.Client that authenticates against GAR/GCR using a refreshable
+    OIDC-based credentials lookup. On each credentials call the lookup checks whether the cached
+    GAR access token is within prefetch_margin_seconds of expiry and, if so, transparently
+    re-runs the OIDC exchange before returning credentials.
     '''
     session = requests.Session()
     adapter = requests.adapters.HTTPAdapter(
@@ -378,8 +381,11 @@ def client_with_gar_oidc_auth(
     )
     session.mount('https://', adapter)
 
+    credentials_lookup = oa.make_refreshable_gar_credentials_lookup(oidc_cfg=oidc_cfg)
+
     return Client(
-        credentials_lookup=oa.make_refreshable_gar_credentials_lookup(oidc_cfg=oidc_cfg),
+        credentials_lookup=credentials_lookup,
+        credentials_invalidate=credentials_lookup.invalidate_cache,
         session=session,
     )
 
@@ -449,6 +455,7 @@ class Client:
     def __init__(
         self,
         credentials_lookup: collections.abc.Callable=no_credentials_lookup,
+        credentials_invalidate: collections.abc.Callable[[], None]=None,
         routes: OciRoutes=OciRoutes(),
         disable_tls_validation: bool=False,
         timeout_seconds: int=None,
@@ -464,6 +471,9 @@ class Client:
         '''
         :param Callable credentials_lookup:
             defaults to no credentials, leading to anonymous-auth attempt
+        :param Callable credentials_invalidate:
+            optional, invoked to drop any cached credentials before one retry upon a 401 from the
+            bearer-realm (e.g. for refreshable credentials whose cached token expired prematurely)
         :param OciRoutes routes:
         :param bool disable_tls_validation:
         :param int timeout_seconds:
@@ -491,6 +501,7 @@ class Client:
             read concurrency.
         '''
         self.credentials_lookup = credentials_lookup
+        self.credentials_invalidate = credentials_invalidate
         self.token_cache = OauthTokenCache()
         if not session:
             self.session = requests.Session()
@@ -561,7 +572,7 @@ class Client:
         scope: str,
         remaining_retries: int=None,
         sleep_before_retry_seconds: float=None,
-        _gar_refreshed: bool=False,
+        _credentials_refreshed: bool=False,
     ):
         if remaining_retries is None:
             remaining_retries = self.max_retries
@@ -706,17 +717,17 @@ class Client:
 
             if (
                 res.status_code == 401
-                and not _gar_refreshed
-                and hasattr(self.credentials_lookup, 'invalidate_cache')
+                and not _credentials_refreshed
+                and self.credentials_invalidate
             ):
-                logger.warning('bearer realm 401 - invalidating cached GAR token and retrying')
-                self.credentials_lookup.invalidate_cache()
+                logger.warning('bearer realm 401 - invalidating cached credentials and retrying')
+                self.credentials_invalidate()
                 return self._authenticate(
                     image_reference=image_reference,
                     scope=scope,
                     remaining_retries=remaining_retries,
                     sleep_before_retry_seconds=sleep_before_retry_seconds,
-                    _gar_refreshed=True,
+                    _credentials_refreshed=True,
                 )
 
         res.raise_for_status()

@@ -52,6 +52,13 @@ outputs:
     description: |
       the path to which docker-cfg was written. Defaults to $HOME/.docker/config.json
     value: ${{ steps.oci-auth.outputs.docker-cfg-path }}
+  oidc-cfgs:
+    description: |
+      JSON mapping of GAR/GCR registry-host -> resolved GAR OIDC configuration
+      (`{"audience": ..., "service_account": ...}`, matching oci.auth.GarOidcConfiguration).
+      Allows subsequent steps to build a refreshable GAR credentials-lookup (e.g. via
+      oci.auth.refreshable_gar_credentials_lookup) without re-resolving the config.
+    value: ${{ steps.oci-auth.outputs.oidc-cfgs }}
 
 runs:
   using: composite
@@ -100,6 +107,11 @@ runs:
           extra_auths=extra_auths,
         )
 
+        oidc_cfgs = oidc.export_gar_oidc_cfgs(
+          image_references=image_references,
+        )
+
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           f.write(f'docker-cfg={json.dumps(docker_cfg)}\n')
           f.write(f'docker-cfg-path={docker_cfg_path}\n')
+          f.write(f'oidc-cfgs={json.dumps(oidc_cfgs)}\n')

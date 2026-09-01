@@ -314,6 +314,28 @@ def authenticate_against_azure(
     }
 
 
+def fetch_github_oidc_token(
+    gh_token: str,
+    gh_token_url: str,
+    audience: str,
+    session: requests.Session | None=None,
+) -> str:
+    '''
+    Fetch a GitHub Actions OIDC token (JWT) for the given audience from GitHub's
+    id-token endpoint (ACTIONS_ID_TOKEN_REQUEST_URL / _TOKEN).
+    '''
+    session = session or requests.Session()
+
+    res = _fetch_with_retries(
+        url=f'{gh_token_url}&audience={audience}',
+        session=session,
+        headers={
+            'Authorization': f'Bearer {gh_token}',
+        },
+    )
+    return res.json()['value']
+
+
 def authenticate_against_gar(
     oidc_cfg: GarOidcConfiguration,
     gh_token: str,
@@ -323,10 +345,15 @@ def authenticate_against_gar(
     '''
     See https://github.com/google-github-actions/auth for reference.
     '''
-    access_token = oci.auth.exchange_gar_token(
-        oidc_cfg=oidc_cfg,
+    subject_token = fetch_github_oidc_token(
         gh_token=gh_token,
         gh_token_url=gh_token_url,
+        audience=oidc_cfg.audience,
+    )
+
+    access_token = oci.auth.exchange_gar_token(
+        oidc_cfg=oidc_cfg,
+        subject_token=subject_token,
         lifetime_seconds=lifetime_seconds,
     )
 
@@ -443,3 +470,70 @@ def write_docker_config(
         json.dump(docker_cfg, file)
 
     return docker_cfg
+
+
+def exportable_gar_oidc_cfg(
+    oidc_cfg: GarOidcConfiguration,
+) -> oci.auth.GarOidcConfiguration:
+    '''
+    Project the action's GarOidcConfiguration (which derives `audience` from its project /
+    identity-pool attributes) onto oci.auth.GarOidcConfiguration, i.e. the portable, JSON-
+    serialisable form consumable by oci.auth.refreshable_gar_credentials_lookup.
+    '''
+    return oci.auth.GarOidcConfiguration(
+        audience=oidc_cfg.audience,
+        service_account=oidc_cfg.service_account,
+    )
+
+
+def export_gar_oidc_cfgs(
+    image_references: collections.abc.Iterable[str],
+) -> dict[str, dict]:
+    '''
+    Resolve the matching GAR OIDC cfg for each passed-in GAR/GCR image-reference and return a
+    mapping of registry-host -> oci.auth.GarOidcConfiguration (as dict), suitable for exporting
+    as an action output. Non-GAR/GCR image-references, and hosts without a match, are omitted.
+    '''
+    cfgs: dict[str, dict] = {}
+
+    for image_reference in image_references:
+        image_reference = oci.model.OciImageReference(image_reference)
+
+        if image_reference.registry_type not in (
+            oci.model.OciRegistryType.GAR,
+            oci.model.OciRegistryType.GCR,
+        ):
+            continue
+
+        oidc_cfg = find_oidc_cfg(image_reference=image_reference)
+        cfgs[image_reference.netloc] = dataclasses.asdict(
+            exportable_gar_oidc_cfg(oidc_cfg=oidc_cfg),
+        )
+
+    return cfgs
+
+
+def refreshable_gar_credentials_lookup(
+    oidc_cfg: GarOidcConfiguration,
+    prefetch_margin_seconds: int=300,
+):
+    '''
+    Build an oci.auth.refreshable_gar_credentials_lookup for GitHub Actions: the OIDC
+    subject-token is re-fetched from GitHub's id-token endpoint (ACTIONS_ID_TOKEN_REQUEST_URL /
+    _TOKEN) on each refresh.
+
+    The lookup exposes `invalidate_cache`, to be passed as oci.client.Client's
+    `credentials_invalidate`.
+    '''
+    def subject_token_supplier() -> str:
+        return fetch_github_oidc_token(
+            gh_token=os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN'],
+            gh_token_url=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL'],
+            audience=oidc_cfg.audience,
+        )
+
+    return oci.auth.refreshable_gar_credentials_lookup(
+        oidc_cfg=exportable_gar_oidc_cfg(oidc_cfg=oidc_cfg),
+        subject_token_supplier=subject_token_supplier,
+        prefetch_margin_seconds=prefetch_margin_seconds,
+    )
