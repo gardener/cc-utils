@@ -8,8 +8,8 @@ import re
 import github3.pulls
 
 import ci.util
+import ocm.diff
 import ocm.retrieve
-import cnudie.util
 import github.limits
 import gitutil
 import ocm
@@ -303,7 +303,7 @@ def bom_diff(
         component_descriptor_lookup=component_descriptor_lookup,
     )
 
-    formatted_diff = cnudie.util.format_component_diff(
+    formatted_diff = ocm.diff.format_component_diff(
         component_diff=bom_diff,
         delivery_dashboard_url_view_diff=delivery_dashboard_url_view_diff,
         delivery_dashboard_url=delivery_dashboard_url

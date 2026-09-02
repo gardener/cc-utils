@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 import enum
 import functools
+import graphlib
 import io
 import json
 import logging
@@ -883,7 +884,15 @@ Iterable = collections.abc.Iterable
 
 
 # Type-Aliases (for interoperability w/ external implementations)
-ComponentName = str | tuple[str, str] | Component | ComponentIdentity
+ComponentName = (
+    Component
+    | ComponentDescriptor
+    | ComponentIdentity
+    | ComponentReference
+    | str
+    | tuple[str, str]
+)
+ComponentId = ComponentName  # alias; both coerce between name and identity
 OcmRepositoryLookup = Callable[
     [ComponentName],
     Iterable[OciOcmRepository],
@@ -896,3 +905,103 @@ VersionLookup = Callable[
     [ComponentName, OcmRepository],
     Iterable[str],
 ]
+
+
+def to_component_id(
+    component: ComponentId, /
+) -> ComponentIdentity:
+    if isinstance(component, ComponentIdentity):
+        return component
+
+    if isinstance(component, ComponentDescriptor) or hasattr(component, 'component'):
+        component = component.component
+        # fall through to next case
+    if isinstance(component, Component) or hasattr(component, 'name') \
+        and not hasattr(component, 'componentName'):
+        name = component.name
+        version = component.version
+    if isinstance(component, ComponentReference) or hasattr(component, 'componentName'):
+        name = component.componentName
+        version = component.version
+    if isinstance(component, str):
+        try:
+            name, version = component.split(':', 1)
+        except ValueError as ve:
+            ve.add_note(f'{component=}')
+            raise
+    if isinstance(component, tuple):
+        name, version = component
+
+    return ComponentIdentity(
+        name=name,
+        version=version,
+    )
+
+
+def to_component_name(
+    component: ComponentName, /
+) -> str:
+    if isinstance(component, ComponentDescriptor):
+        component = component.component
+    if isinstance(component, Component):
+        component = component.name
+    elif isinstance(component, ComponentIdentity):
+        component = component.name
+    elif isinstance(component, ComponentReference):
+        component = component.componentName
+    elif isinstance(component, tuple):
+        if not len(component) == 2:
+            raise ValueError('expected two-tuple with two elements')
+        component = component[0]
+    if not isinstance(component, str):
+        raise ValueError(component)
+
+    if ':' in component:
+        # assumption: has form <name>:<version>
+        # let exception raise in other cases
+        component, _ = component.split(':')
+
+    return component
+
+
+def to_component(
+    component: Component | ComponentDescriptor, /
+) -> Component:
+    if isinstance(component, Component):
+        return component
+    if isinstance(component, ComponentDescriptor):
+        return component.component
+    raise ValueError(component)
+
+
+def iter_sorted(
+    components: collections.abc.Iterable[Component | ComponentDescriptor], /
+) -> collections.abc.Generator[Component, None, None]:
+    '''
+    returns a generator yielding the given components, honouring their dependencies, starting
+    with "leaf" components (i.e. components w/o dependencies), also known as topologically sorted.
+    '''
+    components = (to_component(c) for c in components)
+    components_by_id = {c.identity(): c for c in components}
+
+    toposorter = graphlib.TopologicalSorter()
+
+    def ref_to_comp_id(component_ref: ComponentReference) -> ComponentIdentity:
+        return ComponentIdentity(
+            name=component_ref.componentName,
+            version=component_ref.version,
+        )
+
+    for component_id, component in components_by_id.items():
+        depended_on_comp_ids = (
+            ref_to_comp_id(cref)
+            for cref in component.componentReferences
+        )
+        toposorter.add(component_id, *depended_on_comp_ids)
+
+    for component_id in toposorter.static_order():
+        if component_id not in components_by_id:
+            # ignore component-references not contained in passed components for now
+            continue
+
+        yield components_by_id[component_id]
