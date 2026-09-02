@@ -34,7 +34,7 @@ import oci.model as om
 import ocm
 import ocm.oci
 import ocm.iter
-import cnudie.retrieve
+import ocm.retrieve
 import ctt.process_dependencies as pdeps
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
@@ -209,12 +209,12 @@ def run(run_id: str):
         src_refs.append(ref)
         logger.info(f'pushed src CD: {ref}')
 
-    src_lookup = cnudie.retrieve.oci_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(src_repo_url),
+    src_lookup = ocm.retrieve.oci_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(src_repo_url),
         oci_client=oci_client,
     )
-    dst_lookup = cnudie.retrieve.oci_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(dst_repo_url),
+    dst_lookup = ocm.retrieve.oci_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(dst_repo_url),
         oci_client=oci_client,
     )
 

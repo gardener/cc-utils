@@ -8,7 +8,7 @@ import re
 import github3.pulls
 
 import ci.util
-import cnudie.retrieve
+import ocm.retrieve
 import cnudie.util
 import github.limits
 import gitutil
@@ -297,7 +297,7 @@ def bom_diff(
     else:
         delivery_dashboard_url_view_diff = None
 
-    bom_diff = cnudie.retrieve.component_diff(
+    bom_diff = ocm.retrieve.component_diff(
         left_component=from_component,
         right_component=to_component,
         component_descriptor_lookup=component_descriptor_lookup,

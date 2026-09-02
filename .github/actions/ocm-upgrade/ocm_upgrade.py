@@ -24,7 +24,7 @@ import dacite
 import github3.repos
 import yaml
 
-import cnudie.retrieve
+import ocm.retrieve
 import github.pullrequest
 import gitutil
 import oci.auth
@@ -138,17 +138,17 @@ def create_ocm_lookups(
     oci_client = oci.client.Client(
         credentials_lookup=oci.auth.docker_credentials_lookup(),
     )
-    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
+    ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(
         *ocm_repositories,
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
         cache_dir=None,
     )
 
-    version_lookup = cnudie.retrieve.version_lookup(
+    version_lookup = ocm.retrieve.version_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
     )

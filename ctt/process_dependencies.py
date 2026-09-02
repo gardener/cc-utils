@@ -23,7 +23,7 @@ import urllib.parse
 import dacite
 import yaml
 
-import cnudie.retrieve
+import ocm.retrieve
 import ctt.oci_util
 import ctt.replicate
 import sbom.cbom as sbom_cbom
@@ -94,9 +94,9 @@ class LocalBlobsMode(enum.StrEnum):
 def create_component_descriptor_lookup_for_ocm_repo(
     ocm_repo_url: str,
     oci_client: oci.client.Client | None=None,
-) -> cnudie.retrieve.ComponentDescriptorLookupById:
-    return cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo_url),
+) -> ocm.retrieve.ComponentDescriptorLookupById:
+    return ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(ocm_repo_url),
         oci_client=oci_client,
     )
 
@@ -351,8 +351,8 @@ def enum_processing_cfgs(
 def determine_changed_components(
     component_descriptor: ocm.ComponentDescriptor,
     tgt_ocm_repo_url: str,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    component_descriptor_lookup: ocm.retrieve.ComponentDescriptorLookupById,
+    tgt_component_descriptor_lookup: ocm.retrieve.ComponentDescriptorLookupById,
     component_filter: collections.abc.Callable[[ocm.Component], bool]=None,
     reftype_filter: collections.abc.Callable[[ocm.iter.NodeReferenceType], bool]=None,
     pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
@@ -615,8 +615,8 @@ def iter_replication_resource_elements(
 def create_replication_plan_step(
     processing_cfg: dict,
     root_component_descriptor: ocm.ComponentDescriptor,
-    src_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
-    tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    src_component_descriptor_lookup: ocm.retrieve.ComponentDescriptorLookupById,
+    tgt_component_descriptor_lookup: ocm.retrieve.ComponentDescriptorLookupById,
     ocm_repository: str,
     tgt_oci_registries: collections.abc.Sequence[str],
     oci_client: oci.client.Client,
@@ -666,7 +666,7 @@ def create_replication_plan_step(
 def process_images(
     processing_cfg_path: str,
     root_component_descriptor: ocm.ComponentDescriptor,
-    component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    component_descriptor_lookup: ocm.retrieve.ComponentDescriptorLookupById,
     oci_client: oci.client.Client,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
@@ -805,7 +805,7 @@ def process_replication_plan_step(
     replication_plan_step: ctt.model.ReplicationPlanStep,
     root_component_descriptor: ocm.ComponentDescriptor,
     oci_client: oci.client.Client,
-    tgt_component_descriptor_lookup: cnudie.retrieve.ComponentDescriptorLookupById,
+    tgt_component_descriptor_lookup: ocm.retrieve.ComponentDescriptorLookupById,
     processing_mode: ProcessingMode=ProcessingMode.REGULAR,
     replication_mode: oci.ReplicationMode=oci.ReplicationMode.PREFER_MULTIARCH,
     inject_ocm_coordinates_into_oci_manifests: bool=False,

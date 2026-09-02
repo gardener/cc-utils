@@ -158,7 +158,7 @@ runs:
         import dacite
         import yaml
 
-        import cnudie.retrieve
+        import ocm.retrieve
         import oci.client
         import ocm
 
@@ -184,8 +184,8 @@ runs:
         oci_client = oci.client.client_with_dockerauth()
 
         if ocm_repository := '${{ inputs.ocm-repository }}':
-          component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-            ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repository),
+          component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(ocm_repository),
             oci_client=oci_client,
           )
         else:

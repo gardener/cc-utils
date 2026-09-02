@@ -24,7 +24,7 @@ except ImportError:
     print(f'note: added {repo_root} to python-path (sys.path)', file=sys.stderr)
     import ocm
 
-import cnudie.retrieve
+import ocm.retrieve
 import github
 import gitutil
 import oci.auth
@@ -195,17 +195,17 @@ def main():
             absent_ok=True,
         ),
     )
-    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(
+    ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(
         *parsed.ocm_repositories,
         component.current_ocm_repo,
     )
 
-    ocm_version_lookup = cnudie.retrieve.version_lookup(
+    ocm_version_lookup = ocm.retrieve.version_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client,
     )

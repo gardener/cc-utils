@@ -34,7 +34,7 @@ def _load_scan():
 
     spec = importlib.util.spec_from_file_location('scan', _scan_py)
     mod = importlib.util.module_from_spec(spec)
-    for name in ('cnudie', 'cnudie.retrieve', 'oci.auth', 'ocm.iter'):
+    for name in ('oci.auth', 'ocm.iter', 'ocm.retrieve'):
         if name not in sys.modules:
             sys.modules[name] = types.ModuleType(name)
     spec.loader.exec_module(mod)

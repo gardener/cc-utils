@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-import cnudie.retrieve
+import ocm.retrieve
 import ctt.process_dependencies
 import oci.auth
 import oci.client
@@ -111,8 +111,8 @@ def replicate(parsed):
         max_concurrency_per_host=parsed.max_concurrency_per_host,
     )
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(parsed.src_repo),
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.src_repo),
         oci_client=oci_client,
     )
 

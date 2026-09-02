@@ -66,7 +66,7 @@ import semver
 from ruamel.yaml import YAML
 from ruamel.yaml import YAMLError
 
-import cnudie.retrieve
+import ocm.retrieve
 import ocm
 import requests.exceptions
 
@@ -1213,13 +1213,13 @@ def write_ocm_release_notes(
     repo_dir: str = '.',
     ocm_repository: str = GARDENER_OCM_REPOSITORY,
 ) -> None:
-    ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(ocm_repository)
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(ocm_repository)
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client_,
         cache_dir=None,
     )
-    version_lookup = cnudie.retrieve.version_lookup(
+    version_lookup = ocm.retrieve.version_lookup(
         ocm_repository_lookup=ocm_repository_lookup,
         oci_client=oci_client_,
     )

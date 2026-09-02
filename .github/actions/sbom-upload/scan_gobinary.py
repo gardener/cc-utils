@@ -36,7 +36,7 @@ import urllib.request
 _cc_utils_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, _cc_utils_root)
 
-import cnudie.retrieve
+import ocm.retrieve
 import oci.auth
 import oci.client
 import oci.model as om
@@ -173,13 +173,13 @@ def main() -> None:
         credentials_lookup=credentials_lookup,
     )
 
-    ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*ocm_repositories)
-    lookup = cnudie.retrieve.composite_component_descriptor_lookup(
+    ocm_repo_lookup = ocm.retrieve.ocm_repository_lookup(*ocm_repositories)
+    lookup = ocm.retrieve.composite_component_descriptor_lookup(
         lookups=(
-            cnudie.retrieve.in_memory_cache_component_descriptor_lookup(
+            ocm.retrieve.in_memory_cache_component_descriptor_lookup(
                 ocm_repository_lookup=ocm_repo_lookup,
             ),
-            cnudie.retrieve.oci_component_descriptor_lookup(
+            ocm.retrieve.oci_component_descriptor_lookup(
                 ocm_repository_lookup=ocm_repo_lookup,
                 oci_client=oci_client,
             ),

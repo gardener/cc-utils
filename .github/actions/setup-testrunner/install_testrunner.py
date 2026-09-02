@@ -12,14 +12,14 @@ logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logging.getLogger('oci.client').setLevel(logging.WARN)
 
 try:
-    import cnudie.retrieve
+    import ocm.retrieve
 except ImportError:
     # patch pythonpath for local development
     sys.path.insert(
         1,
         os.path.join(own_dir, '../../..'),
     )
-    import cnudie.retrieve
+    import ocm.retrieve
 
 import ocm
 import oci.auth
@@ -43,12 +43,12 @@ def main():
         credentials_lookup=oci.auth.docker_credentials_lookup(absent_ok=True),
     )
 
-    ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(parsed.ocm_repo)
-    version_lookup = cnudie.retrieve.version_lookup(
+    ocm_repo_lookup = ocm.retrieve.ocm_repository_lookup(parsed.ocm_repo)
+    version_lookup = ocm.retrieve.version_lookup(
         ocm_repository_lookup=ocm_repo_lookup,
         oci_client=oci_client,
     )
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm_repo_lookup,
         oci_client=oci_client,
     )
