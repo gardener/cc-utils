@@ -23,30 +23,35 @@ def main_source(
     ambiguous_ok: bool=True,
 ) -> ocm.Source | None:
     '''
-    returns the "main source" of the given OCM Component. Typically, components will have exactly
-    one source, in which the applied logic is to return the sole source-artefact.
+    returns the "main source" of the given OCM Component. Sources labelled with
+    `cloud.gardener/cicd/source` and `repository-classification: main` take precedence.
+    Otherwise, a component with exactly one source is unambiguous.
 
     For other cases, behaviour can be controlled via kw-(only-)params:
 
     no_source_ok: if component has _no_ sources, return None
-    ambiguous_ok: if component has more than one source, return first
+    ambiguous_ok: if no main-source can be determined, return first source
 
     In cases where no main-source can be determined, raises ValueError.
     '''
     component = as_component(component)
 
+    for source in component.sources:
+        label = source.find_label('cloud.gardener/cicd/source')
+        if label and label.value.get('repository-classification') == 'main':
+            return source
+
     if len(component.sources) == 1:
         return component.sources[0]
-    elif not component.sources:
+    if not component.sources:
         if no_source_ok:
             return None
-        else:
-            raise ValueError('no sources', component)
+        raise ValueError('no sources', component)
 
     if ambiguous_ok:
         return component.sources[0]
 
-    raise ValueError('could not umambiguously determine main-source', component)
+    raise ValueError('could not unambiguously determine main-source', component)
 
 
 def artifact_url(

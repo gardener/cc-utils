@@ -12,7 +12,7 @@ import dacite
 import requests
 import yaml
 
-import cnudie.util
+import ocm.diff
 import ocm
 import ocm.iter as oi
 import ocm.oci
@@ -25,12 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 ComponentDescriptorLookupById = collections.abc.Callable[
-    [cnudie.util.ComponentId, ocm.retrieve.OcmRepositoryLookup],
+    [ocm.ComponentId, ocm.retrieve.OcmRepositoryLookup],
     collections.abc.Awaitable[ocm.ComponentDescriptor],
 ]
 
 VersionLookupByComponent = collections.abc.Callable[
-    [cnudie.util.ComponentName, ocm.OcmRepository],
+    [ocm.ComponentName, ocm.OcmRepository],
     collections.abc.Awaitable[collections.abc.Sequence[str]],
 ]
 
@@ -74,10 +74,10 @@ def in_memory_cache_component_descriptor_lookup(
     _writeback = WriteBack(writeback)
 
     async def lookup(
-        component_id: cnudie.util.ComponentId,
+        component_id: ocm.ComponentId,
         ocm_repository_lookup=ocm_repository_lookup,
     ):
-        component_id = cnudie.util.to_component_id(component_id)
+        component_id = ocm.to_component_id(component_id)
 
         ocm_repos = ocm.retrieve.iter_ocm_repositories(
             component_id,
@@ -143,10 +143,10 @@ def file_system_cache_component_descriptor_lookup(
     _writeback = WriteBack(writeback)
 
     async def lookup(
-        component_id: cnudie.util.ComponentId,
+        component_id: ocm.ComponentId,
         ocm_repository_lookup: ocm.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
     ):
-        component_id = cnudie.util.to_component_id(component_id)
+        component_id = ocm.to_component_id(component_id)
 
         ocm_repos = ocm.retrieve.iter_ocm_repositories(
             component_id,
@@ -197,12 +197,12 @@ def delivery_service_component_descriptor_lookup(
         raise ValueError(delivery_client)
 
     async def lookup(
-        component_id: cnudie.util.ComponentId,
+        component_id: ocm.ComponentId,
         ocm_repository_lookup: ocm.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
         ignore_errors: tuple[Exception]=default_ignore_errors,
     ):
-        component_id = cnudie.util.to_component_id(component_id)
+        component_id = ocm.to_component_id(component_id)
 
         ocm_repos = ocm.retrieve.iter_ocm_repositories(
             component_id,
@@ -350,11 +350,11 @@ def oci_component_descriptor_lookup(
         raise ValueError(oci_client)
 
     async def lookup(
-        component_id: cnudie.util.ComponentId,
+        component_id: ocm.ComponentId,
         ocm_repository_lookup: ocm.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
-        component_id = cnudie.util.to_component_id(component_id)
+        component_id = ocm.to_component_id(component_id)
 
         if isinstance(oci_client, collections.abc.Callable):
             local_oci_client = oci_client()
@@ -404,11 +404,11 @@ def version_lookup(
     default_absent_ok: bool=True,
 ) -> VersionLookupByComponent:
     async def lookup(
-        component_id: cnudie.util.ComponentName,
+        component_id: ocm.ComponentName,
         ocm_repository_lookup: ocm.retrieve.OcmRepositoryLookup=ocm_repository_lookup,
         absent_ok: bool=default_absent_ok,
     ):
-        component_name = cnudie.util.to_component_name(component_id)
+        component_name = ocm.to_component_name(component_id)
 
         ocm_repos = ocm.retrieve.iter_ocm_repositories(
             component_name,
@@ -458,12 +458,12 @@ def composite_component_descriptor_lookup(
     default_absent_ok=True,
 ) -> ComponentDescriptorLookupById:
     async def lookup(
-        component_id: cnudie.util.ComponentId,
+        component_id: ocm.ComponentId,
         /,
         ocm_repository_lookup=ocm_repository_lookup,
         absent_ok=default_absent_ok,
     ):
-        component_id = cnudie.util.to_component_id(component_id)
+        component_id = ocm.to_component_id(component_id)
 
         writebacks = []
         for lookup in lookups:
@@ -565,11 +565,11 @@ async def component_diff(
     right_component: ocm.Component | ocm.ComponentDescriptor,
     component_descriptor_lookup: ComponentDescriptorLookupById,
     ignore_component_names=(),
-) -> cnudie.util.ComponentDiff:
+) -> ocm.diff.ComponentDiff:
     import ocm.iter_async as oia # late import to avoid cyclic dependencies
 
-    left_component = cnudie.util.to_component(left_component)
-    right_component = cnudie.util.to_component(right_component)
+    left_component = ocm.to_component(left_component)
+    right_component = ocm.to_component(right_component)
 
     left_components = [
         component_node.component async for component_node in oia.iter(
@@ -587,7 +587,7 @@ async def component_diff(
         ) if component_node.component.name not in ignore_component_names
     ]
 
-    return cnudie.util.diff_components(
+    return ocm.diff.diff_components(
         left_components=left_components,
         right_components=right_components,
         ignore_component_names=ignore_component_names,

@@ -148,3 +148,119 @@ def to_absolute_oci_access(
         raise ValueError(f'Unsupported access type: {access.type}')
 
     return access
+
+
+def normalise_component_name(component_name: str) -> str:
+    return component_name.lower()  # oci-spec demands lowercase
+
+
+def to_component_id_and_repository_url(
+    component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentIdentity | str,
+    repository: ocm.OciOcmRepository | str=None,
+) -> tuple[ocm.Component | ocm.ComponentIdentity, str]:
+    if isinstance(component, str):
+        name, version = component.rsplit(':', 1)
+        component = ocm.ComponentIdentity(
+            name=name,
+            version=version,
+        )
+
+    if isinstance(component, ocm.ComponentDescriptor):
+        component = component.component
+    elif isinstance(component, ocm.ComponentIdentity) and not repository:
+        raise ValueError('repository must be passed if calling w/ component-identity')
+
+    if not repository:  # component is sure to be of type ocm.Component by now (checked above)
+        repository = component.current_ocm_repo
+
+    if isinstance(repository, ocm.OciOcmRepository):
+        repo_base_url = repository.baseUrl
+    elif isinstance(repository, str):
+        repo_base_url = repository
+    else:
+        raise ValueError(f'only OciOcmRepository is supported - got: {repository=}')
+
+    return component, repo_base_url
+
+
+def oci_ref(
+    component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentIdentity | str,
+    repository: ocm.OciOcmRepository | str=None,
+) -> oci.model.OciImageReference:
+    component, repo_base_url = to_component_id_and_repository_url(
+        component=component,
+        repository=repository,
+    )
+
+    return oci.model.OciImageReference(
+        '/'.join((
+            repo_base_url.rstrip('/'),
+            'component-descriptors',
+            f'{component.name.lower()}:{component.version}',
+        )),
+    )
+
+
+def target_oci_ref(
+    component: ocm.Component,
+    component_ref: ocm.ComponentReference=None,
+    component_version: str=None,
+) -> str:
+    if not component_ref:
+        component_ref = component
+        component_name = component_ref.name
+    else:
+        component_name = component_ref.componentName
+
+    component_name = normalise_component_name(component_name)
+    component_version = component_ref.version
+
+    last_ocm_repo = component.current_ocm_repo
+
+    return last_ocm_repo.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
+    )
+
+
+def oci_artefact_reference(
+    component: (
+        ocm.Component
+        | ocm.ComponentIdentity
+        | ocm.ComponentReference
+        | str  # 'name:version'
+        | tuple[str, str]  # (name, version)
+    ),
+    ocm_repository: str | ocm.OciOcmRepository=None,
+) -> str:
+    if isinstance(component, ocm.Component):
+        if not ocm_repository:
+            ocm_repository = component.current_ocm_repo
+        component_name = component.name
+        component_version = component.version
+    elif isinstance(component, ocm.ComponentIdentity):
+        component_name = component.name
+        component_version = component.version
+    elif isinstance(component, ocm.ComponentReference):
+        component_name = component.componentName
+        component_version = component.version
+    elif isinstance(component, str):
+        component_name, component_version = component.split(':')
+    elif isinstance(component, tuple):
+        if not len(component) == 2 or not all(isinstance(x, str) for x in component):
+            raise TypeError('if a tuple is given as component, it must contain two strings')
+        component_name, component_version = component
+    else:
+        raise ValueError(component)
+
+    if not ocm_repository:
+        raise ValueError('ocm_repository must be given unless a Component is passed.')
+    if isinstance(ocm_repository, str):
+        ocm_repository = ocm.OciOcmRepository(baseUrl=ocm_repository)
+    elif not isinstance(ocm_repository, ocm.OciOcmRepository):
+        raise TypeError(type(ocm_repository))
+
+    return ocm_repository.component_version_oci_ref(
+        name=component_name,
+        version=component_version,
+    )

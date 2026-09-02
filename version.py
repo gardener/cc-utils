@@ -709,3 +709,22 @@ def find_predecessor(
                 return candidate_orig
 
     return candidate_orig
+
+
+META_SEPARATOR = '.build-'
+
+
+def sanitise_version(version: str) -> str:
+    '''
+    Additional build-metadata as defined in SemVer can be added via `+` to the version. However,
+    OCI registries don't support `+` as a tag character, so this function converts a semver into
+    an OCI-tag-safe form by replacing `+` with `META_SEPARATOR`.
+    '''
+    return version.replace('+', META_SEPARATOR)
+
+
+def desanitise_version(version: str) -> str:
+    '''
+    Reverts `sanitise_version`, restoring the original semver representation.
+    '''
+    return version.replace(META_SEPARATOR, '+')
