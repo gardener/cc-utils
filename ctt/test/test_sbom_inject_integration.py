@@ -24,7 +24,7 @@ import tempfile
 
 import yaml
 
-import cnudie.retrieve
+import ocm.retrieve
 import ctt.process_dependencies as pdeps
 import oci.auth as oa
 import oci.client as oc
@@ -44,8 +44,8 @@ COMPONENT_VERSION = 'v1.55.3'
 
 def _oci_lookup(ocm_repo_url: str, oci_client: oc.Client):
     '''Build a lightweight OCI-only component descriptor lookup (no ctx/config system).'''
-    return cnudie.retrieve.oci_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(ocm_repo_url),
+    return ocm.retrieve.oci_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(ocm_repo_url),
         oci_client=oci_client,
     )
 

@@ -1,6 +1,6 @@
 import yaml
 
-import cnudie.retrieve
+import ocm.retrieve
 import ocm
 import ocm.iter
 import ocm.validate
@@ -21,8 +21,8 @@ def validate(
 
     if recursion_depth != 0 and ocm_repositories:
         repos = [r.strip() for r in ocm_repositories.split(',') if r.strip()]
-        ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*repos)
-        lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        ocm_repo_lookup = ocm.retrieve.ocm_repository_lookup(*repos)
+        lookup = ocm.retrieve.create_default_component_descriptor_lookup(
             ocm_repository_lookup=ocm_repo_lookup,
             oci_client=oci.client.client_with_dockerauth(),
         )

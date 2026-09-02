@@ -67,7 +67,7 @@ runs:
 
         import yaml
 
-        import cnudie.retrieve
+        import ocm.retrieve
         import oci.client
         import ocm
         import version
@@ -85,16 +85,16 @@ runs:
         component_version = current_component_descriptor.component.version
 
         ocm_repositories = '${{ inputs.ocm-repositories }}'.split(',')
-        ocm_repository_lookup = cnudie.retrieve.ocm_repository_lookup(*ocm_repositories)
+        ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(*ocm_repositories)
 
         oci_client = oci.client.client_with_dockerauth()
 
-        component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
+        component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
           ocm_repository_lookup=ocm_repository_lookup,
           oci_client=oci_client,
         )
 
-        version_lookup = cnudie.retrieve.version_lookup(
+        version_lookup = ocm.retrieve.version_lookup(
           ocm_repository_lookup=ocm_repository_lookup,
           oci_client=oci_client,
         )
@@ -111,7 +111,7 @@ runs:
           ),
         )
 
-        component_diff = cnudie.retrieve.component_diff(
+        component_diff = ocm.retrieve.component_diff(
           left_component=latest_component_descriptor,
           right_component=current_component_descriptor,
           ignore_component_names=(component_name,),

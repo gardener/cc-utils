@@ -6,7 +6,7 @@ import argparse
 import os
 import sys
 
-import cnudie.retrieve
+import ocm.retrieve
 import oci.auth
 import oci.client
 import ocm
@@ -98,13 +98,13 @@ def _fetch_sboms(parsed):
 
     format_prefixes: list[str] = parsed.sbom_formats
 
-    ocm_repo_lookup = cnudie.retrieve.ocm_repository_lookup(*parsed.ocm_repositories)
-    lookup = cnudie.retrieve.composite_component_descriptor_lookup(
+    ocm_repo_lookup = ocm.retrieve.ocm_repository_lookup(*parsed.ocm_repositories)
+    lookup = ocm.retrieve.composite_component_descriptor_lookup(
         lookups=(
-            cnudie.retrieve.in_memory_cache_component_descriptor_lookup(
+            ocm.retrieve.in_memory_cache_component_descriptor_lookup(
                 ocm_repository_lookup=ocm_repo_lookup,
             ),
-            cnudie.retrieve.oci_component_descriptor_lookup(
+            ocm.retrieve.oci_component_descriptor_lookup(
                 ocm_repository_lookup=ocm_repo_lookup,
                 oci_client=oci_client,
             ),

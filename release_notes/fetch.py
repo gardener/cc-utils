@@ -6,7 +6,7 @@ import os
 import git
 import github3.repos
 
-import cnudie.retrieve
+import ocm.retrieve
 import gitutil
 import ocm
 import ocm.util
@@ -261,7 +261,7 @@ def _determine_blocks_to_include(
 
 def fetch_release_notes(
     component: ocm.Component,
-    version_lookup: cnudie.retrieve.VersionLookupByComponent,
+    version_lookup: ocm.retrieve.VersionLookupByComponent,
     git_helper: gitutil.GitHelper,
     github_api_lookup: rnu.GithubApiLookup,
     version_whither: str | None=None,

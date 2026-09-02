@@ -13,7 +13,7 @@ import zlib
 import dacite
 import yaml
 
-import cnudie.retrieve
+import ocm.retrieve
 import oci.client
 import ocm
 import ocm.gardener
@@ -206,7 +206,7 @@ def release_notes_for_subcomponents(
     version_filter: collections.abc.Callable[[str], bool]=lambda _: True,
     seen_component_ids: set[ocm.ComponentIdentity] | None=None,
 ) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
-    component_diff = cnudie.retrieve.component_diff(
+    component_diff = ocm.retrieve.component_diff(
         left_component=whence_component,
         right_component=whither_component,
         component_descriptor_lookup=component_descriptor_lookup,

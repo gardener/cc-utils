@@ -25,7 +25,7 @@ import yaml
 
 import ccc.oci
 import ci.util
-import cnudie.retrieve
+import ocm.retrieve
 import ocm
 import ocm.iter
 import ocm.util
@@ -104,8 +104,8 @@ def diff(
 
     print('retrieving component-descriptors (might take a few seconds)')
 
-    component_descriptor_lookup = cnudie.retrieve.create_default_component_descriptor_lookup(
-        ocm_repository_lookup=cnudie.retrieve.ocm_repository_lookup(
+    component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+        ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(
             *parsed.ocm_repo_urls,
         ),
         oci_client=ccc.oci.oci_client(),
