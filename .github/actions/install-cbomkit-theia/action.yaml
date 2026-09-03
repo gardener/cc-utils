@@ -25,7 +25,24 @@ runs:
         image="ghcr.io/cbomkit/cbomkit-theia:${{ inputs.version }}"
         install_dir="${HOME}/.local/bin"
         mkdir -p "${install_dir}"
-        cid="$(docker create --platform "${platform}" "${image}")"
+
+        # retry pull/create: we observed rare TLS-handshake-timeouts to ghcr.io
+        # (e.g. on solinas runners) which are transient; a fresh connection fixes it
+        attempts=3
+        for attempt in $(seq 1 ${attempts}); do
+          if cid="$(docker create --platform "${platform}" "${image}" 2>/tmp/cbomkit-create.err)"; then
+            break
+          fi
+          rc=$?
+          echo "::warning::cbomkit-theia: docker create failed (attempt ${attempt}/${attempts}): $(cat /tmp/cbomkit-create.err)"
+          if [ ${attempt} -lt ${attempts} ]; then
+            sleep $((attempt * 5))
+          else
+            echo "::error::cbomkit-theia: docker create failed after ${attempts} attempts"
+            exit ${rc}
+          fi
+        done
+
         docker cp "${cid}:/app/cbomkit-theia" "${install_dir}/cbomkit-theia"
         docker rm "${cid}"
         echo "${install_dir}" >> "${GITHUB_PATH}"

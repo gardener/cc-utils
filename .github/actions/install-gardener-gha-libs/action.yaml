@@ -72,7 +72,23 @@ runs:
       run: |
         set -euo pipefail
         # fallback if running on GHE
-        git clone https://github.com/gardener/cc-utils
+        # retry clone: we observed rare transient TLS/HTTP flakes from solinas
+        # runners to github.com; a fresh connection fixes it
+        attempts=3
+        for attempt in $(seq 1 ${attempts}); do
+          if git clone https://github.com/gardener/cc-utils; then
+            break
+          fi
+          rc=$?
+          echo "::warning::install-gardener-gha-libs: git clone failed (attempt ${attempt}/${attempts})"
+          if [ ${attempt} -lt ${attempts} ]; then
+            rm -rf cc-utils  # possibly-partial clone from previous attempt
+            sleep $((attempt * 5))
+          else
+            echo "::error::install-gardener-gha-libs: git clone failed after ${attempts} attempts"
+            exit ${rc}
+          fi
+        done
     # removed on pinned branches
     - name: install-gardener-gha-libs
       if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' }}
