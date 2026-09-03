@@ -99,11 +99,21 @@ runs:
       run: |
         set -eu
         install_ok=false
-        if curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-          | sh -s -- -b '${{ steps.version.outputs.install-dir }}' \
-               'v${{ steps.version.outputs.target }}'; then
-          install_ok=true
-        fi
+        attempts=3
+        # retry the download: we observed rare transient network/TLS flakes on
+        # solinas runners; fresh connection usually fixes it
+        for attempt in $(seq 1 ${attempts}); do
+          if curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+            | sh -s -- -b '${{ steps.version.outputs.install-dir }}' \
+                 'v${{ steps.version.outputs.target }}'; then
+            install_ok=true
+            break
+          fi
+          echo "::warning::syft: download failed (attempt ${attempt}/${attempts})"
+          if [ ${attempt} -lt ${attempts} ]; then
+            sleep $((attempt * 5))
+          fi
+        done
         echo "success=${install_ok}" >> "${GITHUB_OUTPUT}"
 
     - name: add-to-path

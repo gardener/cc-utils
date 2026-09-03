@@ -333,13 +333,7 @@ runs:
 
     - name: install-syft
       if: ${{ inputs.oci-registry != '' }}
-      shell: bash
-      run: |
-        install_dir="${HOME}/.local/bin"
-        mkdir -p "${install_dir}"
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-          | sh -s -- -b "${install_dir}"
-        echo "${install_dir}" >> "${GITHUB_PATH}"
+      uses: gardener/cc-utils/.github/actions/install-syft@master
 
     - name: install-cbomkit-theia
       if: ${{ inputs.oci-registry != '' }}
