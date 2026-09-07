@@ -61,6 +61,142 @@ class ReplicationMode(enum.Enum):
             raise NotImplementedError(self)
 
 
+def _apply_annotations(
+    manifest: om.OciImageManifest | om.OciImageManifestList,
+    annotations: dict[str, str],
+) -> bool:
+    '''Patches annotations into manifest in-place. Returns True if any value changed.'''
+    dirty = False
+    for k, v in annotations.items():
+        if manifest.annotations.get(k) != v:
+            manifest.annotations[k] = v
+            dirty = True
+    return dirty
+
+
+def _replicate_manifest_list(
+    raw_manifest: str,
+    manifest: om.OciImageManifestList,
+    src_image_reference: om.OciImageReference,
+    tgt_image_reference: om.OciImageReference,
+    client: oc.Client,
+    mode: ReplicationMode,
+    platform_filter: collections.abc.Callable[[om.OciPlatform], bool] | None,
+    annotations: dict[str, str] | None,
+) -> tuple[requests.Response, om.OciImageReference, bytes]:
+    src_name = src_image_reference.ref_without_tag
+    tgt_name = tgt_image_reference.ref_without_tag
+    manifest_dirty = False
+
+    for idx, sub_manifest in enumerate(tuple(manifest.manifests)):
+        src_reference = f'{src_name}@{sub_manifest.digest}'
+        tgt_reference = f'{tgt_name}'
+
+        if platform_filter:
+            platform = op.from_single_image(
+                image_reference=src_reference,
+                oci_client=client,
+                base_platform=sub_manifest.platform,
+            )
+            if not platform_filter(platform):
+                logger.info(f'skipping {platform=} for {src_image_reference=}')
+                manifest_dirty = True
+                manifest.manifests.remove(sub_manifest)
+                continue
+
+        logger.info(f'replicating to {tgt_reference=}')
+
+        # only propagate PREFER_MULTIARCH (preserves nested indices); never pass
+        # NORMALISE_TO_MULTIARCH as it would wrap sub-manifests in spurious index layers
+        recursive_mode = ReplicationMode.REGISTRY_DEFAULTS
+        if mode is ReplicationMode.PREFER_MULTIARCH:
+            recursive_mode = ReplicationMode.PREFER_MULTIARCH
+
+        res, ref, submanifest_bytes = replicate_artifact(
+            src_image_reference=src_reference,
+            tgt_image_reference=tgt_reference,
+            oci_client=client,
+            mode=recursive_mode,
+            annotations=annotations,
+        )
+
+        submanifest_digest = f'sha256:{hashlib.sha256(submanifest_bytes).hexdigest()}'
+        if submanifest_digest != sub_manifest.digest:
+            patched = dataclasses.replace(
+                sub_manifest,
+                digest=submanifest_digest,
+                size=len(submanifest_bytes),
+            )
+            manifest.manifests.remove(sub_manifest)
+            manifest.manifests.insert(idx, patched)
+            manifest_dirty = True
+
+    if annotations:
+        manifest_dirty |= _apply_annotations(manifest, annotations)
+
+    if manifest_dirty:
+        raw_manifest = json.dumps(manifest.as_dict())
+
+    manifest_digest = hashlib.sha256(raw_manifest.encode('utf-8')).hexdigest()
+    tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
+
+    res = client.put_manifest(
+        image_reference=tgt_image_reference,
+        manifest=raw_manifest,
+    )
+
+    return res, tgt_image_reference, raw_manifest.encode('utf-8')
+
+
+def _wrap_single_as_manifest_list(
+    src_image_reference: om.OciImageReference,
+    tgt_image_reference: om.OciImageReference,
+    client: oc.Client,
+    media_type: str,
+    annotations: dict[str, str] | None,
+) -> tuple[requests.Response, om.OciImageReference, bytes]:
+    if not src_image_reference.has_digest_tag:
+        src_image_reference = om.OciImageReference.to_image_ref(
+            client.to_digest_hash(image_reference=src_image_reference)
+        )
+
+    platform = op.from_single_image(
+        image_reference=src_image_reference,
+        oci_client=client,
+    )
+    # force digest-tag so the sub-manifest entry is addressable
+    tgt_image_ref = f'{tgt_image_reference.ref_without_tag}@{src_image_reference.tag}'
+
+    res, ref, manifest_bytes = replicate_artifact(
+        src_image_reference=src_image_reference,
+        tgt_image_reference=tgt_image_ref,
+        oci_client=client,
+        annotations=annotations,
+    )
+
+    manifest_list = om.OciImageManifestList(
+        manifests=[
+            om.OciImageManifestListEntry(
+                digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
+                mediaType=media_type,
+                size=len(manifest_bytes),
+                platform=platform,
+            ),
+        ],
+        mediaType=om.DOCKER_MANIFEST_LIST_MIME,
+    )
+    manifest_list_bytes = json.dumps(manifest_list.as_dict()).encode('utf-8')
+    manifest_digest = hashlib.sha256(manifest_list_bytes).hexdigest()
+    tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
+
+    res = client.put_manifest(
+        image_reference=tgt_image_reference,
+        manifest=manifest_list_bytes,
+    )
+
+    return res, tgt_image_reference, manifest_list_bytes
+
+
 def replicate_artifact(
     src_image_reference: str | om.OciImageReference,
     tgt_image_reference: str | om.OciImageReference,
@@ -119,7 +255,7 @@ def replicate_artifact(
 
     accept = mode.accept_header()
 
-    # we need the unaltered - manifest for verbatim replication
+    # we need the unaltered manifest for verbatim replication
     resp = client.manifest_raw(
         image_reference=src_image_reference,
         accept=accept,
@@ -161,158 +297,44 @@ def replicate_artifact(
     elif schema_version == 2:
         media_type = manifest.get('mediaType', om.DOCKER_MANIFEST_SCHEMA_V2_MIME)
 
-        if media_type in (
-            om.DOCKER_MANIFEST_LIST_MIME,
-            om.OCI_IMAGE_INDEX_MIME,
-        ):
-            # multi-arch
-            manifest = dacite.from_dict(
-                data_class=om.OciImageManifestList,
-                data=manifest,
-            )
-            manifest: om.OciImageManifestList
-
-            src_ref = om.OciImageReference(image_reference=src_image_reference)
-            src_name = src_ref.ref_without_tag
-            tgt_ref = om.OciImageReference(image_reference=tgt_image_reference)
-            tgt_name = tgt_ref.ref_without_tag
-
-            # try to avoid modifications (from x-serialisation) - unless we have to
-            manifest_dirty = False
-
-            # cp manifests to tuple, because we _might_ modify if there is a platform_filter
-            for idx, sub_manifest in enumerate(tuple(manifest.manifests)):
-                src_reference = f'{src_name}@{sub_manifest.digest}'
-                tgt_reference = f'{tgt_name}'
-
-                if platform_filter:
-                    platform = op.from_single_image(
-                        image_reference=src_reference,
-                        oci_client=oci_client,
-                        base_platform=sub_manifest.platform,
-                    )
-                    if not platform_filter(platform):
-                        logger.info(f'skipping {platform=} for {src_image_reference=}')
-                        manifest_dirty = True
-                        manifest.manifests.remove(sub_manifest)
-                        continue
-
-                logger.info(f'replicating to {tgt_reference=}')
-
-                # only propagate PREFER_MULTIARCH (preserves nested indices); never pass
-                # NORMALISE_TO_MULTIARCH as it would wrap sub-manifests in spurious index layers
-                recursive_mode = ReplicationMode.REGISTRY_DEFAULTS
-                if mode is ReplicationMode.PREFER_MULTIARCH:
-                    recursive_mode = ReplicationMode.PREFER_MULTIARCH
-
-                res, ref, submanifest_bytes = replicate_artifact(
-                    src_image_reference=src_reference,
-                    tgt_image_reference=tgt_reference,
-                    oci_client=client,
-                    mode=recursive_mode,
-                    annotations=annotations,
-                )
-
-                submanifest_digest = f'sha256:{hashlib.sha256(submanifest_bytes).hexdigest()}'
-                if submanifest_digest != sub_manifest.digest:
-                    patched_sub_manifest = dataclasses.replace(
-                        sub_manifest,
-                        digest=submanifest_digest,
-                        size=len(submanifest_bytes),
-                    )
-                    manifest.manifests.remove(sub_manifest)
-                    manifest.manifests.insert(idx, patched_sub_manifest)
-                    manifest_dirty = True
-
-            if annotations:
-                # try to avoid unnecessary changes by x-serialisation - only add values if
-                # they are either new or different
-                for k, v in annotations.items():
-                    if manifest.annotations.get(k) == v:
-                        continue
-                    else:
-                        manifest.annotations[k] = v
-                        manifest_dirty = True
-
-            if manifest_dirty:
-                raw_manifest = json.dumps(manifest.as_dict())
-
-            manifest_digest = hashlib.sha256(raw_manifest.encode('utf-8')).hexdigest()
-            tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
-
-            res = client.put_manifest(
-                image_reference=tgt_image_reference,
-                manifest=raw_manifest,
+        if media_type in (om.DOCKER_MANIFEST_LIST_MIME, om.OCI_IMAGE_INDEX_MIME):
+            return _replicate_manifest_list(
+                raw_manifest=raw_manifest,
+                manifest=dacite.from_dict(
+                    data_class=om.OciImageManifestList,
+                    data=manifest,
+                ),
+                src_image_reference=src_image_reference,
+                tgt_image_reference=tgt_image_reference,
+                client=client,
+                mode=mode,
+                platform_filter=platform_filter,
+                annotations=annotations,
             )
 
-            return res, tgt_image_reference, raw_manifest.encode('utf-8')
-
-        elif media_type in (
-            om.OCI_MANIFEST_SCHEMA_V2_MIME,
-            om.DOCKER_MANIFEST_SCHEMA_V2_MIME,
-        ):
+        elif media_type in (om.OCI_MANIFEST_SCHEMA_V2_MIME, om.DOCKER_MANIFEST_SCHEMA_V2_MIME):
             if mode is ReplicationMode.NORMALISE_TO_MULTIARCH:
-                if not src_image_reference.has_digest_tag:
-                    src_image_reference = om.OciImageReference.to_image_ref(
-                        oci_client.to_digest_hash(
-                            image_reference=src_image_reference,
-                        )
-                    )
-                platform = op.from_single_image(
-                    image_reference=src_image_reference,
-                    oci_client=oci_client,
-                )
-                # force usage of digest-tag (symbolic tag required for manifest-list
-                tgt_image_ref = \
-                    f'{tgt_image_reference.ref_without_tag}@{src_image_reference.tag}'
-
-                res, ref, manifest_bytes = replicate_artifact(
+                return _wrap_single_as_manifest_list(
                     src_image_reference=src_image_reference,
-                    tgt_image_reference=tgt_image_ref,
-                    oci_client=oci_client,
+                    tgt_image_reference=tgt_image_reference,
+                    client=client,
+                    media_type=media_type,
                     annotations=annotations,
                 )
-
-                manifest_list = om.OciImageManifestList(
-                    manifests=[
-                        om.OciImageManifestListEntry(
-                            digest=f'sha256:{hashlib.sha256(manifest_bytes).hexdigest()}',
-                            mediaType=media_type,
-                            size=len(manifest_bytes),
-                            platform=platform,
-                        ),
-                    ],
-                    mediaType=om.DOCKER_MANIFEST_LIST_MIME,
-                )
-
-                manifest_list_bytes = json.dumps(
-                    manifest_list.as_dict(),
-                ).encode('utf-8')
-
-                manifest_digest = hashlib.sha256(manifest_list_bytes).hexdigest()
-                tgt_image_reference = tgt_image_reference.with_new_digest(digest=manifest_digest)
-
-                res = oci_client.put_manifest(
-                    image_reference=tgt_image_reference,
-                    manifest=manifest_list_bytes,
-                )
-
-                return res, tgt_image_reference, manifest_list_bytes
 
             manifest = dacite.from_dict(
                 data_class=om.OciImageManifest,
-                data=json.loads(raw_manifest)
+                data=json.loads(raw_manifest),
             )
             need_uncompressed_layer_digests = False
             uncompressed_layer_digests = None
         else:
             raise NotImplementedError(f'{media_type=}')
     else:
-      raise NotImplementedError(schema_version)
+        raise NotImplementedError(schema_version)
 
     for idx, layer in enumerate(manifest.blobs()):
         # need to specially handle cfg-blob (may be absent for v2 / legacy images)
-
         is_cfg_blob = idx == 0
         if is_cfg_blob and need_to_synthesise_cfg_blob:
             # if we need(ed) to synthesise cfg-blob (because source-image contained a v1-manifest)
@@ -374,39 +396,32 @@ def replicate_artifact(
 
     if need_to_synthesise_cfg_blob:
         fake_cfg_dict = json.loads(json.loads(raw_manifest)['history'][0]['v1Compatibility'])
-
-        # patch-in uncompressed layer-digests
         fake_cfg_dict['rootfs'] = {
             'diff_ids': uncompressed_layer_digests,
             'type': 'layers',
         }
-
         fake_cfg_raw = json.dumps(fake_cfg_dict).encode('utf-8')
+        cfg_digest = f'sha256:{hashlib.sha256(fake_cfg_raw).hexdigest()}'
 
         client.put_blob(
             image_reference=tgt_image_reference,
-            digest=(cfg_digest := f'sha256:{hashlib.sha256(fake_cfg_raw).hexdigest()}'),
+            digest=cfg_digest,
             octets_count=len(fake_cfg_raw),
             data=fake_cfg_raw,
         )
 
-        manifest_dict = manifest.as_dict()
-        # patch-on altered cfg-digest
-        manifest_dict['config']['digest'] = cfg_digest
-        manifest_dict['config']['size'] = len(fake_cfg_raw)
-        raw_manifest = json.dumps(manifest_dict)
+        manifest = dataclasses.replace(
+            manifest,
+            config=dataclasses.replace(
+                manifest.config,
+                digest=cfg_digest,
+                size=len(fake_cfg_raw),
+            ),
+        )
+        raw_manifest = json.dumps(manifest.as_dict())
 
     if annotations:
-        manifest_dirty = False
-
-        for k, v in annotations.items():
-            if manifest.annotations.get(k) == v:
-                continue
-            else:
-                manifest.annotations[k] = v
-                manifest_dirty = True
-
-        if manifest_dirty:
+        if _apply_annotations(manifest, annotations):
             raw_manifest = json.dumps(manifest.as_dict())
 
     manifest_digest = hashlib.sha256(raw_manifest.encode('utf-8')).hexdigest()
