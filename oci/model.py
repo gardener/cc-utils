@@ -20,7 +20,7 @@ DOCKER_MANIFEST_SCHEMA_V2_MIME = 'application/vnd.docker.distribution.manifest.v
 empty_dict = dataclasses.field(default_factory=dict) # noqa:E3701
 
 
-class MimeTypes:
+class MimeTypes(enum.StrEnum):
     '''
     predefined, well-known mimetypes, handy to be used in oci.client.Client.manifest as `accept` arg
 
@@ -30,9 +30,12 @@ class MimeTypes:
 
     note: not all registries honour `access` header
     '''
-    single_image = ', '.join((OCI_MANIFEST_SCHEMA_V2_MIME, DOCKER_MANIFEST_SCHEMA_V2_MIME))
-    multiarch = ', '.join((OCI_IMAGE_INDEX_MIME, DOCKER_MANIFEST_LIST_MIME))
-    prefer_multiarch = ', '.join((multiarch, single_image))
+    single_image = f'{OCI_MANIFEST_SCHEMA_V2_MIME}, {DOCKER_MANIFEST_SCHEMA_V2_MIME}'
+    multiarch = f'{OCI_IMAGE_INDEX_MIME}, {DOCKER_MANIFEST_LIST_MIME}'
+    prefer_multiarch = (
+        f'{OCI_IMAGE_INDEX_MIME}, {DOCKER_MANIFEST_LIST_MIME}'
+        f', {OCI_MANIFEST_SCHEMA_V2_MIME}, {DOCKER_MANIFEST_SCHEMA_V2_MIME}'
+    )
 
 
 class OciTagType(enum.Enum):
@@ -296,7 +299,7 @@ class OciImageReference:
                oci.util.normalise_image_reference(other._orig_image_reference)
 
     def __hash__(self):
-        return hash((self._orig_image_reference,))
+        return hash(oci.util.normalise_image_reference(self._orig_image_reference))
 
 
 class OciManifestSchemaVersion(enum.Enum):
