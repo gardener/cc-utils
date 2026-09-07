@@ -21,6 +21,54 @@ jobs:
       version-prerelease: ${{ (inputs.mode == 'snapshot' || inputs.mode == '') && 'dev0' || '' }}
       base-component-file: .ocm/ocm-component.yaml
 
+  lint-pybandit:
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - name: install-linters
+        shell: bash
+        run: |
+          pip3 install --break-system-packages bandit
+      - name: lint-python
+        shell: bash
+        run: |
+          set -euo pipefail
+          blobs_dir=/tmp/blobs.d
+          mkdir -p "${blobs_dir}"
+
+          bandit_logfile=bandit.log
+          bandit_evidence="${blobs_dir}/bandit.tar.gz"
+
+          bandit \
+            --configfile pyproject.toml \
+            --recursive \
+            -f txt -o "${bandit_logfile}" \
+            ocm/
+
+          tar czf "${bandit_evidence}" "${bandit_logfile}" pyproject.toml
+      - name: add-banditlog-to-component-descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            name: sast-linting-evidence
+            relation: local
+            access:
+              type: localBlob
+              localReference: bandit.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - pybandit
+              - name: gardener.cloud/comment
+                value: |
+                  we use bandit (linter) for SAST-Scans.
+                  See: https://bandit.readthedocs.io/en/latest/
+
   build-ocm-oci-image:
     name: Build OCM-OCI-Image
     needs:
