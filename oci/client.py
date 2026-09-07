@@ -1610,125 +1610,29 @@ class Client:
                 data=data,
                 mimetype=mimetype,
             )
-        elif octets_count >= max_chunk and (data_is_generator or data_is_requests_resp):
-            # workaround: write into temporary file, as at least GCR does not implement
-            # chunked-upload, and requests will not properly work w/ all generators
-            # (in particular, it will not work w/ our "fake" on)
-            with tempfile.TemporaryFile() as tf:
-                if data_is_generator:
-                    for chunk in data:
-                        tf.write(chunk)
-                elif data_is_requests_resp:
-                    while (chunk := data.raw.read(8192)):
-                        tf.write(chunk)
-                else:
-                    # must only enter this codepath, if either generator or requests-response
-                    raise RuntimeError('this line must not be reached')
-                tf.seek(0)
 
-                return self._put_blob_single_post(
-                    image_reference=image_reference,
-                    digest=digest,
-                    octets_count=octets_count,
-                    data=tf,
-                    mimetype=mimetype,
-                )
-        else:
-            if data_is_requests_resp:
-                with data:
-                  return self._put_blob_chunked(
-                      image_reference=image_reference,
-                      octets_count=octets_count,
-                      data_iterator=data.iter_content(chunk_size=max_chunk),
-                      chunk_size=max_chunk,
-                      mimetype=mimetype,
-                  )
+        if not (data_is_generator or data_is_requests_resp):
+            raise NotImplementedError(type(data))
+
+        # workaround: write into temporary file, as at least GCR does not implement
+        # chunked-upload, and requests will not properly work w/ all generators
+        # (in particular, it will not work w/ our "fake" on)
+        with tempfile.TemporaryFile() as tf:
+            if data_is_generator:
+                for chunk in data:
+                    tf.write(chunk)
             else:
-              raise NotImplementedError
+                while (chunk := data.raw.read(8192)):
+                    tf.write(chunk)
+            tf.seek(0)
 
-    @initialise_repository_if_required
-    def _put_blob_chunked(
-        self,
-        image_reference: str | om.OciImageReference,
-        octets_count: int,
-        data_iterator: collections.abc.Iterator[bytes],
-        chunk_size: int=1024 * 1024 * 16, # 16 MiB
-        mimetype='application/octect-stream',
-    ):
-        image_reference = om.OciImageReference(image_reference)
-        scope = _scope(image_reference=image_reference, action='push,pull')
-        logger.debug(f'chunked-put {chunk_size=}')
-
-        # start uploading session
-        res = self._request(
-            url=self.routes.uploads_url(image_reference=image_reference),
-            image_reference=image_reference,
-            scope=scope,
-            method='POST',
-            headers={
-                'content-length': '0',
-            }
-        )
-        res.raise_for_status()
-
-        upload_url = res.headers['location']
-
-        octets_left = octets_count
-        octets_sent = 0
-        offset = 0
-        sha256 = hashlib.sha256()
-
-        while octets_left > 0:
-            octets_to_send = min(octets_left, chunk_size)
-            octets_left -= octets_to_send
-
-            data = next(data_iterator)
-            sha256.update(data)
-
-            if not len(data) == octets_to_send:
-                # sanity check to detect programming errors
-                raise ValueError(f'{len(data)=} vs {octets_to_send=}')
-
-            logger.debug(f'{octets_to_send=} {octets_left=} {len(data)=}')
-            logger.debug(f'{octets_sent + offset}-{octets_sent + octets_to_send + offset}')
-
-            crange_from = octets_sent
-            crange_to = crange_from + len(data) - 1
-
-            res = self._request(
-                url=upload_url,
+            return self._put_blob_single_post(
                 image_reference=image_reference,
-                scope=scope,
-                method='PATCH',
-                data=data,
-                headers={
-                 'Content-Length': str(octets_to_send),
-                 'Content-Type': mimetype,
-                 'Content-Range': f'{crange_from}-{crange_to}',
-                 'Range': f'{crange_from}-{crange_to}',
-                }
+                digest=digest,
+                octets_count=octets_count,
+                data=tf,
+                mimetype=mimetype,
             )
-            res.raise_for_status()
-
-            upload_url = res.headers['location']
-
-            octets_sent += len(data)
-
-        sha256_digest = f'sha256:{sha256.hexdigest()}'
-
-        # close uploading session
-        query = urllib.parse.urlencode({'digest': sha256_digest})
-        upload_url = res.headers['location'] + '?' + query
-        res = self._request(
-            url=upload_url,
-            image_reference=image_reference,
-            scope=scope,
-            method='PUT',
-            headers={
-                 'Content-Length': '0',
-            },
-        )
-        return res
 
     @initialise_repository_if_required
     def _put_blob_single_post(

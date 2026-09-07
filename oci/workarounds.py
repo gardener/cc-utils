@@ -24,7 +24,7 @@ def is_cfg_blob_sane(
     manifest: om.OciImageManifest,
     cfg_blob: bytes | dict,
 ) -> bool:
-    if isinstance(cfg_blob, bytes) or isinstance(cfg_blob, str):
+    if isinstance(cfg_blob, (bytes, str)):
         cfg_blob = json.loads(cfg_blob)
     if not isinstance(cfg_blob, dict):
         raise ValueError(cfg_blob)
@@ -50,7 +50,7 @@ def sanitise_cfg_blob(
     if is_cfg_blob_sane(manifest=manifest, cfg_blob=cfg_blob):
         return cfg_blob
 
-    if isinstance(cfg_blob, bytes) or isinstance(cfg_blob, str):
+    if isinstance(cfg_blob, (bytes, str)):
         cfg_blob = json.loads(cfg_blob)
 
     cfg_blob_nonempty_layers = _cfg_blob_non_empty_history_layers(cfg_blob=cfg_blob)
