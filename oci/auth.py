@@ -279,14 +279,24 @@ def docker_credentials_lookup(
 
         return find_nothing_lookup
 
+    _cfg_cache: dict = {}  # keys: 'auth', 'mtime'
+
     def docker_auth_lookup(
         image_reference: str,
         privileges: Privileges=Privileges.READONLY,
         absent_ok: bool=False,
     ):
-        # re-read docker-cfg to reflect fs-updates
-        with open(docker_cfg) as f:
-            docker_auth = json.load(f)
+        try:
+            mtime = os.stat(docker_cfg).st_mtime
+        except OSError:
+            mtime = None
+
+        if 'auth' not in _cfg_cache or _cfg_cache.get('mtime') != mtime:
+            with open(docker_cfg) as f:
+                _cfg_cache['auth'] = json.load(f)
+            _cfg_cache['mtime'] = mtime
+
+        docker_auth = _cfg_cache['auth']
 
         if image_reference.startswith('/'):
             # relative reference - no means to find appropriate cfg
