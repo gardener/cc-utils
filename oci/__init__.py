@@ -88,7 +88,9 @@ def _replicate_manifest_list(
     tgt_name = tgt_image_reference.ref_without_tag
     manifest_dirty = False
 
-    for idx, sub_manifest in enumerate(tuple(manifest.manifests)):
+    replicated_manifests = []
+
+    for sub_manifest in manifest.manifests:
         src_reference = f'{src_name}@{sub_manifest.digest}'
         tgt_reference = f'{tgt_name}'
 
@@ -101,7 +103,6 @@ def _replicate_manifest_list(
             if not platform_filter(platform):
                 logger.info(f'skipping {platform=} for {src_image_reference=}')
                 manifest_dirty = True
-                manifest.manifests.remove(sub_manifest)
                 continue
 
         logger.info(f'replicating to {tgt_reference=}')
@@ -122,14 +123,16 @@ def _replicate_manifest_list(
 
         submanifest_digest = f'sha256:{hashlib.sha256(submanifest_bytes).hexdigest()}'
         if submanifest_digest != sub_manifest.digest:
-            patched = dataclasses.replace(
+            sub_manifest = dataclasses.replace(
                 sub_manifest,
                 digest=submanifest_digest,
                 size=len(submanifest_bytes),
             )
-            manifest.manifests.remove(sub_manifest)
-            manifest.manifests.insert(idx, patched)
             manifest_dirty = True
+
+        replicated_manifests.append(sub_manifest)
+
+    manifest.manifests = replicated_manifests
 
     if annotations:
         manifest_dirty |= _apply_annotations(manifest, annotations)
