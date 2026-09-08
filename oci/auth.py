@@ -231,6 +231,19 @@ def _invoke_credential_helper(
     return OciBasicAuthCredentials(username=username, password=secret)
 
 
+def _default_auth_cfg_candidates() -> collections.abc.Iterator[str]:
+    '''
+    yields default candidate paths of docker/podman auth-config files, in decreasing order of
+    precedence (podman's ${XDG_RUNTIME_DIR}/containers/auth.json first, as it contains the more
+    recently refreshed credentials when using podman; then podman's
+    $HOME/.config/containers/auth.json, and docker's $HOME/.docker/config.json)
+    '''
+    if xdg_runtime_dir := os.environ.get('XDG_RUNTIME_DIR'):
+        yield os.path.join(xdg_runtime_dir, 'containers/auth.json')
+    yield os.path.join(os.environ.get('HOME', ''), '.config/containers/auth.json')
+    yield os.path.join(os.environ.get('HOME', ''), '.docker/config.json')
+
+
 def docker_credentials_lookup(
     docker_cfg: str | None=None,
     absent_ok: bool=False,
@@ -239,8 +252,13 @@ def docker_credentials_lookup(
 ) -> collections.abc.Callable[[image_reference, Privileges, bool], OciConfig]:
     '''
     returns a credentials-lookup backed by docker's auth-config. By design, docker's auth-config
-    only allows configuring credentials per hostname. By default docker-cfg is expected at
-    `$HOME/.docker/config.json`. Location of docker-cfg can be customised via docker_cfg parameter.
+    only allows configuring credentials per hostname. By default, both podman's and docker's
+    auth-config locations are probed (in this order):
+      ${XDG_RUNTIME_DIR}/containers/auth.json (podman)
+      $HOME/.config/containers/auth.json      (podman)
+      $HOME/.docker/config.json               (docker)
+    An explicit cfg-file location can be enforced via docker_cfg parameter (in which case no
+    probing is done).
 
     Supports credential helpers via `credHelpers` (per-registry) and `credsStore` (global fallback)
     fields in docker-cfg. Resolution order depends on credential_helper_policy (see below).
@@ -262,7 +280,13 @@ def docker_credentials_lookup(
     parameter will be ignored)
     '''
     if not docker_cfg:
-        docker_cfg = os.path.join(os.environ.get('HOME', ''), '.docker/config.json')
+        docker_cfg = next(
+            (
+                candidate for candidate in _default_auth_cfg_candidates()
+                if os.path.isfile(candidate)
+            ),
+            os.path.join(os.environ.get('HOME', ''), '.docker/config.json'),
+        )
 
     if not os.path.isfile(docker_cfg):
         if not absent_ok:
@@ -394,6 +418,11 @@ def docker_credentials_lookup(
         return None
 
     return docker_auth_lookup
+
+
+# alias - podman's auth.json has the same format, and is covered by docker_credentials_lookup's
+# default-location probing
+podman_credentials_lookup = docker_credentials_lookup
 
 
 @dataclasses.dataclass(frozen=True)
