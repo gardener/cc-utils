@@ -147,6 +147,7 @@
   github_orgs:
     - kubernetes-dev
     - kubernetes-dev-gdch
+    - kubernetes-canary-gdch
 
 - name: tools-aws-delivery-dev
   type: aws
