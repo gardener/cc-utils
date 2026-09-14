@@ -89,7 +89,8 @@ def test_iter_resource_refs_oci_access():
 
 
 def test_iter_resource_refs_relative_access():
-    refs = list(prune._iter_resource_refs(_make_relative_node('some-image:v1'), OCM_REPO))
+    # relative refs are registry-root-relative (they already carry the ocm-repo account/subpath)
+    refs = list(prune._iter_resource_refs(_make_relative_node('my-account/some-image:v1'), OCM_REPO))
     assert refs == [f'{TARGET_BASE}/some-image:v1']
 
 
