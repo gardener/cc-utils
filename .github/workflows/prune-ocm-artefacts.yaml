@@ -46,18 +46,12 @@ on:
         description: |
           passed to gardener/cc-utils/.github/actions/oci-auth (selects the OCI-registry to
           authenticate against; main fallback for cfgs not covered by extra-auths)
+    secrets:
       extra-auths:
         required: false
-        type: string
-        default: ''
         description: |
           JSON mapping of additional auth entries for oci-auth
           (e.g. `{"registry.example.com": {"auth": "TOKEN"}}`).
-    secrets:
-      extra-auths-secret:
-        required: false
-        description: |
-          Same format as `inputs.extra-auths`; takes precedence if both are set.
 
 jobs:
   prune:
@@ -69,7 +63,7 @@ jobs:
         uses: gardener/cc-utils/.github/actions/oci-auth@master
         with:
           oci-image-reference: ${{ inputs.oci-image-reference }}
-          extra-auths: ${{ secrets.extra-auths-secret || inputs.extra-auths }}
+          extra-auths: ${{ secrets.extra-auths }}
       - name: Install gardener-gha-libs
         uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: Prune OCM artefacts
