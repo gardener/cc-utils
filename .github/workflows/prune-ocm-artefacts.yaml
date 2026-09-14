@@ -1,0 +1,130 @@
+name: Prune OCM Artefacts
+
+# description: |
+#   Removes stale OCI artefacts from target OCM repositories (via ocm.prune),
+#   retaining the greatest N versions of a given root component's dependency tree.
+#
+#   Typical use: run after a replication workflow to prevent unbounded tag growth
+#   in the target registry (e.g. Artifactory per-repo "Max Unique Tags" limit).
+
+on:
+  workflow_call:
+    inputs:
+      component-name:
+        required: true
+        type: string
+        description: |
+          root OCM-component-name whose version tree defines the retain-set
+      targets:
+        required: true
+        type: string
+        description: |
+          newline-separated list of OCM-repository base-URLs to prune (e.g.
+          `gardener-oci.common.repositories.cloud.sap/dev`)
+      keep-versions:
+        required: false
+        type: number
+        default: 3
+        description: |
+          number of greatest semver versions to retain per root component
+      dry-run:
+        required: false
+        type: boolean
+        default: false
+        description: |
+          if true, enumerate and log candidates without removing anything
+      restrict-to-ocm-repo:
+        required: false
+        type: boolean
+        default: true
+        description: |
+          skip OCI resource refs outside the target OCM repository prefix
+      oci-image-reference:
+        required: false
+        type: string
+        default: europe-docker.pkg.dev/gardener-project
+        description: |
+          passed to gardener/cc-utils/.github/actions/oci-auth (selects the OCI-registry to
+          authenticate against; main fallback for cfgs not covered by extra-auths)
+      extra-auths:
+        required: false
+        type: string
+        default: ''
+        description: |
+          JSON mapping of additional auth entries for oci-auth
+          (e.g. `{"registry.example.com": {"auth": "TOKEN"}}`).
+
+jobs:
+  prune:
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      id-token: write
+    steps:
+      - name: Authenticate against OCI registries
+        uses: gardener/cc-utils/.github/actions/oci-auth@master
+        with:
+          oci-image-reference: ${{ inputs.oci-image-reference }}
+          extra-auths: ${{ inputs.extra-auths }}
+      - name: Install gardener-gha-libs
+        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      - name: Prune OCM artefacts
+        shell: python
+        env:
+          COMPONENT_NAME: ${{ inputs.component-name }}
+          TARGETS: ${{ inputs.targets }}
+          KEEP_VERSIONS: ${{ inputs.keep-versions }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          RESTRICT_TO_OCM_REPO: ${{ inputs.restrict-to-ocm-repo }}
+        run: |
+          import logging
+          import os
+
+          logging.basicConfig(level=logging.INFO, format='%(levelname)s %(name)s: %(message)s')
+          logger = logging.getLogger('prune-ocm-artefacts')
+
+          import oci.auth as oa
+          import oci.client as oc
+          import oci.model as om
+          import ocm
+          import ocm.prune
+
+          component_name = os.environ['COMPONENT_NAME']
+          targets = [t.strip() for t in os.environ['TARGETS'].splitlines() if t.strip()]
+          keep_versions = int(os.environ.get('KEEP_VERSIONS') or 3)
+          dry_run = os.environ.get('DRY_RUN', 'false').lower() == 'true'
+          restrict = os.environ.get('RESTRICT_TO_OCM_REPO', 'true').lower() == 'true'
+
+          if not targets:
+              logger.warning('no targets given — nothing to do')
+              raise SystemExit(0)
+
+          oci_client = oc.Client(credentials_lookup=oa.docker_credentials_lookup())
+
+          for repo_url in sorted(targets):
+              ref = om.OciImageReference.to_image_ref(repo_url)
+              mode = ocm.prune.EnumerationMode(0)
+              if ref.registry_type not in (om.OciRegistryType.KEPPEL, om.OciRegistryType.GAR):
+                  mode |= ocm.prune.EnumerationMode.KNOWN_REPOSITORIES
+              if restrict:
+                  mode |= ocm.prune.EnumerationMode.RESTRICT_TO_OCM_REPO
+
+              ocm_repo = ocm.OciOcmRepository(baseUrl=repo_url)
+              ctx = ocm.prune.PruneCtx(ocm_repo=ocm_repo, oci_client=oci_client, mode=mode)
+
+              for ver in ocm.prune.resolve_versions(
+                  component_name, None, ocm_repo, oci_client, keep_versions,
+              ):
+                  ocm.prune.prune(ocm.ComponentIdentity(name=component_name, version=ver), ctx)
+
+              ocm.prune.enumerate_candidates(ctx)
+
+              to_delete = ctx.candidates - ctx.retain_set
+              logger.info(
+                  f'{repo_url}: retaining {len(ctx.retain_set)}, deleting {len(to_delete)}'
+              )
+
+              for ref_ in sorted(to_delete):
+                  logger.info(f'  {"would remove" if dry_run else "removing"}: {ref_}')
+
+              if not dry_run:
+                  ocm.prune.delete_all(to_delete, oci_client)
