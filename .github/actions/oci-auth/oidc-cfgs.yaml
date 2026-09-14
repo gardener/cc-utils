@@ -27,6 +27,8 @@
   github_orgs:
     - kubernetes
     - open-delivery-gear
+    - kubernetes-dev-gdch
+    - kubernetes-canary-gdch
 
 # ghtools / delivery
 - name: tools-gar-delivery
