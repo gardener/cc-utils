@@ -12,6 +12,7 @@ import oci.model as om
 import oci.nonstd
 import oci.util
 import ocm
+import ocm.access as ocm_access
 import ocm.iter as ocm_iter
 import ocm.retrieve
 import version as version_mod
@@ -94,11 +95,10 @@ def _iter_resource_refs(
     ocm_repo: ocm.OciOcmRepository,
 ) -> collections.abc.Iterator[str]:
     access = node.resource.access
-    if isinstance(access, ocm.OciAccess):
-        yield access.imageReference
-    elif isinstance(access, ocm.RelativeOciAccess):
-        base = ocm_repo.oci_ref.rstrip('/')
-        yield f'{base}/{access.reference.lstrip("/")}'
+    if isinstance(access, (ocm.OciAccess, ocm.RelativeOciAccess)):
+        # relative refs are registry-root-relative (they already carry the ocm-repo
+        # subpath); resolve against the registry host only, consistent w/ ctt-replication
+        yield ocm_access.to_absolute_oci_access(access, ocm_repo).imageReference
 
 
 def _in_scope_of_ocm_repo(ref: str, ocm_repo: ocm.OciOcmRepository) -> bool:
