@@ -57,7 +57,7 @@ jobs:
       id-token: write
     environment: ${{ inputs.github-environment }}
     steps:
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@562e85c0e06dde08d78d8d047f9acb947003d1ad
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
@@ -67,7 +67,7 @@ jobs:
           permissions: |
             pull-requests: write
             members: read
-      - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@master
+      - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@676d1a2c148ce2d7cad722a8d37afd19d8c2ea7d
         with:
           trusted-label: ${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
           trusted-teams: ${{ inputs.trusted-teams }}
