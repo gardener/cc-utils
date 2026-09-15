@@ -26,7 +26,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@3f14638721857489accb2e1cb39804fc16a2793c
       - name: install-linters
         shell: bash
         run: |
@@ -49,7 +49,7 @@ jobs:
 
           tar czf "${bandit_evidence}" "${bandit_logfile}" pyproject.toml
       - name: add-banditlog-to-component-descriptor
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@8c94987cc05ad4d335945dccbfb173430fe0eabb
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
