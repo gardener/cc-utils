@@ -105,11 +105,11 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@9a07ed3ce708db7334c508c53f4c25079742f571
     - uses: azure/setup-helm@v4
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@886a5ebb45a8524043b488ce64fbbf749e93e40a
       with:
         name: ${{ inputs.component-descriptor-artifact }}
         path: /tmp/cd-artifact
@@ -139,7 +139,7 @@ runs:
         EOF
     - name: authenticate
       if: ${{ inputs.push == 'true' }}
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@46f66dd594d9a152c93cca79a7b0ac1f64b67689
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
         gh-token: ${{ inputs.gh-token }}
@@ -301,7 +301,7 @@ runs:
           )
 
     - name: export-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@8c94987cc05ad4d335945dccbfb173430fe0eabb
       with:
         ocm-resources-file: ocm-resources.yaml
         blobs-directory: blobs.d
