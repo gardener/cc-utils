@@ -6,6 +6,8 @@ import dataclasses
 import hashlib
 import json
 
+import requests
+
 import oci.client as oc
 import oci.model as om
 
@@ -107,3 +109,30 @@ def sanitise_image(
     patched_img_ref = f'{img_ref.ref_without_tag}@{manifest_dig}'
 
     return patched_img_ref
+
+
+def patch_head_blob_to_use_get(oci_client: oc.Client) -> None:
+    '''
+    it has been observed that some versions of Artifactory will, for the same (and actually
+    absent) blob, inconsistently yield HTTP 200 for a HEAD request and HTTP 404 for a GET
+    request. This workaround patches `oci_client.head_blob` to actually issue a GET (response
+    body discarded, unread), so existence-checks are no longer fooled.
+    '''
+    def _head_blob_via_get(image_reference, digest, absent_ok=True):
+        try:
+            response = oci_client.blob(
+                image_reference=image_reference,
+                digest=digest,
+                stream=True,
+                absent_ok=False,
+            )
+        except requests.exceptions.HTTPError as e:
+            response = e.response
+            response.close()
+            if absent_ok and response.status_code == 404:
+                return response
+            raise
+        response.close() # release connection without reading body
+        return response
+
+    oci_client.head_blob = _head_blob_via_get
