@@ -124,6 +124,49 @@ image_processing_cfg:
 `registry.acme.org/myorg/myimage:1.0` rather than
 `registry.acme.org/registry_example_com/myorg/myimage:1.0`.
 
+### TagFoldingUploader
+
+Some OCI-registries impose an implicit limit on the number of manifests / layer-blobs within a
+single repository.  `TagFoldingUploader` works around this by isolating each image-version into its
+own repository: it folds the (mangled) tag into the repository-name, so at most one image-version
+lands per repository.
+
+The mapping is a pure function of the target image-reference, hence stable and independent of
+run-composition and ordering.  It therefore needs neither persisted state nor a pre-calculation
+pass, and stays correct for incremental (partial) replication runs.
+
+It must be placed _after_ the uploader that sets the push target (e.g. `PrependTargetUploader`).
+
+```yaml
+uploaders:
+  prepend:
+    type: PrependTargetUploader
+    kwargs:
+      remove_prefixes:
+        - my-registry/
+  fold:
+    type: TagFoldingUploader
+    kwargs:
+      separator: '-'                 # joins base-repo and folded tag (default '-')
+      mangle_replacement_char: '_'   # replaces characters illegal in a repo path-component
+
+image_processing_cfg:
+  - name: default
+    filter:
+      - type: MatchAllFilter
+    target: acme
+    upload:
+      - prepend   # -> tgt-registry/my-image:v3
+      - fold      # -> tgt-registry/my-image-v3:v3
+```
+
+With this configuration `my-registry/my-image:v1`, `:v2`, `:v3` are pushed to (and recorded as)
+`tgt-registry/my-image-v1:v1`, `tgt-registry/my-image-v2:v2`, `tgt-registry/my-image-v3:v3`
+respectively.
+
+Note: the resulting image-reference is longer than the input; registries that cap the total
+reference-length may reject very long refs.  Reference-shortening is not currently implemented.
+
 ### DescriptorRefRewriteUploader
 
 Use this when the registry the artefacts are _pushed to_ differs from the registry _clients should

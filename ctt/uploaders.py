@@ -4,9 +4,27 @@
 
 import abc
 import collections.abc
+import re
 
 import ctt.model
 import ocm
+
+
+# characters permitted (between alphanumerics) in an OCI repository path-component
+_repo_component_illegal = re.compile(r'[^a-z0-9._-]')
+
+
+def mangle_repo_component(
+    value: str,
+    replacement_char: str='_',
+) -> str:
+    '''
+    lower-cases `value` and replaces characters not permitted in an OCI repository path-component
+    with `replacement_char`. Not injective (e.g. `V1` and `v1` both map to `v1`); as callers only
+    ever fold this into a repository-name suffix (never into a tag), a collision merely co-locates
+    two distinct tags in the same repository - it can never overwrite.
+    '''
+    return _repo_component_illegal.sub(replacement_char, value.lower())
 
 
 class UploaderBase:
@@ -327,6 +345,76 @@ class DigestUploader(UploaderBase):
     ) -> ctt.model.ReplicationResourceElement:
         replication_resource_element.reference_by_digest = True
         replication_resource_element.retain_symbolic_tag = self._retain_symbolic_tag
+
+        return replication_resource_element
+
+
+class TagFoldingUploader(UploaderBase):
+    '''
+    Isolates each image-version into its own target repository by folding the tag into the
+    repository-name. This bounds the number of manifests/blobs per repository (to one image-version
+    each) to work around OCI-registries that impose an implicit limit on the amount of
+    manifests/layer-blobs within a single repository.
+
+    The mapping is a pure function of the (already computed) target image-reference, hence stable
+    and independent of run-composition or ordering. It therefore requires neither persisted state
+    nor a pre-calculation pass, and remains safe for incremental (partial) replication runs.
+
+    Must run _after_ the uploader that sets the push target (e.g. PrependTargetUploader): it reads
+    the base target ref, appends the (mangled) tag to `ref_without_tag`, and re-attaches the
+    original tag. Example (base target `tgt-registry/my-image`):
+
+        tgt-registry/my-image:v1  ->  tgt-registry/my-image-v1:v1
+        tgt-registry/my-image:v2  ->  tgt-registry/my-image-v2:v2
+        tgt-registry/my-image:v3  ->  tgt-registry/my-image-v3:v3
+
+    Note: the total image-reference grows longer; some registries impose a max-length. Shortening
+    is not yet implemented (kept out until a test-run shows it is needed).
+    '''
+    def __init__(
+        self,
+        separator: str='-',
+        mangle_replacement_char: str='_',
+    ):
+        self._separator = separator
+        self._mangle_replacement_char = mangle_replacement_char
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+        /,
+        target_as_source: bool=False,
+        **kwargs,
+    ) -> ctt.model.ReplicationResourceElement:
+        if not target_as_source:
+            src_ref = replication_resource_element.src_ref
+        else:
+            src_ref = replication_resource_element.tgt_ref
+
+        if src_ref.has_mixed_tag:
+            fold_source, _ = src_ref.parsed_mixed_tag
+        else:
+            fold_source = src_ref.tag
+
+        tgt_base_ref = self._separator.join((
+            src_ref.ref_without_tag,
+            mangle_repo_component(fold_source, self._mangle_replacement_char),
+        ))
+
+        if src_ref.has_mixed_tag:
+            symbolical_tag, digest_tag = src_ref.parsed_mixed_tag
+            tgt_ref = f'{tgt_base_ref}:{symbolical_tag}@{digest_tag}'
+        elif src_ref.has_digest_tag:
+            tgt_ref = f'{tgt_base_ref}@{src_ref.tag}'
+        else:
+            tgt_ref = f'{tgt_base_ref}:{src_ref.tag}'
+
+        if src_ref.has_digest_tag:
+            replication_resource_element.reference_by_digest = True
+
+        replication_resource_element.target.access = ocm.OciAccess(
+            imageReference=tgt_ref,
+        )
 
         return replication_resource_element
 
