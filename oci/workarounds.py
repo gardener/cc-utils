@@ -5,11 +5,15 @@ collection of workarounds required to deal w/ different OCI Registries' idiosync
 import dataclasses
 import hashlib
 import json
+import logging
 
 import requests
 
 import oci.client as oc
 import oci.model as om
+
+
+logger = logging.getLogger(__name__)
 
 
 def _cfg_blob_non_empty_history_layers(cfg_blob: dict) -> list[dict]:
@@ -137,3 +141,48 @@ def patch_head_blob_to_use_get(oci_client: oc.Client) -> None:
         return response
 
     oci_client.head_blob = _head_blob_via_get
+
+
+def patch_put_manifest_to_validate_via_get(oci_client: oc.Client) -> None:
+    '''
+    it has been observed that Artifactory will (in certain situations) accept a manifest-PUT
+    (yielding HTTP 20x) while silently dropping the manifest, such that subsequent GETs will
+    yield HTTP 404. This workaround patches `oci_client.put_manifest` to - after each successful
+    PUT - issue a GET to validate the manifest is actually being served from the target registry.
+    Replication will thus fail early, rather than erroneously being marked as done.
+    '''
+    orig_put_manifest = oci_client.put_manifest
+
+    def _put_manifest_validating(image_reference, manifest: bytes, *args, **kwargs):
+        res = orig_put_manifest(
+            image_reference,
+            manifest,
+            *args,
+            **kwargs,
+        )
+
+        validation_ref = image_reference
+        if not om.OciImageReference.to_image_ref(image_reference).has_digest_tag:
+            manifest_digest = 'sha256:' + hashlib.sha256(manifest).hexdigest()
+            validation_ref = (
+                f'{om.OciImageReference.to_image_ref(image_reference).ref_without_tag}'
+                f'@{manifest_digest}'
+            )
+
+        try:
+            oci_client.manifest_raw(
+                image_reference=validation_ref,
+                accept=om.MimeTypes.multiarch,
+                absent_ok=False,
+            ).close()
+        except requests.exceptions.HTTPError as he:
+            he.add_note(
+                f'manifest was accepted (HTTP 20x) but is not served from replication-target '
+                f'{image_reference=} (validated via {validation_ref=})'
+            )
+            raise
+
+        return res
+
+    oci_client.put_manifest = _put_manifest_validating
+    logger.info('patched put_manifest to validate each upload via GET (paranoid mode)')

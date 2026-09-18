@@ -1,8 +1,10 @@
+import hashlib
 import unittest.mock
 
 import pytest
 import requests
 
+import oci.model as om
 import oci.workarounds as ow
 
 
@@ -75,3 +77,81 @@ def test_patch_head_blob_to_use_get_other_error_propagates():
             digest='sha256:abc',
             absent_ok=True,
         )
+
+
+def _make_client_silently_dropping_manifests():
+    '''
+    returns a mocked oci-client whose manifest-PUT accepts (HTTP 20x) but whose GET yields 404,
+    mimicking the observed Artifactory bug.
+    '''
+
+    class _SilentDropClient:
+        def put_manifest(self, image_reference, manifest, *args, **kwargs):
+            return _mock_response(201)
+
+        def manifest_raw(self, image_reference, *args, **kwargs):
+            raise requests.exceptions.HTTPError(response=_mock_response(404))
+
+    return _SilentDropClient()
+
+
+def test_patch_put_manifest_to_validate_via_get_dropped_manifest_raises():
+    oci_client = _make_client_silently_dropping_manifests()
+
+    ow.patch_put_manifest_to_validate_via_get(oci_client)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        oci_client.put_manifest(
+            image_reference='example.com/foo:bar',
+            manifest=b'{"schemaVersion": 2}',
+        )
+
+
+def test_patch_put_manifest_to_validate_via_get_served_manifest_passes():
+    class _ServingClient:
+        def __init__(self):
+            self.validated_refs = []
+
+        def put_manifest(self, image_reference, manifest, *args, **kwargs):
+            self.manifest = manifest
+            return _mock_response(201)
+
+        def manifest_raw(self, image_reference, *args, **kwargs):
+            self.validated_refs.append(image_reference)
+            return _mock_response(200)
+
+    oci_client = _ServingClient()
+    ow.patch_put_manifest_to_validate_via_get(oci_client)
+
+    manifest = b'{"schemaVersion": 2}'
+    res = oci_client.put_manifest(image_reference='example.com/foo:bar', manifest=manifest)
+
+    assert res.ok
+    expected_digest = 'sha256:' + hashlib.sha256(manifest).hexdigest()
+    assert oci_client.validated_refs == [f'example.com/foo@{expected_digest}']
+
+
+def test_patch_put_manifest_to_validate_via_get_validates_digest_ref_verbatim():
+    class _ServingClient:
+        def __init__(self):
+            self.validated_refs = []
+
+        def put_manifest(self, image_reference, manifest, *args, **kwargs):
+            return _mock_response(201)
+
+        def manifest_raw(self, image_reference, *args, **kwargs):
+            self.validated_refs.append((image_reference, kwargs))
+            return _mock_response(200)
+
+    oci_client = _ServingClient()
+    ow.patch_put_manifest_to_validate_via_get(oci_client)
+
+    digest_ref = (
+        'example.com/foo@sha256:'
+        '0000000000000000000000000000000000000000000000000000000000000000'
+    )
+    oci_client.put_manifest(image_reference=digest_ref, manifest=b'{"schemaVersion": 2}')
+
+    assert oci_client.validated_refs == [
+        (digest_ref, {'accept': om.MimeTypes.multiarch, 'absent_ok': False}),
+    ]
