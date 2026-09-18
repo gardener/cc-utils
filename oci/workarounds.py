@@ -125,6 +125,7 @@ def patch_head_blob_to_use_get(oci_client: oc.Client) -> None:
                 digest=digest,
                 stream=True,
                 absent_ok=False,
+                warn_if_not_ok=not absent_ok,
             )
         except requests.exceptions.HTTPError as e:
             response = e.response
