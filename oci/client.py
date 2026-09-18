@@ -1462,6 +1462,7 @@ class Client:
         digest: str,
         stream=True,
         absent_ok=False,
+        warn_if_not_ok=True,
     ) -> requests.models.Response:
         image_reference = om.OciImageReference(image_reference)
 
@@ -1474,6 +1475,7 @@ class Client:
             method='GET',
             stream=stream,
             raise_for_status=False,
+            warn_if_not_ok=warn_if_not_ok,
         )
 
         if absent_ok and res.status_code == requests.codes.NOT_FOUND: # noqa

@@ -27,6 +27,7 @@ def test_patch_head_blob_to_use_get_present():
         digest='sha256:abc',
         stream=True,
         absent_ok=False,
+        warn_if_not_ok=False,
     )
     res.close.assert_called_once()
 
