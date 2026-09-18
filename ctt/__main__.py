@@ -105,6 +105,17 @@ def configure_parser(parser):
             'absent, blob.'
         ),
     )
+    parser.add_argument(
+        '--paranoid',
+        action='store_true',
+        default=False,
+        help=(
+            'validate each uploaded oci-manifest via GET after successful PUT, failing the '
+            'replication if it is not actually served. Works around registries (observed: '
+            'Artifactory) that accept manifest-PUTs with HTTP 20x while silently dropping the '
+            'manifest (subsequent GETs yield HTTP 404).'
+        ),
+    )
 
 
 def replicate(parsed):
@@ -124,6 +135,9 @@ def replicate(parsed):
 
     if parsed.blob_existence_check_via_get:
         oci.workarounds.patch_head_blob_to_use_get(oci_client)
+
+    if parsed.paranoid:
+        oci.workarounds.patch_put_manifest_to_validate_via_get(oci_client)
 
     component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.src_repo),
