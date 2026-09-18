@@ -905,6 +905,14 @@ def process_external_resources(
             f'added {len(bom_resources)} BOM resource(s) for {info.resource["name"]!r}'
         )
 
+    if new_resources:
+        # strip stale SBOM/CBOM resources so fresh ones are the only source of truth;
+        # guards against duplicates when this step is re-run (e.g. on a pipeline retry)
+        component['resources'] = [
+            r for r in component['resources']
+            if 'cbom-format' not in (r.get('extraIdentity') or {})
+            and 'sbom-format' not in (r.get('extraIdentity') or {})
+        ]
     component['resources'].extend(new_resources)
     with open(component_descriptor_path, 'w') as f:
         yaml.safe_dump(cd_raw, f)
