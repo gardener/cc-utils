@@ -79,6 +79,18 @@ def test_patch_head_blob_to_use_get_other_error_propagates():
         )
 
 
+def test_patch_head_blob_to_ignore_existing_blobs_always_reports_absent():
+    oci_client = unittest.mock.Mock()
+    oci_client.blob.return_value = _mock_response(200) # would-be-present, must be ignored
+
+    ow.patch_head_blob_to_ignore_existing_blobs(oci_client)
+    res = oci_client.head_blob(image_reference='example.com/foo:bar', digest='sha256:abc')
+
+    assert not res.ok
+    assert res.status_code == 404
+    oci_client.blob.assert_not_called()
+
+
 def _make_client_silently_dropping_manifests():
     '''
     returns a mocked oci-client whose manifest-PUT accepts (HTTP 20x) but whose GET yields 404,
