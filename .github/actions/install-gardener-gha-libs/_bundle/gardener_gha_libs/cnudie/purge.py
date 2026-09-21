@@ -1,0 +1,194 @@
+import collections.abc
+import logging
+import traceback
+
+import cnudie.retrieve
+import cnudie.util
+import oci.client as oc
+import oci.model as om
+import ocm
+import ocm.iter
+import version
+
+logger = logging.getLogger(__name__)
+
+
+def iter_componentversions_to_purge(
+    component: ocm.Component | ocm.ComponentDescriptor,
+    policy: version.VersionRetentionPolicies,
+    oci_client: oc.Client,
+) -> collections.abc.Generator[ocm.ComponentIdentity, None, None]:
+    oci_ref = cnudie.util.oci_ref(component=component)
+    if isinstance(component, ocm.ComponentDescriptor):
+        component = component.component
+
+    for v in version.versions_to_purge(
+        versions=oci_client.tags(oci_ref.ref_without_tag),
+        reference_version=component.version,
+        policy=policy,
+    ):
+        yield ocm.ComponentIdentity(
+            name=component.name,
+            version=v,
+        )
+
+
+def remove_component_descriptor_and_referenced_artefacts(
+    component: ocm.Component | ocm.ComponentDescriptor,
+    oci_client: oc.Client,
+    lookup: cnudie.retrieve.ComponentDescriptorLookupById=None,
+    recursive: bool=False,
+    on_error: str='abort', # todo: implement, e.g. patch-component-descriptor-and-abort
+    absent_ok: bool=False,
+):
+    if isinstance(component, ocm.ComponentDescriptor):
+        component = component.component
+
+    logger.info(f'will try to purge {component.name}:{component.version} including local resources')
+
+    current_component = None
+    resources_with_removal_errors = []
+
+    for node in ocm.iter.iter(
+        component=component,
+        lookup=lookup,
+        recursion_depth=-1 if recursive else 0,
+    ):
+        # ocm.iter.iter will return sequences of:
+        # - component-node (always exactly one per component)
+        # - resource-nodes (if any)
+        # - source-nodes (if any)
+        if isinstance(node, ocm.iter.ComponentNode):
+            if current_component: # skip for first iteration
+                _remove_component_descriptor(
+                    component=current_component,
+                    oci_client=oci_client,
+                    absent_ok=absent_ok,
+                )
+            current_component = node.component
+            continue
+
+        if isinstance(node, ocm.iter.SourceNode):
+            continue # we ignore source-nodes for now
+
+        if isinstance(node, ocm.iter.ResourceNode):
+            if not node.resource.relation is ocm.ResourceRelation.LOCAL:
+                logger.debug(f'skipping non-local {node.resource.name=}')
+                continue
+            try:
+                did_remove = _remove_resource(
+                    node=node,
+                    oci_client=oci_client,
+                    absent_ok=absent_ok,
+                )
+                if not did_remove:
+                    logger.info(f'do not know how to remove {node.resource=}')
+            except Exception as e:
+                logger.warning(f'error while trying to remove {node.resource=} - {e=}')
+                traceback.print_exc()
+                resources_with_removal_errors.append(node)
+                if on_error == 'abort':
+                    logger.fatal('error encountered - aborting comoponent-descriptor-removal')
+                    raise e
+                else:
+                    raise ValueError(f'unknown value {on_error=}')
+
+    # remove final component (last component-component-descriptor would otherwise not be removed,
+    # as we remove component-descriptors only after (trying to) remove referenced resources.
+    if current_component:
+        _remove_component_descriptor(
+            component=component,
+            oci_client=oci_client,
+            absent_ok=absent_ok,
+        )
+
+
+def _remove_component_descriptor(
+    component: ocm.Component,
+    oci_client: oc.Client,
+    absent_ok: bool=False,
+):
+    oci_ref = cnudie.util.oci_ref(
+        component=component,
+    )
+
+    oci_client.delete_manifest(
+        image_reference=oci_ref,
+        purge=True,
+        absent_ok=absent_ok,
+    )
+
+
+def _remove_resource(
+    node: ocm.iter.ResourceNode,
+    oci_client: oc.Client,
+    absent_ok: bool=False,
+) -> bool:
+    resource = node.resource
+    if not resource.type in (ocm.ArtefactType.OCI_IMAGE, 'ociImage'):
+        return False # we only support removal of oci-images for now
+
+    if not resource.relation in (ocm.ResourceRelation.LOCAL, 'local'):
+        return False # external resources can never be removed (as we do not "own" them)
+
+    if not isinstance(resource.access, ocm.OciAccess):
+        return False # similar to above: we only support removal of oci-images in oci-registries
+
+    access: ocm.OciAccess = resource.access
+    image_reference = om.OciImageReference(access.imageReference)
+
+    manifest = oci_client.manifest(
+        image_reference=image_reference,
+        absent_ok=True,
+        accept=om.MimeTypes.prefer_multiarch,
+    )
+
+    if not manifest:
+        return True # nothing to do if image does not exist
+
+    if image_reference.has_symbolical_tag:
+        purge = True
+    elif image_reference.has_digest_tag:
+        purge = False # no need to "purge" if we were passed a digest-tag
+    else:
+        raise ValueError(f'cannot remove image w/o tag: {str(image_reference)}')
+
+    oci_client.delete_manifest(
+        image_reference=image_reference,
+        purge=purge,
+        accept=om.MimeTypes.prefer_multiarch,
+        absent_ok=absent_ok,
+    )
+
+    if isinstance(manifest, om.OciImageManifest):
+        return True
+
+    if not isinstance(manifest, om.OciImageManifestList):
+        raise ValueError(f'did not expect type {manifest=} {type(manifest)} - this is a bug')
+
+    # multi-arch-case - try to guess other tags, and purge those
+    manifest: om.OciImageManifestList
+
+    def iter_platform_refs():
+        repository = image_reference.ref_without_tag
+        base_tag = image_reference.tag
+
+        for submanifest in manifest.manifests:
+            p = submanifest.platform
+            yield f'{repository}:{base_tag}-{p.os}-{p.architecture}'
+
+    for ref in iter_platform_refs():
+        if not oci_client.head_manifest(
+            image_reference=ref,
+            absent_ok=True,
+        ):
+            logger.warning(f'did not find {ref=} - ignoring')
+            continue
+
+        oci_client.delete_manifest(
+            image_reference=ref,
+            purge=True,
+            absent_ok=absent_ok,
+        )
+
+    return True
