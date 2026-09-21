@@ -95,7 +95,8 @@ def configure_parser(parser):
         default=False,
         help='scan S3-backed resources and inject SBOM/CBOM documents into replicated descriptors',
     )
-    parser.add_argument(
+    blob_existence_group = parser.add_mutually_exclusive_group()
+    blob_existence_group.add_argument(
         '--blob-existence-check-via-get',
         action='store_true',
         default=False,
@@ -103,6 +104,16 @@ def configure_parser(parser):
             'check blob-existence via GET instead of HEAD. Works around registries (observed: '
             'Artifactory) that can inconsistently answer HEAD=200/GET=404 for the same, actually '
             'absent, blob.'
+        ),
+    )
+    blob_existence_group.add_argument(
+        '--always-upload-blobs',
+        action='store_true',
+        default=False,
+        help=(
+            'unconditionally treat blobs as absent, forcing every blob to be re-uploaded. Works '
+            'around registries (observed: Artifactory) that report a blob as present (HEAD/GET '
+            'both 20x) yet still reject the manifest-PUT referencing it.'
         ),
     )
     parser.add_argument(
@@ -135,6 +146,8 @@ def replicate(parsed):
 
     if parsed.blob_existence_check_via_get:
         oci.workarounds.patch_head_blob_to_use_get(oci_client)
+    elif parsed.always_upload_blobs:
+        oci.workarounds.patch_head_blob_to_ignore_existing_blobs(oci_client)
 
     component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.src_repo),

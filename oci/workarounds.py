@@ -143,6 +143,27 @@ def patch_head_blob_to_use_get(oci_client: oc.Client) -> None:
     oci_client.head_blob = _head_blob_via_get
 
 
+def patch_head_blob_to_ignore_existing_blobs(oci_client: oc.Client) -> None:
+    '''
+    it has been observed that Artifactory will, for a blob that HEAD/GET both correctly report
+    as present, still reject a manifest-PUT referencing it with "MANIFEST_INVALID" / "failed to
+    copy blob to <path>". Unlike `patch_head_blob_to_use_get` (which addresses the opposite
+    HEAD/GET inconsistency), this workaround makes `oci_client.head_blob` unconditionally report
+    "absent", forcing every blob to be re-uploaded on each replication, which has been observed to
+    work around the copy-failure. This trades away the "skip already-present blobs" optimisation
+    entirely, so only enable it where that cost is acceptable; never combine with
+    `patch_head_blob_to_use_get`.
+    '''
+    def _head_blob_always_absent(image_reference, digest, absent_ok=True):
+        response = requests.models.Response()
+        response.status_code = 404
+        response.reason = 'Not Found (forced-absent by patch_head_blob_to_ignore_existing_blobs)'
+        return response
+
+    oci_client.head_blob = _head_blob_always_absent
+    logger.info('patched head_blob to unconditionally report blobs as absent (force-reupload)')
+
+
 def patch_put_manifest_to_validate_via_get(oci_client: oc.Client) -> None:
     '''
     it has been observed that Artifactory will (in certain situations) accept a manifest-PUT
