@@ -31,7 +31,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@fe944fc5f709bbaf362fdf8cc50e1f24303ca8db
     - name: check-event
       id: check
       shell: python
