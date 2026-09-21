@@ -32,6 +32,7 @@ import sbom.s3 as sbom_s3
 import oci
 import oci.client
 import oci.model as om
+import oci.workarounds
 import ocm
 import ocm.gardener
 import ocm.iter
@@ -680,6 +681,7 @@ def process_images(
     tgt_ocm_repo_path: str | None=None, # deprecated -> specify `ocm_repository` in tgt-cfg instead
     pruning_mode: PruningMode=PruningMode.PRUNE_SUBTREES,
     inject_s3_sboms: bool=False,
+    paranoid: bool=False,
 ) -> collections.abc.Generator[ocm.iter.Node, None, None]:
     '''
     note: Passing a filter to prevent component descriptors from being replicated using the
@@ -690,6 +692,9 @@ def process_images(
     _excluded_.
     '''
     processing_cfg = parse_processing_cfg(processing_cfg_path)
+
+    if paranoid:
+        oci.workarounds.patch_put_manifest_to_validate_via_get(oci_client)
 
     reftype_filter = None
     if remove_label and remove_label(ocm.gardener.ExtraComponentReferencesLabel.name):

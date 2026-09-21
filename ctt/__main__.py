@@ -136,9 +136,6 @@ def replicate(parsed):
     if parsed.blob_existence_check_via_get:
         oci.workarounds.patch_head_blob_to_use_get(oci_client)
 
-    if parsed.paranoid:
-        oci.workarounds.patch_put_manifest_to_validate_via_get(oci_client)
-
     component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
         ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(parsed.src_repo),
         oci_client=oci_client,
@@ -171,6 +168,7 @@ def replicate(parsed):
         max_workers=max_workers,
         pruning_mode=parsed.pruning_mode,
         inject_s3_sboms=parsed.inject_s3_sboms,
+        paranoid=parsed.paranoid,
     ):
         pass
 
