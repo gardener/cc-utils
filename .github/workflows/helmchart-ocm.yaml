@@ -118,7 +118,7 @@ jobs:
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@4cd4f254611e59cddb175d47a32ec63f4f6f2d6b
         with:
           name: prepare-workflow-values
       - name: check-params
@@ -146,17 +146,17 @@ jobs:
 
       - name: fetch-ocm-fragments
         id: fetch-ocm
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@b3d3286f7703038f50cb22661eadc9b6fdd64d6f
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
           component-descriptor-artefact: base-component-descriptor
           ctx: ${{ inputs.ocm-ctx }}
           upload-artifact-name: ''
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0ca08fbd573bd3a33e3efa59f24d852e54a12b08
         with:
           remove-trusted-label: false
       - name: build-helmchart
-        uses: gardener/cc-utils/.github/actions/helmchart@master
+        uses: gardener/cc-utils/.github/actions/helmchart@9ce7b2a07f23b4183733cd1ca92ceb93efec14ec
         with:
           name: ${{ inputs.name }}
           dir: ${{ inputs.dir }}
