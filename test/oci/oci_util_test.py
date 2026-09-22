@@ -13,3 +13,7 @@ def test_normalise_image_reference():
     # insert 'library' if no "owner" is given
     reference = 'alpine:1.2.3'
     assert ou.normalise_image_reference(reference) == 'registry-1.docker.io/library/' + reference
+
+    # localhost with port is a valid registry host, must not be rewritten
+    reference = 'localhost:8443/my/image:1.2.3'
+    assert ou.normalise_image_reference(reference) == reference
