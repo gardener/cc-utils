@@ -460,7 +460,9 @@ def replicate_blobs(
 
     def replicate_blob(blob: om.OciBlobRef) -> om.OciBlobRef:
         if blob_overwrite_bytes := blob_overwrites.get(blob.digest):
-            logger.info(f'Replicate with overwriting {blob=}')
+            logger.info(
+                f'Replicate with overwriting {blob.digest} ({blob.mediaType}) {src_ref} -> {tgt_ref}'
+            )
 
             if hasattr(blob_overwrite_bytes, 'read'):
                 digest = hashlib.sha256()
