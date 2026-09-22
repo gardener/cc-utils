@@ -54,7 +54,7 @@ jobs:
 
       - name: Run image update action
         id: image_update
-        uses: gardener/cc-utils/.github/actions/update-extension-provider-images@master
+        uses: gardener/cc-utils/.github/actions/update-extension-provider-images@be0d8480d15f6e4f98526c198debf304d22119b0
         with:
           images-yaml-path: ${{ inputs.images-yaml-path }}
           release-notes-path: ${{ inputs.release-notes-path }}
@@ -75,7 +75,7 @@ jobs:
             echo "notes_content=" >> $GITHUB_OUTPUT
           fi
 
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@4cd4f254611e59cddb175d47a32ec63f4f6f2d6b
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
@@ -86,7 +86,7 @@ jobs:
             pull-requests: write
 
       - name: Setup Git Identity
-        uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+        uses: gardener/cc-utils/.github/actions/setup-git-identity@6490634c5ff4f9f6efc34324da6268466507a791
 
       - name: Check for Changes
         id: check_changes
