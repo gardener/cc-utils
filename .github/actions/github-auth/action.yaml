@@ -62,7 +62,7 @@ inputs:
       Number of retry attempts on transient errors (5xx, 408, 429, network failures).
   backoff-base:
     type: number
-    default: 3.0
+    default: 1.0
     description: |
       Base for exponential backoff (delay = min(base^attempt, backoff-cap)).
   backoff-cap:
