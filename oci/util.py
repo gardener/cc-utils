@@ -24,8 +24,9 @@ def normalise_image_reference(image_reference: str):
     parts = image_reference.split('/')
 
     left_part = parts[0]
+    host_part = left_part.split(':')[0]
     # heuristically check if we have a (potentially) valid hostname
-    if '.' not in left_part.split(':')[0]:
+    if '.' not in host_part and host_part != 'localhost':
         # insert 'library' if only image name was given
         if len(parts) == 1:
             parts.insert(0, 'library')
