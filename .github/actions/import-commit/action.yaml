@@ -83,7 +83,7 @@ runs:
         git fetch "${bundle_file}" '+refs/capture-commit:refs/capture-commit'
     - name: import-commit-objects-from-artefact
       if: ${{ inputs.commit-objects-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@4cd4f254611e59cddb175d47a32ec63f4f6f2d6b
       with:
         name: ${{ inputs.commit-objects-artefact }}
     - name: unbundle-commit-objects-from-artefact
