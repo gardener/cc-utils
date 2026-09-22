@@ -158,7 +158,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0ca08fbd573bd3a33e3efa59f24d852e54a12b08
         id: checkout
         with:
           submodules: ${{ inputs.checkout-submodules }}
@@ -166,7 +166,7 @@ jobs:
           github-auth-token-permissions: |
             contents: write
             pull-requests: write
-      - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
+      - uses: gardener/cc-utils/.github/actions/ocm-upgrade@af3c6427185996a473b7202b47e3f2e009968b43
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
           component-descriptor-artifact: ${{ inputs.component-descriptor == '' && needs.prepare.outputs.component-descriptor-artefact || '' }}
