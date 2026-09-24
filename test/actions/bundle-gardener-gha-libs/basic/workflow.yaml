@@ -23,3 +23,24 @@ jobs:
             fi
           done
           echo "bundle-dir=${bundle_dir} subdirs=${subdirs} OK"
+      - name: assert-wheelhouse-offline-installable
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle_dir='${{ steps.bundle.outputs.bundle-dir }}'
+          wheels="${bundle_dir}/wheels"
+          [ -d "${wheels}" ]
+          # exactly the three own wheels - nothing pulled from pypi.org
+          count="$(ls "${wheels}"/gardener_*.whl | wc -l)"
+          if [ "${count}" -ne 3 ]; then
+            echo "expected exactly 3 own wheels; found:"
+            ls "${wheels}"/gardener_*.whl
+            exit 1
+          fi
+          # full closure must install without any package index
+          target="$(mktemp -d)"
+          PIP_NO_INDEX=1 PIP_FIND_LINKS="${wheels}" \
+            pip install -q --ignore-installed --target "${target}" \
+              gardener-oci gardener-ocm gardener-gha-libs
+          PYTHONPATH="${target}" python3 -c 'import ocm, oci, release_notes'
+          echo 'offline wheelhouse-install OK'
