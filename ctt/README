@@ -74,6 +74,44 @@ default parallelise replication using multithreading, and will early-exit replic
 OCI-Artefacts, if already present in replication-target. It is designed to be safe (and
 resource-efficient) to be rerun against the same replication-target multiple times.
 
+Processors
+----------
+
+Processors amend the replication-options of matched resources prior to upload (e.g. request
+modifications of the replicated OCI artefacts).
+
+### ManifestFilterProcessor
+
+Strips attributes from the top-level OCI manifest document during replication. This is useful
+for target registries that reject manifests carrying certain (valid, but unsupported)
+attributes — e.g. AWS ECR rejects image-indexes whose entries carry a `features` attribute
+in their `platform` objects.
+
+Attributes are denoted as dotted paths; a `key[]` segment traverses into each element of the
+list value at `key` (e.g. `manifests[].platform.features`). Absent attributes are tolerated.
+
+For multiarch images, the image-index (incl. its entries) is rewritten and child manifests are
+replicated verbatim. Stripping changes the manifest, hence also its content-digest (which is
+reflected in the replicated component-descriptors).
+
+```yaml
+processors:
+  strip_features:
+    type: ManifestFilterProcessor
+    kwargs:
+      strip_manifest_attributes:
+        - manifests[].platform.features
+
+image_processing_cfg:
+  - name: default
+    filter:
+      - type: MatchAllFilter
+    processor: strip_features
+    target: acme
+    upload:
+      - prepend_target
+```
+
 Uploaders
 ---------
 
