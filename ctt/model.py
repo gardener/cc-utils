@@ -8,6 +8,9 @@ import ocm
 class ReplicationResourceOptions:
     extra_tags: list[str] = dataclasses.field(default_factory=list)
     remove_files: list[str] = dataclasses.field(default_factory=list)
+    # attributes to strip from the top-level OCI manifest document, as dotted paths
+    # (`[]` traverses into each element of a list), e.g. 'manifests[].platform.features'
+    strip_manifest_attributes: list[str] = dataclasses.field(default_factory=list)
     digest: str | None = None
     reference_by_digest: bool = False
     retain_symbolic_tag: bool = False

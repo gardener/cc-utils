@@ -25,11 +25,203 @@ import tarutil
 logger = logging.getLogger(__name__)
 
 
+def parse_attribute_path(path: str) -> tuple[tuple[str, bool], ...]:
+    '''
+    Parses a dotted attribute path into segments of (key, is_list). A `key[]` segment
+    traverses into each element of the list value at `key`. The last segment must not
+    be a list-traversal.
+    Example: 'manifests[].platform.features'
+    '''
+    segments = []
+    for segment in path.split('.'):
+        is_list = segment.endswith('[]')
+        key = segment[:-2] if is_list else segment
+        if not key:
+            raise ValueError(f'invalid attribute path: {path!r}')
+        segments.append((key, is_list))
+
+    if segments[-1][1]:
+        raise ValueError(f'last segment of attribute path must not be a list: {path!r}')
+
+    return tuple(segments)
+
+
+def strip_attribute(
+    document: dict,
+    attribute_path: tuple[tuple[str, bool], ...], # as parsed by parse_attribute_path
+) -> bool:
+    '''
+    Removes the attribute denoted by attribute_path from document (in-place), tolerating
+    its absence (or type-mismatches along the path). Returns whether anything was removed.
+    '''
+    (key, is_list), rest = attribute_path[0], attribute_path[1:]
+
+    if not isinstance(document, dict) or key not in document:
+        return False
+
+    if not rest:
+        del document[key]
+        return True
+
+    value = document[key]
+
+    if not is_list:
+        return strip_attribute(value, rest)
+
+    if not isinstance(value, list):
+        return False
+
+    changed = False
+    for element in value:
+        changed |= strip_attribute(element, rest)
+    return changed
+
+
+def replicate_with_stripped_manifest_attributes(
+    source_ref: typing.Union[str, om.OciImageReference],
+    target_ref: typing.Union[str, om.OciImageReference],
+    strip_manifest_attributes: typing.Sequence[str],
+    oci_client: oc.Client,
+    mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
+    platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
+    oci_manifest_annotations: dict[str, str]=None,
+) -> typing.Tuple[requests.Response, str, bytes]: # response, tgt-ref, manifest_bytes
+    '''
+    Replicates an OCI artefact, removing the given attributes (dotted paths, see
+    parse_attribute_path) from the top-level manifest document prior to pushing. Useful
+    for target registries that reject manifests carrying certain (valid, but unsupported)
+    attributes (e.g. `manifests[].platform.features`).
+
+    For multiarch images, the image-index (incl. its entries) is rewritten and child
+    manifests are replicated verbatim.
+    '''
+    if mode is oci.ReplicationMode.NORMALISE_TO_MULTIARCH:
+        raise NotImplementedError('cannot strip manifest attributes with NORMALISE_TO_MULTIARCH')
+
+    source_ref = om.OciImageReference.to_image_ref(source_ref)
+    target_ref = om.OciImageReference.to_image_ref(target_ref)
+
+    attribute_paths = [parse_attribute_path(p) for p in strip_manifest_attributes]
+
+    if mode is oci.ReplicationMode.REGISTRY_DEFAULTS:
+        accept = None
+    elif mode is oci.ReplicationMode.PREFER_MULTIARCH:
+        accept = om.MimeTypes.prefer_multiarch
+    else:
+        raise NotImplementedError(mode)
+
+    resp = oci_client.manifest_raw(
+        image_reference=str(source_ref),
+        accept=accept,
+    )
+    manifest_dict = json.loads(resp.text)
+    media_type = manifest_dict.get('mediaType') or resp.headers.get('Content-Type')
+
+    if int(manifest_dict.get('schemaVersion', 2)) == 1:
+        raise NotImplementedError('cannot strip manifest attributes of legacy (v1) manifests')
+
+    if media_type in (om.DOCKER_MANIFEST_LIST_MIME, om.OCI_IMAGE_INDEX_MIME):
+        # for index-documents, annotations are only retained for OCI media-type
+        # (mirrors oci.model.OciImageManifestList.as_dict)
+        apply_annotations = media_type == om.OCI_IMAGE_INDEX_MIME
+
+        src_repo = source_ref.ref_without_tag
+        tgt_repo = target_ref.ref_without_tag
+
+        # only propagate PREFER_MULTIARCH (preserves nested indices)
+        recursive_mode = oci.ReplicationMode.REGISTRY_DEFAULTS
+        if mode is oci.ReplicationMode.PREFER_MULTIARCH:
+            recursive_mode = oci.ReplicationMode.PREFER_MULTIARCH
+
+        kept_entries = []
+        for entry in manifest_dict.get('manifests', ()):
+            child_src_ref = f'{src_repo}@{entry["digest"]}'
+
+            if platform_filter:
+                platform_raw = entry.get('platform')
+                platform = oci.platform.from_single_image(
+                    image_reference=child_src_ref,
+                    oci_client=oci_client,
+                    base_platform=om.OciPlatform(
+                        architecture=platform_raw.get('architecture'),
+                        os=platform_raw.get('os'),
+                        variant=platform_raw.get('variant'),
+                        features=platform_raw.get('features'),
+                    ) if platform_raw else None,
+                )
+                if not platform_filter(platform):
+                    logger.info(f'skipping {platform=} for {child_src_ref=}')
+                    continue
+
+            res, ref, child_bytes = oci.replicate_artifact(
+                src_image_reference=child_src_ref,
+                tgt_image_reference=f'{tgt_repo}@{entry["digest"]}',
+                oci_client=oci_client,
+                mode=recursive_mode,
+                annotations=oci_manifest_annotations,
+            )
+
+            child_digest = f'sha256:{hashlib.sha256(child_bytes).hexdigest()}'
+            if child_digest != entry['digest']:
+                entry['digest'] = child_digest
+                entry['size'] = len(child_bytes)
+
+            kept_entries.append(entry)
+
+        manifest_dict['manifests'] = kept_entries
+    elif media_type in (om.OCI_MANIFEST_SCHEMA_V2_MIME, om.DOCKER_MANIFEST_SCHEMA_V2_MIME):
+        apply_annotations = True # mirrors oci.model.OciImageManifest.as_dict
+
+        for blob_ref in [manifest_dict.get('config'), *manifest_dict.get('layers', ())]:
+            if not blob_ref:
+                continue
+            digest = blob_ref['digest']
+            if oci_client.head_blob(
+                image_reference=target_ref,
+                digest=digest,
+                absent_ok=True,
+            ):
+                continue
+            blob = oci_client.blob(
+                image_reference=str(source_ref),
+                digest=digest,
+            )
+            oci_client.put_blob(
+                image_reference=target_ref,
+                digest=digest,
+                octets_count=blob_ref['size'],
+                data=blob,
+            )
+    else:
+        raise NotImplementedError(f'{media_type=}')
+
+    for attribute_path in attribute_paths:
+        strip_attribute(manifest_dict, attribute_path)
+
+    if oci_manifest_annotations and apply_annotations:
+        annotations = manifest_dict.setdefault('annotations', {})
+        for key, value in oci_manifest_annotations.items():
+            if annotations.get(key) != value:
+                annotations[key] = value
+
+    manifest_raw = json.dumps(manifest_dict).encode('utf-8')
+    manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+    target_ref = target_ref.with_new_digest(digest=manifest_digest)
+
+    res = oci_client.put_manifest(
+        image_reference=target_ref,
+        manifest=manifest_raw,
+    )
+
+    return res, str(target_ref), manifest_raw
+
+
 def filter_image(
     source_ref: typing.Union[str, om.OciImageReference],
     target_ref: typing.Union[str, om.OciImageReference],
     oci_client: oc.Client,
     remove_files: typing.Sequence[str]=(),
+    strip_manifest_attributes: typing.Sequence[str]=(),
     mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
     platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
     oci_manifest_annotations: dict[str, str]=None,
@@ -38,7 +230,7 @@ def filter_image(
     target_ref = om.OciImageReference.to_image_ref(target_ref)
 
     # shortcut in case there are no filtering-rules
-    if not remove_files:
+    if not remove_files and not strip_manifest_attributes:
         return oci.replicate_artifact(
             src_image_reference=source_ref,
             tgt_image_reference=target_ref,
@@ -46,6 +238,21 @@ def filter_image(
             mode=mode,
             platform_filter=platform_filter,
             annotations=oci_manifest_annotations,
+        )
+
+    if strip_manifest_attributes:
+        if remove_files:
+            raise NotImplementedError(
+                'cannot combine removal of in-image files and stripping of manifest attributes'
+            )
+        return replicate_with_stripped_manifest_attributes(
+            source_ref=source_ref,
+            target_ref=target_ref,
+            strip_manifest_attributes=strip_manifest_attributes,
+            oci_client=oci_client,
+            mode=mode,
+            platform_filter=platform_filter,
+            oci_manifest_annotations=oci_manifest_annotations,
         )
 
     if mode is oci.ReplicationMode.REGISTRY_DEFAULTS:
