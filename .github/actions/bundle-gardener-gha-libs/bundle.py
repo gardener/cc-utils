@@ -11,6 +11,13 @@ hardcoded version and install_requires from the dist metadata) is generated so
 each subdirectory is pip-installable at runtime without any file lookups into
 the original source tree.
 
+In addition, a wheelhouse (`wheels/`) is populated with wheels for the own
+dists and all their (transitive) third-party dependencies (via `pip wheel`;
+sdists are built into wheels here, so no build step is needed at runtime).
+Finally, a fully offline smoke-test installation is run -- a missing wheel
+fails loudly here (at pin-/release-time) rather than sporadically at
+action-runtime, depending on whether pypi.org happens to be reachable.
+
 Subdir names (one per package) are written to GITHUB_OUTPUT if set, and
 printed to stdout.
 '''
@@ -18,6 +25,7 @@ printed to stdout.
 import argparse
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -32,6 +40,19 @@ _SETUP_FILES = (
     'setup.ocm.py',
     'setup.gha.py',
 )
+
+# own dists (never fetch from an index - wheels are built from own sources;
+# namesakes on pypi.org must not end up in the wheelhouse)
+_OWN_DISTS = frozenset((
+    'gardener-oci',
+    'gardener-ocm',
+    'gardener-gha-libs',
+))
+
+
+def _req_name(requirement: str) -> str:
+    name = re.split(r'[<>=!~;\s(\[]', requirement, maxsplit=1)[0]
+    return name.strip().lower().replace('_', '-')
 
 
 def _parse_dist_metadata(dist_info_dir: str) -> tuple[str, str, list[str]]:
@@ -108,9 +129,90 @@ def _gen_setup_py(
     )
 
 
+def _pip_env() -> dict:
+    # scrub env-influences that could skew builds (e.g. egg-info visible via
+    # PYTHONPATH would make pip spuriously skip "already satisfied" wheels)
+    env = os.environ.copy()
+    env.pop('PYTHONPATH', None)
+    return env
+
+
+def build_wheelhouse(
+    bundle_dir: str,
+    subdirs: list[str],
+    requires: list[str],
+    own_versions: dict[str, str],
+) -> str:
+    wheels_dir = os.path.join(bundle_dir, 'wheels')
+    os.makedirs(wheels_dir, exist_ok=True)
+
+    subprocess.check_call(
+        [
+            sys.executable, '-m', 'pip', 'wheel', '--quiet', '--no-deps',
+            '--wheel-dir', wheels_dir,
+            *[os.path.join(bundle_dir, sub) for sub in subdirs],
+        ],
+        env=_pip_env(),
+    )
+
+    reqs_file = os.path.join(bundle_dir, 'requirements-third-party.txt')
+    with open(reqs_file, 'w') as f:
+        f.write('\n'.join(sorted(set(requires))) + '\n')
+
+    # setuptools + certifi: offline source for install-gardener-gha-libs'
+    # install-prerequisites-on-ghe step
+    subprocess.check_call(
+        [
+            sys.executable, '-m', 'pip', 'wheel', '--quiet',
+            '--wheel-dir', wheels_dir,
+            '--requirement', reqs_file,
+            'setuptools',
+            'certifi',
+        ],
+        env=_pip_env(),
+    )
+
+    # transitive deps (e.g. via odg-client -> gardener-ocm) may have pulled
+    # like-named dists from pypi into the wheelhouse; pip would prefer such
+    # final releases over own dev-release wheels -> purge them
+    for fname in os.listdir(wheels_dir):
+        if not fname.endswith('.whl'):
+            continue
+        dist, _, rest = fname.partition('-')
+        if (norm := dist.lower().replace('_', '-')) not in _OWN_DISTS:
+            continue
+        if rest.split('-')[0] != own_versions[norm]:
+            logger.warning('removing foreign own-dist wheel: %s', fname)
+            os.remove(os.path.join(wheels_dir, fname))
+
+    return wheels_dir
+
+
+def smoke_test_wheelhouse(wheels_dir: str) -> None:
+    # Prove the wheelhouse suffices for a fully offline installation, so that
+    # missing wheels fail here (at pin-/release-time) rather than (sporadically)
+    # depending on pypi-reachability at action-runtime.
+    with tempfile.TemporaryDirectory(prefix='wheelhouse-smoke-') as target:
+        env = _pip_env() | {
+            'PIP_NO_INDEX': '1',
+            'PIP_FIND_LINKS': wheels_dir,
+        }
+        subprocess.check_call(
+            [
+                sys.executable, '-m', 'pip', 'install', '--quiet',
+                '--ignore-installed',
+                '--target', target,
+                *sorted(_OWN_DISTS),
+            ],
+            env=env,
+        )
+
+
 def bundle(repo_root: str, bundle_dir: str) -> list[str]:
     os.makedirs(bundle_dir, exist_ok=True)
     subdirs: list[str] = []
+    all_requires: list[str] = []
+    own_versions: dict[str, str] = {}
 
     for setup_file in _SETUP_FILES:
         real_setup = os.path.join(repo_root, setup_file)
@@ -147,14 +249,25 @@ def bundle(repo_root: str, bundle_dir: str) -> list[str]:
                 name, version, requires = _parse_dist_metadata(
                     os.path.join(tmp, dist_infos[0])
                 )
+                all_requires.extend(requires)
+                own_versions[name.lower().replace('_', '-')] = version
                 sub = os.path.join(bundle_dir, dist_name)
-                shutil.copytree(tmp, sub, ignore=shutil.ignore_patterns('*.dist-info'))
+                shutil.copytree(
+                    tmp,
+                    sub,
+                    ignore=shutil.ignore_patterns('*.dist-info', '__pycache__', '*.pyc'),
+                )
 
         package_data = _collect_package_data(sub)
         with open(os.path.join(sub, 'setup.py'), 'w') as f:
             f.write(_gen_setup_py(name, version, requires, package_data))
         subdirs.append(dist_name)
         logger.info('bundled %s -> %s', setup_file, sub)
+
+    third_party = [r for r in all_requires if _req_name(r) not in _OWN_DISTS]
+    wheels_dir = build_wheelhouse(bundle_dir, subdirs, third_party, own_versions)
+    smoke_test_wheelhouse(wheels_dir)
+    logger.info('wheelhouse populated and smoke-tested: %s', wheels_dir)
 
     return subdirs
 
