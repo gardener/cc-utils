@@ -7,6 +7,9 @@ description: |
   action checks for a _bundle/ directory next to itself (present on pinned
   branches) and falls back to cloning from github.com at runtime.
 
+  Bundles containing a wheels/ wheelhouse are installed fully offline
+  (pip --no-index) - no pypi.org reachability is required at runtime.
+
 inputs:
   bundle-dir:
     type: string
@@ -29,6 +32,7 @@ runs:
     # on GHE runners Python may not be pre-installed; set it up unconditionally
     # so that pip is available for the bundle path as well as the fallback path.
     # this step is intentionally NOT removed on pinned branches.
+    # keep python-version in sync with bundle-gardener-gha-libs (wheel ABIs)
     - name: setup-python
       if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
       uses: actions/setup-python@v5
@@ -47,7 +51,15 @@ runs:
           exit 0
         fi
         log="$(mktemp)"
-        if ! pip install -q "${bundle_dir}"/*/ >"${log}" 2>&1; then
+        if [ -d "${bundle_dir}/wheels" ]; then
+          # install from wheelhouse, resolve nothing from pypi.org
+          pip_cmd=(pip install -q --no-index --find-links "${bundle_dir}/wheels"
+            gardener-oci gardener-ocm gardener-gha-libs)
+        else
+          # legacy source-only bundle; deps resolved from default index
+          pip_cmd=(pip install -q "${bundle_dir}"/*/)
+        fi
+        if ! "${pip_cmd[@]}" >"${log}" 2>&1; then
           echo '::error::install-gardener-gha-libs: pip install from bundle failed - full output:'
           cat "${log}"
           exit 1
@@ -70,6 +82,13 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
+        bundle_dir='${{ inputs.bundle-dir }}'
+        [ -z "${bundle_dir}" ] && bundle_dir='${{ github.action_path }}/_bundle'
+        if [ -d "${bundle_dir}/wheels" ]; then
+          # resolve from bundle's wheelhouse instead of pypi.org
+          export PIP_NO_INDEX=1
+          export PIP_FIND_LINKS="${bundle_dir}/wheels"
+        fi
         log="$(mktemp)"
         if ! pip install -q setuptools certifi >"${log}" 2>&1; then
           echo '::error::install-gardener-gha-libs: installing setuptools/certifi failed - full output:'
