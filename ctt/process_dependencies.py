@@ -474,11 +474,13 @@ def process_upload_request(
     # other threads waiting for upload result that result is ready by setting the event
 
     remove_files = replication_resource_element.remove_files
+    strip_manifest_attributes = replication_resource_element.strip_manifest_attributes
     component = replication_resource_element.component_id
     resource = replication_resource_element.target
 
     logger.info(
-        f'processing {src_ref=} -> {tgt_ref=} {remove_files=} {replication_mode=} {platform_filter=}'
+        f'processing {src_ref=} -> {tgt_ref=} {remove_files=} {strip_manifest_attributes=} '
+        f'{replication_mode=} {platform_filter=}'
     )
 
     if inject_ocm_coordinates_into_oci_manifests:
@@ -502,6 +504,7 @@ def process_upload_request(
             source_ref=src_ref,
             target_ref=tgt_ref,
             remove_files=remove_files,
+            strip_manifest_attributes=strip_manifest_attributes,
             mode=replication_mode,
             platform_filter=platform_filter,
             oci_client=oci_client,
