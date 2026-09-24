@@ -44,7 +44,37 @@ on:
           is imported before pinning so the captured commit is reachable as `own-ref`.
 
 jobs:
+  build-bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+            arch: amd64
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
+    name: build-bundle (${{ matrix.arch }})
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        with:
+          fetch-depth: 0
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          init-git-identity: true
+          github-auth-token-permissions: |
+            contents: write
+            workflows: write
+      - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
+        id: bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle-${{ matrix.arch }}
+          path: ${{ steps.bundle.outputs.bundle-dir }}
+
   pin:
+    needs: build-bundle
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
@@ -58,7 +88,20 @@ jobs:
           github-auth-token-permissions: |
             contents: write
             workflows: write
-
+      - uses: actions/download-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle-amd64
+          path: /tmp/bundle-amd64
+      - uses: actions/download-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle-arm64
+          path: /tmp/bundle-arm64
+      - name: merge-wheelhouses
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
+          cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
       - name: pin-actions-and-workflows
         uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
         with:
@@ -67,3 +110,4 @@ jobs:
           own-org: ${{ inputs.own-org }}
           own-repo: ${{ inputs.own-repo }}
           release-commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
+          bundle-dir: /tmp/gardener-gha-libs-bundle

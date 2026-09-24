@@ -4,8 +4,10 @@ description: |
   a local directory for use on pinned branches.
 
   Each package is placed in its own subdirectory (named after the dist, e.g.
-  gardener_gha_libs) alongside a setup.py, making it directly pip-installable
-  at runtime without any network access or build step.
+  gardener_gha_libs) alongside a setup.py. Additionally, a wheels/ wheelhouse
+  containing wheels for the own dists and all (transitive) third-party
+  dependencies is populated and smoke-tested, so installation at runtime
+  requires neither network access nor a build step.
 
   NOTE: this action is internal to gardener/cc-utils and not intended for use
   in other repositories.
@@ -28,6 +30,12 @@ outputs:
 runs:
   using: composite
   steps:
+    # keep python-version in sync with install-gardener-gha-libs' setup-python
+    # step: wheel abi/markers are selected for the bundling python version
+    - name: setup-python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
     - name: install-prerequisites
       shell: bash
       run: |
