@@ -31,17 +31,76 @@ jobs:
     with:
       mode: ${{ inputs.mode }}
 
-  test-bundling:
-    runs-on: ubuntu-latest
+  build-bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            arch: amd64
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
+    name: build-bundle (${{ matrix.arch }})
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/bundle-gardener-gha-libs
         id: bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle-${{ matrix.arch }}
+          path: ${{ steps.bundle.outputs.bundle-dir }}
+
+  merge-bundle:
+    needs: build-bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle-amd64
+          path: /tmp/bundle-amd64
+      - uses: actions/download-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle-arm64
+          path: /tmp/bundle-arm64
+      - name: merge-wheelhouses
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
+          cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle
+          path: /tmp/gardener-gha-libs-bundle
+
+  smoke-test-bundle:
+    needs: merge-bundle
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            arch: amd64
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
+    name: smoke-test-bundle (${{ matrix.arch }})
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gardener-gha-libs-bundle
+          path: /tmp/gardener-gha-libs-bundle
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/install-gardener-gha-libs
         with:
-          bundle-dir: ${{ steps.bundle.outputs.bundle-dir }}
+          bundle-dir: /tmp/gardener-gha-libs-bundle
       - name: smoketest
         shell: python
         run: |
