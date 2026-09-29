@@ -200,6 +200,11 @@ def request_pull_requests_from_api(
             if prs := list_associated_pulls(github_api, owner, repo_name, commit.hexsha):
                 # add all found pull requests to the result right away
                 for pullrequest in prs:
+                    if not pullrequest.merged_at:
+                        # GitHub's API returns open PRs that merely target a branch containing
+                        # this commit — skip them to avoid including release notes from PRs
+                        # that were not part of this release
+                        continue
                     if github.pullrequest.parse_pullrequest_title(
                         title=pullrequest.title,
                         invalid_ok=True,
@@ -215,7 +220,9 @@ def request_pull_requests_from_api(
                 if note_content or not is_yaml_content:
                     continue
                 data = dataclasses.asdict(
-                    rnm.ReleaseNotesMetadata(round(time.time() * 1000), [z.number for z in prs])
+                    rnm.ReleaseNotesMetadata(
+                        round(time.time() * 1000), [z.number for z in prs if z.merged_at]
+                    )
                 )
                 meta = rnm.get_meta_obj(_meta_key, data)
                 _upsert_document(yaml_documents, _meta_key, meta)
