@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: gardener-oci
+Version: 1.2854.0.dev0
+Requires-Dist: dacite
+Requires-Dist: python-dateutil
+Requires-Dist: requests
+Requires-Dist: www-authenticate
+Dynamic: requires-dist

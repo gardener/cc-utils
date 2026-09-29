@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: gardener-ocm
+Version: 1.2854.0.dev0
+Requires-Dist: PyYaml
+Requires-Dist: cachetools
+Requires-Dist: cryptography
+Requires-Dist: dacite
+Requires-Dist: gardener-oci
+Requires-Dist: jsonpath-ng
+Requires-Dist: jsonschema
+Requires-Dist: python-dateutil
+Requires-Dist: semver
+Dynamic: requires-dist
