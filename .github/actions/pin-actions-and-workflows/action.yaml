@@ -37,6 +37,12 @@ inputs:
       GitHub repository name (e.g. `cc-utils`). Used together with `own-org` to
       identify own `uses:` references that need to be rewritten. Defaults to the
       repository name derived from `github.repository`.
+  bundle-dir:
+    type: string
+    default: ''
+    description: |
+      Path to a pre-built bundle directory (as produced by bundle-gardener-gha-libs).
+      If set, the bundle-gardener-gha-libs step is skipped and this directory is used directly.
   git-user-name:
     type: string
     default: github-actions[bot]
@@ -80,11 +86,15 @@ runs:
 
     - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
       id: bundle
+      if: ${{ inputs.bundle-dir == '' }}
 
     - name: pin
       shell: bash
       run: |
         set -euo pipefail
+
+        bundle_dir='${{ inputs.bundle-dir }}'
+        [ -z "${bundle_dir}" ] && bundle_dir='${{ steps.bundle.outputs.bundle-dir }}'
 
         # derive org/repo from github.repository if not explicitly provided
         own_org='${{ inputs.own-org }}'
@@ -102,7 +112,7 @@ runs:
           --target-branch '${{ inputs.target-branch }}' \
           --own-org "${own_org}" \
           --own-repo "${own_repo}" \
-          --bundle-dir '${{ steps.bundle.outputs.bundle-dir }}'
+          --bundle-dir "${bundle_dir}"
 
     - name: push
       shell: bash
