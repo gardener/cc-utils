@@ -214,6 +214,9 @@ class LegacyS3Access(Access):
     objectKey: str
     mediaType: str | None = None
     region: str | None = None
+    version: str | None = None
+    endpoint: str | None = None
+    usePathStyle: bool | None = None
 
 
 @dc(kw_only=True)
