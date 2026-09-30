@@ -159,6 +159,8 @@ def build_wheelhouse(
     with open(reqs_file, 'w') as f:
         f.write('\n'.join(sorted(set(requires))) + '\n')
 
+    # setuptools + certifi: offline source for install-gardener-gha-libs'
+    # install-prerequisites-on-ghe step
     subprocess.check_call(
         [
             sys.executable, '-m', 'pip', 'wheel', '--quiet',
