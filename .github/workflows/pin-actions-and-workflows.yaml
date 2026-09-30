@@ -57,6 +57,7 @@ jobs:
     name: build-bundle (${{ matrix.arch }})
     permissions:
       contents: read
+      id-token: write  # required for trusted-checkout OIDC token exchange
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
