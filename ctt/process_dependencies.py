@@ -1014,31 +1014,48 @@ def process_replication_plan_step(
             source_image_ref = str(rre.src_ref)
             source_digest = dref.tag  # sha256:<hex>
 
-            # generate CBOM from the existing CycloneDX SBOM — no image re-download
+            # reuse an existing CBOM referrer if one was already produced for this image
+            # digest in a previous replication; otherwise generate CBOM from the existing
+            # CycloneDX SBOM — no image re-download
             cbom_referrer_digest = None
             if processing_mode is not ProcessingMode.DRY_RUN:
+                # a flaky referrers lookup must not fail the whole replication; fall back
+                # to regenerating the CBOM instead
                 try:
-                    with tempfile.TemporaryDirectory(dir=tmpdir or None) as _tmp:
-                        cdx_path = os.path.join(_tmp, 'sbom.cdx.json')
-                        cbom_path = os.path.join(_tmp, 'cbom.cdx.json')
-                        with open(cdx_path, 'wb') as _f:
-                            _f.write(cdx_bytes)
-                        sbom_inject._run_cbomkit_theia(
-                            image_ref=str(dref),
-                            cdx_bom_path=cdx_path,
-                            out_path=cbom_path,
-                            tmpdir=_tmp,
-                        )
-                        with open(cbom_path, 'rb') as _f:
-                            cbom_bytes = _f.read()
-                        cbom_referrer_digest = sbom_cbom.push_cbom_referrer(
-                            cbom_bytes=cbom_bytes,
-                            image_reference=dref,
-                            oci_client=oci_client,
-                            tool_version=cbom_tool_ver,
-                        )
+                    cbom_referrer_digest = sbom_cbom.lookup_cbom_referrer(
+                        image_ref=dref,
+                        oci_client=oci_client,
+                    )
                 except Exception as e:
-                    logger.warning(f'{rre.source.name!r}: CBOM generation failed: {e}')
+                    logger.warning(
+                        f'{rre.source.name!r}: CBOM referrer lookup failed, regenerating: {e}'
+                    )
+                    cbom_referrer_digest = None
+                if cbom_referrer_digest:
+                    logger.info(f'{rre.source.name!r}: CBOM cache hit, reusing referrer')
+                else:
+                    try:
+                        with tempfile.TemporaryDirectory(dir=tmpdir or None) as _tmp:
+                            cdx_path = os.path.join(_tmp, 'sbom.cdx.json')
+                            cbom_path = os.path.join(_tmp, 'cbom.cdx.json')
+                            with open(cdx_path, 'wb') as _f:
+                                _f.write(cdx_bytes)
+                            sbom_inject._run_cbomkit_theia(
+                                image_ref=str(dref),
+                                cdx_bom_path=cdx_path,
+                                out_path=cbom_path,
+                                tmpdir=_tmp,
+                            )
+                            with open(cbom_path, 'rb') as _f:
+                                cbom_bytes = _f.read()
+                            cbom_referrer_digest = sbom_cbom.push_cbom_referrer(
+                                cbom_bytes=cbom_bytes,
+                                image_reference=dref,
+                                oci_client=oci_client,
+                                tool_version=cbom_tool_ver,
+                            )
+                    except Exception as e:
+                        logger.warning(f'{rre.source.name!r}: CBOM generation failed: {e}')
 
             spdx_res, cdx_res, cbom_res = sbom_inject.build_sbom_ocm_resources(
                 resource_name=rre.source.name,
