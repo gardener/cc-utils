@@ -24,6 +24,32 @@ ANALYSIS_METHOD_ANNOTATION = 'gardener.cloud/cbom/analysis-method'
 CBOM_LAYER_MEDIA_TYPE = _oci.CYCLONEDX_JSON_MEDIA_TYPE
 
 
+def lookup_cbom_referrer(
+    image_ref: str | om.OciImageReference,
+    oci_client: oc.Client,
+) -> str | None:
+    '''
+    Return the digest of an existing CBOM referrer manifest for `image_ref`
+    (which should already be digest-addressed), or None if none is present or the
+    referrers API is not supported.
+
+    This is the CBOM counterpart to `sbom.inject.lookup_sbom_referrers`: it lets callers
+    skip re-running cbomkit-theia when a CBOM was already produced for the same image
+    digest in a previous replication. Only the referrer-manifest digest is returned since
+    that is all `build_cbom_ocm_resources` requires to reconstruct the OCM resource.
+    '''
+    image_ref = om.OciImageReference.to_image_ref(image_ref)
+    referrers = oci_client.referrers(
+        image_reference=image_ref,
+        artifact_type=CBOM_ARTIFACT_TYPE,
+        absent_ok=True,
+    )
+    # None means the referrers API is not supported; () means supported but no entries
+    if not referrers:
+        return None
+    return referrers[0].digest
+
+
 def push_cbom_referrer(
     cbom_bytes: bytes,
     image_reference: str | om.OciImageReference,
