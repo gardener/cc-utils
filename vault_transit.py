@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Contributors to the Gardener project
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """
 A client for signing via HashiCorp Vault's Transit secrets engine.
 
