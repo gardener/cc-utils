@@ -35,7 +35,7 @@ following steps.
   # 4. Provide the CSR to your CA, receive leaf (+ intermediates), concatenate leaf-first
 
   # 5. Attach the certificate chain to your Vault Transit key (leaf first)
-  $ vault write transit/keys/<key>/set-certificate-chain certificate_chain=@<leaf-then-intermediates.pem>
+  $ vault write transit/keys/<key>/set-certificate certificate_chain=@<leaf-then-intermediates.pem>
 """
 
 import base64
@@ -151,7 +151,7 @@ class VaultTransitClient:
         """
         Reads the configured transit key and returns a `(public_key, certificate_chain)` tuple for
         the given version. `public_key` is PEM-encoded; `certificate_chain` is the PEM chain
-        (leaf-first) attached via the `set-certificate-chain` Vault API, or `None` if no
+        (leaf-first) attached via the `set-certificate` Vault API, or `None` if no
         chain is attached.
         """
         # Allow specifying a v<N> prefix, but strip it away here, since the `v`
@@ -179,7 +179,7 @@ class VaultTransitClient:
                 'is it an asymmetric (rsa-*/ecdsa-*/ed25519) key?'
             )
 
-        # `certificate_chain` is only present if a chain was attached via `set-certificate-chain`.
+        # `certificate_chain` is only present if a chain was attached via `set-certificate`.
         certificate_chain = key_version.get('certificate_chain')
         if not (certificate_chain and certificate_chain.strip()):
             certificate_chain = None
