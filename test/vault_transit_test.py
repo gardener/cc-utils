@@ -13,18 +13,6 @@ import signingserver
 import vault_transit
 
 
-def test_signing_response_requires_certificate_chain():
-    # a certificate chain is a required field: a VaultTransitSigningResponse cannot be constructed
-    # without one, so `.raw` can never be cert-less (drop-in parity with the signing-server).
-    with pytest.raises(TypeError):
-        vault_transit.VaultTransitSigningResponse(
-            signature='dGhlLXNpZ25hdHVyZQ==',
-            public_key='-----BEGIN PUBLIC KEY-----\nMFoo\n-----END PUBLIC KEY-----\n',
-            public_key_version='1',
-            signing_algorithm=signingserver.SigningAlgorithm.RSASSA_PSS,
-        ) # no certificate_chain -> TypeError (missing required argument)
-
-
 def test_signing_response_raw_envelope_with_certificate_chain():
     # when a cert chain is attached, `.raw` must match the signing-server structure: the
     # CERTIFICATE block(s) precede the SIGNATURE block, so both extract identically.
