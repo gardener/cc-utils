@@ -129,6 +129,22 @@ class VaultTransitSigningResponse:
             '-----END SIGNATURE-----\n'
         )
 
+    @property
+    def certificate(self) -> str:
+        """
+        Returns the leaf certificate (the first `-----BEGIN CERTIFICATE-----` block of the
+        chain, which is leaf-first).
+
+        Mirrors `signingserver.SigningResponse.certificate` so both backends expose the same
+        public surface. The chain is a required, non-empty, leaf-first field, so this always
+        returns the leaf certificate.
+        """
+        start_idx = self.certificate_chain.find('-----BEGIN CERTIFICATE-----')
+        end_str = '-----END CERTIFICATE-----'
+        end_idx = self.certificate_chain.find(end_str)
+
+        return self.certificate_chain[start_idx:end_idx + len(end_str)]
+
 
 class VaultTransitClient:
     """

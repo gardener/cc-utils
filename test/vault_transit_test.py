@@ -43,6 +43,34 @@ def test_signing_response_raw_envelope_with_certificate_chain():
     assert '-----BEGIN CERTIFICATE-----\nleaf\n-----END CERTIFICATE-----' in reparsed.certificate
 
 
+def test_certificate_returns_leaf_and_matches_signingserver():
+    # `.certificate` must expose the leaf (first) cert, identically to signingserver.SigningResponse,
+    # so the two backends share the same public surface.
+    certificate_chain = (
+        '-----BEGIN CERTIFICATE-----\nleaf\n-----END CERTIFICATE-----\n'
+        '-----BEGIN CERTIFICATE-----\nintermediate\n-----END CERTIFICATE-----\n'
+    )
+    response = vault_transit.VaultTransitSigningResponse(
+        signature='dGhlLXNpZ25hdHVyZQ==',
+        public_key='-----BEGIN PUBLIC KEY-----\nMFoo\n-----END PUBLIC KEY-----\n',
+        public_key_version='1',
+        signing_algorithm=signingserver.SigningAlgorithm.RSASSA_PSS,
+        certificate_chain=certificate_chain,
+    )
+
+    # only the leaf block, no intermediate, no SIGNATURE preamble
+    assert response.certificate == '-----BEGIN CERTIFICATE-----\nleaf\n-----END CERTIFICATE-----'
+    assert 'intermediate' not in response.certificate
+    assert 'Signature Algorithm:' not in response.certificate
+
+    # must match signingserver's own extraction from the same `.raw`
+    reparsed = signingserver.SigningResponse(
+        raw=response.raw,
+        signing_algorithm=signingserver.SigningAlgorithm.RSASSA_PSS,
+    )
+    assert response.certificate == reparsed.certificate
+
+
 def _client_with_mocked_hvac(sign_response, key='my-key', engine='transit', certificate_chains=None):
     """
     Builds a VaultTransitClient whose underlying hvac client is replaced by a mock returning
