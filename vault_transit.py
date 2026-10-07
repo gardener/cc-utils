@@ -184,7 +184,9 @@ class VaultTransitClient:
 
         data = resp['data']
         if version not in data.get('keys', {}):
-            raise VaultTransitException(f'public key version {version} does not exist for {self.cfg.key!r}')
+            raise VaultTransitException(
+                f'public key version {version} does not exist for {self.cfg.key!r}'
+            )
 
         key_version = data['keys'][version]
 
@@ -242,7 +244,8 @@ class VaultTransitClient:
         elif isinstance(digest, str):
             digest = bytes.fromhex(digest)
 
-        assert isinstance(digest, bytes)
+        if not isinstance(digest, bytes):
+            raise TypeError(f'expected bytes digest, got {type(digest).__name__}')
 
         try:
             resp = self._client.secrets.transit.sign_data(
@@ -274,7 +277,10 @@ class VaultTransitClient:
         vault_signature = resp['data']['signature']
         vault_signature_parts = vault_signature.split(':')
         if len(vault_signature_parts) != 3:
-            raise VaultTransitException(f'unexpected vault signature format (expected 3 colon-separated parts, got {len(vault_signature_parts)})')
+            raise VaultTransitException(
+                f'unexpected vault signature format: expected 3 colon-separated parts, '
+                f'got {len(vault_signature_parts)}'
+            )
 
         # Signature is `vault:v<n>:<base64>`; the version and the raw base64 (as expected by
         # cosign / ocm-verify) are simply the 2nd and 3rd colon-separated parts. Strip the `v`
