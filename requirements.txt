@@ -12,6 +12,7 @@ flake8
 gardener-oci
 github3.py<5.0.0
 html2text
+hvac
 jq
 jsonpath-ng
 jsonschema
