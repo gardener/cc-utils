@@ -205,10 +205,29 @@ jobs:
       - name: upload-component-descriptor-to-ocm-repository
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         run: |
-          python -m ocm upload \
-            --file /tmp/ocm/component-descriptor.yaml \
-            --blobs-dir /tmp/ocm/blobs.d \
-            --on-exist ${{ inputs.on-existing-component-descriptor }}
+          case '${{ inputs.on-existing-component-descriptor }}' in
+            skip)            conflict_policy=skip ;;
+            overwrite)       conflict_policy=replace ;;
+            fail)            conflict_policy=abort-and-fail ;;
+            *)               echo "unknown on-existing-component-descriptor value"; exit 1 ;;
+          esac
+
+          base_url="$(yq '.component.repositoryContexts[-1].baseUrl' /tmp/ocm/component-descriptor.yaml)"
+          sub_path="$(yq '.component.repositoryContexts[-1].subPath // ""' /tmp/ocm/component-descriptor.yaml)"
+          if [ -n "${sub_path}" ]; then
+            target_repo="${base_url%/}/${sub_path#/}"
+          else
+            target_repo="${base_url}"
+          fi
+
+          curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19 bash
+
+          ocm add cv \
+            --repository "oci::${target_repo}" \
+            --constructor /tmp/ocm/component-descriptor.yaml \
+            --working-directory /tmp/ocm/blobs.d \
+            --component-version-conflict-policy "${conflict_policy}"
+
           tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
       - name: upload-component-descriptor-as-artefact
         uses: gardener/cc-utils/.github/actions/upload-artifact@ocm-v2-migration
