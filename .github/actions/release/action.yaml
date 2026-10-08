@@ -395,6 +395,11 @@ runs:
           target_repo="${base_url}"
         fi
 
+        echo "debugging outputs:"
+        echo "target repo: ${target_repo}"
+        echo "component descriptor:"
+        cat /tmp/component-descriptor.yaml
+
         curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19 bash
 
         ocm add cv \

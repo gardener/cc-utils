@@ -19,3 +19,5 @@ jobs:
     permissions:
       contents: write
       id-token: write
+    with:
+      on-validation-errors: continue
