@@ -1,0 +1,54 @@
+componentReferences:
+- componentName: github.com/gardener/cc-utils
+  labels: []
+  name: cc-utils
+  version: 1.2737.0
+creationTime: '2026-10-08T11:26:58Z'
+labels:
+- name: imagevector.gardener.cloud/images
+  value:
+    images:
+    - name: apiserver
+      repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
+      resourceId:
+        name: apiserver
+      sourceRepository: github.com/gardener/gardener
+name: github.tools.sap/kubernetes/cc-demo
+provider:
+  name: SAP SE
+resources:
+- access:
+    imageReference: registry.k8s.io/pause:3.10
+    type: ociRegistry
+  labels:
+  - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
+    value:
+      comment: 'pause-container is not accessible from outside k8s clusters and not
+        interacted with from other containers or other systems
+
+        '
+      policy: skip
+  - name: imagevector.gardener.cloud/name
+    value: pause-container
+  - name: imagevector.gardener.cloud/repository
+    value: registry.k8s.io/pause
+  - name: imagevector.gardener.cloud/source-repository
+    value: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+  name: pause-container
+  relation: external
+  type: ociImage
+  version: '3.10'
+sources:
+- access:
+    commit: f248b054f5f978f9993f597deedfc3d703a96217
+    ref: refs/heads/master
+    repoUrl: github.tools.sap/kubernetes/cc-demo
+    type: gitHub
+  labels:
+  - name: cloud.gardener/cicd/source
+    value:
+      repository-classification: main
+  name: main-source
+  type: git
+  version: 0.0.0-dev
+version: 0.0.0-dev
