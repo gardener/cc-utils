@@ -28,7 +28,7 @@ def _stale_sbom(name='img', version='v1', fmt='spdx-2.3'):
         'version': version,
         'type': 'application/spdx+json',
         'relation': 'external',
-        'access': {'type': 'localBlob/v1', 'localReference': 'sha256:old'},
+        'input': {'type': 'File/v1', 'path': 'sha256:old', 'mediaType': 'application/spdx+json'},
         'extraIdentity': {'sbom-format': fmt, 'version': version},
     }
 
@@ -39,7 +39,10 @@ def _stale_cbom(name='img', version='v1'):
         'version': version,
         'type': 'application/vnd.cyclonedx+json',
         'relation': 'external',
-        'access': {'type': 'localBlob/v1', 'localReference': 'sha256:old-cbom'},
+        'input': {
+            'type': 'File/v1', 'path': 'sha256:old-cbom',
+            'mediaType': 'application/vnd.cyclonedx+json',
+        },
         'extraIdentity': {'cbom-format': 'cyclonedx-1.6', 'version': version},
     }
 
@@ -74,13 +77,19 @@ def _run_process(tmp_dir, resources):
     fresh_spdx = {
         'name': 'img', 'version': 'v1', 'type': 'application/spdx+json',
         'relation': 'external',
-        'access': {'type': 'localBlob/v1', 'localReference': 'sha256:fresh-spdx'},
+        'input': {
+            'type': 'File/v1', 'path': 'sha256:fresh-spdx',
+            'mediaType': 'application/spdx+json',
+        },
         'extraIdentity': {'sbom-format': 'spdx-2.3', 'version': 'v1'},
     }
     fresh_cdx = {
         'name': 'img', 'version': 'v1', 'type': 'application/vnd.cyclonedx+json',
         'relation': 'external',
-        'access': {'type': 'localBlob/v1', 'localReference': 'sha256:fresh-cdx'},
+        'input': {
+            'type': 'File/v1', 'path': 'sha256:fresh-cdx',
+            'mediaType': 'application/vnd.cyclonedx+json',
+        },
         'extraIdentity': {'sbom-format': 'cyclonedx-1.6', 'version': 'v1'},
     }
 
@@ -157,7 +166,7 @@ def test_stale_sboms_replaced_on_rerun():
     ]
     # fresh pair replaces all three stale entries — no duplicates
     assert len(sbom_resources) == 2
-    refs = {r['access']['localReference'] for r in sbom_resources}
+    refs = {r['input']['path'] for r in sbom_resources}
     assert 'sha256:old' not in refs
     assert 'sha256:old-cbom' not in refs
 

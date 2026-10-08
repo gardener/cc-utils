@@ -5,7 +5,7 @@
 import hashlib
 import os
 import sys
-import unittest.mock as mock
+import tempfile
 
 sys.path.insert(
     0,
@@ -19,109 +19,112 @@ import release_notes.ocm as rn_ocm
 import ocm
 
 
-def _make_component(version='1.0.0'):
-    comp = mock.MagicMock()
-    comp.version = version
-    comp.resources = []
-    comp.current_ocm_repo.component_version_oci_ref.return_value = 'registry.example.com/comp:1.0.0'
-    return comp
+def _make_cd_dict(version='1.0.0', resources=None):
+    return {
+        'component': {
+            'version': version,
+            'resources': resources if resources is not None else [],
+        }
+    }
 
 
-# --- attach_release_notes ---
+# --- attach_release_notes_to_dict ---
 
-def test_markdown_blob_uploaded_when_non_empty():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+def test_markdown_blob_written_when_non_empty():
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
     markdown = 'some release notes'
 
-    release.attach_release_notes(component, markdown, b'tar', oci_client)
+    release.attach_release_notes_to_dict(cd_dict, markdown, b'tar', blobs_dir)
 
     octets = markdown.encode('utf-8')
     expected_digest = f'sha256:{hashlib.sha256(octets).hexdigest()}'
-    oci_client.put_blob.assert_any_call(
-        image_reference='registry.example.com/comp:1.0.0',
-        digest=expected_digest,
-        octets_count=len(octets),
-        data=octets,
-    )
+    assert os.path.isfile(os.path.join(blobs_dir, expected_digest))
 
 
 def test_markdown_blob_skipped_when_empty():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
 
-    release.attach_release_notes(component, '', b'tar', oci_client)
+    release.attach_release_notes_to_dict(cd_dict, '', b'tar', blobs_dir)
 
-    # only the tar blob should be uploaded
-    assert oci_client.put_blob.call_count == 1
+    # only the tar blob should be written
+    blobs = [f for f in os.listdir(blobs_dir) if not os.path.islink(os.path.join(blobs_dir, f))]
+    assert len(blobs) == 1
 
 
-def test_tar_blob_always_uploaded():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+def test_tar_blob_always_written():
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
     tar_bytes = b'tar data'
 
-    release.attach_release_notes(component, '', tar_bytes, oci_client)
+    release.attach_release_notes_to_dict(cd_dict, '', tar_bytes, blobs_dir)
 
     expected_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
-    oci_client.put_blob.assert_called_once_with(
-        image_reference='registry.example.com/comp:1.0.0',
-        digest=expected_digest,
-        octets_count=len(tar_bytes),
-        data=tar_bytes,
-    )
+    assert os.path.isfile(os.path.join(blobs_dir, expected_digest))
 
 
 def test_release_notes_resources_appended_with_markdown():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
 
-    release.attach_release_notes(component, 'notes', b'tar', oci_client)
+    release.attach_release_notes_to_dict(cd_dict, 'notes', b'tar', blobs_dir)
 
-    names = [r.name for r in component.resources]
+    names = [r['name'] for r in cd_dict['component']['resources']]
     assert rn_ocm.release_notes_resource_name_old in names
     assert rn_ocm.release_notes_resource_name in names
 
 
 def test_release_notes_resources_appended_without_markdown():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
 
-    release.attach_release_notes(component, '', b'tar', oci_client)
+    release.attach_release_notes_to_dict(cd_dict, '', b'tar', blobs_dir)
 
-    names = [r.name for r in component.resources]
+    names = [r['name'] for r in cd_dict['component']['resources']]
     assert rn_ocm.release_notes_resource_name_old not in names
     assert rn_ocm.release_notes_resource_name in names
 
 
-# --- attach_branch_info ---
+def test_release_notes_resources_use_file_input():
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
 
-def test_branch_info_blob_uploaded():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    release.attach_release_notes_to_dict(cd_dict, 'notes', b'tar', blobs_dir)
+
+    for r in cd_dict['component']['resources']:
+        assert 'input' in r
+        assert 'access' not in r
+        assert r['input']['type'] == str(ocm.InputType.FILE)
+        assert r['input']['path'].startswith('sha256:')
+
+
+# --- attach_branch_info_to_dict ---
+
+def test_branch_info_blob_written():
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
     data = b'branch: main\n'
 
-    release.attach_branch_info(component, data, oci_client)
+    release.attach_branch_info_to_dict(cd_dict, data, blobs_dir)
 
     expected_digest = f'sha256:{hashlib.sha256(data).hexdigest()}'
-    oci_client.put_blob.assert_called_once_with(
-        image_reference=mock.ANY,
-        digest=expected_digest,
-        octets_count=len(data),
-        data=data,
-    )
+    assert os.path.isfile(os.path.join(blobs_dir, expected_digest))
 
 
 def test_branch_info_resource_appended():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    blobs_dir = tempfile.mkdtemp()
+    cd_dict = _make_cd_dict()
 
-    release.attach_branch_info(component, b'data', oci_client)
+    release.attach_branch_info_to_dict(cd_dict, b'data', blobs_dir)
 
-    assert len(component.resources) == 1
-    resource = component.resources[0]
-    assert resource.name == 'branch-info'
-    assert resource.version == '1.0.0'
+    resources = cd_dict['component']['resources']
+    assert len(resources) == 1
+    resource = resources[0]
+    assert resource['name'] == 'branch-info'
+    assert resource['version'] == '1.0.0'
+    assert 'input' in resource
+    assert 'access' not in resource
 
 
 # --- Asset.matches() ---

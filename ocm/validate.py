@@ -123,7 +123,7 @@ def iter_results_for_resource_node(
         return
 
     resource = node.resource
-    if resource.access.type is not ocm.AccessType.OCI_REGISTRY:
+    if resource.access is None or resource.access.type is not ocm.AccessType.OCI_REGISTRY:
         yield ValidationResult(
             mode=validation_cfg.access,
             passed=True,
