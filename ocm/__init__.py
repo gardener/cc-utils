@@ -54,6 +54,10 @@ class SchemaVersion(enum.StrEnum):
     V2 = 'v2'
 
 
+class InputType(enum.StrEnum):
+    FILE = 'File/v1'
+
+
 class AccessType(enum.StrEnum):
     GITHUB = 'github' # XXX: new: gitHub/v1
     HELM = 'Helm/v1'
@@ -102,6 +106,19 @@ AccessType._value2member_map_ |= {
 }
 
 AccessTypeOrStr = AccessType | str
+
+
+@dc(kw_only=True)
+class Input:
+    type: InputType
+
+
+@dc(kw_only=True)
+class FileInput(Input):
+    type = InputType.FILE
+    path: str
+    mediaType: str | None = None
+    compress: bool | None = None
 
 
 @dc(kw_only=True)
