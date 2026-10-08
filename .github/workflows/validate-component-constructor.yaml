@@ -1,6 +1,9 @@
 name: validate-component-constructor
 
 on:
+  push:
+    branches:
+      - ocm-v2-migration
   workflow_dispatch:
     inputs:
       version:
