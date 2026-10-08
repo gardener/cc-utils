@@ -1,0 +1,36 @@
+name: validate-component-constructor
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: false
+        default: '0.0.0-dev'
+        description: version to use for the component descriptor
+
+jobs:
+  validate:
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: gardener/cc-utils/.github/actions/base-component-descriptor@ocm-v2-migration
+        with:
+          version: ${{ inputs.version }}
+          ocm-repository: europe-docker.pkg.dev/gardener-project/snapshots/gardener
+          post-process: component-cli
+      - uses: gardener/cc-utils/.github/actions/component-descriptor-to-constructor@ocm-v2-migration
+      - uses: gardener/cc-utils/.github/actions/download-artifact@ocm-v2-migration
+        with:
+          name: component-constructor
+      - name: validate-with-ocm-add-cv
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19 bash
+          export PATH="${HOME}/.local/bin:${PATH}"
+          ocm add cv \
+            --repository ctf::/tmp/ctf.d \
+            --constructor component-constructor.yaml
+          echo "validation successful"
