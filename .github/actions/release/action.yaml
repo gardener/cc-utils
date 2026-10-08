@@ -308,54 +308,41 @@ runs:
     - name: attach-release-notes-to-component-descriptor
       shell: python
       run: |
-        import dataclasses
         import os
         import sys
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import oci.auth
-        import oci.client
-        import ocm
         import release
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+          cd_dict = yaml.safe_load(f)
 
         with open('/tmp/release-notes/legacy-release-notes.md') as f:
           release_notes_markdown = f.read()
         with open('/tmp/release-notes/release-notes-archive.tar', 'rb') as f:
           tar_bytes = f.read()
 
-        oci_client = oci.client.Client(credentials_lookup=oci.auth.docker_credentials_lookup())
-
-        release.attach_release_notes(
-          component=component_descriptor.component,
+        release.attach_release_notes_to_dict(
+          cd_dict=cd_dict,
           release_notes_markdown=release_notes_markdown,
           tar_bytes=tar_bytes,
-          oci_client=oci_client,
+          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
         )
 
         with open('/tmp/component-descriptor.yaml', 'w') as f:
-          yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
-            stream=f,
-          )
+          yaml.safe_dump(data=cd_dict, stream=f)
 
     - name: attach-branch-info-to-component-descriptor
       shell: python
       run: |
-        import dataclasses
         import os
         import sys
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import oci.client
-        import ocm
         import release
 
         if not os.path.isfile(branch_info_filename := '.ocm/branch-info.yaml'):
@@ -365,25 +352,19 @@ runs:
         print(f'found "{branch_info_filename}" - will attach contents to component descriptor')
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+          cd_dict = yaml.safe_load(f)
 
         with open(branch_info_filename, 'rb') as f:
           branch_info_bytes = f.read()
 
-        oci_client = oci.client.client_with_dockerauth()
-
-        release.attach_branch_info(
-          component=component_descriptor.component,
+        release.attach_branch_info_to_dict(
+          cd_dict=cd_dict,
           branch_info_bytes=branch_info_bytes,
-          oci_client=oci_client,
+          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
         )
 
         with open('/tmp/component-descriptor.yaml', 'w') as f:
-          yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
-            stream=f,
-          )
+          yaml.safe_dump(data=cd_dict, stream=f)
     - name: validate OCM Component-Descriptor
       uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-v2-migration
       with:
