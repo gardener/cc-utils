@@ -138,11 +138,11 @@ def attach_release_notes_to_dict(
 ) -> None:
     '''
     Write release-notes blobs to blobs_dir and append the corresponding resource
-    dicts (with file inputs) to cd_dict['component']['resources'].
+    dicts (with file inputs) to cd_dict['resources'].
     '''
-    resources = cd_dict['component'].setdefault('resources', [])
+    resources = cd_dict.setdefault('resources', [])
 
-    version = cd_dict['component']['version']
+    version = cd_dict['version']
 
     if release_notes_markdown:
         octets = release_notes_markdown.encode('utf-8')
@@ -180,11 +180,11 @@ def attach_branch_info_to_dict(
 ) -> None:
     '''
     Write branch-info blob to blobs_dir and append the corresponding resource
-    dict (with file input) to cd_dict['component']['resources'].
+    dict (with file input) to cd_dict['resources'].
     '''
-    version = cd_dict['component']['version']
+    version = cd_dict['version']
     digest = _write_blob(blobs_dir, branch_info_bytes)
-    cd_dict['component'].setdefault('resources', []).append({
+    cd_dict.setdefault('resources', []).append({
         'name': 'branch-info',
         'version': version,
         'type': 'application/vnd.gardener.cloud.branch-info+yaml',

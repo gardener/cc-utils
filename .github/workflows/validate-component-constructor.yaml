@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@ocm-v2-migration
         with:
-          version: ${{ inputs.version }}
+          version: ${{ inputs.version || '0.0.0-dev' }}
           ocm-repository: europe-docker.pkg.dev/gardener-project/snapshots/gardener
           post-process: component-cli
       - uses: gardener/cc-utils/.github/actions/component-descriptor-to-constructor@ocm-v2-migration

@@ -65,11 +65,9 @@ def _run_process(tmp_dir, resources):
     '''
     cd_path = os.path.join(tmp_dir, 'component-descriptor.yaml')
     cd = {
-        'component': {
-            'name': 'example.com/comp',
-            'version': '1.0.0',
-            'resources': list(resources),
-        }
+        'name': 'example.com/comp',
+        'version': '1.0.0',
+        'resources': list(resources),
     }
     with open(cd_path, 'w') as f:
         yaml.safe_dump(cd, f)
@@ -145,7 +143,7 @@ def _run_process(tmp_dir, resources):
 
     with open(cd_path) as f:
         result = yaml.safe_load(f)
-    return result['component']['resources']
+    return result['resources']
 
 
 def test_stale_sboms_replaced_on_rerun():

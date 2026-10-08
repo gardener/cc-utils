@@ -33,8 +33,8 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@v1
-    - uses: gardener/cc-utils/.github/actions/download-artifact@v1
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@ocm-v2-migration
+    - uses: gardener/cc-utils/.github/actions/download-artifact@ocm-v2-migration
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-and-transform
@@ -63,10 +63,16 @@ runs:
         with open(output_path, 'w') as f:
             yaml.safe_dump(constructor, f, default_flow_style=False, allow_unicode=True)
 
+        # package as component-descriptor.tar.gz so merge-ocm-fragments can consume it
+        with open('component-descriptor.yaml', 'w') as f:
+            yaml.safe_dump(constructor, f, default_flow_style=False, allow_unicode=True)
+        with tarfile.open('component-descriptor.tar.gz', 'w:gz') as tf:
+            tf.add('component-descriptor.yaml')
+
         print(f'wrote constructor to {output_path}')
         with open(output_path) as f:
             print(f.read())
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@v1
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@ocm-v2-migration
       with:
         name: component-constructor
-        path: ${{ inputs.output-path }}
+        path: component-descriptor.tar.gz

@@ -253,7 +253,7 @@ runs:
       id: preprocess
       shell: bash
       run: |
-        version=$(yq .component.version /tmp/component-descriptor.yaml)
+        version=$(yq .version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
 
         # main git tag
@@ -387,13 +387,8 @@ runs:
           *)               echo "unknown on-existing-component-descriptor value"; exit 1 ;;
         esac
 
-        base_url="$(yq '.component.repositoryContexts[-1].baseUrl' /tmp/component-descriptor.yaml)"
-        sub_path="$(yq '.component.repositoryContexts[-1].subPath // ""' /tmp/component-descriptor.yaml)"
-        if [ -n "${sub_path}" ]; then
-          target_repo="${base_url%/}/${sub_path#/}"
-        else
-          target_repo="${base_url}"
-        fi
+        base_url="${{ steps.read-ocm-repositories.outputs.ocm-repositories }}"
+        target_repo="${base_url%%,*}" # use first repo if comma-separated
 
         echo "debugging outputs:"
         echo "target repo: ${target_repo}"

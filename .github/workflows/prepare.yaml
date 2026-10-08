@@ -275,6 +275,7 @@ jobs:
           ocm-repository: ${{ steps.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
           post-process: ${{ inputs.post-process }}
+      - uses: gardener/cc-utils/.github/actions/component-descriptor-to-constructor@ocm-v2-migration
       - name: prepare-artefact
         run: |
           set -eu

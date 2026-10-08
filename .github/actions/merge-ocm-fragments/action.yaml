@@ -225,7 +225,7 @@ runs:
         with open(component_descriptor_path, 'w') as f:
           yaml.safe_dump(component_descriptor, f)
 
-        component = component_descriptor['component']
+        component = component_descriptor
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
           name = component['name']
           version = component['version']
@@ -244,9 +244,11 @@ runs:
       shell: python
       run: |
         import dataclasses
+        import enum
         import logging
         import os
 
+        import dacite
         import yaml
 
         import ocm
@@ -261,11 +263,11 @@ runs:
 
         out_dir = '${{ inputs.outdir }}'
         with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
-            yaml.safe_load(f),
+          component = dacite.from_dict(
+            data_class=ocm.ComponentConstructor,
+            data=yaml.safe_load(f),
+            config=dacite.Config(cast=[enum.Enum]),
           )
-
-        component = component_descriptor.component
 
         prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
         prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
@@ -288,9 +290,21 @@ runs:
           component_prefixes=prefixes,
           deduplicate_resources=True,
         )
+        raw = dataclasses.asdict(component)
+        for r in raw.get('resources', []):
+            if r.get('access') is None:
+                r.pop('access', None)
+            r.pop('digest', None)
+            r.pop('extraIdentity', None)
+            r.pop('srcRefs', None)
+        for s in raw.get('sources', []):
+            s.pop('extraIdentity', None)
+        for ref in raw.get('componentReferences', []):
+            ref.pop('extraIdentity', None)
+            ref.pop('digest', None)
         with open(component_descriptor_path, 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
+            data=raw,
             stream=f,
             Dumper=ocm.EnumValueYamlDumper,
           )
@@ -305,7 +319,7 @@ runs:
         export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-descriptor.yaml"
         cname=$(
           cat ${{ inputs.outdir }}/component-descriptor.yaml \
-          yq -r .component.name \
+          yq -r .name \
         )
         export COMPONENT_NAME=$cname
 

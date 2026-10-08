@@ -577,6 +577,7 @@ class Resource(Artifact, LabelMethodsMixin):
         | dict
         | None
     )
+    input: FileInput | dict | None = None
     digest: DigestSpec | None = None
     extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
     relation: ResourceRelation = ResourceRelation.LOCAL
@@ -861,6 +862,42 @@ class ComponentDescriptor:
                 fp=fileobj,
                 cls=EnumJSONEncoder,
             )
+
+
+@dc
+class ProviderSpec:
+    name: str
+
+
+@dc
+class ComponentConstructor(LabelMethodsMixin):
+    '''
+    Input format for building OCM component versions via `ocm add cv`.
+    Equivalent to Component but without repositoryContexts, and with provider
+    as a ProviderSpec object instead of a plain string.
+    '''
+    name: str
+    version: str
+    provider: ProviderSpec
+
+    sources: list[Source] = dataclasses.field(default_factory=list)
+    componentReferences: list[ComponentReference] = dataclasses.field(default_factory=list)
+    resources: list[Resource] = dataclasses.field(default_factory=list)
+    labels: list[Label] = dataclasses.field(default_factory=list)
+    creationTime: str | None = None
+
+    def iter_artefacts(self) -> collections.abc.Generator[Source | Resource, None, None]:
+        if self.sources:
+            yield from self.sources
+        if self.resources:
+            yield from self.resources
+
+    @property
+    def component(self) -> typing.Self:
+        return self
+
+    def identity(self):
+        return ComponentIdentity(name=self.name, version=self.version)
 
 
 if _have_yaml:

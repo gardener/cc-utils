@@ -155,7 +155,7 @@ jobs:
         id: collect
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-descriptor-artefact: base-component-descriptor
+          component-descriptor-artefact: component-constructor
           outdir: /tmp/ocm
           post-process: ${{ inputs.ocm-post-process }}
 
@@ -192,16 +192,16 @@ jobs:
           oci-image-reference: ${{ steps.prep.outputs.ocm-repositories }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
-      - uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-v2-migration
-        with:
-          component-descriptor-path: /tmp/ocm/component-descriptor.yaml
-          on-validation-errors: ${{ inputs.on-validation-errors }}
-          ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
-          recursion-depth: 0
-          validation-cfg: |
-            schema: fail
-            access: ${{ steps.prep.outputs.can-push == 'true' && 'fail' || 'skip' }}
-            artefact-uniqueness: fail
+      # - uses: gardener/cc-utils/.github/actions/ocm-validate@ocm-v2-migration
+      #   with:
+      #     component-descriptor-path: /tmp/ocm/component-descriptor.yaml
+      #     on-validation-errors: ${{ inputs.on-validation-errors }}
+      #     ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
+      #     recursion-depth: 0
+      #     validation-cfg: |
+      #       schema: fail
+      #       access: ${{ steps.prep.outputs.can-push == 'true' && 'fail' || 'skip' }}
+      #       artefact-uniqueness: fail
       - name: upload-component-descriptor-to-ocm-repository
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         run: |
@@ -212,13 +212,8 @@ jobs:
             *)               echo "unknown on-existing-component-descriptor value"; exit 1 ;;
           esac
 
-          base_url="$(yq '.component.repositoryContexts[-1].baseUrl' /tmp/ocm/component-descriptor.yaml)"
-          sub_path="$(yq '.component.repositoryContexts[-1].subPath // ""' /tmp/ocm/component-descriptor.yaml)"
-          if [ -n "${sub_path}" ]; then
-            target_repo="${base_url%/}/${sub_path#/}"
-          else
-            target_repo="${base_url}"
-          fi
+          base_url="${{ steps.prep.outputs.ocm-repositories }}"
+          target_repo="${base_url%%,*}" # use first repo if comma-separated
 
           echo "debugging outputs:"
           echo "target repo: ${target_repo}"

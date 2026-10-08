@@ -1,3 +1,6 @@
+import enum
+
+import dacite
 import yaml
 
 import ocm.retrieve
@@ -15,9 +18,16 @@ def validate(
     recursion_depth: int = -1,
 ) -> tuple[int, list[ocm.validate.ValidationError], list[ocm.validate.ValidationError]]:
     with open(component_descriptor_path) as f:
-        component_descriptor = yaml.safe_load(f)
+        raw = yaml.safe_load(f)
 
-    component_descriptor = ocm.ComponentDescriptor.from_dict(component_descriptor)
+    if 'meta' in raw:
+        component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
+    else:
+        component_descriptor = dacite.from_dict(
+            data_class=ocm.ComponentConstructor,
+            data=raw,
+            config=dacite.Config(cast=[enum.Enum]),
+        )
 
     if recursion_depth != 0 and ocm_repositories:
         repos = [r.strip() for r in ocm_repositories.split(',') if r.strip()]

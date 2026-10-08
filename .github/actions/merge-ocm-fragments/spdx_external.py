@@ -716,7 +716,7 @@ def process_external_resources(
     with open(component_descriptor_path) as f:
         cd_raw = yaml.safe_load(f)
 
-    component = cd_raw['component']
+    component = cd_raw
     component_version: str = component.get('version', '')
     resources: list[dict] = component.get('resources', [])
 

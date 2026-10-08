@@ -101,7 +101,7 @@ class Filter:
 
 
 def iter(
-    component: ocm.Component | ocm.ComponentDescriptor,
+    component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentConstructor,
     lookup: ocm.ComponentDescriptorLookup=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,

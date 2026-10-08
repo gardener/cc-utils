@@ -4,12 +4,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
+import os
 import sys
 import tarfile
 
 import yaml
 
-import transform
+sys.path.insert(0, os.path.dirname(__file__))
+import transform  # noqa: E402  # pylint: disable=import-error
 
 
 def main():
@@ -20,7 +22,7 @@ def main():
         'input',
         nargs='?',
         default='component-descriptor.yaml',
-        help='path to component-descriptor.yaml, or a component-descriptor.tar.gz (default: component-descriptor.yaml)',
+        help='path to component-descriptor.yaml or component-descriptor.tar.gz',
     )
     parser.add_argument(
         '-o', '--output',

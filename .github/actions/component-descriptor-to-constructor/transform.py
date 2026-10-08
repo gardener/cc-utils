@@ -26,9 +26,16 @@ def _clean_access(access: dict) -> dict:
     return access
 
 
+def _drop_empty_strings(d: dict, *keys) -> None:
+    for key in keys:
+        if key in d and d[key] == '':
+            del d[key]
+
+
 def _clean_source(source: dict) -> dict:
     source = copy.deepcopy(source)
     source.pop('extraIdentity', None)
+    _drop_empty_strings(source, 'version')
     source['labels'] = _clean_labels(source.get('labels'))
     if 'access' in source:
         source['access'] = _clean_access(source['access'])
@@ -40,6 +47,9 @@ def _clean_resource(resource: dict) -> dict:
     resource.pop('extraIdentity', None)
     resource.pop('digest', None)
     resource.pop('srcRefs', None)
+    _drop_empty_strings(resource, 'version')
+    if resource.get('access') is None:
+        resource.pop('access', None)
     resource['labels'] = _clean_labels(resource.get('labels'))
     if 'access' in resource:
         resource['access'] = _clean_access(resource['access'])

@@ -21,10 +21,8 @@ import ocm
 
 def _make_cd_dict(version='1.0.0', resources=None):
     return {
-        'component': {
-            'version': version,
-            'resources': resources if resources is not None else [],
-        }
+        'version': version,
+        'resources': resources if resources is not None else [],
     }
 
 
@@ -70,7 +68,7 @@ def test_release_notes_resources_appended_with_markdown():
 
     release.attach_release_notes_to_dict(cd_dict, 'notes', b'tar', blobs_dir)
 
-    names = [r['name'] for r in cd_dict['component']['resources']]
+    names = [r['name'] for r in cd_dict['resources']]
     assert rn_ocm.release_notes_resource_name_old in names
     assert rn_ocm.release_notes_resource_name in names
 
@@ -81,7 +79,7 @@ def test_release_notes_resources_appended_without_markdown():
 
     release.attach_release_notes_to_dict(cd_dict, '', b'tar', blobs_dir)
 
-    names = [r['name'] for r in cd_dict['component']['resources']]
+    names = [r['name'] for r in cd_dict['resources']]
     assert rn_ocm.release_notes_resource_name_old not in names
     assert rn_ocm.release_notes_resource_name in names
 
@@ -92,7 +90,7 @@ def test_release_notes_resources_use_file_input():
 
     release.attach_release_notes_to_dict(cd_dict, 'notes', b'tar', blobs_dir)
 
-    for r in cd_dict['component']['resources']:
+    for r in cd_dict['resources']:
         assert 'input' in r
         assert 'access' not in r
         assert r['input']['type'] == str(ocm.InputType.FILE)
@@ -118,7 +116,7 @@ def test_branch_info_resource_appended():
 
     release.attach_branch_info_to_dict(cd_dict, b'data', blobs_dir)
 
-    resources = cd_dict['component']['resources']
+    resources = cd_dict['resources']
     assert len(resources) == 1
     resource = resources[0]
     assert resource['name'] == 'branch-info'
