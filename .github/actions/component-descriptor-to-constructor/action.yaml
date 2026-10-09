@@ -1,0 +1,62 @@
+name: OCM component descriptor to constructor
+description: |
+  Transforms a component-descriptor into an OCM component constructor YAML (single-component
+  format) suitable for `ocm add cv`.
+  Reads the descriptor from a tarball artifact (as produced by `base-component-descriptor`).
+
+inputs:
+  component-descriptor-artefact:
+    required: false
+    default: base-component-descriptor
+    description: |
+      Name of the GHA artifact containing the component-descriptor tarball
+      (as produced by the `base-component-descriptor` action).
+
+outputs:
+  component-constructor-artifact:
+    description: |
+      Name of the GHA artifact containing the constructor YAML.
+    value: component-constructor
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@8R0WNI3-ocm
+    - uses: gardener/cc-utils/.github/actions/download-artifact@8R0WNI3-ocm
+      with:
+        name: ${{ inputs.component-descriptor-artefact }}
+    - name: extract-and-transform
+      id: transform
+      shell: python
+      run: |
+        import os
+        import sys
+        import tarfile
+
+        import yaml
+
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import transform
+
+        archive = 'component-descriptor.tar.gz'
+        with tarfile.open(archive) as tf:
+          tf.extract('component-descriptor.yaml', path='.')
+
+        with open('component-descriptor.yaml') as f:
+          component_descriptor = yaml.safe_load(f)
+
+        constructor = transform.to_constructor(component_descriptor)
+
+        # package as component-constructor.tar.gz so merge-ocm-fragments can consume it
+        with open('component-constructor.yaml', 'w') as f:
+          yaml.safe_dump(constructor, f, default_flow_style=False, allow_unicode=True)
+
+        with tarfile.open('component-constructor.tar.gz', 'w:gz') as tf:
+          tf.add('component-constructor.yaml')
+
+        with open('component-constructor.yaml') as f:
+          print(f.read())
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@8R0WNI3-ocm
+      with:
+        name: component-constructor
+        path: component-constructor.tar.gz

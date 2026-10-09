@@ -261,11 +261,11 @@ def eval_version_template(
 
 
 def add_resources_from_imagevector(
-    component: ocm.Component,
+    component: ocm.Component | ocm.ComponentConstructor,
     images: collections.abc.Iterable[dict],
     component_prefixes: list[str],
     deduplicate_resources: bool=True,
-) -> ocm.Component:
+) -> ocm.Component | ocm.ComponentConstructor:
     '''
     deduplicate_resources: in concourse-case, resources built from pipeline are already present
     in (base-)component-descriptor. To remove those, set deduplicate_resources as True.

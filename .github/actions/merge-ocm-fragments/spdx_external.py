@@ -698,7 +698,7 @@ def _write_step_summary(records: list[_ScanRecord]) -> None:
 
 
 def process_external_resources(
-    component_descriptor_path: str,
+    component_constructor_path: str,
     out_dir: str,
     cache_registry: str,
     cache_repo_prefix: str = 'sbom-cache',
@@ -706,19 +706,18 @@ def process_external_resources(
 ) -> None:
     '''
     Scan external OCI image resources for SPDX SBOM, CycloneDX SBOM, and CycloneDX CBOM
-    documents; patch results into the component descriptor.
+    documents; patch results into the component constructor.
     '''
     tmpdir = os.environ.get('RUNNER_TEMP') or os.environ.get('TMPDIR') or tempfile.gettempdir()
     logger.info(f'using tmpdir for syft/cbomkit-theia: {tmpdir}')
 
     oci_client = oc.Client(credentials_lookup=oa.docker_credentials_lookup())
 
-    with open(component_descriptor_path) as f:
-        cd_raw = yaml.safe_load(f)
+    with open(component_constructor_path) as f:
+        component_constructor = yaml.safe_load(f)
 
-    component = cd_raw['component']
-    component_version: str = component.get('version', '')
-    resources: list[dict] = component.get('resources', [])
+    component_version: str = component_constructor.get('version', '')
+    resources: list[dict] = component_constructor.get('resources', [])
 
     def _is_oci_registry_access(access: dict) -> bool:
         try:
@@ -849,7 +848,7 @@ def process_external_resources(
                     ))
 
     if not all_results:
-        logger.info('no BOM results to add to component descriptor')
+        logger.info('no BOM results to add to component constructor')
         _write_step_summary(records)
         return
 
@@ -908,16 +907,16 @@ def process_external_resources(
     if new_resources:
         # strip stale SBOM/CBOM resources so fresh ones are the only source of truth;
         # guards against duplicates when this step is re-run (e.g. on a pipeline retry)
-        component['resources'] = [
-            r for r in component['resources']
+        component_constructor['resources'] = [
+            r for r in component_constructor['resources']
             if 'cbom-format' not in (r.get('extraIdentity') or {})
             and 'sbom-format' not in (r.get('extraIdentity') or {})
         ]
-    component['resources'].extend(new_resources)
-    with open(component_descriptor_path, 'w') as f:
-        yaml.safe_dump(cd_raw, f)
+    component_constructor['resources'].extend(new_resources)
+    with open(component_constructor_path, 'w') as f:
+        yaml.safe_dump(component_constructor, f)
 
-    logger.info(f'appended {len(new_resources)} BOM resource(s) to component descriptor')
+    logger.info(f'appended {len(new_resources)} BOM resource(s) to component constructor')
     _write_step_summary(records)
 
 
@@ -927,7 +926,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--component-descriptor', required=True)
+    parser.add_argument('--component-constructor', required=True)
     parser.add_argument('--out-dir', required=True)
     parser.add_argument('--cache-registry', required=True)
     parser.add_argument('--cache-repo-prefix', default='sbom-cache')
@@ -936,7 +935,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     process_external_resources(
-        component_descriptor_path=args.component_descriptor,
+        component_constructor_path=args.component_constructor,
         out_dir=args.out_dir,
         cache_registry=args.cache_registry,
         cache_repo_prefix=args.cache_repo_prefix,

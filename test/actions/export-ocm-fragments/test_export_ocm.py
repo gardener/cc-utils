@@ -80,8 +80,9 @@ def test_patch_local_blob_refs_rewrites_localreference():
         blobs_dir=blobs_dir,
     )
 
-    assert artefact['access']['localReference'].startswith('sha256:')
-    assert 'size' in artefact['access']
+    assert 'access' not in artefact
+    assert artefact['input']['type'] == 'File/v1'
+    assert artefact['input']['path'].startswith('sha256:')
 
 
 def test_patch_local_blob_refs_missing_blob_raises():
