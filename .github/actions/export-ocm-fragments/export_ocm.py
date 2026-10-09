@@ -93,14 +93,26 @@ def patch_local_blob_refs(
         if not (local_ref := access.get('localReference')):
             continue
         if local_ref.startswith('sha256:'):
+            artefact['input'] = {
+                'type': str(ocm.InputType.FILE),
+                'path': local_ref,
+                'mediaType': access.get('mediaType'),
+            }
+            del artefact['access']
             continue
-        if not (local_fpath := find_local_blobfile(local_ref)):
+        if not find_local_blobfile(local_ref):
             raise ValueError(f'did not find blobfile for {artefact=}')
         digest_name = orig_to_digest.get(local_ref)
         if not digest_name:
             raise ValueError(f'did not find digest for local blobfile {artefact=}')
-        access['localReference'] = digest_name
-        access['size'] = os.stat(local_fpath).st_size
+
+        artefact['input'] = {
+            'type': str(ocm.InputType.FILE),
+            'path': digest_name,
+            'mediaType': access.get('mediaType'),
+        }
+        del artefact['access']
+
         print(f'INFO: patched {artefact["name"]}\'s access to {digest_name=} (was: {local_ref=})')
 
         if 'type' not in artefact:

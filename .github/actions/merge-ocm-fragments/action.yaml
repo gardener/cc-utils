@@ -1,37 +1,37 @@
 name: merge-ocm-fragments
 description: |
   Imports OCM-fragments (as exported from `export-ocm-fragments` action), and a
-  base-OCM-Component-Descriptor, and merges them into a resulting OCM-Component-Descriptor.
+  base OCM component constructor, and merges them into a resulting OCM component constructor.
 
   The output-directory (`outdir`) will be populated like so:
 
   ```
-  component-descriptor.yaml
+  component-constructor.yaml
   blobs.d/<alg>:<hexdigest>
   ```
 
-  `component-descriptor.yaml` will contain merged contents from all imported ocm-artefact-fragments,
-  as well as any contents from passed `component-descriptor`, whereas `blobs.d` will contain
+  `component-constructor.yaml` will contain merged contents from all imported ocm-artefact-fragments,
+  as well as any contents from passed `component-constructor`, whereas `blobs.d` will contain
   combined imported blob-files (if any).
 
 inputs:
-  component-descriptor:
+  component-constructor:
     required: false
     type: string
     description: |
-      The (base) component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
+      The (base) component-constructor to merge ocm-fragments into. If it is not passed, a minimal
       one will be created.
-  component-descriptor-artefact:
+  component-constructor-artefact:
     required: false
     type: string
     description: |
       If passed, the passed name is assumed to refer to an (existing) artefact of this name,
-      containing a (base) component-descriptor, as output by the `base-component-descriptor`
+      containing a (base) component-constructor, as output by the `component-descriptor-to-constructor`
       action.
 
-      I.e. it must contain (at least) a file named `component-descriptor.tar.gz`, which in turn
-      must (at least) contain a file `component-descriptor.yaml`, which is used as base
-      component-descriptor.
+      I.e. it must contain (at least) a file named `component-constructor.tar.gz`, which in turn
+      must (at least) contain a file `component-constructor.yaml`, which is used as base
+      component-constructor.
   ctx:
     required: false
     type: string
@@ -44,7 +44,7 @@ inputs:
     type: string
     default: /tmp/ocm
     description: |
-      the directory into which the merged component-descriptor, as well as the imported blobs
+      the directory into which the merged component-constructor, as well as the imported blobs
       are to be written.
 
   post-process:
@@ -55,7 +55,7 @@ inputs:
       - none
       - callback
     description: |
-      configures how the merged component-descriptor should be post-processed.
+      configures how the merged component-constructor should be post-processed.
 
       `component-cli` option is needed for properly honouring imagevectors (this will both
       add component-references, and referenced oci-image-resources, as well as adding
@@ -101,24 +101,24 @@ inputs:
   upload-artifact-name:
     required: false
     type: string
-    default: merged-component-descriptor
+    default: merged-component-constructor
     description: |
       Name under which the merged component-descriptor is uploaded as a GHA artifact.
       Set to an empty string to skip the upload (e.g. when the descriptor is only needed
       within the same job, to avoid artifact-name collisions in matrix jobs).
 
 outputs:
-  component-descriptor-artifact:
+  component-constructor-artifact:
     description: |
-      name of the GHA artifact containing the merged component-descriptor.
-      The artifact holds a single file `component-descriptor.tar.gz` which
-      in turn contains `component-descriptor.yaml`.
+      name of the GHA artifact containing the merged component-constructor.
+      The artifact holds a single file `component-constructor.tar.gz` which
+      in turn contains `component-constructor.yaml`.
       Empty if `upload-artifact-name` input is empty.
     value: ${{ inputs.upload-artifact-name }}
-  component-descriptor-path:
+  component-constructor-path:
     description: |
-      Path to the merged component-descriptor.yaml on the runner filesystem.
-    value: ${{ inputs.outdir }}/component-descriptor.yaml
+      Path to the merged component-constructor.yaml on the runner filesystem.
+    value: ${{ inputs.outdir }}/component-constructor.yaml
   name:
     description: |
       the component-name (for convenience)
@@ -149,46 +149,34 @@ runs:
         fi
         echo "artefact-name=${artefact_name}" >> "${GITHUB_OUTPUT}"
         mkdir -p "${{ inputs.outdir }}"
-    - name: import-component-descriptor
+    - name: import-component-constructor
       shell: bash
-      if: ${{ inputs.component-descriptor != '' }}
+      if: ${{ inputs.component-constructor != '' }}
       run: |
-        cat <<EOF > "${{ inputs.outdir }}/base-component-descriptor.yaml"
-        ${{ inputs.component-descriptor }}
+        cat <<EOF > "${{ inputs.outdir }}/component-constructor.yaml"
+        ${{ inputs.component-constructor }}
         EOF
-    - name: import-component-descriptor-artefact
-      if: ${{ inputs.component-descriptor-artefact != '' }}
+    - name: import-component-constructor-artefact
+      if: ${{ inputs.component-constructor-artefact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@8R0WNI3-ocm
       with:
-        name: ${{ inputs.component-descriptor-artefact }}
-    - name: extract-component-descriptor-artefact
-      if: ${{ inputs.component-descriptor-artefact != '' }}
+        name: ${{ inputs.component-constructor-artefact }}
+    - name: extract-component-constructor-artefact
+      if: ${{ inputs.component-constructor-artefact != '' }}
       shell: bash
       run: |
-        archive=component-descriptor.tar.gz
+        archive=component-constructor.tar.gz
         if [ ! -f "${archive}" ]; then
           echo "Error: expected file not present: ${archive}"
           exit 1
         fi
         tar xf ${archive}
-        component_descriptor_path='component-descriptor.yaml'
-        if [ ! -f "${component_descriptor_path}" ]; then
-          echo "Error: archive did not contain expected ${component_descriptor_path} file"
+        component_constructor_path='component-constructor.yaml'
+        if [ ! -f "${component_constructor_path}" ]; then
+          echo "Error: archive did not contain expected ${component_constructor_path} file"
           exit 1
         fi
-        mv "${component_descriptor_path}" "${{ inputs.outdir }}/base-component-descriptor.yaml"
-    - name: prepare-component-descriptor
-      shell: bash
-      run: |
-        base=${{ inputs.outdir }}/base-component-descriptor.yaml
-        component_descriptor=${{ inputs.outdir }}/component-descriptor.yaml
-        if [ -f ${base} ]; then
-          mv "${base}" "${component_descriptor}"
-        else
-          # create minimal base component-descriptor
-          python -m ocm create \
-           --out "${component_descriptor}"
-        fi
+        mv "${component_constructor_path}" "${{ inputs.outdir }}/component-constructor.yaml"
     - name: import-ocm-fragments
       uses: gardener/cc-utils/.github/actions/download-artifact@8R0WNI3-ocm
       with:
@@ -212,23 +200,22 @@ runs:
         import merge_ocm
 
         out_dir = '${{ inputs.outdir }}'
-        with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
-          component_descriptor = yaml.safe_load(f)
+        with open(component_constructor_path := f'{out_dir}/component-constructor.yaml') as f:
+          component_constructor = yaml.safe_load(f)
 
         merge_ocm.merge_fragments(
-            component_descriptor=component_descriptor,
+            component_constructor=component_constructor,
             fragments_dir=out_dir,
         )
 
-        pprint.pprint(component_descriptor)
+        pprint.pprint(component_constructor)
 
-        with open(component_descriptor_path, 'w') as f:
-          yaml.safe_dump(component_descriptor, f)
+        with open(component_constructor_path, 'w') as f:
+          yaml.safe_dump(component_constructor, f)
 
-        component = component_descriptor['component']
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          name = component['name']
-          version = component['version']
+          name = component_constructor['name']
+          version = component_constructor['version']
           f.write(f'name={name}\n')
           f.write(f'version={version}\n')
           f.write(f'component-version={name}:{version}\n')
@@ -260,12 +247,10 @@ runs:
           exit(0)
 
         out_dir = '${{ inputs.outdir }}'
-        with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
+        with open(component_constructor_path := f'{out_dir}/component-constructor.yaml') as f:
+          component_constructor = ocm.ComponentConstructor.from_dict(
             yaml.safe_load(f),
           )
-
-        component = component_descriptor.component
 
         prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
         prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
@@ -281,16 +266,16 @@ runs:
         logger.info(f'{prefixes=}')
 
         ocm.gardener.add_resources_from_imagevector(
-          component=component,
+          component=component_constructor,
           images=ocm.gardener.iter_images_from_imagevector(
             images_yaml_path=imagevector_file,
           ),
           component_prefixes=prefixes,
           deduplicate_resources=True,
         )
-        with open(component_descriptor_path, 'w') as f:
+        with open(component_constructor_path, 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
+            data=dataclasses.asdict(component_constructor),
             stream=f,
             Dumper=ocm.EnumValueYamlDumper,
           )
@@ -302,10 +287,10 @@ runs:
         set -euo pipefail
 
         export BASE_DEFINITION_PATH="${{ inputs.outdir }}/base-component-descriptor.yaml"
-        export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-descriptor.yaml"
+        export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-constructor.yaml"
         cname=$(
-          cat ${{ inputs.outdir }}/component-descriptor.yaml \
-          yq -r .component.name \
+          cat ${{ inputs.outdir }}/component-constructor.yaml \
+          yq -r .name \
         )
         export COMPONENT_NAME=$cname
 
@@ -360,22 +345,22 @@ runs:
         logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 
         spdx_external.process_external_resources(
-            component_descriptor_path='${{ inputs.outdir }}/component-descriptor.yaml',
+            component_constructor_path='${{ inputs.outdir }}/component-constructor.yaml',
             out_dir='${{ inputs.outdir }}',
             cache_registry='${{ inputs.oci-registry }}',
             cache_repo_prefix='${{ inputs.sbom-cache-repo-prefix }}',
             force_rescan='${{ inputs.spdx-force-rescan }}' == 'true',
         )
 
-    - name: upload-component-descriptor-artifact
+    - name: upload-component-constructor-artifact
       if: ${{ inputs.upload-artifact-name != '' }}
       shell: bash
       run: |
         set -eu
-        tar czf /tmp/component-descriptor.tar.gz \
-          -C "${{ inputs.outdir }}" component-descriptor.yaml
+        tar czf /tmp/component-constructor.tar.gz \
+          -C "${{ inputs.outdir }}" component-constructor.yaml
     - uses: gardener/cc-utils/.github/actions/upload-artifact@8R0WNI3-ocm
       if: ${{ inputs.upload-artifact-name != '' }}
       with:
         name: ${{ inputs.upload-artifact-name }}
-        path: /tmp/component-descriptor.tar.gz
+        path: /tmp/component-constructor.tar.gz

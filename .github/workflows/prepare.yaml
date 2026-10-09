@@ -4,7 +4,7 @@ name: Prepare
 #   An opinionated workflow that will
 #   - output target OCI Registries / OCM Repositories
 #   - calculate an effective version (and create a commit for switching to this version)
-#   - create a base OCM Component-Descriptor
+#   - create an OCM component constructor
 #
 #   All outputs are also exposed as an artefact (name can be influenced via output-artefact input).
 #   Said artefact contains a TARfile (name can be controlled via output-artefact-filename input),
@@ -187,10 +187,10 @@ on:
           It is output using the `capture-commit` action, and can be imported using the
           `import-commit` action.
         value: release-commit-objects
-      component-descriptor-artefact:
+      component-constructor-artefact:
         description: |
-          The name of the GHA artifact holding the base OCM Component-Descriptor.
-        value: ${{ jobs.version-and-ocm.outputs.component-descriptor-artefact }}
+          The name of the GHA artifact holding the OCM component constructor.
+        value: ${{ jobs.version-and-ocm.outputs.component-constructor-artefact }}
 
 jobs:
   version-and-ocm:
@@ -208,7 +208,7 @@ jobs:
       can-push: ${{ steps.params.outputs.can-push }}
       version: ${{ steps.version.outputs.version }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
-      component-descriptor-artefact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
+      component-constructor-artefact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
     steps:
       - name: params
         id: params
@@ -268,13 +268,14 @@ jobs:
           version-operation: ${{ inputs.version-operation }}
           commit-kind: ${{ inputs.mode == 'release' && 'release' || 'build' }}
       - uses: gardener/cc-utils/.github/actions/base-component-descriptor@8R0WNI3-ocm
-        id: component-descriptor
         with:
           base-component: ${{ inputs.base-component-file }}
           version: ${{ steps.version.outputs.version }}
           ocm-repository: ${{ steps.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
           post-process: ${{ inputs.post-process }}
+      - uses: gardener/cc-utils/.github/actions/component-descriptor-to-constructor@8R0WNI3-ocm
+        id: component-constructor
       - name: prepare-artefact
         run: |
           set -eu
@@ -294,7 +295,7 @@ jobs:
           # version-and-ocm
           echo "${{ steps.version.outputs.version }}" > $p/version
           echo "${{ steps.version.outputs.commit-digest }}" > $p/commit-digest
-          # component-descriptor is passed via the `base-component-descriptor` artifact
+          # component-constructor is passed via the `component-constructor` artifact
 
           tar cf "${{ inputs.output-artefact-filename }}" $p
           tar tf "${{ inputs.output-artefact-filename }}" # debug

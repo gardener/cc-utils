@@ -54,6 +54,10 @@ class SchemaVersion(enum.StrEnum):
     V2 = 'v2'
 
 
+class InputType(enum.StrEnum):
+    FILE = 'File/v1'
+
+
 class AccessType(enum.StrEnum):
     GITHUB = 'github' # XXX: new: gitHub/v1
     HELM = 'Helm/v1'
@@ -102,6 +106,19 @@ AccessType._value2member_map_ |= {
 }
 
 AccessTypeOrStr = AccessType | str
+
+
+@dc(kw_only=True)
+class Input:
+    type: InputType
+
+
+@dc(kw_only=True)
+class FileInput(Input):
+    type = InputType.FILE
+    path: str
+    mediaType: str | None = None
+    compress: bool | None = None
 
 
 @dc(kw_only=True)
@@ -844,6 +861,75 @@ class ComponentDescriptor:
                 fp=fileobj,
                 cls=EnumJSONEncoder,
             )
+
+
+@dc
+class ConstructorResource(Artifact, LabelMethodsMixin):
+    name: str
+    version: str
+    type: ArtefactType | str
+    access: (
+        # Order of types is important for deserialization. The first matching type will be taken,
+        # i.e. keep generic accesses at the bottom of the list
+        GithubAccess
+        | LocalBlobAccess
+        | OciBlobAccess
+        | OciAccess
+        | RelativeOciAccess
+        | S3Access
+        | LegacyS3Access
+        | HelmAccess
+        | NPMAccess
+        | dict
+        | None
+    )
+    input: (
+        FileInput
+        | None
+    )
+    digest: DigestSpec | None = None
+    extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
+    relation: ResourceRelation = ResourceRelation.LOCAL
+    labels: list[Label] = dataclasses.field(default_factory=tuple)
+    srcRefs: list[SourceReference] = dataclasses.field(default_factory=tuple)
+
+    def __post_init__(self):
+        if dataclasses.is_dataclass(access := self.access):
+            return
+
+        if isinstance(access, dict):
+            if not 'type' in access:
+                raise ValueError('attribute `type` must be present')
+            self.access = AccessDict(access)
+
+
+@dc
+class ComponentConstructor(LabelMethodsMixin):
+    name: str     # must be valid URL w/o schema
+    version: str  # relaxed semver
+
+    provider: dict
+
+    sources: list[Source]
+    componentReferences: list[ComponentReference]
+    resources: list[ConstructorResource]
+
+    labels: list[Label] = dataclasses.field(default_factory=list)
+
+    creationTime: str | None = None
+
+    @staticmethod
+    def from_dict(raw: dict):
+        if not _have_dacite:
+            raise RuntimeError('not available without dacite')
+
+        return dacite.from_dict(
+            data_class=ComponentConstructor,
+            data=raw,
+            config=dacite.Config(
+                cast=[enum.Enum],
+            ),
+        )
 
 
 if _have_yaml:
