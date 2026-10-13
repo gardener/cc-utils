@@ -18,6 +18,7 @@ import yaml
 
 import oci.model
 import ocm
+import ocm.access
 import version
 
 
@@ -502,6 +503,7 @@ def oci_image_dict_from_resource(
     resource_names_from_label: bool=True,
     fallback_to_target_version_from_resource: bool=False,
     resource_names: collections.abc.Iterable[str]=None,
+    ocm_repo: ocm.OciOcmRepository | None=None,
 ) -> ImageOverwriteDict | None:
     '''
     returns an "image-dicts" as used for image-vector-overwrites understood by gardener for the
@@ -536,7 +538,16 @@ def oci_image_dict_from_resource(
     if resource_names is not None and not name in resource_names:
         return None
 
-    image_ref = oci.model.OciImageReference(resource.access.imageReference)
+    if isinstance(resource.access, ocm.RelativeOciAccess):
+        if not ocm_repo:
+            return None
+        access = ocm.access.to_absolute_oci_access(resource.access, ocm_repo)
+    elif isinstance(resource.access, ocm.OciAccess):
+        access = resource.access
+    else:
+        return None
+
+    image_ref = oci.model.OciImageReference(access.imageReference)
     repository = image_ref.ref_without_tag
 
     if image_ref.has_mixed_tag:
@@ -559,6 +570,36 @@ def oci_image_dict_from_resource(
         image_dict['targetVersion'] = resource.version
 
     return image_dict
+
+
+def oci_image_dict_from_resource_regardless_of_label(
+    resource: ocm.Resource,
+    ocm_repo: ocm.OciOcmRepository | None=None,
+) -> ImageOverwriteDict | None:
+    '''
+    like `oci_image_dict_from_resource`, but does not require the
+    `imagevector.gardener.cloud/name`-label to be present, and uses the resource's name as-is.
+    Used for `--select-images all` (image-vector command).
+    '''
+    if not resource.type is ocm.ArtefactType.OCI_IMAGE:
+        return None
+
+    if isinstance(resource.access, ocm.RelativeOciAccess):
+        if not ocm_repo:
+            return None
+        access = ocm.access.to_absolute_oci_access(resource.access, ocm_repo)
+    elif isinstance(resource.access, ocm.OciAccess):
+        access = resource.access
+    else:
+        return None
+
+    image_ref = oci.model.OciImageReference.to_image_ref(access.imageReference)
+
+    return {
+        'name': resource.name,
+        'repository': image_ref.ref_without_tag,
+        'tag': image_ref.tag,
+    }
 
 
 def iter_image_dicts_from_image_dicts_and_resources(
@@ -616,6 +657,7 @@ def iter_oci_image_dicts_from_component(
             resource_names_from_label=resource_names_from_label,
             fallback_to_target_version_from_resource=fallback_to_target_version_from_resource,
             resource_names=resource_names,
+            ocm_repo=component.current_ocm_repo,
         )
         if resource_dict is None:
             continue
