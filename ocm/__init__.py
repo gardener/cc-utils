@@ -336,6 +336,19 @@ class DigestSpec:
     normalisationAlgorithm: NormalisationAlgorithm | str
     value: str
 
+    @staticmethod
+    def from_oci_artifact_digest(digest: str) -> typing.Self | None:
+        if not digest:
+            return None
+
+        alg, value = digest.split(':')
+
+        return DigestSpec(
+            hashAlgorithm=alg.replace('sha', 'SHA-'),
+            normalisationAlgorithm=NormalisationAlgorithm.OCI_ARTIFACT_DIGEST,
+            value=value,
+        )
+
     @property
     def oci_tag(self) -> str:
         return f'sha256:{self.value}'

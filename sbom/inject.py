@@ -793,6 +793,7 @@ def build_sbom_ocm_resources(
             extraIdentity=extra_id,
             access=ocm.OciAccess(imageReference=f'{repo_ref}@{referrer_digest}'),
             labels=labels,
+            digest=ocm.DigestSpec.from_oci_artifact_digest(referrer_digest),
         )
 
     label_value = {
@@ -822,6 +823,7 @@ def build_sbom_ocm_resources(
         extraIdentity=cbom_extra_id,
         access=ocm.OciAccess(imageReference=f'{repo_ref}@{cbom_referrer_digest}'),
         labels=cbom_labels,
+        digest=ocm.DigestSpec.from_oci_artifact_digest(cbom_referrer_digest),
     )
 
     return (
@@ -1051,6 +1053,7 @@ def build_s3_sbom_ocm_resources(
             extraIdentity=extra_id,
             access=ocm.OciAccess(imageReference=f'{repo_ref}@{manifest_digest}'),
             labels=labels,
+            digest=ocm.DigestSpec.from_oci_artifact_digest(manifest_digest),
         )
 
     label_value = {
@@ -1080,6 +1083,7 @@ def build_s3_sbom_ocm_resources(
         extraIdentity=cbom_extra_id,
         access=ocm.OciAccess(imageReference=f'{repo_ref}@{cbom_manifest_digest}'),
         labels=cbom_labels,
+        digest=ocm.DigestSpec.from_oci_artifact_digest(cbom_manifest_digest),
     )
 
     return (
