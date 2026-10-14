@@ -106,6 +106,16 @@ on:
         type: string
         description: |
           The runner to use for executing the workflow. If not set, default values are being used.
+    secrets:
+      auth-token:
+        required: false
+        description: |
+          An optional authtoken to use for authenticating against push-target. It is written
+          unchanged into `$HOME/.docker/config.json`, and is assumed to be base64-encoded output of
+          `<username>:<secret>`.
+
+          Note that it is only necessary to pass an auth-token if OIDC-authentication is not
+          possible. OIDC-Authentication should be preferred over using a static token.
 
 jobs:
   helmchart:
@@ -155,6 +165,19 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           remove-trusted-label: false
+      - name: inject-authtoken
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # cannot access secret in if on step-level
+          if ${{ secrets.auth-token == '' }}; then
+            exit 0
+          fi
+
+          hostname=$(echo '${{ inputs.oci-registry }}' | cut -d/ -f1 )
+          echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" >> $GITHUB_OUTPUT
       - name: build-helmchart
         uses: gardener/cc-utils/.github/actions/helmchart@master
         with:
@@ -167,3 +190,4 @@ jobs:
           component-descriptor-path: ${{ steps.fetch-ocm.outputs.component-descriptor-path }}
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
