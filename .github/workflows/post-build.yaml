@@ -297,7 +297,7 @@ jobs:
             exit 0
           fi
       - name: fetch-prepare-values
-        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' && inputs.ocm-repositories == '' }}
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
@@ -305,14 +305,19 @@ jobs:
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         id: prep
         run: |
-          if [ -f prepare-workflow-values.tar ]; then
-            tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
-            ocm_repos="$(cat prepare-values.d/ocm-repositories)"
-            rm -rf prepare-values.d prepare-workflow-values.tar
-          else
+          tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories prepare-values.d/ocm-repository
+
+          if [ -n "${{ inputs.ocm-repositories }}" ]; then
             ocm_repos="${{ inputs.ocm-repositories }}"
+          else
+            ocm_repos="$(cat prepare-values.d/ocm-repositories)"
           fi
+          ocm_repository="$(cat prepare-values.d/ocm-repository)"
+
+          rm -rf prepare-values.d prepare-workflow-values.tar
+
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+          echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
       - uses: gardener/cc-utils/.github/actions/github-auth@master
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
@@ -322,6 +327,18 @@ jobs:
             ${{ github.event.repository.name }}
           permissions: |
             pull-requests: read
+      - name: create-extra-auth
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # we cannot check secrets on step-level
+          if [ -z "${{ secrets.oci-auth-token }}" ]; then
+            exit 0
+          fi
+          host=$(echo ${{ steps.prep.outputs.ocm-repository }} | cut -d/ -f1)
+          echo "extra-auths={\"$host\": {\"auth\": \"${{ secrets.oci-auth-token }}\"}}" \
+            >> $GITHUB_OUTPUT
       - name: draft-release-notes
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/release-notes@master
@@ -347,6 +364,7 @@ jobs:
               categories: ''
               recursion_depth: 0
               include_resources: true
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
       - name: update-draft-release
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/draft-release@master
