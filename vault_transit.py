@@ -58,12 +58,27 @@ _vault_signature_algorithm = {
     SigningAlgorithm.RSASSA_PKCS1_V1_5: 'pkcs1v15',
 }
 
-# Maps a hashlib-style hash-algorithm name to the `hash_algorithm` value understood by Vault Transit
+# Maps a hash-algorithm name to the `hash_algorithm` value understood by Vault Transit. Both the
+# hashlib-style (`sha256`) and dashed (`SHA-256`) names are accepted, matching
+# `signingserver.SigningserverClient.sign`.
 _vault_hash_algorithm = {
     'sha224': 'sha2-224',
     'sha256': 'sha2-256',
     'sha384': 'sha2-384',
     'sha512': 'sha2-512',
+    'SHA-224': 'sha2-224',
+    'SHA-256': 'sha2-256',
+    'SHA-384': 'sha2-384',
+    'SHA-512': 'sha2-512',
+}
+
+# Maps each accepted hash-algorithm name to its hashlib attribute name, for local hashing of
+# `content`.
+_hashlib_hash_algorithm = {
+    'sha224': 'sha224', 'SHA-224': 'sha224',
+    'sha256': 'sha256', 'SHA-256': 'sha256',
+    'sha384': 'sha384', 'SHA-384': 'sha384',
+    'sha512': 'sha512', 'SHA-512': 'sha512',
 }
 
 
@@ -237,7 +252,7 @@ class VaultTransitClient:
         # Hash `content` locally, exactly like signingserver does, so that both backends sign the
         # same prehashed digest (Vault is told `prehashed=True`).
         if content:
-            hasher = getattr(hashlib, hash_algorithm, None)
+            hasher = getattr(hashlib, _hashlib_hash_algorithm[hash_algorithm], None)
             if not hasher:
                 raise ValueError(hash_algorithm)
             digest = hasher(content).digest()
