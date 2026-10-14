@@ -23,6 +23,23 @@ import ci.util
 logger = logging.getLogger(__name__)
 
 
+# Maps a hashlib-style hash-algorithm name to the `hashAlgorithm` query-param
+# value the Signing-Server expects. The hashlib-style names (e.g. `sha256`) are
+# deprecated in the Signing Server.
+#
+# https://github.com/open-component-model/signing-server#signing-server
+_signingserver_hash_algorithm = {
+    'sha224': 'SHA-224',
+    'sha256': 'SHA-256',
+    'sha384': 'SHA-384',
+    'sha512': 'SHA-512',
+}
+
+# Reverse mapping of Signing Server hash algorithms to hashlib-style algorithm
+# names.
+_hashlib_hash_algorithm = {v: k for k, v in _signingserver_hash_algorithm.items()}
+
+
 class SigningAlgorithm(enum.StrEnum):
     RSASSA_PSS = 'rsassa-pss'
     RSASSA_PKCS1_V1_5 = 'rsassa-pkcs1-v1_5'
@@ -130,14 +147,17 @@ class SigningserverClient:
             raise ValueError('exactly one of `content` or `digest` must be passed')
 
         signing_algorithm = SigningAlgorithm(signing_algorithm)
+        wire_hash_algorithm = _signingserver_hash_algorithm.get(hash_algorithm, hash_algorithm)
         url = ci.util.urljoin(
             self.cfg.base_url,
             'sign',
             signing_algorithm,
-        ) + '?' + urllib.parse.urlencode({'hashAlgorithm': hash_algorithm})
+        ) + '?' + urllib.parse.urlencode({'hashAlgorithm': wire_hash_algorithm})
 
         if content:
-            hasher = getattr(hashlib, hash_algorithm, None)
+            # Accept both hashlib-style (`sha256`) and dashed (`SHA-256`) names for local hashing
+            hashlib_name = _hashlib_hash_algorithm.get(hash_algorithm, hash_algorithm)
+            hasher = getattr(hashlib, hashlib_name, None)
             if not hasher:
                 raise ValueError(hash_algorithm)
 
