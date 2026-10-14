@@ -252,7 +252,7 @@ class VaultTransitClient:
         # Hash `content` locally, exactly like signingserver does, so that both backends sign the
         # same prehashed digest (Vault is told `prehashed=True`).
         if content:
-            hasher = getattr(hashlib, _hashlib_hash_algorithm[hash_algorithm], None)
+            hasher = getattr(hashlib, _hashlib_hash_algorithm.get(hash_algorithm, hash_algorithm), None)
             if not hasher:
                 raise ValueError(hash_algorithm)
             digest = hasher(content).digest()
