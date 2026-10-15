@@ -9,9 +9,16 @@ def is_user_trusted(
     github_api: github3.GitHub,
     trusted_org: str,
     trusted_teams: collections.abc.Iterable[str],
+    trusted_github_apps: collections.abc.Iterable[str] = (),
     missing_privileges_ok: bool=False,
     debug: bool=False,
 ):
+    if login.endswith('[bot]'):
+        app_slug = login.removesuffix('[bot]')
+        if app_slug in trusted_github_apps:
+            return True
+        return False
+
     try:
         org = github_api.organization(trusted_org)
     except github3.exceptions.ForbiddenError:

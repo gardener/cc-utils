@@ -12,6 +12,7 @@ name: Pull-Request-Trust Helper
 #       - COLLABORATOR
 #       - MEMBER
 #       - OWNER
+#     - he is a GitHub App whose slug is listed in `trusted-github-apps`
 #
 #   Note: This workflow is intended to only by triggered for the following actions for pull-requests:
 #   - opened
@@ -35,6 +36,12 @@ on:
         description: |
           an optional, comma-separated list of team-names. Members of any of those teams
           are considered to be trusted.
+        type: string
+        default: ''
+      trusted-github-apps:
+        description: |
+          an optional, comma-separated list of GitHub App slugs (without the [bot] suffix)
+          to be considered trusted. E.g. "renovate,dependabot".
         type: string
         default: ''
       github-environment:
@@ -71,4 +78,5 @@ jobs:
         with:
           trusted-label: ${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
           trusted-teams: ${{ inputs.trusted-teams }}
+          trusted-github-apps: ${{ inputs.trusted-github-apps }}
           github-token: ${{ steps.fed-token.outputs.token }}
