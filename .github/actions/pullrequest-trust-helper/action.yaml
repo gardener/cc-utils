@@ -19,6 +19,12 @@ inputs:
       an optional, comma-separated list of teams whose members are to be considered trusted.
       If pullrequest-author is member of any configured team, `trusted-label` will be
       automatically added for convenience.
+  trusted-github-apps:
+    type: string
+    description: |
+      an optional, comma-separated list of GitHub App slugs (without the [bot] suffix) to
+      be considered trusted. E.g. "renovate,dependabot".
+    default: ''
   github-token:
     type: string
     description: |
@@ -107,6 +113,7 @@ runs:
         author = '${{ github.event.pull_request.user.login }}'
 
         trusted_teams = [t for t in '${{ inputs.trusted-teams }}'.split(',') if t]
+        trusted_github_apps = [a for a in '${{ inputs.trusted-github-apps }}'.split(',') if a]
 
         if not okay_to_add_trusted_label:
           okay_to_add_trusted_label = trust_helper.is_user_trusted(
@@ -114,6 +121,7 @@ runs:
             github_api=github_api,
             trusted_org=org, # hardcode to local organisation
             trusted_teams=trusted_teams,
+            trusted_github_apps=trusted_github_apps,
             missing_privileges_ok=True,
             debug=${{ inputs.debug && 'True' || 'False' }},
           )
