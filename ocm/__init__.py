@@ -57,6 +57,7 @@ class SchemaVersion(enum.StrEnum):
 class AccessType(enum.StrEnum):
     GITHUB = 'github' # XXX: new: gitHub/v1
     HELM = 'Helm/v1'
+    HTTP = 'HTTP/v1'
     LOCAL_BLOB = 'localBlob/v1'
     NONE = 'None'  # the resource is only declared informally (e.g. generic)
     NPM = 'NPM/v1'
@@ -78,6 +79,8 @@ AccessType._value2member_map_ |= {
     'github/v1': AccessType.GITHUB, # deprecated
     'Helm': AccessType.HELM,
     'helm': AccessType.HELM, # deprecated
+    'HTTP': AccessType.HTTP,
+    'http': AccessType.HTTP, # deprecated
     'LocalBlob': AccessType.LOCAL_BLOB,
     'localBlob': AccessType.LOCAL_BLOB, # deprecated
     'localFilesystemBlob': AccessType.LOCAL_BLOB,
@@ -99,6 +102,8 @@ AccessType._value2member_map_ |= {
     's3/v1': AccessType.S3, # deprecated
     'S3/v2': AccessType.S3_V2,
     's3/v2': AccessType.S3_V2, # deprecated
+    'Wget': AccessType.HTTP, # deprecated
+    'wget': AccessType.HTTP, # deprecated
 }
 
 AccessTypeOrStr = AccessType | str
@@ -223,6 +228,17 @@ class HelmAccess(Access):
     helmChart: str
     caCert: str | None = None
     keyring: str | None = None
+
+
+@dc(kw_only=True)
+class HTTPAccess(Access):
+    type: AccessTypeOrStr = AccessType.HTTP
+    url: str
+    mediaType: str | None = None
+    header: dict[str, str] | None = None
+    verb: str | None = None
+    body: str | None = None
+    noRedirect: bool | None = None
 
 
 @dc(kw_only=True)
@@ -569,6 +585,7 @@ class Resource(Artifact, LabelMethodsMixin):
         | S3Access
         | LegacyS3Access
         | HelmAccess
+        | HTTPAccess
         | NPMAccess
         | dict
         | None
