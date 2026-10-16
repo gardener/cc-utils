@@ -748,6 +748,7 @@ def imagevector(parsed):
 
     images = []
     seen_names = set()
+    seen_name_keys = set()  # names only, for cross-path dedup in --select-images all
 
     for component in components:
         for image in ocm.gardener.iter_oci_image_dicts_from_rooted_component(
@@ -760,25 +761,24 @@ def imagevector(parsed):
             if (name, target_version) in seen_names:
                 continue
             seen_names.add((name, target_version))
+            seen_name_keys.add(name)
             images.append(image)
 
         if parsed.select_images == 'all':
             for resource in component.resources:
-                if not resource.type is ocm.ArtefactType.OCI_IMAGE:
-                    continue
-                if ((name := resource.name), (target_version := None)) in seen_names:
+                if resource.name in seen_name_keys:
                     continue
 
-                seen_names.add((name, target_version))
-                image_ref = oci.model.OciImageReference.to_image_ref(
-                    resource.access.imageReference,
+                image_dict = ocm.gardener.oci_image_dict_from_resource_regardless_of_label(
+                    resource=resource,
+                    ocm_repo=component.component.current_ocm_repo,
                 )
+                if image_dict is None:
+                    continue
 
-                images.append({
-                    'name': name,
-                    'repository': image_ref.ref_without_tag,
-                    'tag': image_ref.tag,
-                })
+                seen_names.add((resource.name, None))
+                seen_name_keys.add(resource.name)
+                images.append(image_dict)
 
     if parsed.subcomponent_ref_name:
         subcomponent_overwrite = ocm.gardener.as_image_vector(images=images)

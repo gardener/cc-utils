@@ -4,6 +4,9 @@ import ocm
 import ocm.gardener as og
 
 
+OCI_REPO = ocm.OciOcmRepository(baseUrl='acme.org/ocm')
+
+
 def test_eval_version_template():
     assert og.eval_version_template(
         version_template=ocm.gardener.VersionTemplate.from_dict({
@@ -101,6 +104,56 @@ def test_oci_image_dict_from_resource():
         'repository': 'acme.org/image-ref',
         'tag': 'tag',
         'targetVersion': 'version-from-label',
+    }
+
+    # RelativeOciAccess without ocm_repo → skip (return None)
+    assert og.oci_image_dict_from_resource(
+        resource=res(access=ocm.RelativeOciAccess(reference='relative/image-ref:tag')),
+    ) is None
+
+    # RelativeOciAccess with ocm_repo → resolved to absolute reference
+    assert og.oci_image_dict_from_resource(
+        resource=res(access=ocm.RelativeOciAccess(reference='relative/image-ref:tag')),
+        ocm_repo=OCI_REPO,
+    ) == {
+        'name': 'name-from-label',
+        'repository': 'acme.org/relative/image-ref',
+        'tag': 'tag',
+        'targetVersion': 'version-from-label',
+    }
+
+
+def test_oci_image_dict_from_resource_regardless_of_label():
+    # name-label is not required
+    assert og.oci_image_dict_from_resource_regardless_of_label(
+        resource=res(name='resource-name', labels=()),
+    ) == {
+        'name': 'resource-name',
+        'repository': 'acme.org/image-ref',
+        'tag': 'tag',
+    }
+
+    # non-OCI-image resources are skipped
+    assert og.oci_image_dict_from_resource_regardless_of_label(
+        resource=res(type=ocm.ArtefactType.BLOB),
+    ) is None
+
+    # RelativeOciAccess without ocm_repo → skip (return None)
+    assert og.oci_image_dict_from_resource_regardless_of_label(
+        resource=res(access=ocm.RelativeOciAccess(reference='relative/image-ref:tag')),
+    ) is None
+
+    # RelativeOciAccess with ocm_repo → resolved to absolute reference
+    assert og.oci_image_dict_from_resource_regardless_of_label(
+        resource=res(
+            name='resource-name',
+            access=ocm.RelativeOciAccess(reference='relative/image-ref:tag'),
+        ),
+        ocm_repo=OCI_REPO,
+    ) == {
+        'name': 'resource-name',
+        'repository': 'acme.org/relative/image-ref',
+        'tag': 'tag',
     }
 
 
@@ -249,3 +302,29 @@ def test_iter_oci_image_dicts_from_component():
             'targetVersion': 'version-from-label',
         }
     )
+
+
+def test_iter_oci_image_dicts_from_rooted_component_relative_access():
+    # RelativeOciAccess resources with the imagevector label should be resolved,
+    # not silently dropped (regression: AttributeError on .imageReference)
+    component = ocm.Component(
+        name='acme.org/c1',
+        version='1.0.0',
+        provider='acme.org',
+        sources=(),
+        repositoryContexts=(OCI_REPO,),
+        componentReferences=(),
+        resources=(
+            res(access=ocm.RelativeOciAccess(reference='relative/image:tag')),
+        ),
+    )
+
+    result = tuple(og.iter_oci_image_dicts_from_rooted_component(
+        component=component,
+        root_component=None,
+        component_descriptor_lookup=lambda _: pytest.fail('should not be called'),
+    ))
+
+    assert len(result) == 1
+    assert result[0]['repository'] == 'acme.org/relative/image'
+    assert result[0]['tag'] == 'tag'
