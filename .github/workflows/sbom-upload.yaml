@@ -119,7 +119,7 @@ jobs:
 
     steps:
       - name: Exchange tokens
-        uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@master
+        uses: gardener/cc-utils/.github/actions/oidc-gcp-token-exchange@c8b4645a1c3002b68e3add127cc9eff5fa3a75fb
         with:
           api-url: ${{ inputs.token-exchange-api-url }}
           oidc-audience: ${{ inputs.token-exchange-audience }}
@@ -140,13 +140,13 @@ jobs:
           echo "gcs-token=${!token_var}" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to OCI registry
-        uses: gardener/cc-utils/.github/actions/oci-auth@master
+        uses: gardener/cc-utils/.github/actions/oci-auth@c13531c7a649b5f8eb778abd4f3e34b5404b8ac7
         with:
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           oci-image-reference: ${{ inputs.oci-registry }}
 
       - name: Fetch and upload SBOMs
-        uses: gardener/cc-utils/.github/actions/sbom-upload@master
+        uses: gardener/cc-utils/.github/actions/sbom-upload@ba999fdd53ab0d6783901c03061fbefaa2912e21
         with:
           ocm-component: ${{ inputs.ocm-component }}
           ocm-repositories: ${{ inputs.ocm-repositories }}
