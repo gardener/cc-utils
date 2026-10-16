@@ -4,6 +4,7 @@ import gzip
 import io
 import json
 import logging
+import re
 import shutil
 import subprocess
 import tarfile
@@ -376,6 +377,119 @@ def _enrich_apk_keys(components, file_reader):
     return new_comps
 
 
+def _norm_algo_name(name):
+    return name.strip().lower().replace('-', '').replace('_', '').replace(' ', '')
+
+
+# OpenSSL SECLEVEL table (SSL_CTX_set_security_level(3)): the bit-floor each
+# level enforces, separately for classic finite-field DH/RSA/DSA moduli and
+# for EC curves (which reach an equivalent security strength at far fewer
+# bits). SECLEVEL=2 is OpenSSL's own compiled-in default.
+_SECLEVEL_DH_FLOOR_BITS = {0: 0, 1: 1024, 2: 2048, 3: 3072, 4: 7680, 5: 15360}
+_SECLEVEL_EC_FLOOR_BITS = {0: 0, 1: 160, 2: 224, 3: 256, 4: 384, 5: 512}
+_SECLEVEL_DH_NAMES = frozenset({'dh', 'dhe'})
+_SECLEVEL_EC_NAMES = frozenset({'ec', 'ecdh', 'ecdhe', 'ecdsa'})
+_SECLEVEL_RE = re.compile(r'SECLEVEL\s*=\s*([0-5])')
+
+
+def _parse_seclevel(data):
+    '''Return the lowest SECLEVEL=N found in OpenSSL config bytes, or None.
+
+    Lowest (most permissive) rather than highest: if the config carries
+    several SECLEVEL directives (e.g. one per section), the weakest one is
+    the only floor the file as a whole actually guarantees.
+    '''
+    text = data.decode('utf-8', errors='replace')
+    levels = [int(m.group(1)) for m in _SECLEVEL_RE.finditer(text)]
+    return min(levels) if levels else None
+
+
+def _enrich_openssl_cnf_seclevel(components, file_reader):
+    '''
+    Fill parameterSetIdentifier for DH/DHE/EC*/ECDHE algorithm components whose
+    only evidence is an OpenSSL config file, from the CipherString's
+    SECLEVEL=N directive.
+
+    cbomkit-theia detects algorithm names referenced in the CipherString line
+    of an openssl.cnf (e.g. "DEFAULT@SECLEVEL=2" implies DHE/ECDHE/etc. are
+    available at runtime) but has no literal key size to record there, since
+    SECLEVEL is a floor on permitted security levels, not a configured key
+    size. This translates that floor via the standard OpenSSL SECLEVEL table
+    and records it as parameterSetIdentifier: a conservative lower bound the
+    configuration actually guarantees, not an observed/negotiated key.
+
+    Only patches a component when every one of its evidence locations is an
+    openssl.cnf path with a resolvable SECLEVEL (so components with any other
+    evidence source are left to the other enrichment paths / MANUAL review).
+
+    Returns the number of algorithm components patched.
+    '''
+    cnf_paths = set()
+    for comp in components:
+        cp = comp.get('cryptoProperties') or {}
+        if cp.get('assetType') != 'algorithm':
+            continue
+        ap = cp.get('algorithmProperties') or {}
+        if ap.get('parameterSetIdentifier'):
+            continue
+        name = _norm_algo_name(comp.get('name', ''))
+        if name not in _SECLEVEL_DH_NAMES and name not in _SECLEVEL_EC_NAMES:
+            continue
+        for occ in (comp.get('evidence') or {}).get('occurrences') or []:
+            loc = occ.get('location', '')
+            if loc.endswith('openssl.cnf'):
+                cnf_paths.add(loc)
+
+    if not cnf_paths or file_reader is None:
+        return 0
+
+    seclevel_by_path = {}
+    for path in cnf_paths:
+        data = file_reader(path)
+        if not data:
+            continue
+        level = _parse_seclevel(data)
+        if level is not None:
+            seclevel_by_path[path] = level
+
+    if not seclevel_by_path:
+        return 0
+
+    patched = 0
+    for comp in components:
+        cp = comp.get('cryptoProperties') or {}
+        if cp.get('assetType') != 'algorithm':
+            continue
+        ap = cp.get('algorithmProperties') or {}
+        if ap.get('parameterSetIdentifier'):
+            continue
+        name = _norm_algo_name(comp.get('name', ''))
+        floor_bits = (
+            _SECLEVEL_DH_FLOOR_BITS if name in _SECLEVEL_DH_NAMES else
+            _SECLEVEL_EC_FLOOR_BITS if name in _SECLEVEL_EC_NAMES else
+            None
+        )
+        if floor_bits is None:
+            continue
+        occs = (comp.get('evidence') or {}).get('occurrences') or []
+        locs = [occ.get('location', '') for occ in occs if occ.get('location')]
+        if not locs or not all(loc in seclevel_by_path for loc in locs):
+            continue
+        level = min(seclevel_by_path[loc] for loc in locs)
+        bits = floor_bits.get(level)
+        if bits is None:
+            continue
+        comp.setdefault('cryptoProperties', {}) \
+            .setdefault('algorithmProperties', {})['parameterSetIdentifier'] = str(bits)
+        props = comp.setdefault('properties', [])
+        props.append({
+            'name': 'gardener.cloud/cbom/key-size-source',
+            'value': f'openssl-cnf-seclevel-{level}',
+        })
+        patched += 1
+    return patched
+
+
 _CA_BUNDLE_PATHS = (
     '/etc/ssl/',
     '/etc/pki/tls/',
@@ -508,8 +622,10 @@ def enrich(cbom_bytes, image_reference=None, file_reader=None, oci_client=None):
     1. Propagate key sizes from related-crypto-material components to their referenced
        algorithm components' parameterSetIdentifier (works without image access).
     2. If image_reference is given, inject RSA algorithm and key-material components for
-       APK signing keys (.rsa.pub files) — using file_reader if provided, then Docker
-       if available, then OCI layer download if oci_client is provided.
+       APK signing keys (.rsa.pub files), and fill parameterSetIdentifier for DH/EC
+       algorithm components whose only evidence is an openssl.cnf SECLEVEL directive —
+       using file_reader if provided, then Docker if available, then OCI layer download
+       if oci_client is provided.
 
     file_reader, if given, must be a callable: path: str -> bytes | None.
     When provided, Docker and OCI paths are not attempted.
@@ -560,9 +676,17 @@ def enrich(cbom_bytes, image_reference=None, file_reader=None, oci_client=None):
                         'CBOM enrichment: injected %d component(s) for APK signing keys',
                         len(new_comps),
                     )
+                seclevel_patched = _enrich_openssl_cnf_seclevel(components, active_reader)
+                if seclevel_patched:
+                    logger.info(
+                        'CBOM enrichment: set parameterSetIdentifier on %d algorithm(s) '
+                        'from openssl.cnf SECLEVEL',
+                        seclevel_patched,
+                    )
             else:
                 logger.debug(
-                    'CBOM enrichment: no file reader available, skipping APK key enrichment',
+                    'CBOM enrichment: no file reader available, skipping APK key enrichment '
+                    'and openssl.cnf SECLEVEL enrichment',
                 )
         finally:
             cleanup()
