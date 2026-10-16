@@ -38,3 +38,20 @@ def test_filefilter_processor(replication_resource_element, tmpdir):
     remove_files = result.remove_files
 
     assert remove_files == ['remove/me',]
+
+
+def test_manifestfilter_processor(replication_resource_element):
+    examinee = processors.ManifestFilterProcessor(
+        strip_manifest_attributes=['manifests[].platform.features'],
+    )
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.strip_manifest_attributes == ('manifests[].platform.features',)
+
+
+def test_manifestfilter_processor_validates_paths():
+    with pytest.raises(ValueError):
+        processors.ManifestFilterProcessor(
+            strip_manifest_attributes=['manifests[]'],
+        )

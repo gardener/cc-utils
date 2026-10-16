@@ -7,6 +7,7 @@ import collections.abc
 import os
 
 import ctt.model
+import ctt.oci_util
 
 
 class ProcessorBase:
@@ -48,6 +49,25 @@ class FileFilter(ProcessorBase):
     ) -> ctt.model.ReplicationResourceElement:
         replication_resource_element.remove_files = self._remove_entries
 
+        return replication_resource_element
+
+
+class ManifestFilterProcessor(ProcessorBase):
+    '''Marks resources for stripping of attributes from the top-level OCI manifest
+    document during replication. No image modification performed here.'''
+    def __init__(
+        self,
+        strip_manifest_attributes: collections.abc.Iterable[str],
+    ):
+        for path in strip_manifest_attributes:
+            ctt.oci_util.parse_attribute_path(path) # fail early for invalid paths
+        self._strip_manifest_attributes = tuple(strip_manifest_attributes)
+
+    def process(
+        self,
+        replication_resource_element: ctt.model.ReplicationResourceElement,
+    ) -> ctt.model.ReplicationResourceElement:
+        replication_resource_element.strip_manifest_attributes = self._strip_manifest_attributes
         return replication_resource_element
 
 
