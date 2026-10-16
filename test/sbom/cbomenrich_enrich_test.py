@@ -147,3 +147,81 @@ def test_propagate_key_sizes_ec():
     }
     assert scbe._propagate_key_sizes([algo_comp, mat_comp]) == 1
     assert algo_comp['cryptoProperties']['algorithmProperties']['parameterSetIdentifier'] == '256'
+
+
+# ---------------------------------------------------------------------------
+# _enrich_openssl_cnf_seclevel
+# ---------------------------------------------------------------------------
+
+def _algo_comp(name, location):
+    return {
+        'type': 'cryptographic-asset',
+        'name': name,
+        'evidence': {'occurrences': [{'location': location}]},
+        'cryptoProperties': {
+            'assetType': 'algorithm',
+            'algorithmProperties': {},
+        },
+    }
+
+
+def test_seclevel_dh_floor():
+    '''DHE sourced only from openssl.cnf gets the SECLEVEL=2 DH floor (2048 bits).'''
+    comp = _algo_comp('DHE', '/etc/ssl/openssl.cnf')
+    reader = lambda path: b'CipherString = DEFAULT@SECLEVEL=2\n'
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 1
+    ap = comp['cryptoProperties']['algorithmProperties']
+    assert ap['parameterSetIdentifier'] == '2048'
+
+
+def test_seclevel_ec_floor_uses_ec_table():
+    '''ECDHE uses the EC floor table, not the DH one, for the same SECLEVEL.'''
+    comp = _algo_comp('ECDHE', '/usr/lib/ssl/openssl.cnf')
+    reader = lambda path: b'CipherString = DEFAULT@SECLEVEL=3\n'
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 1
+    ap = comp['cryptoProperties']['algorithmProperties']
+    assert ap['parameterSetIdentifier'] == '256'
+
+
+def test_seclevel_lowest_wins_across_multiple_directives():
+    '''Multiple SECLEVEL directives in one file -> the lowest (weakest) applies.'''
+    comp = _algo_comp('DH', '/etc/ssl/openssl.cnf')
+    cnf = b'CipherString = DEFAULT@SECLEVEL=3\nCipherString = ALL@SECLEVEL=1\n'
+    reader = lambda path: cnf
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 1
+    ap = comp['cryptoProperties']['algorithmProperties']
+    assert ap['parameterSetIdentifier'] == '1024'
+
+
+def test_seclevel_skips_non_openssl_cnf_evidence():
+    '''A component with any non-openssl.cnf evidence location is left untouched.'''
+    comp = _algo_comp('DHE', '/etc/ssl/openssl.cnf')
+    comp['evidence']['occurrences'].append({'location': '/app/handshake.go'})
+    reader = lambda path: b'CipherString = DEFAULT@SECLEVEL=2\n'
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 0
+    ap = comp['cryptoProperties']['algorithmProperties']
+    assert 'parameterSetIdentifier' not in ap
+
+
+def test_seclevel_skips_already_sized():
+    '''Components that already carry a key size are not overwritten.'''
+    comp = _algo_comp('DHE', '/etc/ssl/openssl.cnf')
+    comp['cryptoProperties']['algorithmProperties']['parameterSetIdentifier'] = '4096'
+    reader = lambda path: b'CipherString = DEFAULT@SECLEVEL=2\n'
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 0
+    ap = comp['cryptoProperties']['algorithmProperties']
+    assert ap['parameterSetIdentifier'] == '4096'
+
+
+def test_seclevel_no_directive_in_file():
+    '''A config file with no SECLEVEL directive leaves the component unpatched.'''
+    comp = _algo_comp('DHE', '/etc/ssl/openssl.cnf')
+    reader = lambda path: b'MinProtocol = TLSv1.2\n'
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 0
+
+
+def test_seclevel_unrelated_algorithm_untouched():
+    '''Non-DH/EC algorithms (e.g. AES) sourced from openssl.cnf are left for other paths.'''
+    comp = _algo_comp('AES128 GCM', '/usr/lib/ssl/openssl.cnf')
+    reader = lambda path: b'CipherString = DEFAULT@SECLEVEL=2\n'
+    assert scbe._enrich_openssl_cnf_seclevel([comp], reader) == 0
