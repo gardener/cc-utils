@@ -9,6 +9,8 @@ def test_access_type_aliases():
         'github/v1': ocm.AccessType.GITHUB,
         'Helm': ocm.AccessType.HELM,
         'helm': ocm.AccessType.HELM,
+        'HTTP': ocm.AccessType.HTTP,
+        'http': ocm.AccessType.HTTP,
         'LocalBlob': ocm.AccessType.LOCAL_BLOB,
         'localBlob': ocm.AccessType.LOCAL_BLOB,
         'NPM': ocm.AccessType.NPM,
@@ -26,6 +28,8 @@ def test_access_type_aliases():
         's3/v1': ocm.AccessType.S3,
         'S3/v2': ocm.AccessType.S3_V2,
         's3/v2': ocm.AccessType.S3_V2,
+        'Wget': ocm.AccessType.HTTP,
+        'wget': ocm.AccessType.HTTP,
     }
     for alias, expected in aliases.items():
         assert ocm.AccessType(alias) is expected, f'{alias} should map to {expected}'
@@ -83,6 +87,9 @@ def test_strip_version_during_deserialisation():
 def test_new_access_classes_instantiate():
     helm = ocm.HelmAccess(helmRepository='oci://repo', helmChart='mychart')
     assert helm.type is ocm.AccessType.HELM
+
+    http = ocm.HTTPAccess(url='https://example.com/path')
+    assert http.type is ocm.AccessType.HTTP
 
     npm = ocm.NPMAccess(registry='https://registry.npmjs.org', package='lodash', version='4.17.21')
     assert npm.type is ocm.AccessType.NPM
