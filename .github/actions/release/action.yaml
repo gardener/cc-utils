@@ -253,7 +253,7 @@ runs:
       id: preprocess
       shell: bash
       run: |
-        version=$(yq .component.version /tmp/component-descriptor.yaml)
+        version=$(yq .version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
 
         # main git tag
@@ -278,14 +278,16 @@ runs:
       id: read-ocm-repositories
       shell: bash
       run: |
-        tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+        tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories prepare-values.d/ocm-repository
         ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
+        ocm_repository="$(cat prepare-values.d/ocm-repository)"
         rm -rf prepare-values.d prepare-workflow-values.tar
         extra_oci_registries='${{ inputs.extra-oci-registries }}'
         if [ -n "${extra_oci_registries}" ]; then
           ocm_repositories="${ocm_repositories},$(printf '%s' "${extra_oci_registries}" | tr '\n' ',')"
         fi
         echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
+        echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry
       uses: gardener/cc-utils/.github/actions/oci-auth@master
@@ -384,25 +386,29 @@ runs:
             Dumper=ocm.EnumValueYamlDumper,
             stream=f,
           )
-    - name: validate OCM Component-Descriptor
-      uses: gardener/cc-utils/.github/actions/ocm-validate@master
-      with:
-        component-descriptor-path: /tmp/component-descriptor.yaml
-        on-validation-errors: ${{ inputs.on-validation-errors }}
-        ocm-repositories: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
-        recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
-        validation-cfg: |
-          schema: fail
-          access: fail
-          artefact-uniqueness: fail
     - name: publish OCM Component-Descriptor
       shell: bash
       id: publish-component-descriptor
       run: |
-        python -m ocm upload \
-          --file /tmp/component-descriptor.yaml \
-          --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}' \
-          --on-exist ${{ inputs.on-existing-component-descriptor }}
+        case '${{ inputs.on-existing-component-descriptor }}' in
+          skip)            conflict_policy=skip ;;
+          overwrite)       conflict_policy=replace ;;
+          fail)            conflict_policy=abort-and-fail ;;
+          *)               echo "unknown on-existing-component-descriptor value"; exit 1 ;;
+        esac
+
+        component_name=$(yq .name /tmp/component-descriptor.yaml)
+        target_repo="${{ steps.read-ocm-repositories.outputs.ocm-repository }}"
+
+        curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19 bash
+
+        ocm add cv \
+          --repository ctf::/tmp/transport-archive \
+          --constructor /tmp/component-descriptor.yaml \
+          --working-directory '${{ inputs.component-descriptor-blobs-dir }}' \
+          --component-version-conflict-policy "${conflict_policy}"
+
+        ocm transfer cv "ctf::/tmp/transport-archive//${component_name}" "oci::${target_repo}"
 
         tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
 

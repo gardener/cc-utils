@@ -315,7 +315,7 @@ runs:
           )
 
     - name: export-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ocm-v2-migration
       with:
         ocm-resources-file: ocm-resources.yaml
         blobs-directory: blobs.d

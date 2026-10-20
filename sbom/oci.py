@@ -272,11 +272,10 @@ def build_sbom_ocm_resources(
             'type': media_type,
             'relation': str(ocm.ResourceRelation.EXTERNAL),
             'extraIdentity': {'version': version, 'sbom-format': sbom_format},
-            'access': {
-                'type': str(ocm.AccessType.LOCAL_BLOB),
-                'localReference': blob_digest,
+            'input': {
+                'type': str(ocm.InputType.FILE),
+                'path': blob_digest,
                 'mediaType': media_type,
-                'size': len(sbom_bytes),
             },
             'labels': [
                 {'name': 'gardener.cloud/sbom/source-image',        'value': source_image_ref},

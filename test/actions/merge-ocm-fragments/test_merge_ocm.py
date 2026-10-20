@@ -23,10 +23,8 @@ import merge_ocm
 
 def _base_descriptor(version='1.0.0'):
     return {
-        'component': {
-            'name': 'example.com/my-component',
-            'version': version,
-        }
+        'name': 'example.com/my-component',
+        'version': version,
     }
 
 
@@ -48,7 +46,7 @@ def test_merge_fragments_resources_merged():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    names = [r['name'] for r in descriptor['component']['resources']]
+    names = [r['name'] for r in descriptor['resources']]
     assert 'img-a' in names
     assert 'img-b' in names
 
@@ -60,7 +58,7 @@ def test_merge_fragments_sources_merged():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    assert descriptor['component']['sources'][0]['name'] == 'src-a'
+    assert descriptor['sources'][0]['name'] == 'src-a'
 
 
 def test_merge_fragments_consumes_fragment_files():
@@ -80,7 +78,7 @@ def test_merge_fragments_patches_local_version():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    resource = descriptor['component']['resources'][0]
+    resource = descriptor['resources'][0]
     assert resource['version'] == '2.3.4'
 
 
@@ -94,7 +92,7 @@ def test_merge_fragments_existing_version_not_overwritten():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    resource = descriptor['component']['resources'][0]
+    resource = descriptor['resources'][0]
     assert resource['version'] == '1.0.0'
 
 
@@ -110,7 +108,7 @@ def test_merge_fragments_ignores_non_fragment_files():
 
         assert os.path.exists(other)
 
-    assert descriptor['component']['resources'] == []
+    assert descriptor['resources'] == []
 
 
 def _write_meta(fragments_dir, fragment_fname, run_attempt):
@@ -131,7 +129,7 @@ def test_merge_fragments_deduplicates_same_attempt():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    assert len(descriptor['component']['resources']) == 1
+    assert len(descriptor['resources']) == 1
 
 
 def test_merge_fragments_higher_attempt_wins():
@@ -146,7 +144,7 @@ def test_merge_fragments_higher_attempt_wins():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    resources = descriptor['component']['resources']
+    resources = descriptor['resources']
     assert len(resources) == 1
     assert resources[0]['access'] == 'new'
 
@@ -164,7 +162,7 @@ def test_merge_fragments_lower_attempt_does_not_overwrite():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    resources = descriptor['component']['resources']
+    resources = descriptor['resources']
     assert len(resources) == 1
     assert resources[0]['access'] == 'new'
 
@@ -181,7 +179,7 @@ def test_merge_fragments_no_meta_treated_as_attempt_zero():
 
         merge_ocm.merge_fragments(descriptor, d)
 
-    resources = descriptor['component']['resources']
+    resources = descriptor['resources']
     assert len(resources) == 1
     assert resources[0]['access'] == 'new'
 
