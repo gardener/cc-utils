@@ -140,6 +140,9 @@ jobs:
       id-token: write
     with:
       mode: release
+      # TODO(ocm-v2): post-process: callback is a breaking change for repos using
+      # .ci/component_descriptor callback — the file passed via COMPONENT_DESCRIPTOR_PATH
+      # is now in OCM component constructor format, not the legacy component-descriptor format.
       post-process: ${{ inputs.ocm-post-process }}
       oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
       releases-suffix: ${{ inputs.releases-suffix }}
@@ -169,7 +172,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
-          component-descriptor-artifact: ${{ inputs.component-descriptor == '' && needs.prepare.outputs.component-descriptor-artefact || '' }}
+          component-constructor-artefact: ${{ inputs.component-descriptor == '' && needs.prepare.outputs.component-constructor-artefact || '' }}
           ocm-repositories: |
             ${{ needs.prepare.outputs.ocm-repositories || inputs.ocm-repositories }}
           github-token: ${{ steps.checkout.outputs.token }}

@@ -156,6 +156,9 @@ jobs:
         with:
           component-constructor-artefact: component-constructor
           outdir: /tmp/ocm
+          # TODO(ocm-v2): post-process: callback is a breaking change for repos using
+          # .ci/component_descriptor callback — the file passed via COMPONENT_DESCRIPTOR_PATH
+          # is now in OCM component constructor format, not the legacy component-descriptor format.
           post-process: ${{ inputs.ocm-post-process }}
 
       - name: fetch-prepare-values
@@ -216,6 +219,13 @@ jobs:
 
           ocm transfer cv "ctf::transport-archive//${component_name}" "oci::${target_repo}"
 
+          # TODO: the tarball is still named component-descriptor.tar.gz for backwards
+          # compatibility with external callers that download and extract it. However the
+          # file inside is now component-constructor.yaml (constructor format). External
+          # callers that extract component-descriptor.yaml by name will break and need to
+          # be updated to extract component-constructor.yaml instead.
+          # Example: helmchart/action.yaml already handles this by extracting
+          # component-constructor.yaml and renaming it locally.
           tar czf component-descriptor.tar.gz -C /tmp/ocm component-constructor.yaml
       - name: upload-component-constructor-as-artefact
         uses: gardener/cc-utils/.github/actions/upload-artifact@master

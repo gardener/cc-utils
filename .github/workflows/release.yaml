@@ -27,29 +27,20 @@ on:
         required: false
         type: string
         description: |
-          A base-component-descriptor, as output from `base-component-descriptor` action.
+          A component constructor, as output from `component-descriptor-to-constructor` action.
           Additional Component-Descriptor-Fragments as exported from the `export-ocm-fragments`
           action will be merged into it (i.e. callers do not need to take care of this).
 
-          If not passed, an artefact named `base-component-descriptor` will be assumed to
+          If not passed, an artefact named `component-constructor` will be assumed to
           exist, and used as default / fallback.
-      on-validation-errors:
-        default: fail
-        type: string
-        description: |
-          How to behave in case of validation-errors. Allowed values are:
+
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value is expected to be in OCM component constructor
+          format (not the legacy component-descriptor format).
+      How to behave in case of validation-errors. Allowed values are:
           - fail     # abort release
           - continue # ignore and create release (if possible)
 
-          Validation can be customised using `ocm-validation-cfg` input (currently, only
-          OCM-Component-Descriptor validation is implemented).
-      ocm-validation-recursion-depth:
-        default: -1
-        type: number
-        description: |
-          How deep to recurse into componentReferences during OCM validation.
-          -1 = full transitive closure (default). 0 = top-level only.
-          See `ocm-validate` action for details.
       extra-oci-registries:
         required: false
         type: string
@@ -308,7 +299,7 @@ jobs:
     outputs:
       release-notes: ${{ steps.release-notes.outputs.release-notes }}
       component-descriptor-artifact: ${{ steps.release.outputs.component-descriptor-artifact }}
-      version: ${{ steps.component-descriptor.outputs.version }}
+      version: ${{ steps.component-constructor.outputs.version }}
 
     steps:
       - name: fetch-prepare-values
@@ -326,12 +317,12 @@ jobs:
           rm -rf prepare-values.d prepare-workflow-values.tar
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
           echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
-      - name: collect-component-descriptor
-        id: component-descriptor
+      - name: collect-component-constructor
+        id: component-constructor
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-descriptor-artefact: base-component-descriptor
-          component-descriptor: ${{ inputs.component-descriptor }}
+          component-constructor-artefact: component-constructor
+          component-constructor: ${{ inputs.component-descriptor }}
           outdir: /tmp/ocm
           oci-registry: ${{ steps.prep.outputs.oci-registry }}
 
@@ -409,7 +400,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/release-notes@master
         id: release-notes
         with:
-          component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
+          component-descriptor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
           github-token: ${{ steps.fed-token.outputs.token }}
           draft: false
@@ -433,7 +424,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/release@ocm-v2-migration
         id: release
         with:
-          component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
+          component-descriptor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
           component-descriptor-blobs-dir: /tmp/ocm/blobs.d
           release-commit-objects: ${{ inputs.release-commit-objects }}
           release-commit-objects-artefact: release-commit-objects
@@ -441,8 +432,6 @@ jobs:
           next-version: ${{ steps.prep-next-version.outputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
-          on-validation-errors: ${{ inputs.on-validation-errors }}
-          ocm-validation-recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
           extra-oci-registries: ${{ inputs.extra-oci-registries }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.fed-token.outputs.token }}
@@ -465,7 +454,7 @@ jobs:
 
           cat <<EOF >>/tmp/slack-payload.yaml
           channel_id: ${{ inputs.slack-channel-id }}
-          title: '[${{ steps.component-descriptor.outputs.component-version }} released]'
+          title: '[${{ steps.component-constructor.outputs.component-version }} released]'
           EOF
 
           # slack-github-action does not like empty files, hence we need to pass "payload"
@@ -522,7 +511,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          version="${{ steps.component-descriptor.outputs.version }}"
+          version="${{ steps.component-constructor.outputs.version }}"
 
           if [[ $version == v* ]]; then
             prefix="v"
@@ -556,5 +545,5 @@ jobs:
         if: ${{ inputs.cleanup-release-branches }}
         uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
         with:
-          version: ${{ steps.component-descriptor.outputs.version }}
+          version: ${{ steps.component-constructor.outputs.version }}
           github-token: ${{ steps.fed-token.outputs.token }}

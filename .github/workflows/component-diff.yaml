@@ -39,11 +39,11 @@ jobs:
       has-diff: ${{ steps.component-diff.outputs.has-diff }}
     steps:
       - uses: actions/checkout@v6
-      - name: collect-component-descriptor
-        id: component-descriptor
+      - name: collect-component-constructor
+        id: component-constructor
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-descriptor-artefact: base-component-descriptor
+          component-constructor-artefact: component-constructor
       - name: fetch-prepare-values
         if: ${{ inputs.ocm-repositories == '' }}
         uses: gardener/cc-utils/.github/actions/download-artifact@master
@@ -63,5 +63,5 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/component-diff@master
         id: component-diff
         with:
-          component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
+          component-descriptor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
           ocm-repositories: ${{ steps.prepare.outputs.ocm-repositories }}
