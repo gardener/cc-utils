@@ -153,6 +153,29 @@ def test_remove_component(cid):
     assert result.names_version_changed == set()
 
 
+def test_diff_components_multi_series(cid):
+    '''Regression test: components with multiple concurrent version series must be paired by
+    closest semver distance, not by first-name-match. Mirrors the gardenlinux 1877/2150 bug.'''
+    left_components = (
+        comp('gardenlinux', '1877.25'),
+        comp('gardenlinux', '2150.11.0'),
+    )
+    right_components = (
+        comp('gardenlinux', '1877.26'),
+        comp('gardenlinux', '2150.12.0'),
+    )
+
+    result = ocm.diff.diff_components(left_components, right_components)
+
+    assert result.cpairs_version_changed == [
+        (comp('gardenlinux', '1877.25'), comp('gardenlinux', '1877.26')),
+        (comp('gardenlinux', '2150.11.0'), comp('gardenlinux', '2150.12.0')),
+    ]
+    assert result.names_version_changed == {'gardenlinux'}
+    assert result.names_only_left == set()
+    assert result.names_only_right == set()
+
+
 def test_diff_components(cid):
     left_components = (
         comp('c1', '1.2.3'),
@@ -178,13 +201,10 @@ def test_diff_components(cid):
     assert result.cidentities_only_right == {
         cid('c1', '2.2.3'), cid('c4', '1.2.3'), cid('c5', '2.3.4'),
     }
-    assert result.cpairs_version_changed == [
-        (comp('c1', '1.2.3'), comp('c1', '2.2.3')),
-        (comp('c5', '1.2.3'), comp('c5', '2.3.4')),
-    ]
+    assert result.cpairs_version_changed == []
     assert result.names_only_left == {'c3'}
     assert result.names_only_right == {'c4'}
-    assert result.names_version_changed == {'c1', 'c5'}
+    assert result.names_version_changed == set()
 
 
 # TODO add other resources than OCI images

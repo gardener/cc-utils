@@ -7,6 +7,7 @@ import dataclasses
 import textwrap
 
 import ocm
+import version as version_util
 
 
 @dataclasses.dataclass(frozen=True)
@@ -138,20 +139,31 @@ def diff_components(
         c for c in right_components if c.identity() in right_only_component_identities
     )
 
-    def find_changed_component(
-        changed_component: ocm.Component,
-        components: collections.abc.Iterable[ocm.Component],
-    ) -> tuple[ocm.Component, ocm.Component | None]:
-        for c in components:
-            if c.name == changed_component.name:
-                return (changed_component, c)
-        return (changed_component, None)
+    def _version_distance(left_ver: str, right_ver: str) -> tuple[int, int]:
+        lv = version_util.parse_to_semver(left_ver, invalid_semver_ok=True)
+        rv = version_util.parse_to_semver(right_ver, invalid_semver_ok=True)
+        if lv is None or rv is None or lv.major != rv.major:
+            return None
+        return abs(lv.minor - rv.minor)
 
     components_with_changed_versions = []
-    for component in left_components:
-        changed_component = find_changed_component(component, right_components)
-        if changed_component[1] is not None:
-            components_with_changed_versions.append(changed_component)
+    paired_right: set[str] = set()  # track already-paired right component identities
+
+    for left_component in left_components:
+        candidates = [
+            right_component for right_component in right_components
+            if right_component.name == left_component.name
+            and right_component.identity() not in paired_right
+            and _version_distance(left_component.version, right_component.version) is not None
+        ]
+        if not candidates:
+            continue
+        right_component = min(
+            candidates,
+            key=lambda c: _version_distance(left_component.version, c.version),
+        )
+        paired_right.add(right_component.identity())
+        components_with_changed_versions.append((left_component, right_component))
 
     left_component_names = {i.name for i in left_component_identities}
     right_component_names = {i.name for i in right_component_identities}
