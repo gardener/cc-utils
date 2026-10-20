@@ -31,11 +31,11 @@ def _read_attempt(fpath: str) -> int:
 
 
 def merge_fragments(
-    component_descriptor: dict,
+    component_constructor: dict,
     fragments_dir: str,
 ) -> dict:
     '''
-    Merges all `.ocm-artefacts` YAML files found in fragments_dir into component_descriptor
+    Merges all `.ocm-artefacts` YAML files found in fragments_dir into component_constructor
     (modified in-place). Each fragment may contain `resources` and/or `sources` lists.
 
     After merging, versions are patched in for artefacts with `relation: local` that do not
@@ -51,19 +51,18 @@ def merge_fragments(
 
     Consumed fragment and sidecar files are removed from fragments_dir.
 
-    Returns the modified component_descriptor.
+    Returns the modified component_constructor.
     '''
-    component = component_descriptor['component']
-    if 'sources' not in component:
-        component['sources'] = []
-    if 'resources' not in component:
-        component['resources'] = []
+    if 'sources' not in component_constructor:
+        component_constructor['sources'] = []
+    if 'resources' not in component_constructor:
+        component_constructor['resources'] = []
 
     resource_attempt: dict[tuple, int] = {
-        _artefact_identity(r): 0 for r in component['resources']
+        _artefact_identity(r): 0 for r in component_constructor['resources']
     }
     source_attempt: dict[tuple, int] = {
-        _artefact_identity(s): 0 for s in component['sources']
+        _artefact_identity(s): 0 for s in component_constructor['sources']
     }
 
     for fname in os.listdir(fragments_dir):
@@ -88,13 +87,13 @@ def merge_fragments(
                 print(f'  skipping duplicate resource {key} (same attempt)')
                 continue
             resource_attempt[key] = attempt
-            for i, r in enumerate(component['resources']):
+            for i, r in enumerate(component_constructor['resources']):
                 if _artefact_identity(r) == key:
                     print(f'  replacing resource {key}: attempt {prev} -> {attempt}')
-                    component['resources'][i] = resource
+                    component_constructor['resources'][i] = resource
                     break
             else:
-                component['resources'].append(resource)
+                component_constructor['resources'].append(resource)
 
         for source in (artefacts.get('sources') or []):
             key = _artefact_identity(source)
@@ -106,21 +105,21 @@ def merge_fragments(
                 print(f'  skipping duplicate source {key} (same attempt)')
                 continue
             source_attempt[key] = attempt
-            for i, s in enumerate(component['sources']):
+            for i, s in enumerate(component_constructor['sources']):
                 if _artefact_identity(s) == key:
                     print(f'  replacing source {key}: attempt {prev} -> {attempt}')
-                    component['sources'][i] = source
+                    component_constructor['sources'][i] = source
                     break
             else:
-                component['sources'].append(source)
+                component_constructor['sources'].append(source)
 
         os.unlink(fpath)
         meta_path = f'{fpath}.meta'
         if os.path.isfile(meta_path):
             os.unlink(meta_path)
 
-    cversion = component.get('version')
-    for artefact in component['sources'] + component['resources']:
+    cversion = component_constructor.get('version')
+    for artefact in component_constructor['sources'] + component_constructor['resources']:
         if not cversion:
             continue
         if artefact.get('version'):
@@ -129,4 +128,4 @@ def merge_fragments(
             continue
         artefact['version'] = cversion
 
-    return component_descriptor
+    return component_constructor

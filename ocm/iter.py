@@ -101,7 +101,7 @@ class Filter:
 
 
 def iter(
-    component: ocm.Component | ocm.ComponentDescriptor,
+    component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentConstructor,
     lookup: ocm.ComponentDescriptorLookup=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,
@@ -144,7 +144,7 @@ def iter(
 
     # need to nest actual iterator to keep global state of seen component-IDs
     def inner_iter(
-        component: ocm.Component | ocm.ComponentDescriptor,
+        component: ocm.Component | ocm.ComponentDescriptor | ocm.ComponentConstructor,
         lookup: ocm.ComponentDescriptorLookup,
         recursion_depth,
         path: tuple[NodePathEntry]=(),

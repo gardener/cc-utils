@@ -132,11 +132,10 @@ on:
           Note that it is only necessary to pass an auth-token if OIDC-authentication is not
           possible. OIDC-Authentication should be preferred over using a static token.
     outputs:
-      component-descriptor:
+      component-constructor:
         description: |
-          the final component-descriptor after base-component-descriptor and any emitted
-          fragments from other jobs.
-        value: ${{ jobs.component-descriptor.outputs.component-descriptor }}
+          the final component-constructor after any emitted fragments from other jobs.
+        value: ${{ jobs.component-descriptor.outputs.component-constructor }}
 
 jobs:
   component-descriptor:
@@ -147,15 +146,15 @@ jobs:
       id-token: write
 
     outputs:
-      component-descriptor: ${{ steps.collect.outputs.component-descriptor }}
+      component-constructor: ${{ steps.collect.outputs.component-constructor }}
       version: ${{ steps.collect.outputs.version }}
 
     steps:
-      - name: collect-component-descriptor
+      - name: collect-component-constructor
         id: collect
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-descriptor-artefact: base-component-descriptor
+          component-constructor-artefact: component-constructor
           outdir: /tmp/ocm
           post-process: ${{ inputs.ocm-post-process }}
 
@@ -194,25 +193,31 @@ jobs:
           oci-image-reference: ${{ steps.prep.outputs.ocm-repositories }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
-      - uses: gardener/cc-utils/.github/actions/ocm-validate@master
-        with:
-          component-descriptor-path: /tmp/ocm/component-descriptor.yaml
-          on-validation-errors: ${{ inputs.on-validation-errors }}
-          ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
-          recursion-depth: 0
-          validation-cfg: |
-            schema: fail
-            access: ${{ steps.prep.outputs.can-push == 'true' && 'fail' || 'skip' }}
-            artefact-uniqueness: fail
       - name: upload-component-descriptor-to-ocm-repository
         if: ${{ steps.prep.outputs.can-push == 'true' }}
         run: |
-          python -m ocm upload \
-            --file /tmp/ocm/component-descriptor.yaml \
-            --blobs-dir /tmp/ocm/blobs.d \
-            --on-exist ${{ inputs.on-existing-component-descriptor }}
-          tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
-      - name: upload-component-descriptor-as-artefact
+          case '${{ inputs.on-existing-component-descriptor }}' in
+            skip)            conflict_policy=skip ;;
+            overwrite)       conflict_policy=replace ;;
+            fail)            conflict_policy=abort-and-fail ;;
+            *)               echo "unknown on-existing-component-descriptor value"; exit 1 ;;
+          esac
+
+          component_name=$(cat /tmp/ocm/component-constructor.yaml | yq .name)
+          target_repo="${{ steps.prep.outputs.ocm-repository }}"
+
+          curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19 bash
+
+          ocm add cv \
+            --repository ctf::transport-archive \
+            --constructor /tmp/ocm/component-constructor.yaml \
+            --working-directory /tmp/ocm/blobs.d \
+            --component-version-conflict-policy "${conflict_policy}"
+
+          ocm transfer cv "ctf::transport-archive//${component_name}" "oci::${target_repo}"
+
+          tar czf component-descriptor.tar.gz -C /tmp/ocm component-constructor.yaml
+      - name: upload-component-constructor-as-artefact
         uses: gardener/cc-utils/.github/actions/upload-artifact@master
         with:
           path: component-descriptor.tar.gz
@@ -297,7 +302,7 @@ jobs:
             exit 0
           fi
       - name: fetch-prepare-values
-        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' && inputs.ocm-repositories == '' }}
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
           name: prepare-workflow-values
@@ -317,7 +322,6 @@ jobs:
           rm -rf prepare-values.d prepare-workflow-values.tar
 
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
-          echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
       - uses: gardener/cc-utils/.github/actions/github-auth@master
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
