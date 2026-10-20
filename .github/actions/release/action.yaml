@@ -166,18 +166,6 @@ inputs:
       - skip
       - overwrite
       - fail
-  on-validation-errors:
-    default: fail
-    type: choice
-    options:
-      - fail
-      - continue
-  ocm-validation-recursion-depth:
-    default: -1
-    type: number
-    description: |
-      Passed as `recursion-depth` to the `ocm-validate` action. -1 = full transitive closure
-      (default). 0 = top-level only. Requires `ocm-repositories` to be resolvable when non-zero.
   extra-oci-registries:
     required: false
     type: string
@@ -310,53 +298,47 @@ runs:
     - name: attach-release-notes-to-component-descriptor
       shell: python
       run: |
-        import dataclasses
         import os
         import sys
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import oci.auth
-        import oci.client
         import ocm
         import release
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+          component_constructor = ocm.ComponentConstructor.from_dict(yaml.safe_load(f))
 
         with open('/tmp/release-notes/legacy-release-notes.md') as f:
           release_notes_markdown = f.read()
         with open('/tmp/release-notes/release-notes-archive.tar', 'rb') as f:
           tar_bytes = f.read()
 
-        oci_client = oci.client.Client(credentials_lookup=oci.auth.docker_credentials_lookup())
-
         release.attach_release_notes(
-          component=component_descriptor.component,
+          component=component_constructor,
           release_notes_markdown=release_notes_markdown,
           tar_bytes=tar_bytes,
-          oci_client=oci_client,
+          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
         )
 
+        import dataclasses
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
+            data=dataclasses.asdict(component_constructor),
             stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
           )
 
     - name: attach-branch-info-to-component-descriptor
       shell: python
       run: |
-        import dataclasses
         import os
         import sys
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import oci.client
         import ocm
         import release
 
@@ -367,24 +349,23 @@ runs:
         print(f'found "{branch_info_filename}" - will attach contents to component descriptor')
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+          component_constructor = ocm.ComponentConstructor.from_dict(yaml.safe_load(f))
 
         with open(branch_info_filename, 'rb') as f:
           branch_info_bytes = f.read()
 
-        oci_client = oci.client.client_with_dockerauth()
-
         release.attach_branch_info(
-          component=component_descriptor.component,
+          component=component_constructor,
           branch_info_bytes=branch_info_bytes,
-          oci_client=oci_client,
+          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
         )
 
+        import dataclasses
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
+            data=dataclasses.asdict(component_constructor),
             stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
           )
     - name: publish OCM Component-Descriptor
       shell: bash
@@ -573,21 +554,21 @@ runs:
         )
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
+          component_constructor = ocm.ComponentConstructor.from_dict(
             yaml.safe_load(f)
           )
 
         for asset in release.iter_assets(path='/tmp/assets.yaml'):
-          path, access = release.find_blob(
+          path, media_type = release.find_blob(
             blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
             asset=asset,
-            component=component_descriptor.component,
+            component=component_constructor,
           )
 
           if asset.mime_type:
             mime_type = asset.mime_type
           else:
-            mime_type = access.mediaType
+            mime_type = media_type
 
           print(f'Uploading {asset=} as github-release-asset')
           fh = open(path, 'rb')

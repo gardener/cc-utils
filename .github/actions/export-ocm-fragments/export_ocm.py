@@ -113,7 +113,7 @@ def patch_local_blob_refs(
         }
         del artefact['access']
 
-        print(f'INFO: patched {artefact["name"]}\'s access to {digest_name=} (was: {local_ref=})')
+        print(f'INFO: patched {artefact["name"]}\'s localBlob access to input {digest_name=} (was: {local_ref=})')
 
         if 'type' not in artefact:
             artefact['type'] = magic.from_file(

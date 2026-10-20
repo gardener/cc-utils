@@ -5,7 +5,7 @@
 import hashlib
 import os
 import sys
-import unittest.mock as mock
+import tempfile
 
 sys.path.insert(
     0,
@@ -20,114 +20,114 @@ import ocm
 
 
 def _make_component(version='1.0.0'):
-    comp = mock.MagicMock()
-    comp.version = version
-    comp.resources = []
-    comp.current_ocm_repo.component_version_oci_ref.return_value = 'registry.example.com/comp:1.0.0'
-    return comp
+    return ocm.ComponentConstructor(
+        name='example.com/my-component',
+        version=version,
+        provider={'name': 'SAP SE'},
+        sources=[],
+        componentReferences=[],
+        resources=[],
+    )
 
 
 # --- attach_release_notes ---
 
-def test_markdown_blob_uploaded_when_non_empty():
-    component = _make_component()
-    oci_client = mock.MagicMock()
-    markdown = 'some release notes'
+def test_markdown_blob_written_when_non_empty():
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
+        markdown = 'some release notes'
 
-    release.attach_release_notes(component, markdown, b'tar', oci_client)
+        release.attach_release_notes(component, markdown, b'tar', blobs_dir)
 
-    octets = markdown.encode('utf-8')
-    expected_digest = f'sha256:{hashlib.sha256(octets).hexdigest()}'
-    oci_client.put_blob.assert_any_call(
-        image_reference='registry.example.com/comp:1.0.0',
-        digest=expected_digest,
-        octets_count=len(octets),
-        data=octets,
-    )
+        octets = markdown.encode('utf-8')
+        expected_digest = f'sha256:{hashlib.sha256(octets).hexdigest()}'
+        assert os.path.isfile(os.path.join(blobs_dir, expected_digest))
 
 
 def test_markdown_blob_skipped_when_empty():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
 
-    release.attach_release_notes(component, '', b'tar', oci_client)
+        release.attach_release_notes(component, '', b'tar', blobs_dir)
 
-    # only the tar blob should be uploaded
-    assert oci_client.put_blob.call_count == 1
+        # only tar blob written, no markdown blob
+        assert len(os.listdir(blobs_dir)) == 1
 
 
-def test_tar_blob_always_uploaded():
-    component = _make_component()
-    oci_client = mock.MagicMock()
-    tar_bytes = b'tar data'
+def test_tar_blob_always_written():
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
+        tar_bytes = b'tar data'
 
-    release.attach_release_notes(component, '', tar_bytes, oci_client)
+        release.attach_release_notes(component, '', tar_bytes, blobs_dir)
 
-    expected_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
-    oci_client.put_blob.assert_called_once_with(
-        image_reference='registry.example.com/comp:1.0.0',
-        digest=expected_digest,
-        octets_count=len(tar_bytes),
-        data=tar_bytes,
-    )
+        expected_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
+        assert os.path.isfile(os.path.join(blobs_dir, expected_digest))
 
 
 def test_release_notes_resources_appended_with_markdown():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
 
-    release.attach_release_notes(component, 'notes', b'tar', oci_client)
+        release.attach_release_notes(component, 'notes', b'tar', blobs_dir)
 
-    names = [r.name for r in component.resources]
-    assert rn_ocm.release_notes_resource_name_old in names
-    assert rn_ocm.release_notes_resource_name in names
+        names = [r.name for r in component.resources]
+        assert rn_ocm.release_notes_resource_name_old in names
+        assert rn_ocm.release_notes_resource_name in names
 
 
 def test_release_notes_resources_appended_without_markdown():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
 
-    release.attach_release_notes(component, '', b'tar', oci_client)
+        release.attach_release_notes(component, '', b'tar', blobs_dir)
 
-    names = [r.name for r in component.resources]
-    assert rn_ocm.release_notes_resource_name_old not in names
-    assert rn_ocm.release_notes_resource_name in names
+        names = [r.name for r in component.resources]
+        assert rn_ocm.release_notes_resource_name_old not in names
+        assert rn_ocm.release_notes_resource_name in names
+
+
+def test_release_notes_resources_use_file_input():
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
+
+        release.attach_release_notes(component, 'notes', b'tar', blobs_dir)
+
+        for r in component.resources:
+            assert r.input is not None
+            assert r.access is None
+            assert r.input.path.startswith('sha256:')
 
 
 # --- attach_branch_info ---
 
-def test_branch_info_blob_uploaded():
-    component = _make_component()
-    oci_client = mock.MagicMock()
-    data = b'branch: main\n'
+def test_branch_info_blob_written():
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
+        data = b'branch: main\n'
 
-    release.attach_branch_info(component, data, oci_client)
+        release.attach_branch_info(component, data, blobs_dir)
 
-    expected_digest = f'sha256:{hashlib.sha256(data).hexdigest()}'
-    oci_client.put_blob.assert_called_once_with(
-        image_reference=mock.ANY,
-        digest=expected_digest,
-        octets_count=len(data),
-        data=data,
-    )
+        expected_digest = f'sha256:{hashlib.sha256(data).hexdigest()}'
+        assert os.path.isfile(os.path.join(blobs_dir, expected_digest))
 
 
 def test_branch_info_resource_appended():
-    component = _make_component()
-    oci_client = mock.MagicMock()
+    with tempfile.TemporaryDirectory() as blobs_dir:
+        component = _make_component()
 
-    release.attach_branch_info(component, b'data', oci_client)
+        release.attach_branch_info(component, b'data', blobs_dir)
 
-    assert len(component.resources) == 1
-    resource = component.resources[0]
-    assert resource.name == 'branch-info'
-    assert resource.version == '1.0.0'
+        assert len(component.resources) == 1
+        resource = component.resources[0]
+        assert resource.name == 'branch-info'
+        assert resource.version == '1.0.0'
+        assert resource.input is not None
 
 
 # --- Asset.matches() ---
 
 def _make_asset(name, extra_id):
-    '''helper: build an Asset with the given name and extra extraIdentity fields'''
     return release.Asset(
         name=f'{name}-linux-amd64',
         mime_type=None,
@@ -137,13 +137,13 @@ def _make_asset(name, extra_id):
 
 
 def _make_resource(name, extra_identity, type='executable'):
-    return ocm.Resource(
+    return ocm.ConstructorResource(
         name=name,
         version='1.0.0',
         type=type,
         extraIdentity=extra_identity,
-        access=ocm.LocalBlobAccess(
-            localReference='sha256:abc',
+        input=ocm.FileInput(
+            path='sha256:abc',
             mediaType='application/octet-stream',
         ),
         relation=ocm.ResourceRelation.LOCAL,
@@ -169,7 +169,6 @@ def test_asset_no_match_wrong_arch():
 
 
 def test_asset_no_match_sbom_resource_with_extra_key():
-    # SBOM resource shares name/os/arch but adds sbom-format — must NOT match
     asset = _make_asset('gardenadm', {})
     sbom_resource = _make_resource(
         'gardenadm',
@@ -180,7 +179,6 @@ def test_asset_no_match_sbom_resource_with_extra_key():
 
 
 def test_asset_matches_sbom_resource_when_format_specified():
-    # caller can still select the SBOM resource explicitly by including sbom-format in id
     asset = release.Asset(
         name='gardenadm-linux-amd64-spdx',
         mime_type=None,
@@ -196,10 +194,6 @@ def test_asset_matches_sbom_resource_when_format_specified():
 
 
 def test_gardener_gardenadm_ambiguity():
-    # regression test: gardener/gardener Release workflow failed with
-    # "asset=Asset(..., id={'name': 'gardenadm', 'os': 'linux', 'architecture': 'amd64'})
-    #  is ambiguous (more than one matching OCM-Resource)"
-    # because SBOM inline resources share name/os/arch with the binary resource.
     asset = release.Asset(
         name='gardenadm-linux-amd64',
         mime_type=None,
@@ -223,22 +217,19 @@ def test_gardener_gardenadm_ambiguity():
 
 
 def test_asset_type_in_id_matches():
-    # type is a top-level field checked via getattr; enum values must be normalised
     asset = release.Asset(
         name='img',
         mime_type=None,
         type='ocm-resource',
         id={'name': 'img', 'type': 'ociImage'},
     )
-    resource = ocm.Resource(
+    resource = _make_resource('img', {})
+    resource = ocm.ConstructorResource(
         name='img',
         version='1.0.0',
-        type=ocm.ArtefactType.OCI_IMAGE,  # enum — value is 'ociImage'
+        type=ocm.ArtefactType.OCI_IMAGE,
         extraIdentity={},
-        access=ocm.LocalBlobAccess(
-            localReference='sha256:abc',
-            mediaType='application/octet-stream',
-        ),
+        input=ocm.FileInput(path='sha256:abc', mediaType='application/octet-stream'),
         relation=ocm.ResourceRelation.LOCAL,
     )
     assert asset.matches(resource)
@@ -251,15 +242,12 @@ def test_asset_type_in_id_no_match():
         type='ocm-resource',
         id={'name': 'img', 'type': 'blob/v1'},
     )
-    resource = ocm.Resource(
+    resource = ocm.ConstructorResource(
         name='img',
         version='1.0.0',
         type=ocm.ArtefactType.OCI_IMAGE,
         extraIdentity={},
-        access=ocm.LocalBlobAccess(
-            localReference='sha256:abc',
-            mediaType='application/octet-stream',
-        ),
+        input=ocm.FileInput(path='sha256:abc', mediaType='application/octet-stream'),
         relation=ocm.ResourceRelation.LOCAL,
     )
     assert not asset.matches(resource)
@@ -286,8 +274,6 @@ def test_asset_version_in_id_no_match():
 
 
 def test_asset_version_in_extra_identity_covered_by_id():
-    # reviewer concern: version appears in both id and resource extraIdentity;
-    # self.id.keys() covers it so the extra-key check must not block the match
     asset = release.Asset(
         name='bin',
         mime_type=None,
@@ -299,7 +285,6 @@ def test_asset_version_in_extra_identity_covered_by_id():
 
 
 def test_asset_no_match_resource_missing_required_extra_key():
-    # id requires 'os' but resource extraIdentity has no such key
     asset = _make_asset('bin', {})
-    resource = _make_resource('bin', {'architecture': 'amd64'})  # 'os' absent
+    resource = _make_resource('bin', {'architecture': 'amd64'})
     assert not asset.matches(resource)

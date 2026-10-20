@@ -66,6 +66,10 @@ inputs:
       provided at this point, as this option is present for backwards-compatibility reasons, and
       should not be used in general.
 
+      TODO(ocm-v2): `callback` is a breaking change — the file passed via COMPONENT_DESCRIPTOR_PATH
+      is now in OCM component constructor format, not the legacy component-descriptor format.
+      Repos using `.ci/component_descriptor` must be updated to handle constructor format.
+
   ocm-component-prefixes:
     type: string
     default: europe-docker.pkg.dev/gardener-project/releases/gardener,europe-docker.pkg.dev/gardener-project/snapshots/gardener
@@ -177,6 +181,11 @@ runs:
           exit 1
         fi
         mv "${component_constructor_path}" "${{ inputs.outdir }}/component-constructor.yaml"
+    # TODO(ocm-v2): if neither component-constructor nor component-constructor-artefact is
+    # provided, component-constructor.yaml will not exist and merge-fragments will fail.
+    # On master this was handled by prepare-component-descriptor which created a minimal
+    # descriptor via `python -m ocm create`. A minimal constructor creation fallback
+    # needs to be added here.
     - name: import-ocm-fragments
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
@@ -254,14 +263,10 @@ runs:
 
         prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
         prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
+        # TODO(ocm-v2): base-component.yaml is no longer included in the component-constructor
+        # artifact. Repos that customised componentPrefixes in .ocm/base-component.yaml will
+        # silently lose that override — the default ocm-component-prefixes will be used instead.
         logger.info(f'{prefixes=}')
-
-        if os.path.isfile(base_component_path := 'base-component.yaml'):
-          with open(base_component_path) as f:
-            raw_base_component = yaml.safe_load(f)
-            if raw_base_component.get('componentPrefixes'):
-              logger.info(f'using component-prefixes from {base_component_path} file')
-              prefixes = raw_base_component.get('componentPrefixes')
 
         logger.info(f'{prefixes=}')
 
@@ -273,12 +278,21 @@ runs:
           component_prefixes=prefixes,
           deduplicate_resources=True,
         )
+        raw = dataclasses.asdict(component_constructor)
+        # strip null/empty fields that are invalid in OCM constructor schema
+        for r in raw.get('resources', []):
+            if r.get('access') is None:
+                r.pop('access', None)
+            r.pop('digest', None)
+            r.pop('extraIdentity', None)
+            r.pop('srcRefs', None)
+        for s in raw.get('sources', []):
+            s.pop('extraIdentity', None)
+        for ref in raw.get('componentReferences', []):
+            ref.pop('extraIdentity', None)
+            ref.pop('digest', None)
         with open(component_constructor_path, 'w') as f:
-          yaml.dump(
-            data=dataclasses.asdict(component_constructor),
-            stream=f,
-            Dumper=ocm.EnumValueYamlDumper,
-          )
+          yaml.safe_dump(data=raw, stream=f)
 
     - name: post-process
       if: ${{ inputs.post-process == 'callback' }}

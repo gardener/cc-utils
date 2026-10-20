@@ -19,9 +19,13 @@ on:
         value: ${{ jobs.prepare.outputs.version }}
       base-component-descriptor:
         description: |
-          name of the GHA artifact holding the base OCM Component-Descriptor
-          (use `merge-ocm-fragments` action to collect full component-descriptor):
-        value: ${{ jobs.prepare.outputs.component-descriptor-artefact }}
+          name of the GHA artifact holding the OCM component constructor
+          (use `merge-ocm-fragments` action to collect full component-descriptor).
+
+          Note: this output keeps the name `base-component-descriptor` for backwards
+          compatibility with external callers. The artifact itself is in OCM component
+          constructor format (not the legacy component-descriptor format).
+        value: ${{ jobs.prepare.outputs.component-constructor-artefact }}
 
 jobs:
   prepare:

@@ -56,11 +56,15 @@ on:
           a forked repository (where owner differs from fork's origin).
         type: string
         default: if-possible
-      component-descriptor:
+      component-constructor:
         description: |
-          Use to explicitly pass-in the OCM-Component-Descriptor containing referenced OCI-Images.
-          If not passed, component-descriptor will be collected from `prepare` action and any
+          Use to explicitly pass-in the OCM component constructor containing referenced OCI-Images.
+          If not passed, the component constructor will be collected from `prepare` action and any
           `oci-ocm`-actions.
+
+          Note: this input was previously named `component-descriptor`. It has been renamed
+          to `component-constructor` as part of the OCM v2 migration. Callers who previously
+          passed an inline component descriptor in the old format must update to constructor format.
         required: false
         type: string
       ocm-mappings:
@@ -158,8 +162,8 @@ jobs:
         id: fetch-ocm
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-descriptor: ${{ inputs.component-descriptor }}
-          component-descriptor-artefact: base-component-descriptor
+          component-constructor: ${{ inputs.component-constructor }}
+          component-constructor-artefact: component-constructor
           ctx: ${{ inputs.ocm-ctx }}
           upload-artifact-name: ''
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
@@ -187,7 +191,7 @@ jobs:
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
           push: ${{ steps.check.outputs.push == 'true' }}
-          component-descriptor-path: ${{ steps.fetch-ocm.outputs.component-descriptor-path }}
+          component-descriptor-path: ${{ steps.fetch-ocm.outputs.component-constructor-path }}
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
