@@ -211,13 +211,13 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@11bd224a8d6d4ba032323c428e0b78450f22d788
     - uses: actions/checkout@v6
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@e935b34598062f0079d1d3e446cd0236c3dd16b0
       with:
         name: ${{ inputs.component-descriptor-artifact }}
         path: /tmp/cd-artifact
@@ -229,7 +229,7 @@ runs:
         tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
           -C /tmp component-descriptor.yaml
     - name: import-release-commit
-      uses: gardener/cc-utils/.github/actions/import-commit@master
+      uses: gardener/cc-utils/.github/actions/import-commit@bf12fbdd41835550dc24e3cca29a3c6fc21a2452
       with:
         commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         commit-objects: ${{ inputs.release-commit-objects }}
@@ -241,7 +241,7 @@ runs:
       run: |
         # capture before create-bump-commit overwrites refs/capture-commit
         echo "digest=$(git rev-parse refs/capture-commit)" >> $GITHUB_OUTPUT
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@e935b34598062f0079d1d3e446cd0236c3dd16b0
     - name: write-component-descriptor-from-input
       if: ${{ inputs.component-descriptor-artifact == '' }}
       shell: bash
@@ -270,7 +270,7 @@ runs:
         EOF
 
     - name: fetch-prepare-values
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@e935b34598062f0079d1d3e446cd0236c3dd16b0
       with:
         name: prepare-workflow-values
 
@@ -288,13 +288,13 @@ runs:
         echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@d90cee78af34c131b52de5545508d2d1af3fc990
       with:
         oci-image-reference: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
         gh-token: ${{ inputs.github-token }}
 
     - name: fetch-release-notes
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@e935b34598062f0079d1d3e446cd0236c3dd16b0
       with:
         name: release-notes
         path: /tmp
@@ -385,7 +385,7 @@ runs:
             stream=f,
           )
     - name: validate OCM Component-Descriptor
-      uses: gardener/cc-utils/.github/actions/ocm-validate@master
+      uses: gardener/cc-utils/.github/actions/ocm-validate@c3291da5bb0797aa52416b459d4590c0e0837c75
       with:
         component-descriptor-path: /tmp/component-descriptor.yaml
         on-validation-errors: ${{ inputs.on-validation-errors }}
@@ -407,7 +407,7 @@ runs:
         tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
 
     - name: upload OCM Component-Descriptor as artifact
-      uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      uses: gardener/cc-utils/.github/actions/upload-artifact@e935b34598062f0079d1d3e446cd0236c3dd16b0
       with:
         path: /tmp/component-descriptor.tar.gz
         name: component-descriptor
@@ -602,7 +602,7 @@ runs:
 
     - name: create-bump-commit
       id: bump
-      uses: gardener/cc-utils/.github/actions/version@master
+      uses: gardener/cc-utils/.github/actions/version@a60487c5210687dee3af7db028a496b9d123acff
       # must be kept in sync with version action called in release workflow (except "version-operation")
       with:
         versionfile: ${{ inputs.version-versionfile }}
