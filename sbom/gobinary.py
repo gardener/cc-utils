@@ -237,10 +237,10 @@ def _modules_from_cdx(doc: dict) -> dict:
     '''
     Extract Go module paths from a parsed CycloneDX SBOM document.
 
-    Returns a dict mapping module_path -> list[binary_path] where binary_path
-    is taken from each component's evidence.occurrences (populated by syft when
-    it finds a Go module compiled into a specific binary).  The list is empty
-    when no occurrence data is present.
+    Returns a dict mapping module_path -> list[binary_path] of all binaries the module
+    was found in. Paths come from evidence.occurrences or, as current syft versions emit
+    them, from `syft:location:<n>:path` properties. The list is empty when neither is
+    present.
     '''
     modules = {}
     for comp in doc.get('components', []):
@@ -250,12 +250,24 @@ def _modules_from_cdx(doc: dict) -> dict:
         mod_path = purl[len(_PURL_GOLANG_PREFIX):]
         if '@' in mod_path:
             mod_path = mod_path[:mod_path.index('@')]
-        bin_paths = [
+        if '?' in mod_path:
+            mod_path = mod_path[:mod_path.index('?')]
+        bin_paths = modules.setdefault(mod_path, [])
+        occ_paths = [
             occ['location']
             for occ in (comp.get('evidence') or {}).get('occurrences') or []
             if occ.get('location')
         ]
-        modules[mod_path] = bin_paths
+        prop_paths = [
+            prop['value']
+            for prop in comp.get('properties') or []
+            if prop.get('name', '').startswith('syft:location:')
+            and prop.get('name', '').endswith(':path')
+            and prop.get('value')
+        ]
+        for path in occ_paths + prop_paths:
+            if path not in bin_paths:
+                bin_paths.append(path)
     return modules
 
 
