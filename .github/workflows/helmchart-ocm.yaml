@@ -56,15 +56,15 @@ on:
           a forked repository (where owner differs from fork's origin).
         type: string
         default: if-possible
-      component-constructor:
+      component-descriptor:
         description: |
-          Use to explicitly pass-in the OCM component constructor containing referenced OCI-Images.
+          Use to explicitly pass-in the OCM component constructor (OCM v2 format).
           If not passed, the component constructor will be collected from `prepare` action and any
           `oci-ocm`-actions.
 
-          Note: this input was previously named `component-descriptor`. It has been renamed
-          to `component-constructor` as part of the OCM v2 migration. Callers who previously
-          passed an inline component descriptor in the old format must update to constructor format.
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value must be in OCM component constructor format
+          (not the legacy component-descriptor format).
         required: false
         type: string
       ocm-mappings:
@@ -162,7 +162,7 @@ jobs:
         id: fetch-ocm
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-constructor: ${{ inputs.component-constructor }}
+          component-constructor: ${{ inputs.component-descriptor }}
           component-constructor-artefact: component-constructor
           ctx: ${{ inputs.ocm-ctx }}
           upload-artifact-name: ''

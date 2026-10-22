@@ -14,24 +14,25 @@ description: |
   - pushing of "bump-commit" (to current branch)
 
 inputs:
-  component-descriptor:
+  component-constructor:
     description: |
-      Effective Component-Descriptor to publish. Any local-blobs are assumed to already be
-      present in target-OCI-Repository.
+      Effective OCM component constructor to publish. Any local blobs will be uploaded
+      by `ocm add cv` from the blobs directory.
 
       Either this input or `component-descriptor-artifact` must be provided.
     required: false
-  component-descriptor-artifact:
+  component-constructor-artifact:
     description: |
       Name of a GHA artifact containing the component-descriptor, as produced by
       `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
-      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+      `component-descriptor.tar.gz`, which in turn must contain `component-constructor.yaml`
+      (OCM v2 constructor format, previously `component-descriptor.yaml`).
 
-      Preferred over the inline `component-descriptor` input for large descriptors.
+      Preferred over the inline `component-constructor` input for large descriptors.
     required: false
-  component-descriptor-blobs-dir:
+  component-constructor-blobs-dir:
     description: |
-      Directory containing blobfiles referenced as local-blobs in component-descriptor
+      Directory containing blobfiles referenced via `input` entries in component-constructor
       (name-scheme: <algorithm>:<hexdigest>).
     required: false
   release-commit-objects:
@@ -129,7 +130,8 @@ inputs:
       ```
 
       `id` must be specified such that a resource is identified unambiguously. Only resources
-      that are stored as a localBlob (access-type) are supported.
+      Resources with a local `input` (File/v1, OCM v2) or `access: localBlob` (legacy) are supported.
+      Both formats are handled by `find_blob()` in release.py.
 
       Example (assuming pipeline builds `helm` for multiple platforms):
       ```
@@ -156,11 +158,11 @@ inputs:
       Optional newline-separated list of additional tag templates. Each non-empty line will be
       treated like `github-tag-template` (supporting ${version} substitution) and an additional
       GitHub tag pointing to the release commit will be created.
-  on-existing-component-descriptor:
+  on-existing-component-constructor:
     default: fail
     type: choice
     description: |
-      Defines how the action should behave if the (to-be-released) component-descriptor already
+      Defines how the action should behave if the (to-be-released) component-constructor already
       exists.
     options:
       - skip
@@ -181,7 +183,7 @@ inputs:
       The relative path (from repository root) to the directory containing the release-notes docs.
 
 outputs:
-  component-descriptor-artifact:
+  component-constructor-artifact:
     description: |
       name of the GHA artifact containing the published component-descriptor
       (same artifact as uploaded by the `release` action: `component-descriptor`).
@@ -204,18 +206,19 @@ runs:
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
     - name: download-component-descriptor-artifact
-      if: ${{ inputs.component-descriptor-artifact != '' }}
+      if: ${{ inputs.component-constructor-artifact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
-        name: ${{ inputs.component-descriptor-artifact }}
+        name: ${{ inputs.component-constructor-artifact }}
         path: /tmp/cd-artifact
-    - name: extract-component-descriptor-artifact
-      if: ${{ inputs.component-descriptor-artifact != '' }}
+    - name: extract-component-constructor-artifact
+      if: ${{ inputs.component-constructor-artifact != '' }}
       shell: bash
       run: |
         set -eu
         tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
-          -C /tmp component-descriptor.yaml
+          -C /tmp component-constructor.yaml
+        mv /tmp/component-constructor.yaml /tmp/component-descriptor.yaml
     - name: import-release-commit
       uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
@@ -230,12 +233,12 @@ runs:
         # capture before create-bump-commit overwrites refs/capture-commit
         echo "digest=$(git rev-parse refs/capture-commit)" >> $GITHUB_OUTPUT
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
-    - name: write-component-descriptor-from-input
-      if: ${{ inputs.component-descriptor-artifact == '' }}
+    - name: write-component-constructor-from-input
+      if: ${{ inputs.component-constructor-artifact == '' }}
       shell: bash
       run: |
         cat <<"EOF" > /tmp/component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
+        ${{ inputs.component-constructor }}
         EOF
     - name: preprocess
       id: preprocess
@@ -295,7 +298,7 @@ runs:
         mkdir /tmp/release-notes
         tar -xf /tmp/release-notes.tar -C /tmp/release-notes
 
-    - name: attach-release-notes-to-component-descriptor
+    - name: attach-release-notes-to-component-constructor
       shell: python
       run: |
         import os
@@ -319,7 +322,7 @@ runs:
           component=component_constructor,
           release_notes_markdown=release_notes_markdown,
           tar_bytes=tar_bytes,
-          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
+          blobs_dir='${{ inputs.component-constructor-blobs-dir }}',
         )
 
         import dataclasses
@@ -330,7 +333,7 @@ runs:
             Dumper=ocm.EnumValueYamlDumper,
           )
 
-    - name: attach-branch-info-to-component-descriptor
+    - name: attach-branch-info-to-component-constructor
       shell: python
       run: |
         import os
@@ -357,7 +360,7 @@ runs:
         release.attach_branch_info(
           component=component_constructor,
           branch_info_bytes=branch_info_bytes,
-          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
+          blobs_dir='${{ inputs.component-constructor-blobs-dir }}',
         )
 
         import dataclasses
@@ -369,9 +372,9 @@ runs:
           )
     - name: publish OCM Component-Descriptor
       shell: bash
-      id: publish-component-descriptor
+      id: publish-component-constructor
       run: |
-        case '${{ inputs.on-existing-component-descriptor }}' in
+        case '${{ inputs.on-existing-component-constructor }}' in
           skip)            conflict_policy=skip ;;
           overwrite)       conflict_policy=replace ;;
           fail)            conflict_policy=abort-and-fail ;;
@@ -386,14 +389,16 @@ runs:
         ocm add cv \
           --repository ctf::/tmp/transport-archive \
           --constructor /tmp/component-descriptor.yaml \
-          --working-directory '${{ inputs.component-descriptor-blobs-dir }}' \
+          --working-directory '${{ inputs.component-constructor-blobs-dir }}' \
           --component-version-conflict-policy "${conflict_policy}"
 
         ocm transfer cv "ctf::/tmp/transport-archive//${component_name}" "oci::${target_repo}"
 
-        tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
+        # rename to component-constructor.yaml before packing (backwards compat: tarball keeps old name)
+        cp /tmp/component-descriptor.yaml /tmp/component-constructor.yaml
+        tar czf /tmp/component-descriptor.tar.gz -C/tmp component-constructor.yaml
 
-    - name: upload OCM Component-Descriptor as artifact
+    - name: upload OCM Component-Constructor as artifact
       uses: gardener/cc-utils/.github/actions/upload-artifact@master
       with:
         path: /tmp/component-descriptor.tar.gz
@@ -490,6 +495,10 @@ runs:
           #   - we still might succeed in publishing bump-commit
         fi
 
+    # TODO(ocm-v2): verify that assets work correctly with both input (OCM v2) and
+    # access: localBlob (legacy) formats. `find_blob()` handles both, but needs end-to-end
+    # testing with actual release assets. Blob files must still exist in blobs.d after
+    # `ocm add cv` has run (it uploads but does not delete blobs from blobs.d).
     - name: create github-release
       if: ${{ inputs.release-on-github == 'true' }}
       shell: python
@@ -560,7 +569,7 @@ runs:
 
         for asset in release.iter_assets(path='/tmp/assets.yaml'):
           path, media_type = release.find_blob(
-            blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
+            blobs_dir='${{ inputs.component-constructor-blobs-dir }}',
             asset=asset,
             component=component_constructor,
           )

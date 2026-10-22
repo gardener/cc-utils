@@ -120,7 +120,7 @@ class Input:
 
 @dc(kw_only=True)
 class FileInput(Input):
-    type = InputType.FILE
+    type: InputType = InputType.FILE
     path: str
     mediaType: str | None = None
     compress: bool | None = None
@@ -912,11 +912,11 @@ class ConstructorResource(Artifact, LabelMethodsMixin):
         | NPMAccess
         | dict
         | None
-    )
+    ) = None
     input: (
         FileInput
         | None
-    )
+    ) = None
     digest: DigestSpec | None = None
     extraIdentity: dict[str, str] = dataclasses.field(default_factory=dict)
     relation: ResourceRelation = ResourceRelation.LOCAL
