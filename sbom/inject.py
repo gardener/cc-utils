@@ -37,6 +37,7 @@ import sbom.cbom as scbom
 import sbom.cbomenrich as scbe
 import sbom.elfcrypto as selfc
 import sbom.gobinary as sgob
+import sbom.gobuildinfo as sgbi
 import sbom.nodecrypto as snodec
 import sbom.oci as soci
 import sbom.s3 as ss3
@@ -467,6 +468,101 @@ def _iter_boring_candidates(image_ref, oci_client):
                     yield path, fobj
 
 
+def _iter_image_files(image_ref, oci_client):
+    '''
+    Yield (path, mode, fobj) for every regular file visible in a single-platform image, in
+    overlay order (topmost layer first; whiteouts and shadowed paths skipped).
+    '''
+    ref = om.OciImageReference.to_image_ref(image_ref)
+    repo_ref = ref.ref_without_tag
+    manifest = oci_client.manifest(image_ref)
+    if isinstance(manifest, om.OciImageManifestList):
+        raise ValueError(f'{image_ref}: expected single-platform manifest')
+
+    seen_paths = set()
+    for layer in reversed(manifest.layers):
+        with tempfile.TemporaryFile() as tmp_f:
+            resp = oci_client.blob(
+                image_reference=repo_ref,
+                digest=layer.digest,
+                stream=True,
+            )
+            try:
+                _decompress_layer(resp, tmp_f)
+            finally:
+                resp.close()
+            tmp_f.seek(0)
+            with tarfile.open(fileobj=tmp_f) as tf:
+                layer_paths = set()
+                for member in tf:
+                    path = '/' + member.name.lstrip('./')
+                    name = os.path.basename(path)
+                    if name.startswith('.wh.'):
+                        layer_paths.add(os.path.join(os.path.dirname(path), name[4:]))
+                        continue
+                    if path in seen_paths:
+                        continue
+                    layer_paths.add(path)
+                    if not member.isfile():
+                        continue
+                    fobj = tf.extractfile(member)
+                    if fobj is None:
+                        continue
+                    yield path, member.mode, fobj
+                seen_paths |= layer_paths
+
+
+def _iter_executables(image_ref, oci_client):
+    '''Yield (path, fobj) for every executable ELF file of a single-platform image.'''
+    for path, mode, fobj in _iter_image_files(image_ref, oci_client):
+        if not mode & 0o111 or fobj.read(4) != b'\x7fELF':
+            continue
+        fobj.seek(0)
+        yield path, fobj
+
+
+def scan_go_settings(image_ref, oci_client) -> tuple[list[dict], list[dict]]:
+    '''
+    Single pass over a single-platform image's files: Go build info of all executable ELF
+    binaries, plus GODEBUG assignments in text files (entrypoint scripts, env files, ...).
+    Returns (binaries, godebug_assignments); see sbom.gobuildinfo.
+    '''
+    binaries = []
+    assignments = []
+    for path, mode, fobj in _iter_image_files(image_ref, oci_client):
+        head = fobj.read(4)
+        fobj.seek(0)
+        if head == b'\x7fELF':
+            if mode & 0o111:
+                binaries.extend(sgbi.scan_binaries([(path, fobj)]))
+        else:
+            assignments.extend(sgbi.scan_text_files([(path, fobj)]))
+    return sorted(binaries, key=lambda b: b['binary']), assignments
+
+
+def scan_go_buildinfo(image_ref, oci_client) -> str | None:
+    '''
+    Extract Go build info from all executables of a single-platform image (plus GODEBUG
+    assignments in text files) and push it as go-buildinfo referrer. Returns the referrer
+    digest, or None if no Go binary was found.
+    '''
+    binaries, assignments = scan_go_settings(image_ref, oci_client)
+    if not binaries:
+        return None
+    digest = sgbi.push_referrer(
+        doc_bytes=sgbi.build_document(image_ref, binaries, assignments),
+        image_reference=image_ref,
+        oci_client=oci_client,
+    )
+    logger.info(
+        '%s: pushed go-buildinfo (%d Go binaries, %d GODEBUG assignments)',
+        image_ref,
+        len(binaries),
+        len(assignments),
+    )
+    return digest
+
+
 def scan_image(
     image_ref: str | om.OciImageReference,
     oci_client: oc.Client,
@@ -645,6 +741,9 @@ def scan_image(
             boring_result['go_binaries_scanned'],
             boring_result['boring_fips_module'],
         )
+
+    if inference:
+        scan_go_buildinfo(image_ref, oci_client)
 
     return (
         spdx_bytes, cdx_bytes, cbom_bytes,

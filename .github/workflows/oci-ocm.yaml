@@ -793,6 +793,25 @@ jobs:
                   f'{len(inference["protocols"])} protocols'
               )
 
+      - name: 'push go-buildinfo referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import oci.auth
+          import oci.client
+          import sbom.inject
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+          digest = sbom.inject.scan_go_buildinfo(
+              image_ref='${{ matrix.args.image-reference }}',
+              oci_client=oci_client,
+          )
+          print(f'go-buildinfo referrer: {digest or "none (no Go binaries)"}')
+
       - name: 'build CBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
         shell: python
