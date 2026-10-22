@@ -132,7 +132,8 @@ runs:
       run: |
         set -eu
         tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
-          -C /tmp component-descriptor.yaml
+          -C /tmp component-constructor.yaml
+        mv /tmp/component-constructor.yaml /tmp/component-descriptor.yaml
     - name: write-component-descriptor-from-input
       if: ${{ inputs.component-descriptor-artifact == '' }}
       shell: bash
@@ -181,10 +182,9 @@ runs:
         name = '${{ inputs.name }}'
         dir = '${{ inputs.dir }}'
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
+          component = ocm.ComponentConstructor.from_dict(
             yaml.safe_load(f),
           )
-        component = component_descriptor.component
 
         version = component.version
         oci_registry = '${{ inputs.oci-registry }}'
@@ -290,18 +290,17 @@ runs:
             target_ref=oci_target_ref,
           )
 
-        helmchart_imagemap = ocm.Resource(
+        helmchart_imagemap = ocm.ConstructorResource(
           name=name,
           version=version,
           type='helmchart-imagemap',
           extraIdentity={
             'type': 'helmchart-imagemap',
           },
-          access=ocm.LocalBlobAccess(
+          input=ocm.FileInput(
+            path=ocm_mappings_path,
             mediaType='application/json',
-            localReference=ocm_mappings_path, # will be processed / patched by export-ocm action
-            size=-1, # will be patched by export-ocm-action
-          )
+          ),
         )
 
         with open('ocm-resources.yaml', 'w') as f:
@@ -315,7 +314,7 @@ runs:
           )
 
     - name: export-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ocm-v2-migration
       with:
         ocm-resources-file: ocm-resources.yaml
         blobs-directory: blobs.d

@@ -58,9 +58,13 @@ on:
         default: if-possible
       component-descriptor:
         description: |
-          Use to explicitly pass-in the OCM-Component-Descriptor containing referenced OCI-Images.
-          If not passed, component-descriptor will be collected from `prepare` action and any
+          Use to explicitly pass-in the OCM component constructor (OCM v2 format).
+          If not passed, the component constructor will be collected from `prepare` action and any
           `oci-ocm`-actions.
+
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value must be in OCM component constructor format
+          (not the legacy component-descriptor format).
         required: false
         type: string
       ocm-mappings:
@@ -156,10 +160,10 @@ jobs:
 
       - name: fetch-ocm-fragments
         id: fetch-ocm
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration
         with:
-          component-descriptor: ${{ inputs.component-descriptor }}
-          component-descriptor-artefact: base-component-descriptor
+          component-constructor: ${{ inputs.component-descriptor }}
+          component-constructor-artefact: component-constructor
           ctx: ${{ inputs.ocm-ctx }}
           upload-artifact-name: ''
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
@@ -187,7 +191,7 @@ jobs:
           oci-registry: ${{ inputs.oci-registry }}
           oci-repository: ${{ inputs.oci-repository }}
           push: ${{ steps.check.outputs.push == 'true' }}
-          component-descriptor-path: ${{ steps.fetch-ocm.outputs.component-descriptor-path }}
+          component-descriptor-path: ${{ steps.fetch-ocm.outputs.component-constructor-path }}
           mappings: ${{ inputs.ocm-mappings }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}

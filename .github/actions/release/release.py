@@ -21,13 +21,13 @@ class Asset:
     type: str
     id: dict[str, str]
 
-    def matches(self, resource: ocm.Resource):
+    def matches(self, resource: ocm.ConstructorResource):
         # special-handling for version, name, and type (as those are defined on toplevel)
         for k,v in self.id.items():
             if k in ('name', 'version', 'type'):
                 resource_value = getattr(resource, k)
             else:
-                resource_value = resource.extraIdentity.get(k)
+                resource_value = (resource.extraIdentity or {}).get(k)
 
             if isinstance(resource_value, enum.Enum):
                 resource_value = resource_value.value
@@ -35,13 +35,11 @@ class Asset:
             if not resource_value == v:
                 return False
 
-        # reject if resource carries extraIdentity keys not covered by id —
-        # such keys are part of the OCM identity and make it a distinct resource
-        # (e.g. SBOM resources share name/os/arch with binaries but add sbom-format)
-        return not (resource.extraIdentity.keys() - self.id.keys())
+        # reject if resource carries extraIdentity keys not covered by id
+        extra = resource.extraIdentity or {}
+        return not (extra.keys() - self.id.keys())
 
     def __post_init__(self):
-        # basic validation: id.name must be present and non-empty
         if not self.id.get('name'):
             print('Error: asset.id.name must not be empty:')
             print(self)
@@ -58,11 +56,9 @@ def iter_assets(
         return
 
     if isinstance(assets, dict):
-        # it is okay-ish if user only gave us a single element
         assets = [assets]
 
     for asset in assets:
-        # kebap -> camel
         asset['mime_type'] = asset.pop('mime-type', None)
 
         yield dacite.from_dict(
@@ -74,15 +70,14 @@ def iter_assets(
 def find_blob(
     blobs_dir: str,
     asset: Asset,
-    component: ocm.Component,
-) -> tuple[str, ocm.LocalBlobAccess]:
+    component: ocm.ComponentConstructor,
+) -> tuple[str, str]:
     '''
-    lookup OCM-resource selected by given `asset`. The resource is assume to have an access of
-    type localBlob, with the blob being expected to reside below `blobs_dir`, as is the case
-    after running `merge-ocm-fragments` action.
+    lookup OCM-resource selected by given `asset`. The resource is assumed to have either
+    an input of type File/v1 (OCM v2 constructor format) or a localBlob access (legacy format),
+    with the blob being expected to reside below `blobs_dir`.
 
-    returns both the found path, and access as a two-tuple (the latter contains mime-type, which
-    makes it useful for uploading as a github-release-asset).
+    returns both the found path, and the mediaType as a two-tuple.
     '''
     matching_resources = (res for res in component.resources if asset.matches(res))
 
@@ -97,80 +92,71 @@ def find_blob(
         print(f'Error: {asset=} is ambiguous (more than one matching OCM-Resource)')
         exit(1)
     except StopIteration:
-        pass # okay, we _want_ to have only one match
+        pass
 
-    # for now, we only allow localBlobs
-    access = resource.access
-    if not access.type is ocm.AccessType.LOCAL_BLOB:
-        print(f'Error: {resource=} has unsupported access-type (only localBlob is allowed)')
+    if resource.input:
+        alg_and_hexdigest = resource.input.path
+        media_type = resource.input.mediaType
+    elif resource.access and hasattr(resource.access, 'localReference'):
+        alg_and_hexdigest = resource.access.localReference
+        media_type = resource.access.mediaType
+    else:
+        print(f'Error: {resource=} has neither input nor localBlob access')
         exit(1)
 
-    # format: sha256:<digest> - as output by `merge-ocm-fragments` action
-    alg_and_hexdigest = access.localReference
-    path = os.path.join(
-        blobs_dir,
-        alg_and_hexdigest,
-    )
+    path = os.path.join(blobs_dir, alg_and_hexdigest)
 
     if not os.path.isfile(path):
         print(f'Error: {path=} does not exist (but was referenced by {resource=} / {asset=}')
         exit(1)
 
-    return path, access
+    return path, media_type
+
+
+def _write_blob(blobs_dir: str, octets: bytes) -> str:
+    '''Write blob to blobs_dir and return its sha256 digest name.'''
+    digest = f'sha256:{hashlib.sha256(octets).hexdigest()}'
+    path = os.path.join(blobs_dir, digest)
+    with open(path, 'wb') as f:
+        f.write(octets)
+    return digest
 
 
 def attach_release_notes(
-    component: ocm.Component,
+    component: ocm.ComponentConstructor,
     release_notes_markdown: str,
     tar_bytes: bytes,
-    oci_client,
+    blobs_dir: str,
 ) -> None:
     '''
-    Upload release-notes blobs to the component's OCI repository and append
-    the corresponding Resources to the component.
+    Write release-notes blobs to blobs_dir and append the corresponding resources
+    with input entries to the component constructor.
     '''
-    tgt_oci_ref = component.current_ocm_repo.component_version_oci_ref(
-        name=component.name,
-        version=component.version,
-    )
-
     if release_notes_markdown:
         octets = release_notes_markdown.encode('utf-8')
-        digest = f'sha256:{hashlib.sha256(octets).hexdigest()}'
-        oci_client.put_blob(
-            image_reference=tgt_oci_ref,
-            digest=digest,
-            octets_count=len(octets),
-            data=octets,
-        )
+        digest = _write_blob(blobs_dir, octets)
         component.resources.append(
-            ocm.Resource(
+            ocm.ConstructorResource(
                 name=rn_ocm.release_notes_resource_name_old,
                 version=component.version,
                 type='text/markdown.release-notes',
-                access=ocm.LocalBlobAccess(
-                    localReference=digest,
-                    size=len(octets),
+                relation=ocm.ResourceRelation.LOCAL,
+                input=ocm.FileInput(
+                    path=digest,
                     mediaType='text/markdown.release-notes',
                 ),
             ),
         )
 
-    tar_digest = f'sha256:{hashlib.sha256(tar_bytes).hexdigest()}'
-    oci_client.put_blob(
-        image_reference=tgt_oci_ref,
-        digest=tar_digest,
-        octets_count=len(tar_bytes),
-        data=tar_bytes,
-    )
+    tar_digest = _write_blob(blobs_dir, tar_bytes)
     component.resources.append(
-        ocm.Resource(
+        ocm.ConstructorResource(
             name=rn_ocm.release_notes_resource_name,
             version=component.version,
             type='application/tar.release-notes',
-            access=ocm.LocalBlobAccess(
-                localReference=tar_digest,
-                size=len(tar_bytes),
+            relation=ocm.ResourceRelation.LOCAL,
+            input=ocm.FileInput(
+                path=tar_digest,
                 mediaType='application/tar.release-notes',
             ),
         ),
@@ -178,30 +164,23 @@ def attach_release_notes(
 
 
 def attach_branch_info(
-    component: ocm.Component,
+    component: ocm.ComponentConstructor,
     branch_info_bytes: bytes,
-    oci_client,
+    blobs_dir: str,
 ) -> None:
     '''
-    Upload the branch-info YAML blob and append the corresponding Resource to
-    the component.
+    Write branch-info blob to blobs_dir and append the corresponding resource
+    with an input entry to the component constructor.
     '''
-    tgt_oci_ref = component.current_ocm_repo.component_version_oci_ref(component)
-    digest = f'sha256:{hashlib.sha256(branch_info_bytes).hexdigest()}'
-    oci_client.put_blob(
-        image_reference=tgt_oci_ref,
-        digest=digest,
-        octets_count=len(branch_info_bytes),
-        data=branch_info_bytes,
-    )
+    digest = _write_blob(blobs_dir, branch_info_bytes)
     component.resources.append(
-        ocm.Resource(
+        ocm.ConstructorResource(
             name='branch-info',
             version=component.version,
             type='application/vnd.gardener.cloud.branch-info+yaml',
-            access=ocm.LocalBlobAccess(
-                localReference=digest,
-                size=len(branch_info_bytes),
+            relation=ocm.ResourceRelation.LOCAL,
+            input=ocm.FileInput(
+                path=digest,
                 mediaType='application/vnd.gardener.cloud.branch-info+yaml',
             ),
         ),

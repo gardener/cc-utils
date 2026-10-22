@@ -3,19 +3,21 @@ description: |
   retrieves release-notes following conventions from Gardener-Project
 
 inputs:
-  component-descriptor:
+  component-constructor:
     description: |
-      effective OCM component-descriptor. It is sufficient to pass a `base component-descriptor`,
-      as output by `base-component-descriptor` workflow. Its version must be set to next planned
-      version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
+      effective OCM component constructor (OCM v2 format). It is sufficient to pass a base
+      component constructor, as output by `component-descriptor-to-constructor` action.
+      Its version must be set to next planned version (e.g. `1.2.0-dev`, if greatest
+      released version was `1.1.0`).
 
-      Either this input or `component-descriptor-artifact` must be provided.
+      Either this input or `component-constructor-artifact` must be provided.
     required: false
-  component-descriptor-artifact:
+  component-constructor-artifact:
     description: |
-      Name of a GHA artifact containing the component-descriptor, as produced by
-      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
-      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+      Name of a GHA artifact containing the OCM component constructor, as produced by
+      `merge-ocm-fragments` (output `component-constructor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-constructor.yaml`
+      (OCM v2 constructor format, previously `component-descriptor.yaml`).
 
       Preferred over the inline `component-descriptor` input for large descriptors.
     required: false
@@ -97,18 +99,19 @@ runs:
         extra-auths: ${{ inputs.extra-auths }}
 
     - name: download-component-descriptor-artifact
-      if: ${{ inputs.component-descriptor-artifact != '' }}
+      if: ${{ inputs.component-constructor-artifact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
-        name: ${{ inputs.component-descriptor-artifact }}
+        name: ${{ inputs.component-constructor-artifact }}
         path: /tmp/cd-artifact
     - name: extract-component-descriptor-artifact
-      if: ${{ inputs.component-descriptor-artifact != '' }}
+      if: ${{ inputs.component-constructor-artifact != '' }}
       shell: bash
       run: |
         set -eu
         tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
-          -C "${{ github.workspace }}" component-descriptor.yaml
+          -C "${{ github.workspace }}" component-constructor.yaml
+        mv "${{ github.workspace }}/component-constructor.yaml" "${{ github.workspace }}/component-descriptor.yaml"
 
     - name: Prepare release-notes variants cfg
       id: prep-releaes-notes-variants-cfg
@@ -132,12 +135,13 @@ runs:
         with open('release-notes-variants-cfg.yaml', 'w') as f:
           yaml.dump(release_notes_variant_cfg, f)
 
-    - name: write-component-descriptor-from-input
-      if: ${{ inputs.component-descriptor-artifact == '' }}
+    - name: write-component-constructor-from-input
+      if: ${{ inputs.component-constructor-artifact == '' }}
       shell: bash
       run: |
+        # input is named component-descriptor for backwards compat but contains constructor format
         cat <<'EOF' > component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
+        ${{ inputs.component-constructor }}
         EOF
 
     - name: Retrieve Release-Notes
@@ -146,7 +150,7 @@ runs:
       run: |
         set -eu
 
-        echo 'Component-Descriptor:'
+        echo 'Component-Constructor (constructor format):'
         cat component-descriptor.yaml
 
         auth_token="${{ inputs.github-token }}"
