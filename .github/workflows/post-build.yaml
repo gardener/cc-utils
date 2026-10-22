@@ -24,7 +24,9 @@ on:
         type: string
         default: overwrite
         description: |
-          defines how to behave in case the to-be-uploaded component-descriptor already exists.
+          defines how to behave in case the to-be-uploaded component-constructor already exists.
+          Note: keeps the name `on-existing-component-descriptor` for backwards compatibility
+          with external callers.
           allowed values are:
             - overwrite
             - skip # silently ignore
@@ -131,14 +133,13 @@ on:
 
           Note that it is only necessary to pass an auth-token if OIDC-authentication is not
           possible. OIDC-Authentication should be preferred over using a static token.
-    outputs:
-      component-constructor:
-        description: |
-          the final component-constructor after any emitted fragments from other jobs.
-        value: ${{ jobs.component-descriptor.outputs.component-constructor }}
-
+# Note: the component-constructor/component-descriptor workflow output was removed.
+# On master, steps.collect.outputs.component-descriptor was never a real output of
+# merge-ocm-fragments, so the output was always empty. Nobody reads
+# needs.post-build.outputs.component-descriptor — callers always hardcode the artifact
+# name `component-descriptor` directly.
 jobs:
-  component-descriptor:
+  component-constructor:
     environment: ${{ inputs.github-environment }}
     runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
@@ -146,7 +147,6 @@ jobs:
       id-token: write
 
     outputs:
-      component-constructor: ${{ steps.collect.outputs.component-constructor }}
       version: ${{ steps.collect.outputs.version }}
 
     steps:
@@ -228,6 +228,8 @@ jobs:
           # component-constructor.yaml and renaming it locally.
           tar czf component-descriptor.tar.gz -C /tmp/ocm component-constructor.yaml
       - name: upload-component-constructor-as-artefact
+        # Note: artifact is still named `component-descriptor` for backwards compatibility —
+        # external callers that download this artifact by name must not be broken.
         uses: gardener/cc-utils/.github/actions/upload-artifact@master
         with:
           path: component-descriptor.tar.gz
@@ -248,7 +250,7 @@ jobs:
   draft-release:
     name: Update / Create Draft-Release
     needs:
-      - component-descriptor
+      - component-constructor
       - repo-metadata
     # never run for forks and only for push events
     if: ${{ ! fromJSON(needs.repo-metadata.outputs.fork) && github.event_name == 'push' }}
@@ -332,6 +334,7 @@ jobs:
           rm -rf prepare-values.d prepare-workflow-values.tar
 
           echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+          echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
       - uses: gardener/cc-utils/.github/actions/github-auth@master
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
@@ -357,7 +360,7 @@ jobs:
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/release-notes@master
         with:
-          component-descriptor-artifact: component-descriptor
+          component-constructor-artifact: component-descriptor  # artifact name kept for backwards compat
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
           github-token: ${{ steps.fed-token.outputs.token || secrets.GITHUB_TOKEN }}
           draft: true
@@ -383,5 +386,5 @@ jobs:
         if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
         uses: gardener/cc-utils/.github/actions/draft-release@master
         with:
-          version: ${{ needs.component-descriptor.outputs.version }}
+          version: ${{ needs.component-constructor.outputs.version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

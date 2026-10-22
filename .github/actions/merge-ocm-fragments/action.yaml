@@ -292,7 +292,7 @@ runs:
             ref.pop('extraIdentity', None)
             ref.pop('digest', None)
         with open(component_constructor_path, 'w') as f:
-          yaml.safe_dump(data=raw, stream=f)
+          yaml.dump(data=raw, stream=f, Dumper=ocm.EnumValueYamlDumper)
 
     - name: post-process
       if: ${{ inputs.post-process == 'callback' }}

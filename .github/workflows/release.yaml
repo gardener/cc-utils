@@ -298,7 +298,7 @@ jobs:
 
     outputs:
       release-notes: ${{ steps.release-notes.outputs.release-notes }}
-      component-descriptor-artifact: ${{ steps.release.outputs.component-descriptor-artifact }}
+      component-descriptor-artifact: ${{ steps.release.outputs.component-constructor-artifact }}
       version: ${{ steps.component-constructor.outputs.version }}
 
     steps:
@@ -400,7 +400,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/release-notes@master
         id: release-notes
         with:
-          component-descriptor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
+          component-constructor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
           ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
           github-token: ${{ steps.fed-token.outputs.token }}
           draft: false
@@ -424,8 +424,8 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/release@ocm-v2-migration
         id: release
         with:
-          component-descriptor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
-          component-descriptor-blobs-dir: /tmp/ocm/blobs.d
+          component-constructor-artifact: ${{ steps.component-constructor.outputs.component-constructor-artifact }}
+          component-constructor-blobs-dir: /tmp/ocm/blobs.d
           release-commit-objects: ${{ inputs.release-commit-objects }}
           release-commit-objects-artefact: release-commit-objects
           release-commit-target: ${{ inputs.release-commit-target }}

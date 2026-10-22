@@ -73,8 +73,9 @@ def find_blob(
     component: ocm.ComponentConstructor,
 ) -> tuple[str, str]:
     '''
-    lookup OCM-resource selected by given `asset`. The resource is assumed to have an input
-    of type File/v1, with the blob being expected to reside below `blobs_dir`.
+    lookup OCM-resource selected by given `asset`. The resource is assumed to have either
+    an input of type File/v1 (OCM v2 constructor format) or a localBlob access (legacy format),
+    with the blob being expected to reside below `blobs_dir`.
 
     returns both the found path, and the mediaType as a two-tuple.
     '''
@@ -93,18 +94,22 @@ def find_blob(
     except StopIteration:
         pass
 
-    if not resource.input:
-        print(f'Error: {resource=} has no input (only File/v1 input is supported)')
+    if resource.input:
+        alg_and_hexdigest = resource.input.path
+        media_type = resource.input.mediaType
+    elif resource.access and hasattr(resource.access, 'localReference'):
+        alg_and_hexdigest = resource.access.localReference
+        media_type = resource.access.mediaType
+    else:
+        print(f'Error: {resource=} has neither input nor localBlob access')
         exit(1)
 
-    alg_and_hexdigest = resource.input.path
     path = os.path.join(blobs_dir, alg_and_hexdigest)
 
     if not os.path.isfile(path):
         print(f'Error: {path=} does not exist (but was referenced by {resource=} / {asset=}')
         exit(1)
 
-    media_type = resource.input.mediaType
     return path, media_type
 
 

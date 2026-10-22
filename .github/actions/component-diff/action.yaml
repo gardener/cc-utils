@@ -18,7 +18,8 @@ inputs:
     description: |
       Name of a GHA artifact containing the component-descriptor, as produced by
       `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
-      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+      `component-descriptor.tar.gz`, which in turn must contain `component-constructor.yaml`
+      (OCM v2 constructor format, previously `component-descriptor.yaml`).
 
       Preferred over the inline `component-descriptor` input for large descriptors.
   ocm-repositories:
