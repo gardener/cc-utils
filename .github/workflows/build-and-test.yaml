@@ -38,7 +38,7 @@ jobs:
         include:
           - runs-on: ubuntu-latest
             arch: amd64
-          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-26.04-arm' }}
             arch: arm64
     runs-on: ${{ matrix.runs-on }}
     name: build-bundle (${{ matrix.arch }})
@@ -86,7 +86,7 @@ jobs:
         include:
           - runs-on: ubuntu-latest
             arch: amd64
-          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-26.04-arm' }}
             arch: arm64
     runs-on: ${{ matrix.runs-on }}
     name: smoke-test-bundle (${{ matrix.arch }})
