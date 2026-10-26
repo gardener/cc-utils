@@ -34,7 +34,7 @@ runs:
     # this step is intentionally NOT removed on pinned branches.
     # keep python-version in sync with bundle-gardener-gha-libs (wheel ABIs)
     - name: setup-python
-      if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
+      if: ${{ ! steps.check.outputs.already-installed }}
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
@@ -73,7 +73,7 @@ runs:
     # when running on non-master branches.
     # removed on pinned branches (github.com path)
     - name: install-prerequisites-on-ghe
-      if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
+      if: ${{ ! steps.check.outputs.already-installed }}
       shell: bash
       run: |
         set -euo pipefail
