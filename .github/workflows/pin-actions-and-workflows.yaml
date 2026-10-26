@@ -59,7 +59,7 @@ jobs:
       contents: read
       id-token: write  # required for trusted-checkout OIDC token exchange
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@110484c48b49e0d022acd2f05e1a702fc0bdfcb8
         with:
           fetch-depth: 0
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -67,7 +67,7 @@ jobs:
           github-auth-token-permissions: |
             contents: write
             workflows: write
-      - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@c73225b980fbf19f9ac88ead85982e921e04d034
         id: bundle
       - uses: actions/upload-artifact@v4
         with:
@@ -81,7 +81,7 @@ jobs:
       contents: write  # required to push the target branch and preservation refs
       id-token: write  # required for OIDC federated token exchange
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@110484c48b49e0d022acd2f05e1a702fc0bdfcb8
         with:
           fetch-depth: 0  # full history required for git worktree operations
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -104,7 +104,7 @@ jobs:
           cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
           cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
       - name: pin-actions-and-workflows
-        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
+        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@593463fb79b32df266c98f38cd7271da77422bb1
         with:
           own-ref: ${{ inputs.own-ref }}
           target-branch: ${{ inputs.target-branch }}
