@@ -364,6 +364,35 @@ definitions:
         - type: 'null'
         - $ref: '#/definitions/digestSpec'
 
+  helmChartResource:
+    type: 'object'
+    required:
+      - 'name'
+      - 'version'
+      - 'type'
+      - 'access'
+    properties:
+      name:
+        type: 'string'
+        $ref: '#/definitions/identityAttributeKey'
+      extraIdentity:
+        $ref: '#/definitions/identityAttribute'
+      version:
+        $ref: '#/definitions/relaxedSemver'
+      type:
+        type: 'string'
+        enum: ['helmChart']
+      labels:
+        type: 'array'
+        items:
+          $ref: '#/definitions/label'
+      access:
+        $ref: '#/definitions/ociImageAccess'
+      digest:
+        oneOf:
+        - type: 'null'
+        - $ref: '#/definitions/digestSpec'
+
   httpAccess:
     type: 'object'
     required:
@@ -455,6 +484,7 @@ definitions:
           anyOf:
             - $ref: '#/definitions/resourceType'
             - $ref: '#/definitions/ociImageResource'
+            - $ref: '#/definitions/helmChartResource'
             - $ref: '#/definitions/genericResource'
 
     componentReferences: {}
