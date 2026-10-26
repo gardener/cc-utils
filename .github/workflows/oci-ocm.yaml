@@ -61,8 +61,8 @@ on:
 
           Unused platforms are ignored.
         default: |
-          linux/arm64: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-26.04-arm' }}
-          linux/amd64: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+          linux/arm64: ubuntu-26.04-arm
+          linux/amd64: ubuntu-latest
       push:
         description: |
           Whether or not to push the built image. Allowed values:
