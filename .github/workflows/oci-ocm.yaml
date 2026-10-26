@@ -61,7 +61,7 @@ on:
 
           Unused platforms are ignored.
         default: |
-          linux/arm64: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+          linux/arm64: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-26.04-arm' }}
           linux/amd64: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
       push:
         description: |
