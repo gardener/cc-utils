@@ -362,6 +362,10 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:
           remove-trusted-label: false
+      - name: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: install-act
         run: |
           curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh \
