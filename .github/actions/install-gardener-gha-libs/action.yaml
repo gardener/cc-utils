@@ -29,12 +29,12 @@ runs:
         if pip show gardener-gha-libs &>/dev/null; then
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
-    # on GHE runners Python may not be pre-installed; set it up unconditionally
-    # so that pip is available for the bundle path as well as the fallback path.
+    # ensure the Python version matches the bundle's wheel ABIs on all runners
+    # (system Python may differ from the version used to build the bundle).
     # this step is intentionally NOT removed on pinned branches.
     # keep python-version in sync with bundle-gardener-gha-libs (wheel ABIs)
     - name: setup-python
-      if: ${{ ! steps.check.outputs.already-installed && github.server_url != 'https://github.com' }}
+      if: ${{ ! steps.check.outputs.already-installed }}
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
