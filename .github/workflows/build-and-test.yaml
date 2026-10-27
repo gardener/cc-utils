@@ -443,8 +443,6 @@ jobs:
           remove-trusted-label: false
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: install-syft
-        # use the shared action (retries transient curl flakes; keeps pinned-version
-        # fallback in sync)
         uses: ./.github/actions/install-syft
       - name: install-cbomkit-theia
         uses: ./.github/actions/install-cbomkit-theia
@@ -476,8 +474,6 @@ jobs:
           remove-trusted-label: false
       - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: install-syft
-        # use the shared action (retries transient curl flakes; keeps pinned-version
-        # fallback in sync)
         uses: ./.github/actions/install-syft
       - name: install-cbomkit-theia
         uses: ./.github/actions/install-cbomkit-theia
