@@ -19,8 +19,12 @@ inputs:
     required: false
     type: string
     description: |
-      The (base) component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
-      one will be created.
+      The (base) OCM component constructor (OCM v2 format) to merge ocm-fragments into.
+      If not passed, a minimal one will be created.
+
+      Note: this input keeps the name `component-descriptor` for backwards compatibility
+      with external callers. The value must be in OCM component constructor format
+      (not the legacy component-descriptor format).
   component-descriptor-artefact:
     required: false
     type: string
@@ -261,9 +265,6 @@ runs:
 
         prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
         prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
-        # TODO(ocm-v2): base-component.yaml is no longer included in the component-constructor
-        # artifact. Repos that customised componentPrefixes in .ocm/base-component.yaml will
-        # silently lose that override — the default ocm-component-prefixes will be used instead.
         logger.info(f'{prefixes=}')
 
         if os.path.isfile(base_component_path := 'base-component.yaml'):

@@ -58,9 +58,13 @@ on:
         default: if-possible
       component-descriptor:
         description: |
-          Use to explicitly pass-in the OCM-Component-Descriptor containing referenced OCI-Images.
-          If not passed, component-descriptor will be collected from `prepare` action and any
+          Use to explicitly pass-in the OCM component constructor (OCM v2 format).
+          If not passed, the component constructor will be collected from `prepare` action and any
           `oci-ocm`-actions.
+
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value must be in OCM component constructor format
+          (not the legacy component-descriptor format).
         required: false
         type: string
       ocm-mappings:

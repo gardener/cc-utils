@@ -16,10 +16,14 @@ description: |
 inputs:
   component-descriptor:
     description: |
-      Effective Component-Descriptor to publish. Any local-blobs are assumed to already be
-      present in target-OCI-Repository.
+      OCM component constructor (OCM v2 format) to publish. Local blobs will be
+      uploaded by `ocm add cv` from the blobs directory.
 
       Either this input or `component-descriptor-artifact` must be provided.
+
+      Note: this input keeps the name `component-descriptor` for backwards compatibility
+      with external callers. The value must be in OCM component constructor format
+      (not the legacy component-descriptor format).
     required: false
   component-descriptor-artifact:
     description: |

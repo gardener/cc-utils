@@ -390,7 +390,11 @@ def add_resources_from_imagevector(
                 'value': target_version,
             })
 
-        img_resource = ocm.Resource(
+        if isinstance(component, ocm.ComponentConstructor):
+            resource_cls = ocm.ConstructorResource
+        else:
+            resource_cls = ocm.Resource
+        img_resource = resource_cls(
             name=resource_name or name,
             version=version or tag,
             extraIdentity=extra_identity,

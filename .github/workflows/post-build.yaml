@@ -24,7 +24,9 @@ on:
         type: string
         default: overwrite
         description: |
-          defines how to behave in case the to-be-uploaded component-descriptor already exists.
+          defines how to behave in case the to-be-uploaded component-constructor already exists.
+          Note: keeps the name `on-existing-component-descriptor` for backwards compatibility
+          with external callers.
           allowed values are:
             - overwrite
             - skip # silently ignore

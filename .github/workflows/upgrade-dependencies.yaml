@@ -10,9 +10,13 @@ on:
         required: false
         type: string
         description: |
-          The Component-Descriptor containing the Component-References to honour.
-          If not given, a default Component-Descriptor will be determined using the
+          The OCM component constructor (OCM v2 format) containing the component references to honour.
+          If not given, a default component constructor will be determined using the
           `prepare.yaml` workflow.
+
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value must be in OCM component constructor format
+          (not the legacy component-descriptor format).
       ocm-repositories:
         required: false
         type: string
@@ -172,7 +176,7 @@ jobs:
       - uses: gardener/cc-utils/.github/actions/ocm-upgrade@master
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
-          component-descriptor-artifact: ${{ inputs.component-descriptor == '' && needs.prepare.outputs.component-constructor-artefact || '' }}
+          component-descriptor-artifact: ${{ inputs.component-descriptor == '' && needs.prepare.outputs.component-descriptor-artefact || '' }}
           ocm-repositories: |
             ${{ needs.prepare.outputs.ocm-repositories || inputs.ocm-repositories }}
           github-token: ${{ steps.checkout.outputs.token }}

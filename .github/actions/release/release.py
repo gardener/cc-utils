@@ -21,7 +21,7 @@ class Asset:
     type: str
     id: dict[str, str]
 
-    def matches(self, resource: ocm.Resource):
+    def matches(self, resource: ocm.ConstructorResource):
         # special-handling for version, name, and type (as those are defined on toplevel)
         for k,v in self.id.items():
             if k in ('name', 'version', 'type'):
@@ -75,12 +75,12 @@ def iter_assets(
 def find_blob(
     blobs_dir: str,
     asset: Asset,
-    component: ocm.Component | ocm.ComponentConstructor,
+    component: ocm.ComponentConstructor,
 ) -> tuple[str, str]:
     '''
-    lookup OCM-resource selected by given `asset`. The resource is assumed to have either:
-    - an input field (File/v1 type), with the blob residing in blobs_dir.
-    - a localBlob access (legacy), with the blob residing in blobs_dir.
+    lookup OCM-resource selected by given `asset`. The resource is assumed to have either
+    an input of type File/v1 (OCM v2 constructor format) or a localBlob access (legacy format),
+    with the blob being expected to reside below `blobs_dir`.
 
     returns both the found path, and the mediaType as a two-tuple.
     '''

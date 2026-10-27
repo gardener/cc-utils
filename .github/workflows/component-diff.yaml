@@ -43,7 +43,7 @@ jobs:
         id: component-descriptor
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration-minimal
         with:
-          component-descriptor-artefact: base-component-descriptor
+          component-descriptor-artefact: component-constructor
       - name: fetch-prepare-values
         if: ${{ inputs.ocm-repositories == '' }}
         uses: gardener/cc-utils/.github/actions/download-artifact@master

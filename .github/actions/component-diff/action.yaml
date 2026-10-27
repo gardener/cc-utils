@@ -81,6 +81,8 @@ runs:
         current_component = ocm.ComponentConstructor.from_dict(raw)
         component_name = current_component.name
         component_version = current_component.version
+
+        ocm_repositories = '${{ inputs.ocm-repositories }}'.split(',')
         ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(*ocm_repositories)
 
         oci_client = oci.client.client_with_dockerauth()

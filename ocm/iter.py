@@ -45,7 +45,7 @@ class ArtefactNode:
     - iterable (useful for pattern-matching, e.g. c,a = node)
     '''
     @property
-    def artefact(self) -> ocm.Resource | ocm.Source:
+    def artefact(self) -> ocm.Resource | ocm.ConstructorResource | ocm.Source:
         if isinstance(self, ResourceNode):
             return self.resource
         if isinstance(self, SourceNode):
@@ -54,7 +54,9 @@ class ArtefactNode:
 
     def __iter__(
         self,
-    ) -> collections.abc.Generator[ocm.Component | ocm.Resource | ocm.Source, None, None]:
+    ) -> collections.abc.Generator[
+        ocm.Component | ocm.Resource | ocm.ConstructorResource | ocm.Source, None, None
+    ]:
         # pylint: disable=E1101
         yield self.component
         yield self.artefact
@@ -62,7 +64,7 @@ class ArtefactNode:
 
 @dataclasses.dataclass
 class ResourceNode(Node, ArtefactNode):
-    resource: ocm.Resource
+    resource: ocm.Resource | ocm.ConstructorResource
 
     def __str__(self) -> str:
         return (
@@ -246,7 +248,7 @@ def iter(
 
 
 def iter_resources(
-    component: ocm.Component,
+    component: ocm.Component | ocm.ComponentConstructor,
     lookup: ocm.ComponentDescriptorLookup=None,
     recursion_depth: int=-1,
     prune_unique: bool=True,

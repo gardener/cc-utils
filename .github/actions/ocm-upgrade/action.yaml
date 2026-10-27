@@ -24,8 +24,12 @@ description: |
 inputs:
   component-descriptor:
     description: |
-      The effective OCM-Component-Descriptor based on which Upgrade-Pullrequests should be
-      created. Prefer `component-descriptor-artifact`.
+      The OCM component constructor (OCM v2 format) based on which upgrade pull requests
+      should be created. Prefer `component-descriptor-artifact`.
+
+      Note: this input keeps the name `component-descriptor` for backwards compatibility
+      with external callers. The value must be in OCM component constructor format
+      (not the legacy component-descriptor format).
     type: string
     required: false
   component-descriptor-artifact:

@@ -55,7 +55,11 @@ inputs:
     required: false
     type: string
     description: |
-      An OCM-Component-Descriptor in YAML form (inline). Prefer `component-descriptor-artifact`.
+      An OCM component constructor (OCM v2 format) in YAML form (inline). Prefer `component-descriptor-artifact`.
+
+      Note: this input keeps the name `component-descriptor` for backwards compatibility
+      with external callers. The value must be in OCM component constructor format
+      (not the legacy component-descriptor format).
 
   component-descriptor-artifact:
     required: false
