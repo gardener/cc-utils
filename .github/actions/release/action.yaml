@@ -166,18 +166,6 @@ inputs:
       - skip
       - overwrite
       - fail
-  on-validation-errors:
-    default: fail
-    type: choice
-    options:
-      - fail
-      - continue
-  ocm-validation-recursion-depth:
-    default: -1
-    type: number
-    description: |
-      Passed as `recursion-depth` to the `ocm-validate` action. -1 = full transitive closure
-      (default). 0 = top-level only. Requires `ocm-repositories` to be resolvable when non-zero.
   extra-oci-registries:
     required: false
     type: string
@@ -253,7 +241,7 @@ runs:
       id: preprocess
       shell: bash
       run: |
-        version=$(yq .component.version /tmp/component-descriptor.yaml)
+        version=$(yq .version /tmp/component-descriptor.yaml)
         echo "version=${version}" >> $GITHUB_OUTPUT
 
         # main git tag
@@ -278,14 +266,16 @@ runs:
       id: read-ocm-repositories
       shell: bash
       run: |
-        tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+        tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories prepare-values.d/ocm-repository
         ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
+        ocm_repository="$(cat prepare-values.d/ocm-repository)"
         rm -rf prepare-values.d prepare-workflow-values.tar
         extra_oci_registries='${{ inputs.extra-oci-registries }}'
         if [ -n "${extra_oci_registries}" ]; then
           ocm_repositories="${ocm_repositories},$(printf '%s' "${extra_oci_registries}" | tr '\n' ',')"
         fi
         echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
+        echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry
       uses: gardener/cc-utils/.github/actions/oci-auth@master
@@ -308,53 +298,47 @@ runs:
     - name: attach-release-notes-to-component-descriptor
       shell: python
       run: |
-        import dataclasses
         import os
         import sys
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import oci.auth
-        import oci.client
         import ocm
         import release
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+          component_constructor = ocm.ComponentConstructor.from_dict(yaml.safe_load(f))
 
         with open('/tmp/release-notes/legacy-release-notes.md') as f:
           release_notes_markdown = f.read()
         with open('/tmp/release-notes/release-notes-archive.tar', 'rb') as f:
           tar_bytes = f.read()
 
-        oci_client = oci.client.Client(credentials_lookup=oci.auth.docker_credentials_lookup())
-
         release.attach_release_notes(
-          component=component_descriptor.component,
+          component=component_constructor,
           release_notes_markdown=release_notes_markdown,
           tar_bytes=tar_bytes,
-          oci_client=oci_client,
+          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
         )
 
+        import dataclasses
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
+            data=dataclasses.asdict(component_constructor),
             stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
           )
 
     - name: attach-branch-info-to-component-descriptor
       shell: python
       run: |
-        import dataclasses
         import os
         import sys
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
-        import oci.client
         import ocm
         import release
 
@@ -365,44 +349,48 @@ runs:
         print(f'found "{branch_info_filename}" - will attach contents to component descriptor')
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+          component_constructor = ocm.ComponentConstructor.from_dict(yaml.safe_load(f))
 
         with open(branch_info_filename, 'rb') as f:
           branch_info_bytes = f.read()
 
-        oci_client = oci.client.client_with_dockerauth()
-
         release.attach_branch_info(
-          component=component_descriptor.component,
+          component=component_constructor,
           branch_info_bytes=branch_info_bytes,
-          oci_client=oci_client,
+          blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
         )
 
+        import dataclasses
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            Dumper=ocm.EnumValueYamlDumper,
+            data=dataclasses.asdict(component_constructor),
             stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
           )
-    - name: validate OCM Component-Descriptor
-      uses: gardener/cc-utils/.github/actions/ocm-validate@master
-      with:
-        component-descriptor-path: /tmp/component-descriptor.yaml
-        on-validation-errors: ${{ inputs.on-validation-errors }}
-        ocm-repositories: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
-        recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
-        validation-cfg: |
-          schema: fail
-          access: fail
-          artefact-uniqueness: fail
     - name: publish OCM Component-Descriptor
       shell: bash
       id: publish-component-descriptor
       run: |
-        python -m ocm upload \
-          --file /tmp/component-descriptor.yaml \
-          --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}' \
-          --on-exist ${{ inputs.on-existing-component-descriptor }}
+        case '${{ inputs.on-existing-component-descriptor }}' in
+          skip)      conflict_policy=skip ;;
+          overwrite) conflict_policy=replace ;;
+          fail)      conflict_policy=abort-and-fail ;;
+          *)         echo "unknown on-existing-component-descriptor value"; exit 1 ;;
+        esac
+
+        component_name=$(yq .name /tmp/component-descriptor.yaml)
+        target_repo="${{ steps.read-ocm-repositories.outputs.ocm-repository }}"
+
+        curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19.1 bash
+        export PATH="${HOME}/.local/bin:${PATH}"
+
+        ocm add cv \
+          --repository ctf::/tmp/transport-archive \
+          --constructor /tmp/component-descriptor.yaml \
+          --working-directory '${{ inputs.component-descriptor-blobs-dir }}' \
+          --component-version-conflict-policy "${conflict_policy}"
+
+        ocm transfer cv "ctf::/tmp/transport-archive//${component_name}" "oci::${target_repo}"
 
         tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
 
@@ -503,6 +491,10 @@ runs:
           #   - we still might succeed in publishing bump-commit
         fi
 
+    # TODO(ocm-v2): verify that assets work correctly with both input (OCM v2) and
+    # access: localBlob (legacy) formats. `find_blob()` handles both, but needs end-to-end
+    # testing with actual release assets. Blob files must still exist in blobs.d after
+    # `ocm add cv` has run (it uploads but does not delete blobs from blobs.d).
     - name: create github-release
       if: ${{ inputs.release-on-github == 'true' }}
       shell: python
@@ -567,21 +559,21 @@ runs:
         )
 
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
+          component_constructor = ocm.ComponentConstructor.from_dict(
             yaml.safe_load(f)
           )
 
         for asset in release.iter_assets(path='/tmp/assets.yaml'):
-          path, access = release.find_blob(
+          path, media_type = release.find_blob(
             blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
             asset=asset,
-            component=component_descriptor.component,
+            component=component_constructor,
           )
 
           if asset.mime_type:
             mime_type = asset.mime_type
           else:
-            mime_type = access.mediaType
+            mime_type = media_type
 
           print(f'Uploading {asset=} as github-release-asset')
           fh = open(path, 'rb')

@@ -177,11 +177,13 @@ def main():
     print(pprint.pformat(parsed), file=sys.stderr)
 
     with open(parsed.component_descriptor) as f:
-        component_descriptor = ocm.ComponentDescriptor.from_dict(
-            yaml.safe_load(f)
-        )
+        raw = yaml.safe_load(f)
 
-    component = component_descriptor.component
+    if 'meta' in raw:
+        component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
+        component = component_descriptor.component
+    else:
+        component = ocm.ComponentConstructor.from_dict(raw)
     # effective component-descriptor will be default contain either "-next"-version, or
     # effective version (which is suffixed w/ commit-digests). hardcode conversion to
     # next final version (might make this configurable later, if needed)
@@ -195,9 +197,12 @@ def main():
             absent_ok=True,
         ),
     )
+    extra_repos = []
+    if hasattr(component, 'current_ocm_repo') and component.current_ocm_repo:
+        extra_repos.append(component.current_ocm_repo)
     ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(
         *parsed.ocm_repositories,
-        component.current_ocm_repo,
+        *extra_repos,
     )
 
     ocm_version_lookup = ocm.retrieve.version_lookup(

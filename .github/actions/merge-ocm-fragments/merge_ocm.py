@@ -53,7 +53,7 @@ def merge_fragments(
 
     Returns the modified component_descriptor.
     '''
-    component = component_descriptor['component']
+    component = component_descriptor
     if 'sources' not in component:
         component['sources'] = []
     if 'resources' not in component:

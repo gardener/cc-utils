@@ -1,0 +1,74 @@
+name: component-descriptor-to-constructor
+description: |
+  Downloads the base-component-descriptor artifact, extracts component-descriptor.yaml,
+  transforms it to OCM v2 constructor (flat) format, and re-packages it as
+  component-descriptor.yaml inside component-descriptor.tar.gz, uploaded as
+  component-constructor artifact.
+
+inputs:
+  base-component-descriptor-artefact:
+    required: false
+    type: string
+    default: base-component-descriptor
+    description: |
+      Name of the GHA artifact produced by the base-component-descriptor action.
+
+outputs:
+  component-constructor-artefact:
+    description: |
+      Name of the GHA artifact containing the component-constructor tarball.
+    value: component-constructor
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+
+    - name: download-base-component-descriptor
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.base-component-descriptor-artefact }}
+
+    - name: transform-to-constructor
+      shell: python
+      run: |
+        import os
+        import sys
+        import tarfile
+        import tempfile
+
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import transform
+
+        import yaml
+
+        # Extract component-descriptor.yaml from the tarball
+        with tarfile.open('component-descriptor.tar.gz', 'r:gz') as tf:
+            member = tf.getmember('component-descriptor.yaml')
+            with tf.extractfile(member) as f:
+                component_descriptor = yaml.safe_load(f)
+
+        # Transform to constructor format
+        constructor = transform.to_constructor(component_descriptor)
+
+        # Write constructor yaml
+        with open('component-descriptor.yaml', 'w') as f:
+            yaml.safe_dump(constructor, f, default_flow_style=False, allow_unicode=True)
+
+        print('Constructor content:')
+        import pprint
+        pprint.pprint(constructor)
+
+    - name: package-constructor
+      shell: bash
+      run: |
+        set -eu
+        # Repackage as component-descriptor.tar.gz containing component-descriptor.yaml
+        tar czf /tmp/component-descriptor.tar.gz component-descriptor.yaml
+
+    - name: upload-component-constructor
+      uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      with:
+        name: component-constructor
+        path: /tmp/component-descriptor.tar.gz

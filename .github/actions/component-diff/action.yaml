@@ -78,13 +78,9 @@ runs:
         else:
           raw = yaml.safe_load('''${{ inputs.component-descriptor}}''')
 
-        current_component_descriptor = ocm.ComponentDescriptor.from_dict(
-          component_descriptor_dict=raw,
-        )
-        component_name = current_component_descriptor.component.name
-        component_version = current_component_descriptor.component.version
-
-        ocm_repositories = '${{ inputs.ocm-repositories }}'.split(',')
+        current_component = ocm.ComponentConstructor.from_dict(raw)
+        component_name = current_component.name
+        component_version = current_component.version
         ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(*ocm_repositories)
 
         oci_client = oci.client.client_with_dockerauth()
@@ -100,7 +96,7 @@ runs:
         )
 
         greatest_version = version.greatest_version(
-          versions=version_lookup(current_component_descriptor),
+          versions=version_lookup(current_component),
           ignore_prerelease_versions=True,
         )
 
@@ -113,7 +109,7 @@ runs:
 
         component_diff = ocm.retrieve.component_diff(
           left_component=latest_component_descriptor,
-          right_component=current_component_descriptor,
+          right_component=current_component,
           ignore_component_names=(component_name,),
           component_descriptor_lookup=component_descriptor_lookup,
         )

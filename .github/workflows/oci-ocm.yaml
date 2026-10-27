@@ -686,7 +686,7 @@ jobs:
 
       - name: 'export SBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ocm-v2-migration-minimal
         with:
           ocm-resources-file: sbom-ocm-resources.yaml
           blobs-directory: blobs.d
@@ -863,7 +863,7 @@ jobs:
 
       - name: 'export CBOM OCM fragments / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ocm-v2-migration-minimal
         with:
           ocm-resources-file: cbom-ocm-resources.yaml
           blobs-directory: blobs.d
@@ -1008,7 +1008,7 @@ jobs:
             '''))
       - name: export-ocm-fragments
         if: ${{ !inputs.omit-ocm-fragment }}
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ocm-v2-migration-minimal
         with:
           ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
           ctx: ${{ inputs.ctx }}

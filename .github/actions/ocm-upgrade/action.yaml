@@ -206,8 +206,10 @@ runs:
         with open('/tmp/component-descriptor.yaml') as f:
           raw = yaml.safe_load(f)
 
-        component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
-        component = component_descriptor.component
+        if 'meta' in raw:
+          component = ocm.ComponentDescriptor.from_dict(raw).component
+        else:
+          component = ocm.ComponentConstructor.from_dict(raw)
 
         with open('/tmp/ocm-repositories') as f:
           ocm_repositories = f.read().strip().split(',')

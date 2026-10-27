@@ -156,10 +156,10 @@ jobs:
 
       - name: fetch-ocm-fragments
         id: fetch-ocm
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration-minimal
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
-          component-descriptor-artefact: base-component-descriptor
+          component-descriptor-artefact: component-constructor
           ctx: ${{ inputs.ocm-ctx }}
           upload-artifact-name: ''
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
