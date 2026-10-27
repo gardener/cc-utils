@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# writes a simple "processing.cfg" for CTT to stdout
+#
+# needs a single argument, which is used as target_repository
+
+usage() {
+cat <<EOF
+Prints a simple "processing.cfg" file for CTT.
+
+usage: ${BASH_SOURCE[0]} --target ocm-target-repository [--source ocm-source-repository]
+
+--target specifies the OCI-Registry to replicate to (also considered OCM-Repository-Root).
+
+if --source (which refers to replication source) is specified, it will be stripped from
+OCI-Image-References in replication-target. This is useful for targets where maximum allowed
+length is limited.
+EOF
+}
+
+if [ $# == 0 ]; then
+  usage
+  exit 1
+fi
+
+while [ -n "${1:-}" ]; do
+  case "$1" in
+    -s | --source)
+      src_registry="$2"; shift;;
+    -t | --target)
+      tgt_registry="$2"; shift;;
+  esac
+  shift
+done
+
+if [ -z "${tgt_registry:-}" ]; then
+  echo "tgt missing"
+  usage
+  exit 1
+fi
+
+if [ -z "${src_registry:-}" ]; then
+  uploader_kwargs="{}"
+else
+  uploader_kwargs="{remove_prefixes: [\"$src_registry\"]}"
+fi
+
+cat <<EOF
+targets:
+  default:
+    type: RegistriesTarget
+    kwargs:
+      registries:
+        - $tgt_registry
+      ocm_repository: $tgt_registry
+
+processors:
+  no-op:
+    type: NoOpProcessor
+
+uploaders:
+  prepend_target:
+    type: PrependTargetUploader
+    kwargs: $uploader_kwargs
+
+image_processing_cfg:
+  - name: default
+    filter:
+      - type: MatchAllFilter
+    processor: no-op
+    target: default
+    upload:
+      - prepend_target
+EOF
