@@ -170,7 +170,7 @@ class ReleaseNotesDoc:
 
             for release_note in sorted_release_notes:
                 release_note: ReleaseNoteEntry
-                author = f'@{release_note.author.username}'
+                author = f'`@{release_note.author.username}`'
                 audience = release_note.audience.name
                 reference = release_note.reference
                 # Replace newlines with two spaces _followed by_ newlines, as this is the proper way
