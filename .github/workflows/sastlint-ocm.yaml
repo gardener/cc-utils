@@ -66,7 +66,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@1655dd4ff76a784a3d807e181aa69db3f533b7b0
         with:
           remove-trusted-label: false
       - uses: actions/setup-go@v5
@@ -76,7 +76,7 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
       - name: setup-git-identity
         if: ${{ inputs.setup-git-identity }}
-        uses: 'gardener/cc-utils/.github/actions/setup-git-identity@master'
+        uses: 'gardener/cc-utils/.github/actions/setup-git-identity@c52eab7b441f6d16c7fc076e61a66c7744b02fd2'
       - name: run-linter
         shell: bash
         run: |
@@ -96,7 +96,7 @@ jobs:
           tar czf /tmp/blobs.d/gosec-report.tar.gz gosec-report.sarif
 
       - name: add-sast-report-to-component-descriptor
-        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@d9a6b585c47f5867d22a9d21ca4da9807bd2b48b
         with:
           blobs-directory: /tmp/blobs.d
           ocm-resources: |
