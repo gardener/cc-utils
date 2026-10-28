@@ -108,7 +108,7 @@ runs:
         # runners to github.com; a fresh connection fixes it
         attempts=3
         for attempt in $(seq 1 ${attempts}); do
-          if git clone https://github.com/gardener/cc-utils; then
+          if git clone ${{ github.server_url }}/gardener/cc-utils; then
             break
           fi
           rc=$?
