@@ -43,6 +43,11 @@ on:
           Optional name of an artifact produced by `capture-commit`. If set, the artifact
           is imported before pinning so the captured commit is reachable as `own-ref`.
 
+permissions:
+  contents: write
+  workflows: write
+  id-token: write
+
 jobs:
   build-bundle:
     strategy:
