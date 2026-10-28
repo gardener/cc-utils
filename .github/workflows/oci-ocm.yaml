@@ -511,7 +511,7 @@ jobs:
 
       - name: 'install syft / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
-        uses: gardener/cc-utils/.github/actions/install-syft@master
+        uses: gardener/cc-utils/.github/actions/install-syft@ocm-v2-migration-minimal
 
       - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
         if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
