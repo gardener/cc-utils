@@ -1,6 +1,11 @@
 import collections.abc
 import hashlib
 import os
+import sys
+
+# ensure the local ocm module (from cc-utils checkout) takes precedence
+# over the installed gardener-ocm package which may not have all symbols
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 import magic
 import yaml
