@@ -187,6 +187,7 @@ runs:
         import os
         import sys
 
+        sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import logging

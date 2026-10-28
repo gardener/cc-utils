@@ -304,6 +304,11 @@ runs:
       run: |
         import os
         import sys
+        sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # evict any cached ocm modules so our local version takes precedence
+        for _k in list(sys.modules):
+            if _k == 'ocm' or _k.startswith('ocm.'):
+                del sys.modules[_k]
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
@@ -339,6 +344,11 @@ runs:
       run: |
         import os
         import sys
+        sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # evict any cached ocm modules so our local version takes precedence
+        for _k in list(sys.modules):
+            if _k == 'ocm' or _k.startswith('ocm.'):
+                del sys.modules[_k]
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
@@ -505,6 +515,11 @@ runs:
       run: |
         import os
         import sys
+        sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # evict any cached ocm modules so our local version takes precedence
+        for _k in list(sys.modules):
+            if _k == 'ocm' or _k.startswith('ocm.'):
+                del sys.modules[_k]
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import github3

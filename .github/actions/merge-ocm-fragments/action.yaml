@@ -244,9 +244,15 @@ runs:
         import dataclasses
         import logging
         import os
+        import sys
 
         import yaml
 
+        sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # evict any cached ocm modules so our local version takes precedence
+        for _k in list(sys.modules):
+            if _k == 'ocm' or _k.startswith('ocm.'):
+                del sys.modules[_k]
         import ocm
         import ocm.gardener
 
