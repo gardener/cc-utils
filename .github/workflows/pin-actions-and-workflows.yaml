@@ -49,7 +49,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runs-on: ${{ vars.DEFAULT_RUNNER || 'solinas' }}
+          - runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
             arch: amd64
           - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
             arch: arm64
@@ -76,7 +76,7 @@ jobs:
 
   pin:
     needs: build-bundle
-    runs-on: ${{ vars.DEFAULT_RUNNER || 'solinas' }}
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
       id-token: write  # required for OIDC federated token exchange
