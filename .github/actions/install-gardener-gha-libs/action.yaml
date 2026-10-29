@@ -29,6 +29,10 @@ runs:
         if pip show gardener-gha-libs &>/dev/null; then
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
+    - name: uninstall-gardener-ocm
+      if: ${{ ! steps.check.outputs.already-installed }}
+      shell: bash
+      run: pip uninstall -y gardener-ocm gardener-oci gardener-gha-libs 2>/dev/null || true
     # ensure the Python version matches the bundle's wheel ABIs on all runners
     # (system Python may differ from the version used to build the bundle).
     # this step is intentionally NOT removed on pinned branches.

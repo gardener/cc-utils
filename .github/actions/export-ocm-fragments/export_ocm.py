@@ -5,8 +5,12 @@ import sys
 
 # ensure the local ocm module (from cc-utils checkout) takes precedence
 # over the installed gardener-ocm package which may not have all symbols
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+for _k in list(sys.modules):
+    if _k == 'ocm' or _k.startswith('ocm.'):
+        del sys.modules[_k]
 import magic
 import yaml
 
