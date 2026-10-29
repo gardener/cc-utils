@@ -442,11 +442,18 @@ runs:
 
         echo "=== DEBUG: constructor YAML ===" && cat /tmp/component-descriptor.yaml
 
+        # --skip-reference-digest-processing prevents ocm add cv from trying to look up
+        # external componentReferences (e.g. cc-utils) which may not be in the target repo yet.
+        # --external-component-version-copy-policy skip: don't copy external component refs.
+        # TODO: discuss — is skipping digest processing for references acceptable, or do we
+        # need to pass the releases registry so it can look them up properly?
         ocm add cv \
           --repository ctf::/tmp/transport-archive \
           --constructor /tmp/component-descriptor.yaml \
           --working-directory '${{ inputs.component-descriptor-blobs-dir }}' \
-          --component-version-conflict-policy "${conflict_policy}"
+          --component-version-conflict-policy "${conflict_policy}" \
+          --external-component-version-copy-policy skip \
+          --skip-reference-digest-processing
 
         ocm transfer cv "ctf::/tmp/transport-archive//${component_name}" "oci::${target_repo}"
 
