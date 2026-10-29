@@ -332,9 +332,21 @@ runs:
         )
 
         import dataclasses
+        _raw = dataclasses.asdict(component_constructor)
+        for _r in _raw.get('resources', []):
+            if _r.get('access') is None:
+                _r.pop('access', None)
+            _r.pop('digest', None)
+            _r.pop('extraIdentity', None)
+            _r.pop('srcRefs', None)
+        for _s in _raw.get('sources', []):
+            _s.pop('extraIdentity', None)
+        for _ref in _raw.get('componentReferences', []):
+            _ref.pop('extraIdentity', None)
+            _ref.pop('digest', None)
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_constructor),
+            data=_raw,
             stream=f,
             Dumper=ocm.EnumValueYamlDumper,
           )
@@ -375,9 +387,21 @@ runs:
         )
 
         import dataclasses
+        _raw = dataclasses.asdict(component_constructor)
+        for _r in _raw.get('resources', []):
+            if _r.get('access') is None:
+                _r.pop('access', None)
+            _r.pop('digest', None)
+            _r.pop('extraIdentity', None)
+            _r.pop('srcRefs', None)
+        for _s in _raw.get('sources', []):
+            _s.pop('extraIdentity', None)
+        for _ref in _raw.get('componentReferences', []):
+            _ref.pop('extraIdentity', None)
+            _ref.pop('digest', None)
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
-            data=dataclasses.asdict(component_constructor),
+            data=_raw,
             stream=f,
             Dumper=ocm.EnumValueYamlDumper,
           )
