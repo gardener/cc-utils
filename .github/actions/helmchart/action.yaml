@@ -173,6 +173,9 @@ runs:
         for _k in list(sys.modules):
             if _k == 'ocm' or _k.startswith('ocm.'):
                 del sys.modules[_k]
+        print(f'DEBUG repo_root={_repo_root}')
+        print(f'DEBUG ocm exists={os.path.isdir(os.path.join(_repo_root, "ocm"))}')
+        print(f'DEBUG sys.path={sys.path[:3]}')
 
         import dataclasses
         import json

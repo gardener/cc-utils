@@ -15,14 +15,15 @@ import tempfile
 
 import yaml
 
-try:
-    import ocm
-except ImportError:
-    # make local development more comfortable
-    repo_root = os.path.join(os.path.dirname(__file__), '../../..')
-    sys.path.insert(1, repo_root)
-    print(f'note: added {repo_root} to python-path (sys.path)', file=sys.stderr)
-    import ocm
+# ensure local ocm module takes precedence over installed gardener-ocm package
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+for _k in list(sys.modules):
+    if _k == 'ocm' or _k.startswith('ocm.'):
+        del sys.modules[_k]
+
+import ocm
 
 import ocm.retrieve
 import github
