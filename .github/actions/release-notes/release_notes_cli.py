@@ -318,7 +318,7 @@ def main():
         variant_markdown_path = os.path.join(tmp_dir.name, f'{variant_cfg.name}-release-notes.md')
 
         for cnode in ocm.iter.iter(
-            component=component_descriptor.component,
+            component=component,
             lookup=component_descriptor_lookup,
             recursion_depth=variant_cfg.recursion_depth,
             node_filter=ocm.iter.Filter.components,
