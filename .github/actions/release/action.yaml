@@ -304,7 +304,10 @@ runs:
       run: |
         import os
         import sys
+        # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+        # where an old gardener-ocm PyPI package may shadow the local ocm module.
         sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # TODO(tmp-gh-tools): remove before merging to master
         # evict any cached ocm modules so our local version takes precedence
         for _k in list(sys.modules):
             if _k == 'ocm' or _k.startswith('ocm.'):
@@ -338,6 +341,10 @@ runs:
                 _r.pop('access', None)
             if _r.get('input') is None:
                 _r.pop('input', None)
+            else:
+                # TODO(tmp-gh-tools): remove before merging to master — local blobs with input
+                # must have relation: local. On persistent runners cbom.py may produce external.
+                _r['relation'] = 'local'
             _r.pop('digest', None)
             _r.pop('extraIdentity', None)
             _r.pop('srcRefs', None)
@@ -358,7 +365,10 @@ runs:
       run: |
         import os
         import sys
+        # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+        # where an old gardener-ocm PyPI package may shadow the local ocm module.
         sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # TODO(tmp-gh-tools): remove before merging to master
         # evict any cached ocm modules so our local version takes precedence
         for _k in list(sys.modules):
             if _k == 'ocm' or _k.startswith('ocm.'):
@@ -395,6 +405,10 @@ runs:
                 _r.pop('access', None)
             if _r.get('input') is None:
                 _r.pop('input', None)
+            else:
+                # TODO(tmp-gh-tools): remove before merging to master — local blobs with input
+                # must have relation: local. On persistent runners cbom.py may produce external.
+                _r['relation'] = 'local'
             _r.pop('digest', None)
             _r.pop('extraIdentity', None)
             _r.pop('srcRefs', None)
@@ -425,6 +439,8 @@ runs:
 
         curl -sfL https://ocm.software/install-cli.sh | OCM_VERSION=0.19.1 bash
         export PATH="${HOME}/.local/bin:${PATH}"
+
+        echo "=== DEBUG: constructor YAML ===" && cat /tmp/component-descriptor.yaml
 
         ocm add cv \
           --repository ctf::/tmp/transport-archive \
@@ -543,7 +559,10 @@ runs:
       run: |
         import os
         import sys
+        # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+        # where an old gardener-ocm PyPI package may shadow the local ocm module.
         sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # TODO(tmp-gh-tools): remove before merging to master
         # evict any cached ocm modules so our local version takes precedence
         for _k in list(sys.modules):
             if _k == 'ocm' or _k.startswith('ocm.'):

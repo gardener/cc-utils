@@ -57,6 +57,28 @@ import textwrap
 
 import yaml
 
+# TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+# where an old gardener-ocm PyPI package may shadow the local ocm module.
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+for _k in list(sys.modules):
+    if _k == 'ocm' or _k.startswith('ocm.') or _k.startswith('sbom.') or _k.startswith('oci.'):
+        del sys.modules[_k]
+# TODO(tmp-gh-tools): remove before merging to master — force-loads sbom packages
+# from repo checkout to bypass the installed (stale) version from gardener-gha-libs.
+# Not needed in production where the bundle installs from source directly.
+import importlib.util as _ilu
+for _mod, _relpath in (
+    ('sbom', 'sbom/__init__.py'),
+    ('sbom.cbom', 'sbom/cbom.py'),
+    ('sbom.oci', 'sbom/oci.py'),
+):
+    _spec = _ilu.spec_from_file_location(_mod, os.path.join(_repo_root, _relpath))
+    _m = _ilu.module_from_spec(_spec)
+    sys.modules[_mod] = _m
+    _spec.loader.exec_module(_m)
+
 import oci.auth as oa
 import oci.client as oc
 import oci.model as om

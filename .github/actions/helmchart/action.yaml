@@ -166,9 +166,12 @@ runs:
       run: |
         import os
         import sys
+        # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+        # where an old gardener-ocm PyPI package may shadow the local ocm module.
         _repo_root = os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..'))
         sys.path.insert(0, _repo_root)
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+        # TODO(tmp-gh-tools): remove before merging to master
         # evict any cached ocm modules so our local version takes precedence
         for _k in list(sys.modules):
             if _k == 'ocm' or _k.startswith('ocm.'):

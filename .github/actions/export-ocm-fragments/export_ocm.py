@@ -3,6 +3,8 @@ import hashlib
 import os
 import sys
 
+# TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+# where an old gardener-ocm PyPI package may shadow the local ocm module.
 # ensure the local ocm module (from cc-utils checkout) takes precedence
 # over the installed gardener-ocm package which may not have all symbols
 _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))

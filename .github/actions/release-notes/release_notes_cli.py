@@ -16,6 +16,8 @@ import tempfile
 import yaml
 
 # ensure local ocm module takes precedence over installed gardener-ocm package
+# TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+# where an old gardener-ocm PyPI package may shadow the local ocm module.
 _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
