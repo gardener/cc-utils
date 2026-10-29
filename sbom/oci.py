@@ -270,7 +270,7 @@ def build_sbom_ocm_resources(
             'name': resource_name,
             'version': version,
             'type': media_type,
-            'relation': str(ocm.ResourceRelation.EXTERNAL),
+            'relation': str(ocm.ResourceRelation.LOCAL),
             'extraIdentity': {'version': version, 'sbom-format': sbom_format},
             'input': {
                 'type': str(ocm.InputType.FILE),
