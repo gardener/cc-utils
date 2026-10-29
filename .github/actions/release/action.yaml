@@ -346,12 +346,15 @@ runs:
                 # must have relation: local. On persistent runners cbom.py may produce external.
                 _r['relation'] = 'local'
             _r.pop('digest', None)
-            _r.pop('extraIdentity', None)
+            if not _r.get('extraIdentity'):
+                _r.pop('extraIdentity', None)
             _r.pop('srcRefs', None)
         for _s in _raw.get('sources', []):
-            _s.pop('extraIdentity', None)
+            if not _s.get('extraIdentity'):
+                _s.pop('extraIdentity', None)
         for _ref in _raw.get('componentReferences', []):
-            _ref.pop('extraIdentity', None)
+            if not _ref.get('extraIdentity'):
+                _ref.pop('extraIdentity', None)
             _ref.pop('digest', None)
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
@@ -410,12 +413,15 @@ runs:
                 # must have relation: local. On persistent runners cbom.py may produce external.
                 _r['relation'] = 'local'
             _r.pop('digest', None)
-            _r.pop('extraIdentity', None)
+            if not _r.get('extraIdentity'):
+                _r.pop('extraIdentity', None)
             _r.pop('srcRefs', None)
         for _s in _raw.get('sources', []):
-            _s.pop('extraIdentity', None)
+            if not _s.get('extraIdentity'):
+                _s.pop('extraIdentity', None)
         for _ref in _raw.get('componentReferences', []):
-            _ref.pop('extraIdentity', None)
+            if not _ref.get('extraIdentity'):
+                _ref.pop('extraIdentity', None)
             _ref.pop('digest', None)
         with open('/tmp/component-descriptor.yaml', 'w') as f:
           yaml.dump(
@@ -423,6 +429,20 @@ runs:
             stream=f,
             Dumper=ocm.EnumValueYamlDumper,
           )
+    # TODO: ocm add cv v0.19.1 tries to resolve all componentReferences before publishing.
+    # Strip them from the constructor temporarily so the publish can proceed.
+    # In production this should work without stripping since the lookup repos contain them.
+    # Needs investigation with a newer OCM CLI version or with proper lookup repos.
+    - name: strip-component-references
+      shell: python
+      run: |
+        import yaml
+        path = '/tmp/component-descriptor.yaml'
+        with open(path) as f:
+            cd = yaml.safe_load(f)
+        cd['componentReferences'] = []
+        with open(path, 'w') as f:
+            yaml.safe_dump(cd, f)
     - name: publish OCM Component-Descriptor
       shell: bash
       id: publish-component-descriptor
@@ -446,7 +466,8 @@ runs:
           --repository ctf::/tmp/transport-archive \
           --constructor /tmp/component-descriptor.yaml \
           --working-directory '${{ inputs.component-descriptor-blobs-dir }}' \
-          --component-version-conflict-policy "${conflict_policy}"
+          --component-version-conflict-policy "${conflict_policy}" \
+          --external-component-version-copy-policy skip
 
         ocm transfer cv "ctf::/tmp/transport-archive//${component_name}" "oci::${target_repo}"
 

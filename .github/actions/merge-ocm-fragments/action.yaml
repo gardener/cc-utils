@@ -305,12 +305,15 @@ runs:
                 # must have relation: local. On persistent runners cbom.py may produce external.
                 r['relation'] = 'local'
             r.pop('digest', None)
-            r.pop('extraIdentity', None)
+            if not r.get('extraIdentity'):
+                r.pop('extraIdentity', None)
             r.pop('srcRefs', None)
         for s in raw.get('sources', []):
-            s.pop('extraIdentity', None)
+            if not s.get('extraIdentity'):
+                s.pop('extraIdentity', None)
         for ref in raw.get('componentReferences', []):
-            ref.pop('extraIdentity', None)
+            if not ref.get('extraIdentity'):
+                ref.pop('extraIdentity', None)
             ref.pop('digest', None)
         with open(component_descriptor_path, 'w') as f:
           yaml.dump(data=raw, stream=f, Dumper=ocm.EnumValueYamlDumper)

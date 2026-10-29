@@ -953,6 +953,11 @@ class ComponentConstructor(LabelMethodsMixin):
         if not _have_dacite:
             raise RuntimeError('not available without dacite')
 
+        # TODO: type_hooks were removed to simplify deserialization. This means enum fields
+        # like access.type are deserialized as plain strings, not AccessType enum values.
+        # Code doing `resource.access.type is AccessType.OCI_REGISTRY` will break — use
+        # string comparison or AccessType(resource.access.type) instead.
+        # Re-add type_hooks if this causes issues in practice.
         return dacite.from_dict(
             data_class=ComponentConstructor,
             data=raw,
