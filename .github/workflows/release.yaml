@@ -167,6 +167,13 @@ on:
         description: |
           If set to `true`, the workflow will create a new GitHub release (or convert an existing
           draft release to an actual release).
+      release-candidate:
+        default: ''
+        type: number
+        description: |
+          The number of the release candidate to publish. If set, the created GitHub release will be
+          marked as "prerelease" and the next version prerelease will be set to
+          "rc.{release-candidate + 1}" instead of "dev".
       github-tag-template:
         default: '${version}'
         type: string
@@ -447,6 +454,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.fed-token.outputs.token }}
           release-on-github: ${{ inputs.release-on-github }}
+          release-candidate: ${{ inputs.release-candidate }}
           github-tag-template: ${{ inputs.github-tag-template }}
           github-additional-tag-templates: ${{ inputs.github-additional-tag-templates }}
           assets: ${{ inputs.assets }}
