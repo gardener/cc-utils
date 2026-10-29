@@ -336,6 +336,8 @@ runs:
         for _r in _raw.get('resources', []):
             if _r.get('access') is None:
                 _r.pop('access', None)
+            if _r.get('input') is None:
+                _r.pop('input', None)
             _r.pop('digest', None)
             _r.pop('extraIdentity', None)
             _r.pop('srcRefs', None)
@@ -391,6 +393,8 @@ runs:
         for _r in _raw.get('resources', []):
             if _r.get('access') is None:
                 _r.pop('access', None)
+            if _r.get('input') is None:
+                _r.pop('input', None)
             _r.pop('digest', None)
             _r.pop('extraIdentity', None)
             _r.pop('srcRefs', None)

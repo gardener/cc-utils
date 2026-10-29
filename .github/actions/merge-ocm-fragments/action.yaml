@@ -295,6 +295,8 @@ runs:
         for r in raw.get('resources', []):
             if r.get('access') is None:
                 r.pop('access', None)
+            if r.get('input') is None:
+                r.pop('input', None)
             r.pop('digest', None)
             r.pop('extraIdentity', None)
             r.pop('srcRefs', None)
