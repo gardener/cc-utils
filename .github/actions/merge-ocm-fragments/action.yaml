@@ -19,18 +19,21 @@ inputs:
     required: false
     type: string
     description: |
-      The (base) component-descriptor to merge ocm-fragments into. If it is not passed, a minimal
-      one will be created.
+      The (base) OCM component constructor (OCM v2 format) to merge ocm-fragments into.
+      If not passed, a minimal one will be created.
+
+      Note: this input keeps the name `component-descriptor` for backwards compatibility
+      with external callers. The value must be in OCM component constructor format
+      (not the legacy component-descriptor format).
   component-descriptor-artefact:
     required: false
     type: string
     description: |
       If passed, the passed name is assumed to refer to an (existing) artefact of this name,
-      containing a (base) component-descriptor, as output by the `base-component-descriptor`
-      action.
+      containing a component-descriptor, as output by the `base-component-descriptor` action.
 
       I.e. it must contain (at least) a file named `component-descriptor.tar.gz`, which in turn
-      must (at least) contain a file `component-descriptor.yaml`, which is used as base
+      must contain a file `component-descriptor.yaml`, which is used as base
       component-descriptor.
   ctx:
     required: false
@@ -65,6 +68,10 @@ inputs:
       Template. Expects hardcoded path at `.ci/component_descriptor`. No additional documentation
       provided at this point, as this option is present for backwards-compatibility reasons, and
       should not be used in general.
+
+      TODO(ocm-v2): `callback` is a breaking change — the file passed via COMPONENT_DESCRIPTOR_PATH
+      is now in OCM component constructor format, not the legacy component-descriptor format.
+      Repos using `.ci/component_descriptor` must be updated to handle constructor format.
 
   ocm-component-prefixes:
     type: string
@@ -171,24 +178,16 @@ runs:
           exit 1
         fi
         tar xf ${archive}
-        component_descriptor_path='component-descriptor.yaml'
-        if [ ! -f "${component_descriptor_path}" ]; then
-          echo "Error: archive did not contain expected ${component_descriptor_path} file"
+        if [ ! -f "component-descriptor.yaml" ]; then
+          echo "Error: archive did not contain component-descriptor.yaml"
           exit 1
         fi
-        mv "${component_descriptor_path}" "${{ inputs.outdir }}/base-component-descriptor.yaml"
-    - name: prepare-component-descriptor
-      shell: bash
-      run: |
-        base=${{ inputs.outdir }}/base-component-descriptor.yaml
-        component_descriptor=${{ inputs.outdir }}/component-descriptor.yaml
-        if [ -f ${base} ]; then
-          mv "${base}" "${component_descriptor}"
-        else
-          # create minimal base component-descriptor
-          python -m ocm create \
-           --out "${component_descriptor}"
-        fi
+        mv "component-descriptor.yaml" "${{ inputs.outdir }}/component-descriptor.yaml"
+    # TODO(ocm-v2): if neither component-descriptor nor component-descriptor-artefact is
+    # provided, component-descriptor.yaml will not exist and merge-fragments will fail.
+    # On master this was handled by prepare-component-descriptor which created a minimal
+    # descriptor via `python -m ocm create`. A minimal constructor creation fallback
+    # needs to be added here.
     - name: import-ocm-fragments
       uses: gardener/cc-utils/.github/actions/download-artifact@master
       with:
@@ -225,10 +224,9 @@ runs:
         with open(component_descriptor_path, 'w') as f:
           yaml.safe_dump(component_descriptor, f)
 
-        component = component_descriptor['component']
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          name = component['name']
-          version = component['version']
+          name = component_descriptor['name']
+          version = component_descriptor['version']
           f.write(f'name={name}\n')
           f.write(f'version={version}\n')
           f.write(f'component-version={name}:{version}\n')
@@ -246,9 +244,18 @@ runs:
         import dataclasses
         import logging
         import os
+        import sys
 
         import yaml
 
+        # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+        # where an old gardener-ocm PyPI package may shadow the local ocm module.
+        sys.path.insert(0, os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..')))
+        # TODO(tmp-gh-tools): remove before merging to master
+        # evict any cached ocm modules so our local version takes precedence
+        for _k in list(sys.modules):
+            if _k == 'ocm' or _k.startswith('ocm.'):
+                del sys.modules[_k]
         import ocm
         import ocm.gardener
 
@@ -261,11 +268,9 @@ runs:
 
         out_dir = '${{ inputs.outdir }}'
         with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
+          component_constructor = ocm.ComponentConstructor.from_dict(
             yaml.safe_load(f),
           )
-
-        component = component_descriptor.component
 
         prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
         prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
@@ -281,19 +286,34 @@ runs:
         logger.info(f'{prefixes=}')
 
         ocm.gardener.add_resources_from_imagevector(
-          component=component,
+          component=component_constructor,
           images=ocm.gardener.iter_images_from_imagevector(
             images_yaml_path=imagevector_file,
           ),
           component_prefixes=prefixes,
           deduplicate_resources=True,
         )
+        raw = dataclasses.asdict(component_constructor)
+        # strip null/empty fields that are invalid in OCM constructor schema
+        for r in raw.get('resources', []):
+            if r.get('access') is None:
+                r.pop('access', None)
+            if r.get('input') is None:
+                r.pop('input', None)
+            else:
+                # TODO(tmp-gh-tools): remove before merging to master — local blobs with input
+                # must have relation: local. On persistent runners cbom.py may produce external.
+                r['relation'] = 'local'
+            r.pop('digest', None)
+            r.pop('extraIdentity', None)
+            r.pop('srcRefs', None)
+        for s in raw.get('sources', []):
+            s.pop('extraIdentity', None)
+        for ref in raw.get('componentReferences', []):
+            ref.pop('extraIdentity', None)
+            ref.pop('digest', None)
         with open(component_descriptor_path, 'w') as f:
-          yaml.dump(
-            data=dataclasses.asdict(component_descriptor),
-            stream=f,
-            Dumper=ocm.EnumValueYamlDumper,
-          )
+          yaml.dump(data=raw, stream=f, Dumper=ocm.EnumValueYamlDumper)
 
     - name: post-process
       if: ${{ inputs.post-process == 'callback' }}
@@ -305,7 +325,7 @@ runs:
         export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-descriptor.yaml"
         cname=$(
           cat ${{ inputs.outdir }}/component-descriptor.yaml \
-          yq -r .component.name \
+          yq -r .name \
         )
         export COMPONENT_NAME=$cname
 
@@ -333,7 +353,7 @@ runs:
 
     - name: install-syft
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/install-syft@master
+      uses: gardener/cc-utils/.github/actions/install-syft@ocm-v2-migration-minimal
 
     - name: install-cbomkit-theia
       if: ${{ inputs.oci-registry != '' }}

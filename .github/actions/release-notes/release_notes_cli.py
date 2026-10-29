@@ -15,14 +15,17 @@ import tempfile
 
 import yaml
 
-try:
-    import ocm
-except ImportError:
-    # make local development more comfortable
-    repo_root = os.path.join(os.path.dirname(__file__), '../../..')
-    sys.path.insert(1, repo_root)
-    print(f'note: added {repo_root} to python-path (sys.path)', file=sys.stderr)
-    import ocm
+# ensure local ocm module takes precedence over installed gardener-ocm package
+# TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+# where an old gardener-ocm PyPI package may shadow the local ocm module.
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+for _k in list(sys.modules):
+    if _k == 'ocm' or _k.startswith('ocm.'):
+        del sys.modules[_k]
+
+import ocm
 
 import ocm.retrieve
 import github
@@ -177,11 +180,13 @@ def main():
     print(pprint.pformat(parsed), file=sys.stderr)
 
     with open(parsed.component_descriptor) as f:
-        component_descriptor = ocm.ComponentDescriptor.from_dict(
-            yaml.safe_load(f)
-        )
+        raw = yaml.safe_load(f)
 
-    component = component_descriptor.component
+    if 'meta' in raw:
+        component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
+        component = component_descriptor.component
+    else:
+        component = ocm.ComponentConstructor.from_dict(raw)
     # effective component-descriptor will be default contain either "-next"-version, or
     # effective version (which is suffixed w/ commit-digests). hardcode conversion to
     # next final version (might make this configurable later, if needed)
@@ -195,9 +200,12 @@ def main():
             absent_ok=True,
         ),
     )
+    extra_repos = []
+    if hasattr(component, 'current_ocm_repo') and component.current_ocm_repo:
+        extra_repos.append(component.current_ocm_repo)
     ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(
         *parsed.ocm_repositories,
-        component.current_ocm_repo,
+        *extra_repos,
     )
 
     ocm_version_lookup = ocm.retrieve.version_lookup(
@@ -312,7 +320,7 @@ def main():
         variant_markdown_path = os.path.join(tmp_dir.name, f'{variant_cfg.name}-release-notes.md')
 
         for cnode in ocm.iter.iter(
-            component=component_descriptor.component,
+            component=component,
             lookup=component_descriptor_lookup,
             recursion_depth=variant_cfg.recursion_depth,
             node_filter=ocm.iter.Filter.components,

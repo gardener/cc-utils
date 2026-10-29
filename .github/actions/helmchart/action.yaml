@@ -55,7 +55,11 @@ inputs:
     required: false
     type: string
     description: |
-      An OCM-Component-Descriptor in YAML form (inline). Prefer `component-descriptor-artifact`.
+      An OCM component constructor (OCM v2 format) in YAML form (inline). Prefer `component-descriptor-artifact`.
+
+      Note: this input keeps the name `component-descriptor` for backwards compatibility
+      with external callers. The value must be in OCM component constructor format
+      (not the legacy component-descriptor format).
 
   component-descriptor-artifact:
     required: false
@@ -162,7 +166,19 @@ runs:
       run: |
         import os
         import sys
+        # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+        # where an old gardener-ocm PyPI package may shadow the local ocm module.
+        _repo_root = os.path.abspath(os.path.join(os.environ['GITHUB_ACTION_PATH'], '..', '..', '..'))
+        sys.path.insert(0, _repo_root)
         sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+        # TODO(tmp-gh-tools): remove before merging to master
+        # evict any cached ocm modules so our local version takes precedence
+        for _k in list(sys.modules):
+            if _k == 'ocm' or _k.startswith('ocm.'):
+                del sys.modules[_k]
+        print(f'DEBUG repo_root={_repo_root}')
+        print(f'DEBUG ocm exists={os.path.isdir(os.path.join(_repo_root, "ocm"))}')
+        print(f'DEBUG sys.path={sys.path[:3]}')
 
         import dataclasses
         import json
@@ -181,10 +197,9 @@ runs:
         name = '${{ inputs.name }}'
         dir = '${{ inputs.dir }}'
         with open('/tmp/component-descriptor.yaml') as f:
-          component_descriptor = ocm.ComponentDescriptor.from_dict(
+          component = ocm.ComponentConstructor.from_dict(
             yaml.safe_load(f),
           )
-        component = component_descriptor.component
 
         version = component.version
         oci_registry = '${{ inputs.oci-registry }}'
@@ -290,18 +305,17 @@ runs:
             target_ref=oci_target_ref,
           )
 
-        helmchart_imagemap = ocm.Resource(
+        helmchart_imagemap = ocm.ConstructorResource(
           name=name,
           version=version,
           type='helmchart-imagemap',
           extraIdentity={
             'type': 'helmchart-imagemap',
           },
-          access=ocm.LocalBlobAccess(
+          input=ocm.FileInput(
+            path=ocm_mappings_path,
             mediaType='application/json',
-            localReference=ocm_mappings_path, # will be processed / patched by export-ocm action
-            size=-1, # will be patched by export-ocm-action
-          )
+          ),
         )
 
         with open('ocm-resources.yaml', 'w') as f:
@@ -315,7 +329,7 @@ runs:
           )
 
     - name: export-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@master
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@ocm-v2-migration-minimal
       with:
         ocm-resources-file: ocm-resources.yaml
         blobs-directory: blobs.d

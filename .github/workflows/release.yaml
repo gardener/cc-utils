@@ -27,29 +27,15 @@ on:
         required: false
         type: string
         description: |
-          A base-component-descriptor, as output from `base-component-descriptor` action.
-          Additional Component-Descriptor-Fragments as exported from the `export-ocm-fragments`
-          action will be merged into it (i.e. callers do not need to take care of this).
+          An OCM component constructor (OCM v2 format) to use as base.
+          Additional OCM fragments from `export-ocm-fragments` will be merged into it.
 
-          If not passed, an artefact named `base-component-descriptor` will be assumed to
+          If not passed, an artefact named `component-constructor` will be assumed to
           exist, and used as default / fallback.
-      on-validation-errors:
-        default: fail
-        type: string
-        description: |
-          How to behave in case of validation-errors. Allowed values are:
-          - fail     # abort release
-          - continue # ignore and create release (if possible)
 
-          Validation can be customised using `ocm-validation-cfg` input (currently, only
-          OCM-Component-Descriptor validation is implemented).
-      ocm-validation-recursion-depth:
-        default: -1
-        type: number
-        description: |
-          How deep to recurse into componentReferences during OCM validation.
-          -1 = full transitive closure (default). 0 = top-level only.
-          See `ocm-validate` action for details.
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value must be in OCM component constructor format
+          (not the legacy component-descriptor format).
       extra-oci-registries:
         required: false
         type: string
@@ -328,9 +314,9 @@ jobs:
           echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
       - name: collect-component-descriptor
         id: component-descriptor
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@ocm-v2-migration-minimal
         with:
-          component-descriptor-artefact: base-component-descriptor
+          component-descriptor-artefact: component-constructor
           component-descriptor: ${{ inputs.component-descriptor }}
           outdir: /tmp/ocm
           oci-registry: ${{ steps.prep.outputs.oci-registry }}
@@ -406,7 +392,7 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
           permissions: ${{ inputs.github-auth-token-permissions }}
-      - uses: gardener/cc-utils/.github/actions/release-notes@master
+      - uses: gardener/cc-utils/.github/actions/release-notes@ocm-v2-migration-minimal
         id: release-notes
         with:
           component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
@@ -430,7 +416,7 @@ jobs:
               categories: ''
               recursion_depth: 0
               include_resources: true
-      - uses: gardener/cc-utils/.github/actions/release@master
+      - uses: gardener/cc-utils/.github/actions/release@ocm-v2-migration-minimal
         id: release
         with:
           component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
@@ -441,8 +427,6 @@ jobs:
           next-version: ${{ steps.prep-next-version.outputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}
-          on-validation-errors: ${{ inputs.on-validation-errors }}
-          ocm-validation-recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
           extra-oci-registries: ${{ inputs.extra-oci-registries }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           git-push-token: ${{ steps.fed-token.outputs.token }}

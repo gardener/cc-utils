@@ -1,7 +1,18 @@
 import collections.abc
 import hashlib
 import os
+import sys
 
+# TODO(tmp-gh-tools): remove before merging to master — only needed on persistent runners
+# where an old gardener-ocm PyPI package may shadow the local ocm module.
+# ensure the local ocm module (from cc-utils checkout) takes precedence
+# over the installed gardener-ocm package which may not have all symbols
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+for _k in list(sys.modules):
+    if _k == 'ocm' or _k.startswith('ocm.'):
+        del sys.modules[_k]
 import magic
 import yaml
 
@@ -72,9 +83,13 @@ def patch_local_blob_refs(
     blobs_dir: str,
 ) -> None:
     '''
-    Patches localBlob access entries in artefacts whose localReference is a plain
-    filename (not yet content-addressed) to use the digest name from orig_to_digest.
-    Also fills in the `size` field and, if missing, the `type` field via mime detection.
+    Patches localBlob access entries in artefacts by converting them to OCM v2
+    input: {type: file, path: <digest>} format.
+
+    For sha256:-prefixed refs: directly sets artefact['input'] and removes artefact['access'].
+    For filename refs: resolves to digest name, sets artefact['input'] with path: digest_name,
+    removes artefact['access'].
+    Also fills in the `type` field via mime detection if missing.
 
     Exits with code 1 (via SystemExit) if a referenced blob file cannot be resolved.
     '''
@@ -92,16 +107,32 @@ def patch_local_blob_refs(
             continue
         if not (local_ref := access.get('localReference')):
             continue
+
         if local_ref.startswith('sha256:'):
+            artefact['input'] = {
+                'type': str(ocm.InputType.FILE),
+                'path': local_ref,
+                'mediaType': access.get('mediaType'),
+            }
+            del artefact['access']
             continue
-        if not (local_fpath := find_local_blobfile(local_ref)):
+        if not find_local_blobfile(local_ref):
             raise ValueError(f'did not find blobfile for {artefact=}')
         digest_name = orig_to_digest.get(local_ref)
         if not digest_name:
             raise ValueError(f'did not find digest for local blobfile {artefact=}')
-        access['localReference'] = digest_name
-        access['size'] = os.stat(local_fpath).st_size
-        print(f'INFO: patched {artefact["name"]}\'s access to {digest_name=} (was: {local_ref=})')
+
+        artefact['input'] = {
+            'type': str(ocm.InputType.FILE),
+            'path': digest_name,
+            'mediaType': access.get('mediaType'),
+        }
+        del artefact['access']
+
+        print(
+            f'INFO: patched {artefact["name"]}\'s localBlob access to input '
+            f'{digest_name=} (was: {local_ref=})'
+        )
 
         if 'type' not in artefact:
             artefact['type'] = magic.from_file(
