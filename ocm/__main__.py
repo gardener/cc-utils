@@ -255,15 +255,17 @@ def upload(parsed):
                 access.localReference,
             ),
         )
-        for candidate in blob_path_candidates:
-            if not os.path.exists(candidate):
-                continue
+        blob_path = next(
+            (c for c in blob_path_candidates if os.path.exists(c)),
+            None,
+        )
 
-        if not os.path.exists(candidate):
-            print(f'error: did not find expected blob at {candidate=}')
+        if blob_path is None:
+            print(f'error: did not find expected blob at {blob_path_candidates=}')
             print(f'this blob was expected for {artefact=}')
             exit(1)
-        with open(candidate, 'rb') as f:
+
+        with open(blob_path, 'rb') as f:
             oci_client.put_blob(
                 image_reference=oci_target_ref,
                 digest=access.localReference,
