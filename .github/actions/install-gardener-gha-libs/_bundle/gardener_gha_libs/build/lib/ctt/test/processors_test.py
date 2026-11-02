@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: Contributors to the Gardener project
+#
+# SPDX-License-Identifier: Apache-2.0
+
+import pytest
+
+import ctt.model
+import ctt.processors as processors
+
+
+@pytest.fixture
+def replication_resource_element():
+    return ctt.model.ReplicationResourceElement(
+        source=None,
+        target=None,
+        component_id=None,
+        src_ocm_repo=None,
+    )
+
+
+def test_noop_processor(replication_resource_element):
+    examinee = processors.NoOpProcessor()
+
+    result = examinee.process(replication_resource_element)
+
+    assert result is replication_resource_element
+
+
+def test_filefilter_processor(replication_resource_element, tmpdir):
+    filter_file = tmpdir.join('filters')
+    filter_file.write('remove/me')
+
+    examinee = processors.FileFilter(
+        filter_files=[filter_file],
+    )
+
+    result = examinee.process(replication_resource_element)
+    remove_files = result.remove_files
+
+    assert remove_files == ['remove/me',]
+
+
+def test_manifestfilter_processor(replication_resource_element):
+    examinee = processors.ManifestFilterProcessor(
+        strip_manifest_attributes=['manifests[].platform.features'],
+    )
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.strip_manifest_attributes == ['manifests[].platform.features']
+
+
+def test_manifestfilter_processor_validates_paths():
+    with pytest.raises(ValueError):
+        processors.ManifestFilterProcessor(
+            strip_manifest_attributes=['manifests[]'],
+        )
