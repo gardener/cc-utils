@@ -183,7 +183,7 @@ jobs:
           hostname=$(echo '${{ inputs.oci-registry }}' | cut -d/ -f1 )
           echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" >> $GITHUB_OUTPUT
       - name: build-helmchart
-        uses: gardener/cc-utils/.github/actions/helmchart@master
+        uses: gardener/cc-utils/.github/actions/helmchart@ocm-v2-migration-minimal
         with:
           name: ${{ inputs.name }}
           dir: ${{ inputs.dir }}

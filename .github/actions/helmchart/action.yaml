@@ -161,6 +161,11 @@ runs:
         oci-image-reference: ${{ inputs.oci-registry }}
         gh-token: ${{ inputs.gh-token }}
         extra-auths: ${{ inputs.extra-auths }}
+    # TODO(tmp-gh-tools): remove before merging to master — uninstalls stale gardener-ocm
+    # from persistent runners so the local ocm module takes precedence.
+    - name: uninstall-gardener-ocm
+      shell: bash
+      run: pip uninstall -y gardener-ocm gardener-oci gardener-gha-libs 2>/dev/null || true
     - name: helmchart
       shell: python
       run: |
