@@ -128,7 +128,7 @@ jobs:
     steps:
       - name: retrieve-params
         if: ${{ inputs.push == 'if-possible' }}
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@a3babe4c5299808baf0b61503328c0c28ee5e87c
         with:
           name: prepare-workflow-values
       - name: check-params
@@ -156,13 +156,13 @@ jobs:
 
       - name: fetch-ocm-fragments
         id: fetch-ocm
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@dffc35f73b4599dd135dcb4f11a9c1c4ef1cc6a7
         with:
           component-descriptor: ${{ inputs.component-descriptor }}
           component-descriptor-artefact: base-component-descriptor
           ctx: ${{ inputs.ocm-ctx }}
           upload-artifact-name: ''
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@84351d11640076268703be25508be7be8a5ea8a6
         with:
           remove-trusted-label: false
       - name: inject-authtoken
@@ -179,7 +179,7 @@ jobs:
           hostname=$(echo '${{ inputs.oci-registry }}' | cut -d/ -f1 )
           echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" >> $GITHUB_OUTPUT
       - name: build-helmchart
-        uses: gardener/cc-utils/.github/actions/helmchart@master
+        uses: gardener/cc-utils/.github/actions/helmchart@3107f66580912c06bc4b70306fd9ffff6140602e
         with:
           name: ${{ inputs.name }}
           dir: ${{ inputs.dir }}
