@@ -318,7 +318,7 @@ runs:
             'type': 'helmchart-imagemap',
           },
           input=ocm.FileInput(
-            path=ocm_mappings_path,
+            path=f'{name}.ocm-mappings.json',
             mediaType='application/json',
           ),
         )
