@@ -110,7 +110,7 @@ inputs:
       release to an actual release).
   release-candidate:
     default: ''
-    type: number
+    type: string
     description: |
       The number of the release candidate to publish. If set, the created GitHub release will be
       marked as "prerelease" and the next version prerelease will be set to
