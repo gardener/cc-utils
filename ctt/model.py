@@ -1,7 +1,20 @@
 import dataclasses
+import enum
 
 import oci.model
 import ocm
+
+
+@dataclasses.dataclass(frozen=True)
+class AppendFilesEntry:
+    src_path: str
+    tgt_path: str
+
+
+class AppendMode(enum.StrEnum):
+    REPLACE_REMOVED = 'replace_removed'
+    INSERT_INTO_LAYER = 'insert_into_layer'
+    NEW_LAYER = 'new_layer'
 
 
 @dataclasses.dataclass
@@ -11,6 +24,10 @@ class ReplicationResourceOptions:
     # attributes to strip from the top-level OCI manifest document, as dotted paths
     # (`[]` traverses into each element of a list), e.g. 'manifests[].platform.features'
     strip_manifest_attributes: list[str] = dataclasses.field(default_factory=list)
+    append_files: list[AppendFilesEntry] = dataclasses.field(default_factory=list)
+    append_mode: AppendMode = AppendMode.REPLACE_REMOVED
+    # only used if append_mode is INSERT_INTO_LAYER; Python-style index (negative allowed)
+    append_layer_idx: int | None = None
     digest: str | None = None
     reference_by_digest: bool = False
     retain_symbolic_tag: bool = False
