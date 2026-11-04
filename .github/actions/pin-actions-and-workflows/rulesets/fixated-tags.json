@@ -1,0 +1,19 @@
+{
+  "name": "fixated-tags",
+  "target": "tag",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/tags/fixated/**"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {"type": "creation"},
+    {"type": "update"},
+    {"type": "deletion"}
+  ],
+  "bypass_actors": [
+    {"actor_id": null, "actor_type": "DeployKey", "bypass_mode": "always"}
+  ]
+}

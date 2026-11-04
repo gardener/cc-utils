@@ -60,6 +60,22 @@ inputs:
       Optional name of an artifact produced by `capture-commit` (e.g. `release-commit-objects`).
       If set, the artifact is imported before pinning so that the commit it contains is
       reachable and can be passed as `own-ref`.
+  allowed-base:
+    type: string
+    default: ''
+    description: |
+      Branch `own-ref` must be reachable from, or be a release commit on top of (see
+      README.md). Fetched from `origin` before pinning. Defaults to the repository's
+      default branch. Pass `-` to disable the check (not recommended).
+  push-ssh-key:
+    type: string
+    default: ''
+    description: |
+      Optional SSH private key (typically a deploy key with write access, stored as
+      environment secret) to push target branch and preservation ref with. If set, the
+      push is done via SSH using this key, instead of the credentials configured by
+      checkout. Intended to be combined with a ruleset on the target branch that only
+      allows this deploy key to bypass (see README.md).
 
 runs:
   using: composite
@@ -106,17 +122,62 @@ runs:
           own_repo='${{ github.event.repository.name }}'
         fi
 
+        allowed_base='${{ inputs.allowed-base }}'
+        if [ -z "${allowed_base}" ]; then
+          allowed_base='${{ github.event.repository.default_branch }}'
+        fi
+        if [ -z "${allowed_base}" ]; then
+          echo '::error::could not determine default branch - pass `allowed-base` explicitly'
+          exit 1
+        fi
+        allowed_base_args=()
+        if [ "${allowed_base}" != '-' ]; then
+          # always check against remote state (local branch might have been tampered with)
+          git fetch --no-tags origin \
+            "+refs/heads/${allowed_base}:refs/remotes/origin/${allowed_base}"
+          allowed_base_args=(--allowed-base "refs/remotes/origin/${allowed_base}")
+        fi
+
         '${{ github.action_path }}/pin.py' \
           --repo-root '${{ github.workspace }}' \
           --own-ref '${{ inputs.own-ref }}' \
           --target-branch '${{ inputs.target-branch }}' \
           --own-org "${own_org}" \
           --own-repo "${own_repo}" \
-          --bundle-dir "${bundle_dir}"
+          --bundle-dir "${bundle_dir}" \
+          "${allowed_base_args[@]}"
 
     - name: push
       shell: bash
+      env:
+        PUSH_SSH_KEY: ${{ inputs.push-ssh-key }}
       run: |
         set -euo pipefail
-        git push --force origin 'refs/heads/${{ inputs.target-branch }}'
-        git push origin "refs/tags/fixated/$(git rev-parse '${{ inputs.own-ref }}')"
+
+        remote=origin
+        if [ -n "${PUSH_SSH_KEY}" ]; then
+          key_dir=$(mktemp -d)
+          trap 'rm -rf "${key_dir}"' EXIT
+          printf '%s\n' "${PUSH_SSH_KEY}" > "${key_dir}/key"
+          chmod 600 "${key_dir}/key"
+          host='${{ github.server_url }}'
+          host="${host#https://}"
+
+          # retrieve host keys via (TLS-authenticated) API; GHES does not expose them
+          curl -sSfL -H 'Authorization: Bearer ${{ github.token }}' '${{ github.api_url }}/meta' \
+            | jq -r --arg host "${host}" '.ssh_keys // [] | .[] | "\($host) \(.)"' \
+            > "${key_dir}/known_hosts"
+          if [ -s "${key_dir}/known_hosts" ]; then
+            host_key_opts="-o UserKnownHostsFile=${key_dir}/known_hosts -o StrictHostKeyChecking=yes"
+          else
+            echo "::warning::no ssh host keys published for ${host} - accepting on first use"
+            host_key_opts='-o StrictHostKeyChecking=accept-new'
+          fi
+
+          # do not use credentials configured by checkout (those must not be able to push)
+          export GIT_SSH_COMMAND="ssh -i ${key_dir}/key -o IdentitiesOnly=yes ${host_key_opts}"
+          remote="git@${host}:${{ github.repository }}.git"
+        fi
+
+        git push --force "${remote}" 'refs/heads/${{ inputs.target-branch }}'
+        git push "${remote}" "refs/tags/fixated/$(git rev-parse '${{ inputs.own-ref }}')"

@@ -6,6 +6,8 @@ pinning cross-references between co-located actions and workflows in a single
 repository by commit digest. Key files:
   - action.yaml         — composite action definition (inputs, steps)
   - pin.py              — implementation script (Python, GitPython, ruamel.yaml)
+  - sync_mirror.py      — verifies a pinned branch and pushes it to mirrors
+  - rulesets/           — rulesets restricting pushes to v1 / fixated tags to deploy keys
   - ../../../.github/workflows/pin-actions-and-workflows.yaml — reusable workflow
 
 Terminology:
@@ -24,7 +26,11 @@ Design decisions:
     so callers typically do not need to specify them explicitly
   - Pinned commits are pushed to a separate target branch (default: v1) via
     force-push; previous tips are preserved via refs/tags/fixated/<own-commit-digest>
-  - pin.py has a full CLI for local testing (--dry-run, --verbose)
+  - pin.py refuses to pin own commits not reachable from the allowed base (default
+    branch), except release commits (single parent on allowed base, VERSION files only)
+  - pushes may use a deploy key from a GitHub environment; rulesets/ restrict v1 and
+    fixated tags to deploy keys
+  - pin.py has a full CLI for local testing (--verbose)
 LLM-CONTEXT-END -->
 
 ## Motivation
@@ -50,10 +56,11 @@ and workflows are pinned by commit digest. Consumers can reference:
 
 ## How it works
 
-After every push to the own branch (`master`), the
+As part of each release (see `release-cc-utils.yaml`), the
 [`pin-actions-and-workflows` workflow](../../../.github/workflows/pin-actions-and-workflows.yaml)
 runs `pin.py`, which:
 
+0. Verifies the own commit was reviewed (see [Hardening](#hardening)).
 1. Builds the dependency graph of all actions and workflows in the repository.
 2. Processes files in topological order (leaves first), so that when a file is
    rewritten, all files it references have already been assigned a pinned digest.
@@ -109,6 +116,83 @@ pip install gitpython ruamel.yaml
 | `own-repo` | *(from remote)* | GitHub repository name (e.g. `cc-utils`) |
 | `git-user-name` | `github-actions[bot]` | Author name for pinning commits |
 | `git-user-email` | `github-actions[bot]@...` | Author email for pinning commits |
+| `allowed-base` | *(default branch)* | Branch `own-ref` must be reachable from (or be a release commit on top of); `-` disables the check |
+| `push-ssh-key` | *(none)* | Deploy key to push with (instead of checkout credentials) |
+
+## Hardening
+
+Every consumer of `v1` runs whatever `v1` points to, typically with access to its
+secrets. Hence, moving `v1` must require the same review as changing the default
+branch.
+
+**Reviewed own commits.** The action refuses to pin an own commit unless it is
+reachable from the default branch, or is a release commit (exactly one parent, which
+is reachable from the default branch, and only changing `VERSION` files). Release
+commits are created by the release pipeline, and only pushed to the default branch
+after pinning.
+
+**Restricted pushes.** If the `pin` job runs in a GitHub environment (workflow input
+`github-environment`) offering a `PIN_PUSH_SSH_KEY` secret, `v1` and `fixated/*`
+tags are pushed using this deploy key. Combined with the rulesets in
+[`rulesets/`](rulesets/), which block all pushes to `v1` and `fixated/*` tags except
+by deploy keys, only jobs running in this environment can move `v1`. Restrict the
+environment to the default branch, so that only reviewed workflow definitions have
+access to the key.
+
+Rollout (repository admin; order matters to avoid failing releases):
+
+1. Create a key pair, add the public key as deploy key with write access, and the
+   private key as secret `PIN_PUSH_SSH_KEY` in environment `release`:
+
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C 'pin-actions-and-workflows' -f pin-push-key
+   gh repo deploy-key add pin-push-key.pub --allow-write --title pin-actions-and-workflows
+   gh secret set PIN_PUSH_SSH_KEY --env release < pin-push-key
+   rm pin-push-key pin-push-key.pub
+   ```
+
+2. Restrict environment `release` to the default branch (Settings / Environments /
+   release / Deployment branches and tags: `master`).
+3. Run a release; check `v1` and `fixated/*` were pushed by the deploy key.
+4. Apply rulesets:
+
+   ```bash
+   for f in .github/actions/pin-actions-and-workflows/rulesets/*.json; do
+     gh api repos/{owner}/{repo}/rulesets --method POST --input "${f}"
+   done
+   ```
+
+Rulesets allow bypass for *any* deploy key with write access, so there must not be
+another one. This does not protect against changes to the default branch itself;
+those must be protected (required reviews, no bypass) separately.
+
+## Mirrors
+
+`v1` may be mirrored to other GitHub instances (e.g. GitHub Enterprise Server), where
+consumers reference it instead. Instead of pushing `v1` to mirrors manually, use
+`sync_mirror.py`. It fetches `v1`, `fixated/*` tags, and the default branch from the
+source repository, and verifies that
+
+- `v1` equals the preservation ref of its own commit,
+- the own commit was reviewed (see above), and
+- all commits between own commit and `v1` are pinning-commits (only rewriting own
+  `uses:` references to commits of the chain, or adding bundle files).
+
+Only then, it pushes `v1` (using `--force-with-lease`) and the preservation ref to
+each mirror:
+
+```bash
+pip install gitpython ruamel.yaml
+.github/actions/pin-actions-and-workflows/sync_mirror.py \
+  --source https://github.com/gardener/cc-utils.git \
+  --mirror <mirror-url> [--mirror <mirror-url> ...] \
+  [--backfill-fixated-tags] \
+  --dry-run  # remove after checking output
+```
+
+Contents of the bundle (in particular third-party wheels) cannot be verified against
+the own commit. Mirrors should apply the same rulesets, with a dedicated deploy key
+(passed via `--ssh-key`) for pushing.
 
 ## Backwards compatibility
 

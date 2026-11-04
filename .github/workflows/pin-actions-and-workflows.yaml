@@ -42,6 +42,21 @@ on:
         description: |
           Optional name of an artifact produced by `capture-commit`. If set, the artifact
           is imported before pinning so the captured commit is reachable as `own-ref`.
+      allowed-base:
+        type: string
+        default: ''
+        description: |
+          Branch `own-ref` must be reachable from (or be a release commit on top of).
+          Defaults to the repository's default branch.
+      github-environment:
+        type: string
+        default: ''
+        description: |
+          GitHub environment to run the `pin` job in. If the environment offers a
+          `PIN_PUSH_SSH_KEY` secret (a deploy key), target branch and preservation ref
+          are pushed using this key. See the action's README.md for how to restrict
+          pushes to the target branch to this key, and the environment to the default
+          branch.
 
 jobs:
   build-bundle:
@@ -76,6 +91,7 @@ jobs:
 
   pin:
     needs: build-bundle
+    environment: ${{ inputs.github-environment }}
     runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
     permissions:
       contents: write  # required to push the target branch and preservation refs
@@ -112,3 +128,5 @@ jobs:
           own-repo: ${{ inputs.own-repo }}
           release-commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
           bundle-dir: /tmp/gardener-gha-libs-bundle
+          allowed-base: ${{ inputs.allowed-base }}
+          push-ssh-key: ${{ secrets.PIN_PUSH_SSH_KEY }}

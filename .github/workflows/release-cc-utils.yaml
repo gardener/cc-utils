@@ -42,6 +42,8 @@ jobs:
     with:
       own-ref: refs/capture-commit
       release-commit-objects-artefact: release-commit-objects
+      # holds deploy-key (only key allowed to push to `v1`); restricted to `master`
+      github-environment: release
 
   release-to-github-and-bump:
     uses: ./.github/workflows/release.yaml

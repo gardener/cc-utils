@@ -1,0 +1,19 @@
+{
+  "name": "pinned-branch",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/v1"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {"type": "creation"},
+    {"type": "update"},
+    {"type": "deletion"}
+  ],
+  "bypass_actors": [
+    {"actor_id": null, "actor_type": "DeployKey", "bypass_mode": "always"}
+  ]
+}

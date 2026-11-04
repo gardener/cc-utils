@@ -19,9 +19,9 @@ represents a fully self-consistent, immutable snapshot of the action/workflow tr
 
 APPROACH
 --------
-After every push to the own branch (default: `master`), a pipeline runs this
-tool, which:
+As part of each release, a pipeline runs this tool, which:
 
+  0. Verifies the own commit was reviewed (see REVIEWED OWN COMMITS below).
   1. Resolves the full dependency graph of all actions and workflows.
   2. Rewrites references leaf-first (topological order), so that when a parent is
      rewritten, all files it references already point at pinned commits.
@@ -58,22 +58,37 @@ this tool creates a preservation ref at `refs/tags/fixated/<own-commit-digest>` 
 processed own commit. These refs are outside `refs/heads/` and do not clutter the
 branch list, but keep the commit objects alive indefinitely.
 
+REVIEWED OWN COMMITS
+--------------------
+Every consumer of the target branch runs whatever this tool pins. Hence, if
+`--allowed-base` is passed, the own commit must be one of:
+  - reachable from the allowed base (typically the protected default branch), or
+  - a release commit: exactly one parent, which is reachable from the allowed base,
+    and changing only paths matching `--release-commit-path` patterns (default:
+    VERSION files). Release commits are created by the release pipeline and are only
+    pushed to the default branch after pinning.
+Otherwise, pinning is refused.
+
 CLI USAGE (for local testing)
 ------------------------------
   ./pin.py \\
       [--repo-root /path/to/repo]   # defaults to repo root relative to script
-      [--own-branch master]         # defaults to master
+      [--own-ref master]            # defaults to master
       [--target-branch v1]          # defaults to v1
       [--own-org gardener]          # defaults to origin remote org
       [--own-repo cc-utils]         # defaults to origin remote repo name
+      [--allowed-base origin/master]  # defaults to no check
       [--verbose / -v]              # extra logging
 '''
 
 import argparse
+import collections.abc
+import fnmatch
 import graphlib
 import logging
 import os
 import shutil
+import sys
 import tempfile
 
 import git as gitpython
@@ -86,6 +101,69 @@ yaml = ruamel.yaml.YAML()
 yaml.preserve_quotes = True
 yaml.indent(mapping=2, sequence=4, offset=2)
 yaml.width = 4096  # prevent ruamel from wrapping long lines
+
+DEFAULT_RELEASE_COMMIT_PATHS = (
+    'VERSION',
+    '*/VERSION',
+)
+
+
+class UnreviewedOwnCommit(Exception):
+    pass
+
+
+def check_own_commit_reviewed(
+    *,
+    repo: gitpython.Repo,
+    own_commit: gitpython.Commit,
+    allowed_base: str,
+    release_commit_paths: collections.abc.Iterable[str] = DEFAULT_RELEASE_COMMIT_PATHS,
+) -> None:
+    '''
+    Raise UnreviewedOwnCommit unless own_commit is reachable from allowed_base, or is a
+    release commit on top of it (single parent reachable from allowed_base, changing only
+    paths matching release_commit_paths).
+    '''
+    base_commit = repo.commit(allowed_base)
+
+    if repo.is_ancestor(own_commit, base_commit):
+        logger.info('Own commit %s is reachable from %s', own_commit.hexsha, allowed_base)
+        return
+
+    if len(own_commit.parents) != 1:
+        raise UnreviewedOwnCommit(
+            f'{own_commit.hexsha} is not reachable from {allowed_base}, and is not a '
+            f'release commit (has {len(own_commit.parents)} parents)'
+        )
+
+    parent = own_commit.parents[0]
+    if not repo.is_ancestor(parent, base_commit):
+        raise UnreviewedOwnCommit(
+            f'neither {own_commit.hexsha} nor its parent {parent.hexsha} is reachable '
+            f'from {allowed_base}'
+        )
+
+    release_commit_paths = tuple(release_commit_paths)
+    changed_paths = set()
+    for diff in parent.diff(own_commit):
+        changed_paths.update(p for p in (diff.a_path, diff.b_path) if p)
+
+    disallowed_paths = sorted(
+        path for path in changed_paths
+        if not any(fnmatch.fnmatchcase(path, pattern) for pattern in release_commit_paths)
+    )
+    if disallowed_paths:
+        raise UnreviewedOwnCommit(
+            f'{own_commit.hexsha} is not reachable from {allowed_base}, and changes paths '
+            f'not allowed for release commits ({release_commit_paths}): {disallowed_paths}'
+        )
+
+    logger.info(
+        'Own commit %s is a release commit on top of %s (reachable from %s)',
+        own_commit.hexsha,
+        parent.hexsha,
+        allowed_base,
+    )
 
 
 def _is_pinned(ref: str, repo: gitpython.Repo) -> bool:
@@ -329,6 +407,8 @@ def create_pinned_branch(
     own_repo: str | None,
     bundle_dir: str | None = None,
     bundle_action_prefix: str = '.github/actions/install-gardener-gha-libs',
+    allowed_base: str | None = None,
+    release_commit_paths: collections.abc.Iterable[str] = DEFAULT_RELEASE_COMMIT_PATHS,
 ) -> None:
     '''
     Build pinned commits locally and update the target branch ref in the local
@@ -341,6 +421,9 @@ def create_pinned_branch(
     that prefix is rewritten to install from the bundle instead of cloning.
     bundle_dir is expected to contain one subdirectory per package, each with
     source files and a setup.py (as produced by bundle-gardener-gha-libs).
+
+    If allowed_base is given, the own commit is checked using check_own_commit_reviewed
+    before anything is created.
     '''
     repo = gitpython.Repo(repo_root)
 
@@ -353,6 +436,16 @@ def create_pinned_branch(
     own_commit = repo.commit(own_ref)
     own_digest = own_commit.hexsha
     logger.info('Own ref %s at commit digest %s', own_ref, own_digest)
+
+    if allowed_base:
+        check_own_commit_reviewed(
+            repo=repo,
+            own_commit=own_commit,
+            allowed_base=allowed_base,
+            release_commit_paths=release_commit_paths,
+        )
+    else:
+        logger.warning('No allowed base passed; not checking whether own commit was reviewed')
 
     dep_graph, prefix_to_blob = _build_dependency_graph(
         own_commit,
@@ -502,6 +595,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             'is rewritten to install from it instead of cloning at runtime.'
         ),
     )
+    parser.add_argument(
+        '--allowed-base',
+        default=None,
+        help=(
+            'Ref (typically the protected default branch, e.g. origin/master) own-ref must '
+            'be reachable from, or be a release commit on top of. If omitted, no check is '
+            'done (only intended for local testing).'
+        ),
+    )
+    parser.add_argument(
+        '--release-commit-path',
+        dest='release_commit_paths',
+        action='append',
+        default=None,
+        help=(
+            'fnmatch pattern for paths a release commit may change (repeatable). '
+            f'Default: {" ".join(DEFAULT_RELEASE_COMMIT_PATHS)}'
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -511,14 +623,20 @@ def main(argv: list[str] | None = None) -> None:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(levelname)s %(message)s',
     )
-    create_pinned_branch(
-        repo_root=args.repo_root,
-        own_ref=args.own_ref,
-        target_branch=args.target_branch,
-        own_org=args.own_org,
-        own_repo=args.own_repo,
-        bundle_dir=args.bundle_dir,
-    )
+    try:
+        create_pinned_branch(
+            repo_root=args.repo_root,
+            own_ref=args.own_ref,
+            target_branch=args.target_branch,
+            own_org=args.own_org,
+            own_repo=args.own_repo,
+            bundle_dir=args.bundle_dir,
+            allowed_base=args.allowed_base,
+            release_commit_paths=args.release_commit_paths or DEFAULT_RELEASE_COMMIT_PATHS,
+        )
+    except UnreviewedOwnCommit as e:
+        logger.error('Refusing to pin: %s', e)
+        sys.exit(1)
 
 
 if __name__ == '__main__':
