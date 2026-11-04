@@ -30,11 +30,12 @@ class NoOpProcessor(ProcessorBase):
 class FileFilter(ProcessorBase):
     def __init__(
         self,
-        filter_files: collections.abc.Iterable[str],
+        filter_files: collections.abc.Iterable[str]=(),
+        filter_globs: collections.abc.Iterable[str]=(),
         base_dir: str='',
     ):
         self._remove_entries = []
-        for path in filter_files:
+        for path in filter_files or ():
             with open(os.path.join(base_dir, path)) as f:
                 for line in f.readlines():
                     line = line.strip()
@@ -43,11 +44,14 @@ class FileFilter(ProcessorBase):
                     else:
                         self._remove_entries.append(line)
 
+        self._remove_globs = [g.lstrip('/') for g in (filter_globs or ())]
+
     def process(
         self,
         replication_resource_element: ctt.model.ReplicationResourceElement,
     ) -> ctt.model.ReplicationResourceElement:
         replication_resource_element.remove_files = self._remove_entries
+        replication_resource_element.remove_file_globs = self._remove_globs
 
         return replication_resource_element
 

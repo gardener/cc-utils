@@ -435,3 +435,203 @@ def test_append_files_idempotent(tmp_path, src_layout):
     tgt_ref_b, manifest_raw_b = _run()
     assert tgt_ref_a == tgt_ref_b
     assert manifest_raw_a == manifest_raw_b
+
+
+def test_filter_image_remove_file_globs(tmp_path):
+    '''
+    `remove_file_globs` must remove tar members whose paths match any of the glob patterns
+    (fnmatch, after stripping leading `/` from both pattern and member name).
+    '''
+    layer_gz, layer_gz_digest, layer_ungz_digest = _mk_tar_gz_blob([
+        ('etc/ssl/certs/ca-certificates.crt', b'bundle'),
+        ('etc/ssl/certs/00673b5b.0', b'hash-link-slug'),
+        ('etc/ssl/certs/ACCVRAIZ1.pem', b'per-ca-pem'),
+        ('etc/ssl/certs/another-dir/file.txt', b'other'),
+        ('etc/os-release', b'os-info'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer_ungz_digest])
+    manifest_bytes, _manifest_digest = _mk_manifest(
+        layers=[(layer_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip')],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {layer_gz_digest: layer_gz, cfg_digest: cfg_bytes}
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_file_globs=['/etc/ssl/certs/*.pem', 'etc/ssl/certs/*.0'],
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+    new_layer_digest = pushed_manifest['layers'][0]['digest']
+    new_layer_tar = _gz_decompress(client.pushed_blobs[new_layer_digest])
+    members = _tar_members(new_layer_tar)
+
+    assert 'etc/ssl/certs/ca-certificates.crt' in members
+    assert 'etc/ssl/certs/00673b5b.0' not in members
+    assert 'etc/ssl/certs/ACCVRAIZ1.pem' not in members
+    assert 'etc/ssl/certs/another-dir/file.txt' in members
+    assert 'etc/os-release' in members
+
+
+def test_filter_image_globs_alone_skips_noop_shortcut(tmp_path, src_layout):
+    '''
+    When only `remove_file_globs` is set (no literal `remove_files`, no appends), the
+    shortcut that returns `oci.replicate_artifact` unchanged must not be taken — the
+    layer rewrite has to run so globs can be evaluated.
+    '''
+    layer_gz, layer_gz_digest, layer_ungz_digest = _mk_tar_gz_blob([
+        ('etc/ssl/certs/junk.pem', b'remove-me'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer_ungz_digest])
+    manifest_bytes, _ = _mk_manifest(
+        layers=[(layer_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip')],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {layer_gz_digest: layer_gz, cfg_digest: cfg_bytes}
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_file_globs=['etc/ssl/certs/*.pem'],
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+    new_layer_digest = pushed_manifest['layers'][0]['digest']
+    members = _tar_members(_gz_decompress(client.pushed_blobs[new_layer_digest]))
+    assert 'etc/ssl/certs/junk.pem' not in members
+
+
+def test_filter_image_globs_and_replace_removed(tmp_path, src_layout):
+    '''
+    `replace_removed` append mode must trigger on layers that matched a glob, not just
+    on layers that matched a literal `remove_files` entry.
+    '''
+    layer_gz, layer_gz_digest, layer_ungz_digest = _mk_tar_gz_blob([
+        ('etc/ssl/certs/ca-certificates.crt', b'old-bundle'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer_ungz_digest])
+    manifest_bytes, _ = _mk_manifest(
+        layers=[(layer_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip')],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {layer_gz_digest: layer_gz, cfg_digest: cfg_bytes}
+
+    payload = _write_payload(tmp_path, 'curated.pem', b'curated-cert')
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_file_globs=['etc/ssl/certs/*.crt'],
+        append_files=[
+            ctt.model.AppendFilesEntry(src_path=payload, tgt_path='/etc/ssl/certs/ca-certificates.crt'),
+        ],
+        append_mode=ctt.model.AppendMode.REPLACE_REMOVED,
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+    # must be in-place replacement (1 layer), not NEW_LAYER fallback
+    assert len(pushed_manifest['layers']) == 1
+    new_layer_digest = pushed_manifest['layers'][0]['digest']
+    members = _tar_members(_gz_decompress(client.pushed_blobs[new_layer_digest]))
+    assert members.get('etc/ssl/certs/ca-certificates.crt') == b'curated-cert'
+
+
+def test_filter_image_globs_combined_with_literal_remove_files(tmp_path, src_layout):
+    '''Literal paths and globs are both honoured in the same filter pass.'''
+    layer_gz, layer_gz_digest, layer_ungz_digest = _mk_tar_gz_blob([
+        ('keep/me', b'k'),
+        ('literal-remove', b'l'),
+        ('glob-remove.pem', b'g'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer_ungz_digest])
+    manifest_bytes, _ = _mk_manifest(
+        layers=[(layer_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip')],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {layer_gz_digest: layer_gz, cfg_digest: cfg_bytes}
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_files=['literal-remove'],
+        remove_file_globs=['*.pem'],
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+    new_layer_digest = pushed_manifest['layers'][0]['digest']
+    members = _tar_members(_gz_decompress(client.pushed_blobs[new_layer_digest]))
+    assert 'keep/me' in members
+    assert 'literal-remove' not in members
+    assert 'glob-remove.pem' not in members
+
+
+def test_filter_image_globs_do_not_prevent_new_layer_fallback(tmp_path):
+    '''
+    When globs are present but match nothing, and REPLACE_REMOVED AppendFiles was
+    requested, the fallback to NEW_LAYER still applies.
+    '''
+    layer_gz, layer_gz_digest, layer_ungz_digest = _mk_tar_gz_blob([
+        ('foo/bar', b'x'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer_ungz_digest])
+    manifest_bytes, _ = _mk_manifest(
+        layers=[(layer_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip')],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {layer_gz_digest: layer_gz, cfg_digest: cfg_bytes}
+
+    payload = _write_payload(tmp_path, 'curated.pem', b'curated-cert')
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_file_globs=['no/such/dir/*.pem'],
+        append_files=[
+            ctt.model.AppendFilesEntry(src_path=payload, tgt_path='/opt/bundle.pem'),
+        ],
+        append_mode=ctt.model.AppendMode.REPLACE_REMOVED,
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+    assert len(pushed_manifest['layers']) == 2, (
+        'must fall back to NEW_LAYER when no glob matched any layer'
+    )
+    new_layer_digest = pushed_manifest['layers'][-1]['digest']
+    members = _tar_members(_gz_decompress(client.pushed_blobs[new_layer_digest]))
+    assert 'opt/bundle.pem' in members
