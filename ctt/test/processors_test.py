@@ -55,3 +55,178 @@ def test_manifestfilter_processor_validates_paths():
         processors.ManifestFilterProcessor(
             strip_manifest_attributes=['manifests[]'],
         )
+
+
+def test_appendfiles_processor_defaults_to_replace_removed(replication_resource_element, tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    examinee = processors.AppendFiles(
+        src_path=str(src),
+        tgt_path='/etc/ssl/certs/ca-certificates.crt',
+    )
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.append_files == [
+        ctt.model.AppendFilesEntry(
+            src_path=str(src),
+            tgt_path='etc/ssl/certs/ca-certificates.crt',
+        ),
+    ]
+    assert result.append_mode is ctt.model.AppendMode.REPLACE_REMOVED
+    assert result.append_layer_idx is None
+
+
+def test_appendfiles_processor_insert_into_layer(replication_resource_element, tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    examinee = processors.AppendFiles(
+        src_path=str(src),
+        tgt_path='/etc/ssl/certs/ca-certificates.crt',
+        mode='insert_into_layer',
+        layer_idx=-1,
+    )
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.append_mode is ctt.model.AppendMode.INSERT_INTO_LAYER
+    assert result.append_layer_idx == -1
+
+
+def test_appendfiles_processor_rejects_missing_src(tmp_path):
+    with pytest.raises(ValueError, match='does not exist'):
+        processors.AppendFiles(
+            src_path=str(tmp_path / 'not-there'),
+            tgt_path='/etc/ssl/certs/ca-certificates.crt',
+        )
+
+
+def test_appendfiles_processor_rejects_invalid_tgt(tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    with pytest.raises(ValueError):
+        processors.AppendFiles(
+            src_path=str(src),
+            tgt_path='',
+        )
+
+    with pytest.raises(ValueError):
+        processors.AppendFiles(
+            src_path=str(src),
+            tgt_path='/../outside',
+        )
+
+
+def test_appendfiles_processor_rejects_invalid_mode(tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    with pytest.raises(ValueError, match='unsupported'):
+        processors.AppendFiles(
+            src_path=str(src),
+            tgt_path='/x',
+            mode='bogus-mode',
+        )
+
+
+def test_appendfiles_processor_requires_layer_idx_for_insert(tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    with pytest.raises(ValueError, match='layer_idx is required'):
+        processors.AppendFiles(
+            src_path=str(src),
+            tgt_path='/x',
+            mode='insert_into_layer',
+        )
+
+    with pytest.raises(ValueError, match='only supported'):
+        processors.AppendFiles(
+            src_path=str(src),
+            tgt_path='/x',
+            mode='new_layer',
+            layer_idx=-1,
+        )
+
+
+def test_chained_processor_applies_in_order(replication_resource_element, tmp_path):
+    filter_file = tmp_path / 'rm.txt'
+    filter_file.write_text('remove/me')
+    payload = tmp_path / 'curated.pem'
+    payload.write_bytes(b'payload')
+
+    chained = processors.ChainedProcessor(
+        processors=[
+            processors.FileFilter(filter_files=[str(filter_file)]),
+            processors.AppendFiles(
+                src_path=str(payload),
+                tgt_path='/etc/ssl/certs/ca-certificates.crt',
+            ),
+            processors.AppendFiles(
+                src_path=str(payload),
+                tgt_path='/etc/pki/tls/certs/ca-bundle.crt',
+            ),
+        ],
+    )
+
+    result = chained.process(replication_resource_element)
+
+    assert result.remove_files == ['remove/me']
+    assert result.append_files == [
+        ctt.model.AppendFilesEntry(
+            src_path=str(payload),
+            tgt_path='etc/ssl/certs/ca-certificates.crt',
+        ),
+        ctt.model.AppendFilesEntry(
+            src_path=str(payload),
+            tgt_path='etc/pki/tls/certs/ca-bundle.crt',
+        ),
+    ]
+    assert result.append_mode is ctt.model.AppendMode.REPLACE_REMOVED
+
+
+def test_chained_processor_rejects_empty_list():
+    with pytest.raises(ValueError):
+        processors.ChainedProcessor(processors=[])
+
+
+def test_appendfiles_multi_entry_conflict_detection(replication_resource_element, tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    first = processors.AppendFiles(
+        src_path=str(src),
+        tgt_path='/etc/ssl/certs/ca-certificates.crt',
+        mode='new_layer',
+    )
+    conflicting = processors.AppendFiles(
+        src_path=str(src),
+        tgt_path='/x',
+        mode='insert_into_layer',
+        layer_idx=-1,
+    )
+
+    replication_resource_element = first.process(replication_resource_element)
+    with pytest.raises(ValueError, match='conflicting'):
+        conflicting.process(replication_resource_element)
+
+
+def test_appendfiles_dedup_and_append(replication_resource_element, tmp_path):
+    src = tmp_path / 'curated.pem'
+    src.write_bytes(b'payload')
+
+    first = processors.AppendFiles(src_path=str(src), tgt_path='/x')
+    second_same = processors.AppendFiles(src_path=str(src), tgt_path='/x')
+    third_different_tgt = processors.AppendFiles(src_path=str(src), tgt_path='/y')
+
+    rre = first.process(replication_resource_element)
+    rre = second_same.process(rre)
+    rre = third_different_tgt.process(rre)
+
+    assert rre.append_files == [
+        ctt.model.AppendFilesEntry(src_path=str(src), tgt_path='x'),
+        ctt.model.AppendFilesEntry(src_path=str(src), tgt_path='y'),
+    ]

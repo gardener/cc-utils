@@ -261,7 +261,22 @@ def _processor(processor_cfg: dict):
     if not proc_ctor:
         logger.critical(f'no such image processor: {proc_type}')
         exit(1)
-    processor = proc_ctor(**processor_cfg.get('kwargs', {}))
+    kwargs = dict(processor_cfg.get('kwargs', {}))
+    # special-case: ChainedProcessor takes a list of nested processor configurations.
+    # base_dir (auto-injected from cfg-file location) applies to nested processors, not
+    # to ChainedProcessor itself.
+    if proc_ctor is processors.ChainedProcessor:
+        base_dir = kwargs.pop('base_dir', '')
+        nested_cfgs = kwargs.get('processors') or []
+        nested_instances = []
+        for nested in nested_cfgs:
+            nested = dict(nested)
+            nested_kwargs = dict(nested.get('kwargs') or {})
+            nested_kwargs.setdefault('base_dir', base_dir)
+            nested['kwargs'] = nested_kwargs
+            nested_instances.append(_processor(processor_cfg=nested))
+        kwargs['processors'] = nested_instances
+    processor = proc_ctor(**kwargs)
     return processor
 
 
@@ -475,11 +490,15 @@ def process_upload_request(
 
     remove_files = replication_resource_element.remove_files
     strip_manifest_attributes = replication_resource_element.strip_manifest_attributes
+    append_files = replication_resource_element.append_files
+    append_mode = replication_resource_element.append_mode
+    append_layer_idx = replication_resource_element.append_layer_idx
     component = replication_resource_element.component_id
     resource = replication_resource_element.target
 
     logger.info(
         f'processing {src_ref=} -> {tgt_ref=} {remove_files=} {strip_manifest_attributes=} '
+        f'{append_files=} {append_mode=} {append_layer_idx=} '
         f'{replication_mode=} {platform_filter=}'
     )
 
@@ -505,6 +524,9 @@ def process_upload_request(
             target_ref=tgt_ref,
             remove_files=remove_files,
             strip_manifest_attributes=strip_manifest_attributes,
+            append_files=append_files,
+            append_mode=append_mode,
+            append_layer_idx=append_layer_idx,
             mode=replication_mode,
             platform_filter=platform_filter,
             oci_client=oci_client,

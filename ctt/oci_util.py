@@ -3,10 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import collections.abc
 import dataclasses
 import hashlib
+import io
 import json
 import logging
+import os
 import tarfile
 import tempfile
 import typing
@@ -22,7 +25,86 @@ import oci.platform
 import oci.model as om
 import tarutil
 
+import ctt.model
+
 logger = logging.getLogger(__name__)
+
+
+def tar_stream_from_files(
+    src_path: str,
+    tgt_path: str,
+    finalise: bool=True,
+) -> collections.abc.Generator[bytes, None, None]:
+    '''
+    Streams a non-gzipped tar archive containing `src_path` (file or directory) such that:
+    - src_path is a file -> single entry at `tgt_path`
+    - src_path is a directory -> tree is replicated below `tgt_path`
+    All tar entries use uid=gid=0, deterministic modes (0644/0755) and mtime=0 (reproducible).
+    `tgt_path` must not contain `..` (already validated by caller).
+    `finalise=False` omits the trailer so multiple streams can be chained.
+    '''
+    buf = io.BytesIO()
+    entries: list[tuple[str, str | None]] = [] # (tgt_path, abs_src_path | None for dir)
+
+    if os.path.isfile(src_path):
+        entries.append((tgt_path, src_path))
+    elif os.path.isdir(src_path):
+        for dirpath, dirnames, filenames in os.walk(src_path):
+            rel_dir = os.path.relpath(dirpath, src_path)
+            if rel_dir == '.':
+                rel_dir = ''
+            if rel_dir:
+                entries.append((os.path.join(tgt_path, rel_dir), None))
+            for d in sorted(dirnames):
+                tgt_dir_path = os.path.join(tgt_path, rel_dir, d)
+                entries.append((tgt_dir_path, None))
+            for f in sorted(filenames):
+                abs_f = os.path.join(dirpath, f)
+                tgt_f_path = os.path.join(tgt_path, rel_dir, f)
+                entries.append((tgt_f_path, abs_f))
+    else:
+        raise ValueError(f'{src_path=} is neither a file nor a directory')
+
+    dedup: dict[str, tuple[str | None, bytes, int]] = {}
+    for tgt, src in entries:
+        norm = tgt.lstrip('/')
+        if src is None:
+            ti = tarfile.TarInfo(name=norm)
+            ti.type = tarfile.DIRTYPE
+            ti.mode = 0o755
+            ti.uid = ti.gid = 0
+            ti.uname = ti.gname = ''
+            ti.mtime = 0
+            ti.size = 0
+            dedup[norm] = (None, ti.tobuf(), 0)
+        else:
+            size = os.path.getsize(src)
+            ti = tarfile.TarInfo(name=norm)
+            ti.type = tarfile.REGTYPE
+            ti.mode = 0o644
+            ti.uid = ti.gid = 0
+            ti.uname = ti.gname = ''
+            ti.mtime = 0
+            ti.size = size
+            dedup[norm] = (src, ti.tobuf(), size)
+
+    for norm in sorted(dedup):
+        src, hdr, size = dedup[norm]
+        buf.write(hdr)
+        if src is not None:
+            with open(src, 'rb') as f:
+                while chunk := f.read(64 * 1024):
+                    buf.write(chunk)
+            remainder = size % 512
+            if remainder:
+                buf.write(b'\0' * (512 - remainder))
+
+    if finalise:
+        buf.write(b'\0' * (tarfile.BLOCKSIZE * 2))
+
+    buf.seek(0)
+    while chunk := buf.read(64 * 1024):
+        yield chunk
 
 
 def parse_attribute_path(path: str) -> tuple[tuple[str, bool], ...]:
@@ -216,12 +298,133 @@ def replicate_with_stripped_manifest_attributes(
     return res, str(target_ref), manifest_raw
 
 
+def _build_append_layer_blob(
+    append_files: typing.Sequence[ctt.model.AppendFilesEntry],
+) -> tuple[bytes, str, str]:
+    '''
+    Builds a single gzipped tar blob containing all files from `append_files`.
+    Returns (gzipped_blob_bytes, gzipped_digest_with_alg, non_gzipped_digest_with_alg).
+    Deterministic: tar entries use uid=gid=0, mtime=0 and stable order.
+    '''
+    combined_tar_buf = io.BytesIO()
+    for entry in append_files:
+        for chunk in tar_stream_from_files(entry.src_path, entry.tgt_path, finalise=False):
+            combined_tar_buf.write(chunk)
+    combined_tar_buf.write(b'\0' * (tarfile.BLOCKSIZE * 2))
+    tar_payload = combined_tar_buf.getvalue()
+
+    non_gzipped_digest = 'sha256:' + hashlib.sha256(tar_payload).hexdigest()
+    crc = zlib.crc32(tar_payload)
+
+    compressor = gziputil.zlib_compressobj()
+    parts = [
+        gziputil.gzip_header(fname=b'layer.tar'),
+        compressor.compress(tar_payload),
+        compressor.flush(),
+        gziputil.gzip_footer(crc32=crc, uncompressed_size=len(tar_payload)),
+    ]
+    gz_blob = b''.join(parts)
+    gz_digest = 'sha256:' + hashlib.sha256(gz_blob).hexdigest()
+
+    return gz_blob, gz_digest, non_gzipped_digest
+
+
+def _append_new_layer_only(
+    source_ref: str,
+    target_ref: om.OciImageReference,
+    manifest: om.OciImageManifest,
+    append_files: typing.Sequence[ctt.model.AppendFilesEntry],
+    oci_client: oc.Client,
+    oci_manifest_annotations: dict[str, str] | None,
+) -> typing.Tuple[requests.Response, str, bytes]:
+    '''
+    Fast-path for pure NEW_LAYER append (no remove_files): replicate blobs as-is,
+    append one fresh layer at the end, patch cfg-blob's diff_ids (append our new
+    diff_id) and re-upload manifest.
+
+    Avoids the per-layer rewrite that the regular path has to do.
+    '''
+    src_ref_str = str(source_ref)
+
+    # copy existing blobs (cfg + layers) as-is
+    blobs = [manifest.config] + list(manifest.layers)
+    for blob_ref in blobs:
+        if oci_client.head_blob(image_reference=target_ref, digest=blob_ref.digest, absent_ok=True):
+            continue
+        blob = oci_client.blob(image_reference=src_ref_str, digest=blob_ref.digest, stream=True)
+        oci_client.put_blob(
+            image_reference=target_ref,
+            digest=blob_ref.digest,
+            octets_count=blob_ref.size,
+            data=blob,
+        )
+
+    # build new layer blob and upload
+    gz_blob, gz_digest, non_gzipped_digest = _build_append_layer_blob(append_files)
+    oci_client.put_blob(
+        image_reference=str(target_ref),
+        digest=gz_digest,
+        octets_count=len(gz_blob),
+        data=gz_blob,
+    )
+
+    # patch cfg-blob: append new diff_id
+    cfg_bytes = oci_client.blob(
+        image_reference=src_ref_str,
+        digest=manifest.config.digest,
+        stream=False,
+    ).content
+    cfg = json.loads(cfg_bytes)
+    if 'rootfs' not in cfg:
+        raise ValueError('expected attr `rootfs` not present on cfg-blob')
+    cfg['rootfs']['diff_ids'].append(non_gzipped_digest)
+    cfg_blob = json.dumps(cfg).encode('utf-8')
+
+    cfg_digest = f'sha256:{hashlib.sha256(cfg_blob).hexdigest()}'
+    oci_client.put_blob(
+        image_reference=str(target_ref),
+        digest=cfg_digest,
+        octets_count=len(cfg_blob),
+        data=cfg_blob,
+    )
+
+    manifest.config = dataclasses.replace(manifest.config, digest=cfg_digest, size=len(cfg_blob))
+    manifest.layers = list(manifest.layers) + [
+        om.OciBlobRef(
+            digest=gz_digest,
+            mediaType='application/vnd.docker.image.rootfs.diff.tar.gzip',
+            size=len(gz_blob),
+        ),
+    ]
+
+    manifest_raw = json.dumps(manifest.as_dict()).encode('utf-8')
+
+    if oci_manifest_annotations:
+        manifest_dict = json.loads(manifest_raw)
+        manifest_dict.setdefault('annotations', {}).update(oci_manifest_annotations)
+        manifest_raw = json.dumps(manifest_dict).encode('utf-8')
+
+    manifest_digest = hashlib.sha256(manifest_raw).hexdigest()
+    target_ref = target_ref.with_new_digest(digest=manifest_digest)
+
+    res = oci_client.put_manifest(
+        image_reference=target_ref,
+        manifest=manifest_raw,
+    )
+    res.raise_for_status()
+
+    return res, target_ref, manifest_raw
+
+
 def filter_image(
     source_ref: typing.Union[str, om.OciImageReference],
     target_ref: typing.Union[str, om.OciImageReference],
     oci_client: oc.Client,
     remove_files: typing.Sequence[str]=(),
     strip_manifest_attributes: typing.Sequence[str]=(),
+    append_files: typing.Sequence[ctt.model.AppendFilesEntry]=(),
+    append_mode: ctt.model.AppendMode=ctt.model.AppendMode.REPLACE_REMOVED,
+    append_layer_idx: int | None=None,
     mode: oci.ReplicationMode=oci.ReplicationMode.REGISTRY_DEFAULTS,
     platform_filter: typing.Callable[[om.OciPlatform], bool]=None,
     oci_manifest_annotations: dict[str, str]=None,
@@ -230,7 +433,7 @@ def filter_image(
     target_ref = om.OciImageReference.to_image_ref(target_ref)
 
     # shortcut in case there are no filtering-rules
-    if not remove_files and not strip_manifest_attributes:
+    if not remove_files and not strip_manifest_attributes and not append_files:
         return oci.replicate_artifact(
             src_image_reference=source_ref,
             tgt_image_reference=target_ref,
@@ -241,9 +444,10 @@ def filter_image(
         )
 
     if strip_manifest_attributes:
-        if remove_files:
+        if remove_files or append_files:
             raise NotImplementedError(
-                'cannot combine removal of in-image files and stripping of manifest attributes'
+                'cannot combine removal/append of in-image files with stripping of manifest '
+                'attributes'
             )
         return replicate_with_stripped_manifest_attributes(
             source_ref=source_ref,
@@ -296,6 +500,9 @@ def filter_image(
                 source_ref=source_ref,
                 target_ref=tgt_name,
                 remove_files=remove_files,
+                append_files=append_files,
+                append_mode=append_mode,
+                append_layer_idx=append_layer_idx,
                 oci_client=oci_client,
                 oci_manifest_annotations=oci_manifest_annotations,
             )
@@ -340,6 +547,9 @@ def filter_image(
             source_ref=source_ref,
             target_ref=target_ref.ref_without_tag,
             remove_files=remove_files,
+            append_files=append_files,
+            append_mode=append_mode,
+            append_layer_idx=append_layer_idx,
             oci_client=oci_client,
             oci_manifest_annotations=oci_manifest_annotations,
         )
@@ -384,12 +594,91 @@ def filter_image(
     # allow / ignore leading '/'
     remove_files = [p.lstrip('/') for p in remove_files]
 
+    # resolve REPLACE_REMOVED to NEW_LAYER when remove_files is empty (nothing to replace)
+    if (
+        append_files
+        and append_mode is ctt.model.AppendMode.REPLACE_REMOVED
+        and not remove_files
+    ):
+        append_mode = ctt.model.AppendMode.NEW_LAYER
+
+    # fast path for pure NEW_LAYER append: skip per-layer rewrite entirely; just copy
+    # blobs as-is and append a fresh layer at the end.
+    if append_files and append_mode is ctt.model.AppendMode.NEW_LAYER and not remove_files:
+        return _append_new_layer_only(
+            source_ref=source_ref,
+            target_ref=target_ref,
+            manifest=manifest,
+            append_files=append_files,
+            oci_client=oci_client,
+            oci_manifest_annotations=oci_manifest_annotations,
+        )
+
+    if append_files:
+        if append_mode is ctt.model.AppendMode.INSERT_INTO_LAYER:
+            if append_layer_idx is None:
+                raise ValueError('append_layer_idx required for INSERT_INTO_LAYER')
+            resolved_idx = (
+                append_layer_idx
+                if append_layer_idx >= 0
+                else len(manifest.layers) + append_layer_idx
+            )
+            if not 0 <= resolved_idx < len(manifest.layers):
+                raise ValueError(
+                    f'{append_layer_idx=} out of range for {len(manifest.layers)=}'
+                )
+            append_target_layer_idxs = {resolved_idx}
+        elif append_mode is ctt.model.AppendMode.REPLACE_REMOVED:
+            append_target_layer_idxs = None # decided per-layer, after stream is consumed
+        elif append_mode is ctt.model.AppendMode.NEW_LAYER:
+            # reachable only when remove_files is non-empty; NEW_LAYER executes after the loop
+            append_target_layer_idxs = set()
+        else:
+            raise NotImplementedError(append_mode)
+    else:
+        append_target_layer_idxs = set()
+
+    # mutates per-layer; reset per layer-iteration
+    removed_from_current_layer = [False]
+    # set to True once at least one append has actually been emitted into a layer
+    appended_into_layer = [False]
+
     def tarmember_filter(tar_info: tarfile.TarInfo):
         stripped_name = tar_info.name.lstrip('./')
         if stripped_name in remove_files:
             logger.debug(f'rm: {tar_info.name=}')
+            removed_from_current_layer[0] = True
             return False # rm member
         return True # keep member
+
+    def _iter_append_payload_streams() -> collections.abc.Generator[bytes, None, None]:
+        '''
+        Chains the per-entry tar streams into one member-stream (no trailer). Border
+        between consecutive entries needs no padding beyond 512-alignment, which each
+        entry-stream maintains internally.
+        '''
+        for entry in append_files:
+            yield from tar_stream_from_files(entry.src_path, entry.tgt_path, finalise=False)
+
+    _TRAILER = b'\0' * (tarfile.BLOCKSIZE * 2)
+
+    def _stream_with_appends(filtered_stream, should_append_getter):
+        '''
+        Chains the filtered (removefiles) stream with the append payload. Holder of the
+        append-decision is consulted exactly once: when filtered_stream is exhausted.
+        At that point the TAR trailer has not yet been emitted (filtered_tarfile_generator
+        is constructed with finalise=False), so appending stays a pure concatenation —
+        no buffering needed to strip a trailer retroactively. The trailer is emitted
+        exactly once, either here (no append) or after the last append-entry.
+        '''
+        yield from filtered_stream
+        if not append_files or not should_append_getter():
+            yield _TRAILER
+            return
+
+        yield from _iter_append_payload_streams()
+        yield _TRAILER
+        appended_into_layer[0] = True
 
     # prepare copy of layers to avoid modification while iterating
     layers_copy = manifest.layers.copy()
@@ -398,7 +687,8 @@ def filter_image(
 
     have_non_tar_layer = False
     patch_cfg_blob = True
-    for layer in manifest.layers:
+    for layer_idx, layer in enumerate(manifest.layers):
+        removed_from_current_layer[0] = False
         layer_hash = hashlib.sha256()
         cfg_hash = hashlib.sha256() # we need to write "non-gzipped" hash to cfg-blob
         leng = 0
@@ -452,6 +742,7 @@ def filter_image(
                 src_tf=tarfile.open(fileobj=src_tar_fobj, mode='r|*'),
                 filter_func=tarmember_filter,
                 chunk_size=tarfile.BLOCKSIZE * 64,
+                finalise=False, # trailer is emitted by _stream_with_appends
             )
 
             f.write((gzip_header := gziputil.gzip_header(fname=b'layer.tar')))
@@ -460,7 +751,22 @@ def filter_image(
 
             compressor = gziputil.zlib_compressobj()
 
-            for chunk in filtered_stream:
+            # decide whether this layer should have entries appended.
+            # - INSERT_INTO_LAYER: matches configured idx (normalised for negatives)
+            # - REPLACE_REMOVED:   decided after the stream has been consumed, based on
+            #                      whether tarmember_filter rejected anything in this layer
+            # - NEW_LAYER:         never matches (extra layer is appended after the loop)
+            if append_mode is ctt.model.AppendMode.INSERT_INTO_LAYER:
+                should_append = layer_idx in append_target_layer_idxs
+                should_append_getter = lambda: should_append
+            elif append_mode is ctt.model.AppendMode.REPLACE_REMOVED:
+                should_append_getter = lambda: removed_from_current_layer[0]
+            else: # NEW_LAYER
+                should_append_getter = lambda: False
+
+            stream_with_appends = _stream_with_appends(filtered_stream, should_append_getter)
+
+            for chunk in stream_with_appends:
                 cfg_hash.update(chunk) # need to hash before compressing for cfg-blob
                 crc = zlib.crc32(chunk, crc)
                 src_leng += len(chunk)
@@ -499,6 +805,29 @@ def filter_image(
 
     # switch layers in manifest to announce changes w/ manifest-upload
     manifest.layers = layers_copy
+
+    # append mode NEW_LAYER (reachable only when remove_files is non-empty AND user
+    # requested NEW_LAYER semantics): build a fresh tar-layer containing the new entries
+    # and append it at the end. Use REPLACE_REMOVED fallback if no layer actually matched.
+    if append_files and not appended_into_layer[0]:
+        gz_blob, gz_digest, non_gzipped_digest = _build_append_layer_blob(append_files)
+
+        oci_client.put_blob(
+            image_reference=str(target_ref),
+            digest=gz_digest,
+            octets_count=len(gz_blob),
+            data=gz_blob,
+        )
+
+        manifest.layers = list(manifest.layers) + [
+            om.OciBlobRef(
+                digest=gz_digest,
+                mediaType='application/vnd.docker.image.rootfs.diff.tar.gzip',
+                size=len(gz_blob),
+            ),
+        ]
+        non_gzipped_layer_digests[gz_digest] = non_gzipped_digest
+        appended_into_layer[0] = True
 
     # need to patch cfg-object, in case layer-digests changed
     if cp_cfg_blob:
