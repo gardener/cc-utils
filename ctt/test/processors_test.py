@@ -230,3 +230,38 @@ def test_appendfiles_dedup_and_append(replication_resource_element, tmp_path):
         ctt.model.AppendFilesEntry(src_path=str(src), tgt_path='x'),
         ctt.model.AppendFilesEntry(src_path=str(src), tgt_path='y'),
     ]
+
+
+def test_filefilter_processor_with_globs(replication_resource_element, tmpdir):
+    filter_file = tmpdir.join('filters')
+    filter_file.write('remove/me\n')
+
+    examinee = processors.FileFilter(
+        filter_files=[filter_file],
+        filter_globs=['/etc/ssl/certs/*.pem', '/etc/ssl/certs/*.0'],
+    )
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.remove_files == ['remove/me']
+    assert result.remove_file_globs == ['etc/ssl/certs/*.pem', 'etc/ssl/certs/*.0']
+
+
+def test_filefilter_processor_globs_only(replication_resource_element):
+    examinee = processors.FileFilter(
+        filter_globs=['/usr/share/ca-certificates/mozilla/*.crt'],
+    )
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.remove_files == []
+    assert result.remove_file_globs == ['usr/share/ca-certificates/mozilla/*.crt']
+
+
+def test_filefilter_processor_no_args(replication_resource_element):
+    examinee = processors.FileFilter()
+
+    result = examinee.process(replication_resource_element)
+
+    assert result.remove_files == []
+    assert result.remove_file_globs == []

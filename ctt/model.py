@@ -21,6 +21,10 @@ class AppendMode(enum.StrEnum):
 class ReplicationResourceOptions:
     extra_tags: list[str] = dataclasses.field(default_factory=list)
     remove_files: list[str] = dataclasses.field(default_factory=list)
+    # glob patterns matched against in-image file paths; entries matching any of these are
+    # removed alongside `remove_files`. Patterns are evaluated with `fnmatch.fnmatchcase`
+    # after stripping a single leading `/`. Example: `/etc/ssl/certs/*.pem`.
+    remove_file_globs: list[str] = dataclasses.field(default_factory=list)
     # attributes to strip from the top-level OCI manifest document, as dotted paths
     # (`[]` traverses into each element of a list), e.g. 'manifests[].platform.features'
     strip_manifest_attributes: list[str] = dataclasses.field(default_factory=list)

@@ -5,6 +5,7 @@
 
 import collections.abc
 import dataclasses
+import fnmatch
 import hashlib
 import io
 import json
@@ -421,6 +422,7 @@ def filter_image(
     target_ref: typing.Union[str, om.OciImageReference],
     oci_client: oc.Client,
     remove_files: typing.Sequence[str]=(),
+    remove_file_globs: typing.Sequence[str]=(),
     strip_manifest_attributes: typing.Sequence[str]=(),
     append_files: typing.Sequence[ctt.model.AppendFilesEntry]=(),
     append_mode: ctt.model.AppendMode=ctt.model.AppendMode.REPLACE_REMOVED,
@@ -433,7 +435,12 @@ def filter_image(
     target_ref = om.OciImageReference.to_image_ref(target_ref)
 
     # shortcut in case there are no filtering-rules
-    if not remove_files and not strip_manifest_attributes and not append_files:
+    if (
+        not remove_files
+        and not remove_file_globs
+        and not strip_manifest_attributes
+        and not append_files
+    ):
         return oci.replicate_artifact(
             src_image_reference=source_ref,
             tgt_image_reference=target_ref,
@@ -444,7 +451,7 @@ def filter_image(
         )
 
     if strip_manifest_attributes:
-        if remove_files or append_files:
+        if remove_files or remove_file_globs or append_files:
             raise NotImplementedError(
                 'cannot combine removal/append of in-image files with stripping of manifest '
                 'attributes'
@@ -500,6 +507,7 @@ def filter_image(
                 source_ref=source_ref,
                 target_ref=tgt_name,
                 remove_files=remove_files,
+                remove_file_globs=remove_file_globs,
                 append_files=append_files,
                 append_mode=append_mode,
                 append_layer_idx=append_layer_idx,
@@ -547,6 +555,7 @@ def filter_image(
             source_ref=source_ref,
             target_ref=target_ref.ref_without_tag,
             remove_files=remove_files,
+            remove_file_globs=remove_file_globs,
             append_files=append_files,
             append_mode=append_mode,
             append_layer_idx=append_layer_idx,
@@ -593,18 +602,25 @@ def filter_image(
 
     # allow / ignore leading '/'
     remove_files = [p.lstrip('/') for p in remove_files]
+    remove_file_globs = [p.lstrip('/') for p in remove_file_globs]
 
-    # resolve REPLACE_REMOVED to NEW_LAYER when remove_files is empty (nothing to replace)
+    # resolve REPLACE_REMOVED to NEW_LAYER when no removal was requested (nothing to replace)
     if (
         append_files
         and append_mode is ctt.model.AppendMode.REPLACE_REMOVED
         and not remove_files
+        and not remove_file_globs
     ):
         append_mode = ctt.model.AppendMode.NEW_LAYER
 
     # fast path for pure NEW_LAYER append: skip per-layer rewrite entirely; just copy
     # blobs as-is and append a fresh layer at the end.
-    if append_files and append_mode is ctt.model.AppendMode.NEW_LAYER and not remove_files:
+    if (
+        append_files
+        and append_mode is ctt.model.AppendMode.NEW_LAYER
+        and not remove_files
+        and not remove_file_globs
+    ):
         return _append_new_layer_only(
             source_ref=source_ref,
             target_ref=target_ref,
@@ -649,6 +665,11 @@ def filter_image(
             logger.debug(f'rm: {tar_info.name=}')
             removed_from_current_layer[0] = True
             return False # rm member
+        for glob in remove_file_globs:
+            if fnmatch.fnmatchcase(stripped_name, glob):
+                logger.debug(f'rm (glob {glob=}): {tar_info.name=}')
+                removed_from_current_layer[0] = True
+                return False # rm member
         return True # keep member
 
     def _iter_append_payload_streams() -> collections.abc.Generator[bytes, None, None]:

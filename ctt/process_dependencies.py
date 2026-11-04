@@ -489,6 +489,7 @@ def process_upload_request(
     # other threads waiting for upload result that result is ready by setting the event
 
     remove_files = replication_resource_element.remove_files
+    remove_file_globs = replication_resource_element.remove_file_globs
     strip_manifest_attributes = replication_resource_element.strip_manifest_attributes
     append_files = replication_resource_element.append_files
     append_mode = replication_resource_element.append_mode
@@ -497,8 +498,8 @@ def process_upload_request(
     resource = replication_resource_element.target
 
     logger.info(
-        f'processing {src_ref=} -> {tgt_ref=} {remove_files=} {strip_manifest_attributes=} '
-        f'{append_files=} {append_mode=} {append_layer_idx=} '
+        f'processing {src_ref=} -> {tgt_ref=} {remove_files=} {remove_file_globs=} '
+        f'{strip_manifest_attributes=} {append_files=} {append_mode=} {append_layer_idx=} '
         f'{replication_mode=} {platform_filter=}'
     )
 
@@ -523,6 +524,7 @@ def process_upload_request(
             source_ref=src_ref,
             target_ref=tgt_ref,
             remove_files=remove_files,
+            remove_file_globs=remove_file_globs,
             strip_manifest_attributes=strip_manifest_attributes,
             append_files=append_files,
             append_mode=append_mode,
