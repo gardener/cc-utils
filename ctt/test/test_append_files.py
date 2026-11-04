@@ -544,7 +544,10 @@ def test_filter_image_globs_and_replace_removed(tmp_path, src_layout):
         target_ref='tgt.example.com/my/image:1',
         remove_file_globs=['etc/ssl/certs/*.crt'],
         append_files=[
-            ctt.model.AppendFilesEntry(src_path=payload, tgt_path='/etc/ssl/certs/ca-certificates.crt'),
+            ctt.model.AppendFilesEntry(
+                src_path=payload,
+                tgt_path='/etc/ssl/certs/ca-certificates.crt',
+            ),
         ],
         append_mode=ctt.model.AppendMode.REPLACE_REMOVED,
         oci_client=client,
