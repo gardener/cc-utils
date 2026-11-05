@@ -4,7 +4,7 @@ name: Prepare
 #   An opinionated workflow that will
 #   - output target OCI Registries / OCM Repositories
 #   - calculate an effective version (and create a commit for switching to this version)
-#   - create a base OCM Component-Descriptor
+#   - create an OCM component constructor (OCM v2 format)
 #
 #   All outputs are also exposed as an artefact (name can be influenced via output-artefact input).
 #   Said artefact contains a TARfile (name can be controlled via output-artefact-filename input),
@@ -189,7 +189,7 @@ on:
         value: release-commit-objects
       component-descriptor-artefact:
         description: |
-          The name of the GHA artifact holding the base OCM Component-Descriptor.
+          The name of the GHA artifact holding the OCM component constructor.
         value: ${{ jobs.version-and-ocm.outputs.component-descriptor-artefact }}
 
 jobs:
@@ -208,7 +208,7 @@ jobs:
       can-push: ${{ steps.params.outputs.can-push }}
       version: ${{ steps.version.outputs.version }}
       commit-digest: ${{ steps.version.outputs.commit-digest }}
-      component-descriptor-artefact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
+      component-descriptor-artefact: ${{ steps.component-constructor.outputs.component-constructor-artefact }}
     steps:
       - name: params
         id: params
@@ -275,6 +275,9 @@ jobs:
           ocm-repository: ${{ steps.params.outputs.ocm-repository }}
           commit-digest: ${{ steps.version.outputs.commit-digest }}
           post-process: ${{ inputs.post-process }}
+      - name: component-descriptor-to-constructor
+        id: component-constructor
+        uses: gardener/cc-utils/.github/actions/component-descriptor-to-constructor@ocm-v2-migration-minimal
       - name: prepare-artefact
         run: |
           set -eu
