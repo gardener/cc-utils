@@ -656,6 +656,7 @@ def filter_image(
 
     # mutates per-layer; reset per layer-iteration
     removed_from_current_layer = [False]
+    removed_paths_in_current_layer = [set()]
     # set to True once at least one append has actually been emitted into a layer
     appended_into_layer = [False]
 
@@ -664,26 +665,42 @@ def filter_image(
         if stripped_name in remove_files:
             logger.debug(f'rm: {tar_info.name=}')
             removed_from_current_layer[0] = True
+            removed_paths_in_current_layer[0].add(stripped_name)
             return False # rm member
         for glob in remove_file_globs:
             if fnmatch.fnmatchcase(stripped_name, glob):
                 logger.debug(f'rm (glob {glob=}): {tar_info.name=}')
                 removed_from_current_layer[0] = True
+                removed_paths_in_current_layer[0].add(stripped_name)
                 return False # rm member
         return True # keep member
 
-    def _iter_append_payload_streams() -> collections.abc.Generator[bytes, None, None]:
+    def _iter_append_payload_streams(
+        tgt_filter: collections.abc.Callable[[str], bool] | None=None,
+    ) -> collections.abc.Generator[bytes, None, None]:
         '''
         Chains the per-entry tar streams into one member-stream (no trailer). Border
         between consecutive entries needs no padding beyond 512-alignment, which each
         entry-stream maintains internally.
+
+        When `tgt_filter` is provided, only entries whose `tgt_path` passes the filter
+        are emitted. This implements per-path REPLACE_REMOVED matching: each append
+        entry lands only in layers where the corresponding target was actually removed,
+        avoiding duplicate-path situations when a base image already shipped a file at
+        `tgt_path` that did NOT match any of the remove patterns.
         '''
         for entry in append_files:
+            if tgt_filter is not None and not tgt_filter(entry.tgt_path.lstrip('/')):
+                continue
             yield from tar_stream_from_files(entry.src_path, entry.tgt_path, finalise=False)
 
     _TRAILER = b'\0' * (tarfile.BLOCKSIZE * 2)
 
-    def _stream_with_appends(filtered_stream, should_append_getter):
+    def _stream_with_appends(
+        filtered_stream,
+        should_append_getter,
+        append_tgt_filter: collections.abc.Callable[[str], bool] | None=None,
+    ):
         '''
         Chains the filtered (removefiles) stream with the append payload. Holder of the
         append-decision is consulted exactly once: when filtered_stream is exhausted.
@@ -691,15 +708,27 @@ def filter_image(
         is constructed with finalise=False), so appending stays a pure concatenation —
         no buffering needed to strip a trailer retroactively. The trailer is emitted
         exactly once, either here (no append) or after the last append-entry.
+
+        `append_tgt_filter` is forwarded to `_iter_append_payload_streams`: per-layer,
+        it restricts which AppendFiles entries are written (`REPLACE_REMOVED` uses it
+        so each entry lands only in layers where its `tgt_path` was removed).
         '''
         yield from filtered_stream
         if not append_files or not should_append_getter():
             yield _TRAILER
             return
 
-        yield from _iter_append_payload_streams()
+        emitted_any = [False]
+        stream = _iter_append_payload_streams(tgt_filter=append_tgt_filter)
+        for chunk in stream:
+            emitted_any[0] = True
+            yield chunk
+        # even if the per-path filter suppressed all entries, the trailer still goes
+        # below the layer's filtered payload — we must not skip it (a tar reader
+        # depends on seeing the trailing two zero blocks at the very end).
         yield _TRAILER
-        appended_into_layer[0] = True
+        if emitted_any[0]:
+            appended_into_layer[0] = True
 
     # prepare copy of layers to avoid modification while iterating
     layers_copy = manifest.layers.copy()
@@ -710,6 +739,7 @@ def filter_image(
     patch_cfg_blob = True
     for layer_idx, layer in enumerate(manifest.layers):
         removed_from_current_layer[0] = False
+        removed_paths_in_current_layer[0] = set()
         layer_hash = hashlib.sha256()
         cfg_hash = hashlib.sha256() # we need to write "non-gzipped" hash to cfg-blob
         leng = 0
@@ -772,20 +802,30 @@ def filter_image(
 
             compressor = gziputil.zlib_compressobj()
 
-            # decide whether this layer should have entries appended.
-            # - INSERT_INTO_LAYER: matches configured idx (normalised for negatives)
+            # decide whether this layer should have entries appended, and if so with
+            # which per-path filter.
+            # - INSERT_INTO_LAYER: matches configured idx (normalised for negatives); all entries
             # - REPLACE_REMOVED:   decided after the stream has been consumed, based on
-            #                      whether tarmember_filter rejected anything in this layer
+            #                      whether tarmember_filter rejected anything in this layer;
+            #                      per-path filter restricts appends to entries whose tgt_path
+            #                      was actually removed HERE
             # - NEW_LAYER:         never matches (extra layer is appended after the loop)
             if append_mode is ctt.model.AppendMode.INSERT_INTO_LAYER:
                 should_append = layer_idx in append_target_layer_idxs
                 should_append_getter = lambda: should_append
+                append_tgt_filter = None
             elif append_mode is ctt.model.AppendMode.REPLACE_REMOVED:
                 should_append_getter = lambda: removed_from_current_layer[0]
+                append_tgt_filter = lambda tgt: tgt in removed_paths_in_current_layer[0]
             else: # NEW_LAYER
                 should_append_getter = lambda: False
+                append_tgt_filter = None
 
-            stream_with_appends = _stream_with_appends(filtered_stream, should_append_getter)
+            stream_with_appends = _stream_with_appends(
+                filtered_stream,
+                should_append_getter,
+                append_tgt_filter=append_tgt_filter,
+            )
 
             for chunk in stream_with_appends:
                 cfg_hash.update(chunk) # need to hash before compressing for cfg-blob
