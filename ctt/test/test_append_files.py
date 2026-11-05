@@ -638,3 +638,167 @@ def test_filter_image_globs_do_not_prevent_new_layer_fallback(tmp_path):
     new_layer_digest = pushed_manifest['layers'][-1]['digest']
     members = _tar_members(_gz_decompress(client.pushed_blobs[new_layer_digest]))
     assert 'opt/bundle.pem' in members
+
+
+def test_append_replace_removed_per_path_only_appends_where_removed(tmp_path):
+    '''
+    ReplaceRemoved must attach each append entry ONLY to layers where the
+    corresponding tgt_path itself was removed — not to every layer that had ANY
+    removal. Otherwise duplicate-within-a-layer situations occur when the base
+    image already ships a file at tgt_path that did NOT match the remove set.
+    '''
+    # layer 1: contains ONLY the append-target (still present, not removed by any
+    # filter). layer 2: contains an unrelated file that WILL match filter_files.
+    # expected: append entry attached only to layer 2 (where something was
+    # actually removed *that matches an AppendFiles tgt_path*). Since the only
+    # removal in layer 2 is `junk` and NOT the append tgt, no append should
+    # occur anywhere -> NEW_LAYER fallback fires.
+    layer1_gz, layer1_gz_digest, layer1_ungz_digest = _mk_tar_gz_blob([
+        ('etc/ssl1.1/cert.pem', b'original-cert'),
+    ])
+    layer2_gz, layer2_gz_digest, layer2_ungz_digest = _mk_tar_gz_blob([
+        ('some/junk/file', b'junk'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer1_ungz_digest, layer2_ungz_digest])
+    manifest_bytes, _ = _mk_manifest(
+        layers=[
+            (layer1_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip'),
+            (layer2_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip'),
+        ],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {
+        layer1_gz_digest: layer1_gz,
+        layer2_gz_digest: layer2_gz,
+        cfg_digest: cfg_bytes,
+    }
+
+    payload = _write_payload(tmp_path, 'curated.pem', b'curated-cert')
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_files=['some/junk/file'],
+        append_files=[
+            ctt.model.AppendFilesEntry(
+                src_path=payload,
+                tgt_path='/etc/ssl1.1/cert.pem',
+            ),
+        ],
+        append_mode=ctt.model.AppendMode.REPLACE_REMOVED,
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+    # nothing matched in any layer for the append's tgt_path; NEW_LAYER fallback
+    # kicks in with one extra layer carrying the bundle.
+    assert len(pushed_manifest['layers']) == 3, (
+        f'expected NEW_LAYER fallback to add one layer, got '
+        f'{len(pushed_manifest["layers"])}'
+    )
+    # layer 1 (which had no removal at all) must still contain ONLY the original
+    # file, exactly once
+    new_layer1_digest = pushed_manifest['layers'][0]['digest']
+    layer1_tar = _gz_decompress(client.pushed_blobs[new_layer1_digest])
+    members = _tar_members(layer1_tar)
+    if 'etc/ssl1.1/cert.pem' in members:
+        # if it's present, it must NOT be the curated content (would be the dup bug)
+        assert members['etc/ssl1.1/cert.pem'] != b'curated-cert', (
+            'curated bundle leaked into a layer that never removed its tgt_path'
+        )
+
+
+def test_append_replace_removed_per_path_lands_only_in_matching_layer(tmp_path):
+    '''
+    When only ONE append tgt_path is removed in one layer (and other layers remove
+    different paths), the append entry must land ONLY in the matching layer —
+    never duplicated across layers that removed unrelated paths.
+    '''
+    # layer 1: removes ONLY 'etc/ssl/certs/ca-certificates.crt' (the append tgt).
+    # layer 2: removes 'usr/share/grpc/roots.pem' (a different tgt of a different
+    # append entry).
+    layer1_gz, layer1_gz_digest, layer1_ungz_digest = _mk_tar_gz_blob([
+        ('etc/ssl/certs/ca-certificates.crt', b'old-bundle'),
+        ('etc/ssl/certs/junk.pem', b'junk'),
+    ])
+    layer2_gz, layer2_gz_digest, layer2_ungz_digest = _mk_tar_gz_blob([
+        ('usr/share/grpc/roots.pem', b'old-grpc-roots'),
+    ])
+    cfg_bytes, cfg_digest = _mk_cfg_blob([layer1_ungz_digest, layer2_ungz_digest])
+    manifest_bytes, _ = _mk_manifest(
+        layers=[
+            (layer1_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip'),
+            (layer2_gz_digest, 'application/vnd.docker.image.rootfs.diff.tar.gzip'),
+        ],
+        cfg_digest=cfg_digest,
+    )
+    blobs = {
+        layer1_gz_digest: layer1_gz,
+        layer2_gz_digest: layer2_gz,
+        cfg_digest: cfg_bytes,
+    }
+
+    payload_cert = _write_payload(tmp_path, 'curated-cert.pem', b'curated-cert')
+    payload_grpc = _write_payload(tmp_path, 'curated-grpc.pem', b'curated-grpc')
+
+    src_ref = 'src.example.com/my/image:1'
+    client = FakeOciClient(
+        manifests={src_ref: (json.loads(manifest_bytes), DOCKER_MANIFEST_V2)},
+        blobs=blobs,
+    )
+
+    _, _, manifest_raw = ctt.oci_util.filter_image(
+        source_ref=src_ref,
+        target_ref='tgt.example.com/my/image:1',
+        remove_files=['etc/ssl/certs/ca-certificates.crt', 'usr/share/grpc/roots.pem'],
+        remove_file_globs=['etc/ssl/certs/*.pem'],
+        append_files=[
+            ctt.model.AppendFilesEntry(
+                src_path=payload_cert,
+                tgt_path='/etc/ssl/certs/ca-certificates.crt',
+            ),
+            ctt.model.AppendFilesEntry(
+                src_path=payload_grpc,
+                tgt_path='/usr/share/grpc/roots.pem',
+            ),
+        ],
+        append_mode=ctt.model.AppendMode.REPLACE_REMOVED,
+        oci_client=client,
+    )
+
+    pushed_manifest = json.loads(manifest_raw)
+
+    # per-layer expectations:
+    # layer 1: removed `ca-certificates.crt` (literal) AND `junk.pem` (glob); append
+    #          payload for `ca-certificates.crt` re-injected — but grpc payload
+    #          must NOT land here
+    # layer 2: removed `roots.pem`; append payload for `roots.pem` re-injected —
+    #          but cert payload must NOT land here
+    layer1_members = _tar_members(_gz_decompress(
+        client.pushed_blobs[pushed_manifest['layers'][0]['digest']]
+    ))
+    assert layer1_members.get('etc/ssl/certs/ca-certificates.crt') == b'curated-cert'
+    assert 'usr/share/grpc/roots.pem' not in layer1_members, (
+        'grpc bundle must not be appended into the layer that removed only ca-certificates.crt'
+    )
+    assert 'etc/ssl/certs/junk.pem' not in layer1_members  # glob removed
+
+    layer2_members = _tar_members(_gz_decompress(
+        client.pushed_blobs[pushed_manifest['layers'][1]['digest']]
+    ))
+    assert layer2_members.get('usr/share/grpc/roots.pem') == b'curated-grpc'
+    assert 'etc/ssl/certs/ca-certificates.crt' not in layer2_members, (
+        'cert bundle must not be appended into the layer that removed only roots.pem'
+    )
+
+    # not a single layer must contain the same path twice
+    for layer_digest in (l['digest'] for l in pushed_manifest['layers']):
+        members = _tar_members(_gz_decompress(client.pushed_blobs[layer_digest]))
+        names = list(members.keys())
+        assert len(names) == len(set(names)), 'duplicate paths within layer'
