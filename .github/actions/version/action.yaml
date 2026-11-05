@@ -171,8 +171,8 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@fc8c9ca008bfe187b5c6b82e66d4d666782f39b1
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a234be04fdc1f0114d337c12252576c186a6fcce
     - name: calculate-version
       id: calc-version
       shell: bash
@@ -256,7 +256,7 @@ runs:
 
     - name: capture-commit
       id: capture-commit
-      uses: gardener/cc-utils/.github/actions/capture-commit@master
+      uses: gardener/cc-utils/.github/actions/capture-commit@5abb6fb91804af8a7837bf6d9ad747daa27bcfe2
       with:
         timestamp-reference: /tmp/timestamp-ref
         to-artefact: ${{ inputs.commit-objects-artefact }}
