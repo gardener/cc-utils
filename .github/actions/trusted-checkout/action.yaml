@@ -253,6 +253,19 @@ runs:
       if: ${{ github.event_name == 'pull_request_target' }}
       id: calc
       shell: python
+      env:
+        # pass expression values via env; event fields (label name, head ref,
+        # head repo) are attacker-controlled on pull_request_target and must not
+        # be interpolated into the python source or into subprocess arguments
+        AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        TRUSTED_LABEL: ${{ inputs.trusted-label || 'ok-to-test' }}
+        EVENT_ACTION: ${{ github.event.action }}
+        EVENT_LABEL: ${{ github.event.label.name }}
+        HEAD_REPO_FULL_NAME: ${{ github.event.pull_request.head.repo.full_name }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        REPO_PATH: ${{ inputs.path }}
+        HEAD_REF: ${{ github.head_ref }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
         import os
         import subprocess
@@ -263,15 +276,16 @@ runs:
           'MEMBER',
           'OWNER',
         )
-        author_association = '${{ github.event.pull_request.author_association }}'
+        author_association = os.environ.get('AUTHOR_ASSOCIATION', '')
         allowed_to_checkout = author_association in allowed_author_associations
 
         # if pullrequest is labelled, it is also considered trusted, regardless of
-        # author's association (rationale: only codeowners can add labels)
-        trusted_label = "${{ inputs.trusted-label || 'ok-to-test' }}"
+        # author's association (rationale: labels can only be applied by users with
+        # at least triage-permission, and created by users with write-permission)
+        trusted_label = os.environ['TRUSTED_LABEL']
 
-        if '${{ github.event.action }}' == 'labeled':
-          if '${{ github.event.label.name }}' == trusted_label:
+        if os.environ.get('EVENT_ACTION', '') == 'labeled':
+          if os.environ.get('EVENT_LABEL', '') == trusted_label:
             allowed_to_checkout = True
             with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f'remove-label={trusted_label}\n')
@@ -286,19 +300,20 @@ runs:
           exit(0)
 
         # allowed to checkout
-        repository = '${{ github.event.pull_request.head.repo.full_name }}'
-        remote = f'${{ github.server_url }}/{repository}'
+        repository = os.environ['HEAD_REPO_FULL_NAME']
+        remote = f'{os.environ["GITHUB_SERVER_URL"]}/{repository}'
         summary = ''
 
-        repo_path = '${{ inputs.path }}'
+        repo_path = os.environ['REPO_PATH']
         if repo_path == '.':
           repo_path = ''
 
+        head_ref = os.environ['HEAD_REF']
         subprocess.run(
           (
             'git',
             '-C',  repo_path,
-            'fetch', remote, 'refs/heads/${{ github.head_ref }}',
+            'fetch', remote, f'refs/heads/{head_ref}',
           ),
           check=True,
         )
@@ -315,7 +330,7 @@ runs:
         )
 
         fetched_head_digest = output.stdout.strip()
-        checkout_ref = '${{ github.event.pull_request.head.sha }}'
+        checkout_ref = os.environ['HEAD_SHA']
         if checkout_ref != fetched_head_digest:
           print('WARNING: pullrequest seems to have been modified')
           print(f'{fetched_head_digest=} vs {checkout_ref=}')

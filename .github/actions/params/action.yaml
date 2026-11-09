@@ -113,32 +113,50 @@ runs:
     - name: params
       id: params
       shell: python
+      env:
+        # pass all expression values via env (never interpolate ${{ }} into the
+        # python source): event fields like label.name are attacker-influenceable
+        # and would otherwise break the parse or inject code before the trust gate
+        REPO_IS_FORK: ${{ steps.repo-metadata.outputs.fork }}
+        MODE: ${{ inputs.mode }}
+        OCI_REGISTRY_PREFIX: ${{ inputs.oci-registry-prefix }}
+        SNAPSHOTS_SUFFIX: ${{ inputs.snapshots-suffix }}
+        RELEASES_SUFFIX: ${{ inputs.releases-suffix }}
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+        EVENT_NAME: ${{ github.event_name }}
+        REPO_OWNER: ${{ github.repository_owner }}
+        HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+        AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        EVENT_ACTION: ${{ github.event.action }}
+        TRUSTED_LABEL: ${{ inputs.trusted-label || 'ok-to-test' }}
+        EVENT_LABEL: ${{ github.event.label.name }}
+        GITHUB_REF: ${{ github.ref }}
       run: |
         import os
         import sys
         sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
         import params
 
-        is_fork = '${{ steps.repo-metadata.outputs.fork }}'
+        is_fork = os.environ['REPO_IS_FORK']
         print(f'repo is a fork: {is_fork}')
 
         urls = params.compute_registry_urls(
-            mode='${{ inputs.mode }}',
-            prefix='${{ inputs.oci-registry-prefix }}',
-            snapshots_suffix='${{ inputs.snapshots-suffix }}',
-            releases_suffix='${{ inputs.releases-suffix }}',
-            ocm_repositories='${{ inputs.ocm-repositories }}',
+            mode=os.environ['MODE'],
+            prefix=os.environ['OCI_REGISTRY_PREFIX'],
+            snapshots_suffix=os.environ['SNAPSHOTS_SUFFIX'],
+            releases_suffix=os.environ['RELEASES_SUFFIX'],
+            ocm_repositories=os.environ['OCM_REPOSITORIES'],
         )
 
         can_push, is_pr_from_fork = params.determine_can_push(
-            event_name='${{ github.event_name }}',
-            repo_owner='${{ github.repository_owner }}',
-            head_owner='${{ github.event.pull_request.head.repo.owner.login }}',
-            author_association='${{ github.event.pull_request.author_association }}',
-            event_action='${{ github.event.action }}',
-            trusted_label="${{ inputs.trusted-label || 'ok-to-test' }}",
-            event_label='${{ github.event.label.name }}',
-            ref='${{ github.ref }}',
+            event_name=os.environ['EVENT_NAME'],
+            repo_owner=os.environ['REPO_OWNER'],
+            head_owner=os.environ.get('HEAD_OWNER', ''),
+            author_association=os.environ.get('AUTHOR_ASSOCIATION', ''),
+            event_action=os.environ.get('EVENT_ACTION', ''),
+            trusted_label=os.environ['TRUSTED_LABEL'],
+            event_label=os.environ.get('EVENT_LABEL', ''),
+            ref=os.environ['GITHUB_REF'],
         )
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
@@ -151,11 +169,12 @@ runs:
             f.write(f'can-push={str(can_push.value).lower()}\n')
             f.write(f'can-push-reason={can_push.reason}\n')
 
+        mode = os.environ['MODE']
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
             f.write(f'''## Pipeline-Params-Summary
 
         <table> <tbody>
-          <tr> <td>mode</td>            <td>${{ inputs.mode }}</td> </tr>
+          <tr> <td>mode</td>            <td>{mode}</td> </tr>
           <tr> <td>oci-registry</td>    <td>{urls.oci_registry}</td> </tr>
           <tr> <td>ocm-repository</td>  <td>{urls.ocm_repository}</td> </tr>
           <tr> <td>ocm-repositories</td><td>{urls.ocm_repositories}</td> </tr>
