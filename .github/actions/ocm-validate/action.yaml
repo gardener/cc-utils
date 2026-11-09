@@ -1,5 +1,10 @@
 name: validate-ocm-component-descriptor
 description: |
+  Deprecated as of OCM v2 migration — `ocm add cv` now handles schema validation.
+  This action is no longer called by the cc-utils pipeline but remains available
+  for external callers. Note: it only supports the legacy component-descriptor format
+  (meta/component wrapper), not the OCM v2 component constructor format.
+
   A (slightly opinionated) action for validating OCM-Component-Descriptors. Works well in
   conjunction w/ `export-ocm-fragment` / `merge-component-descriptor` actions, but can also
   be used in other contexts.

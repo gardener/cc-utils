@@ -10,9 +10,13 @@ on:
         required: false
         type: string
         description: |
-          The Component-Descriptor containing the Component-References to honour.
-          If not given, a default Component-Descriptor will be determined using the
+          The OCM component constructor (OCM v2 format) containing the component references to honour.
+          If not given, a default component constructor will be determined using the
           `prepare.yaml` workflow.
+
+          Note: this input keeps the name `component-descriptor` for backwards compatibility
+          with external callers. The value must be in OCM component constructor format
+          (not the legacy component-descriptor format).
       ocm-repositories:
         required: false
         type: string
@@ -140,6 +144,9 @@ jobs:
       id-token: write
     with:
       mode: release
+      # TODO(ocm-v2): post-process: callback is a breaking change for repos using
+      # .ci/component_descriptor callback — the file passed via COMPONENT_DESCRIPTOR_PATH
+      # is now in OCM component constructor format, not the legacy component-descriptor format.
       post-process: ${{ inputs.ocm-post-process }}
       oci-registry-prefix: ${{ inputs.oci-registry-prefix }}
       releases-suffix: ${{ inputs.releases-suffix }}

@@ -29,6 +29,13 @@ runs:
         if pip show gardener-gha-libs &>/dev/null; then
           echo "already-installed=true" >> ${GITHUB_OUTPUT}
         fi
+    # TODO(tmp-gh-tools): remove before merging to master — only needed on persistent solinas
+    # runners where a previous job may have installed an old gardener-ocm from PyPI.
+    # On github.com with ephemeral runners + bundle this never occurs.
+    - name: uninstall-gardener-ocm
+      if: ${{ ! steps.check.outputs.already-installed }}
+      shell: bash
+      run: pip uninstall -y gardener-ocm gardener-oci gardener-gha-libs 2>/dev/null || true
     # ensure the Python version matches the bundle's wheel ABIs on all runners
     # (system Python may differ from the version used to build the bundle).
     # this step is intentionally NOT removed on pinned branches.

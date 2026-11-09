@@ -1,0 +1,77 @@
+name: component-descriptor-to-constructor
+description: |
+  Downloads the base-component-descriptor artifact, extracts component-descriptor.yaml,
+  transforms it to OCM v2 constructor (flat) format, and re-packages it as
+  component-descriptor.yaml inside component-descriptor.tar.gz, uploaded as
+  component-constructor artifact.
+
+inputs:
+  base-component-descriptor-artefact:
+    required: false
+    type: string
+    default: base-component-descriptor
+    description: |
+      Name of the GHA artifact produced by the base-component-descriptor action.
+
+outputs:
+  component-constructor-artefact:
+    description: |
+      Name of the GHA artifact containing the component-constructor tarball.
+    value: component-constructor
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+
+    - name: download-base-component-descriptor
+      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      with:
+        name: ${{ inputs.base-component-descriptor-artefact }}
+
+    - name: transform-to-constructor
+      shell: python
+      run: |
+        import os
+        import sys
+        import tarfile
+
+        import yaml
+
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import transform
+
+        archive = 'component-descriptor.tar.gz'
+        with tarfile.open(archive) as tf:
+          tf.extract('component-descriptor.yaml', path='.')
+          try:
+            tf.extract('base-component.yaml', path='.')
+          except KeyError:
+            pass  # base-component.yaml is optional
+
+        with open('component-descriptor.yaml') as f:
+          component_descriptor = yaml.safe_load(f)
+
+        constructor = transform.to_constructor(component_descriptor)
+
+        with open('component-descriptor.yaml', 'w') as f:
+          yaml.safe_dump(constructor, f, default_flow_style=False, allow_unicode=True)
+
+        with open('component-descriptor.yaml') as f:
+          print(f.read())
+
+    - name: package-constructor
+      shell: bash
+      run: |
+        set -eu
+        # include base-component.yaml if present (needed by merge-ocm-fragments for componentPrefixes)
+        extra=''
+        [ -f base-component.yaml ] && extra='base-component.yaml'
+        tar czf /tmp/component-descriptor.tar.gz component-descriptor.yaml ${extra}
+
+    - name: upload-component-constructor
+      uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      with:
+        name: component-constructor
+        path: /tmp/component-descriptor.tar.gz

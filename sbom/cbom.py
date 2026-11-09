@@ -124,13 +124,12 @@ def build_cbom_ocm_resources(
         'name': resource_name,
         'version': version,
         'type': CBOM_LAYER_MEDIA_TYPE,
-        'relation': str(ocm.ResourceRelation.EXTERNAL),
+        'relation': str(ocm.ResourceRelation.LOCAL),
         'extraIdentity': extra_identity,
-        'access': {
-            'type': str(ocm.AccessType.LOCAL_BLOB),
-            'localReference': cbom_blob_digest,
+        'input': {
+            'type': str(ocm.InputType.FILE),
+            'path': cbom_blob_digest,
             'mediaType': CBOM_LAYER_MEDIA_TYPE,
-            'size': len(cbom_bytes),
         },
         'labels': labels,
     }
@@ -142,7 +141,7 @@ def build_cbom_ocm_resources(
         'name': f'{resource_name}-cbom-ref',
         'version': version,
         'type': CBOM_LAYER_MEDIA_TYPE,
-        'relation': str(ocm.ResourceRelation.EXTERNAL),
+        'relation': str(ocm.ResourceRelation.LOCAL),
         'extraIdentity': extra_identity,
         'access': {
             'type': str(ocm.AccessType.OCI_REGISTRY),

@@ -1,0 +1,11 @@
+images:
+  # Gardener components
+  - name: gardener-apiserver
+    sourceRepository: github.com/gardener/gardener
+    repository: europe-docker.pkg.dev/gardener-project/releases/gardener/apiserver
+    resourceId:
+      name: apiserver
+  - name: pause-container
+    sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+    repository: registry.k8s.io/pause
+    tag: "3.10"
