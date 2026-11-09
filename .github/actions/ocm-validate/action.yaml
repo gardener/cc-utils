@@ -79,11 +79,18 @@ runs:
     - name: validate-component-descriptor
       id: val
       shell: python
+      env:
+        VALIDATION_CFG: ${{ inputs.validation-cfg }}
+        COMPONENT_DESCRIPTOR_PATH: ${{ inputs.component-descriptor-path }}
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+        RECURSION_DEPTH: ${{ inputs.recursion-depth }}
+        ON_VALIDATION_ERRORS: ${{ inputs.on-validation-errors }}
       run: |
         import os
+        import secrets
         import sys
 
-        sys.path.insert(1, '${{ github.action_path }}')
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
 
         import yaml
 
@@ -92,15 +99,13 @@ runs:
         import validate
 
         validation_cfg = ocm.validate.ValidationCfg.from_dict(
-          yaml.safe_load('''\
-        ${{ inputs.validation-cfg }}
-        '''))
+          yaml.safe_load(os.environ['VALIDATION_CFG']))
 
         total, warnings, errors = validate.validate(
-          component_descriptor_path='${{ inputs.component-descriptor-path }}',
+          component_descriptor_path=os.environ['COMPONENT_DESCRIPTOR_PATH'],
           validation_cfg=validation_cfg,
-          ocm_repositories='${{ inputs.ocm-repositories }}',
-          recursion_depth=${{ inputs.recursion-depth }},
+          ocm_repositories=os.environ['OCM_REPOSITORIES'],
+          recursion_depth=int(os.environ['RECURSION_DEPTH']),
         )
 
         print(f'{total=} validation-results, thereof {len(warnings)=}, {len(errors)=}')
@@ -123,14 +128,17 @@ runs:
           description = \
             f'Validation failed with {len(errors)=}, {len(warnings)=}:\n{error_str}\n{warn_str}'
 
+        # use a random delimiter so descriptor-derived text containing a bare 'EOF' line
+        # cannot close the output block early and inject additional output entries
+        delim = f'EOF_{secrets.token_hex(8)}'
         with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-          f.write('result-description<<EOF\n')
+          f.write(f'result-description<<{delim}\n')
           f.write(description)
-          f.write('EOF\n')
+          f.write(f'\n{delim}\n')
 
         print('Validation-Result:\n')
         print(description)
 
-        if not ok and '${{ inputs.on-validation-errors }}' == 'fail':
+        if not ok and os.environ['ON_VALIDATION_ERRORS'] == 'fail':
           print('there were errors, and `on-validation-errors` is set to `fail` -> exiting w/ 1')
           exit(1)
