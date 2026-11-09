@@ -176,37 +176,48 @@ runs:
     - name: calculate-version
       id: calc-version
       shell: bash
+      env:
+        PRERELEASE_TEMPLATE: ${{ inputs.prerelease }}
+        VERSIONFILE: ${{ inputs.versionfile }}
+        READ_CALLBACK: ${{ inputs.read-callback }}
+        WRITE_CALLBACK: ${{ inputs.write-callback }}
+        INPUT_VERSION: ${{ inputs.version }}
+        VERSION_OPERATION: ${{ inputs.version-operation }}
+        COMMIT_SHA: ${{ github.sha }}
       run: |
         set -eu
 
         touch /tmp/timestamp-ref
 
-        # pass variables to prerelease-template
+        # expand ${commit_digest} / ${epoch} documented template variables
         commit_digest=$(git rev-parse @)
         epoch=$(date +%s)
-        prerelease="${{ inputs.prerelease }}"
+        prerelease="${PRERELEASE_TEMPLATE//'${commit_digest}'/$commit_digest}"
+        prerelease="${prerelease//'${epoch}'/$epoch}"
 
         "${GITHUB_ACTION_PATH}/version_cli.py" \
-          --versionfile="${{ inputs.versionfile }}" \
-          --read-callback="${{ inputs.read-callback }}" \
-          --write-callback="${{ inputs.write-callback }}" \
+          --versionfile="${VERSIONFILE}" \
+          --read-callback="${READ_CALLBACK}" \
+          --write-callback="${WRITE_CALLBACK}" \
           --root-dir="${PWD}" \
-          --version="${{ inputs.version }}" \
-          --operation="${{ inputs.version-operation }}" \
+          --version="${INPUT_VERSION}" \
+          --operation="${VERSION_OPERATION}" \
           --prerelease="${prerelease}" \
           --extra-version-outfile /tmp/effective-version \
-          --commit-digest="${{ github.sha }}"
+          --commit-digest="${COMMIT_SHA}"
 
         echo "effective-version=$(cat /tmp/effective-version)" >> ${GITHUB_OUTPUT}
 
     - name: prepare-callback-action
       if: ${{ inputs.callback-action-path != '' }}
       shell: bash
+      env:
+        CALLBACK_ACTION_PATH: ${{ inputs.callback-action-path }}
       run: |
         set -eu
         # cp outside of repository-tree so we do not have to cleanup afterwards; also, we need a
         # static path, as github-actions do not allow using parameters for this
-        cp -r "${{ inputs.callback-action-path }}" ../version-callback-action
+        cp -r "${CALLBACK_ACTION_PATH}" ../version-callback-action
     - name: call-callback-action
       if: ${{ inputs.callback-action-path != '' }}
       uses: ./../version-callback-action
@@ -220,7 +231,9 @@ runs:
       run: |
         set -euo pipefail
 
-        export EFFECTIVE_VERSION="${{ steps.calc-version.outputs.effective-version }}"
+        # read from file rather than interpolating the effective-version (which, for
+        # the `noop` operation, may contain shell metacharacters) into the script text
+        export EFFECTIVE_VERSION="$(cat /tmp/effective-version)"
 
         ${{ inputs.callback-command }}
 
