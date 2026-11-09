@@ -319,8 +319,17 @@ runs:
     - name: extract-release-notes
       shell: bash
       run: |
+        set -euo pipefail
         mkdir /tmp/release-notes
         tar -xf /tmp/release-notes.tar -C /tmp/release-notes
+        # the artifact is attacker-influenceable (any job in the release run can replace it);
+        # reject symlinks/hardlinks/special files so a crafted tar cannot point release-notes
+        # processing at secrets outside the extraction dir (e.g. the checkout's git credentials)
+        if find /tmp/release-notes -mindepth 1 \! -type f \! -type d | grep -q .; then
+          echo '::error::release-notes archive contains non-regular files (symlinks?) - refusing'
+          find /tmp/release-notes -mindepth 1 \! -type f \! -type d -print
+          exit 1
+        fi
 
     - name: attach-release-notes-to-component-descriptor
       shell: python
