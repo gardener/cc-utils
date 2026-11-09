@@ -16,6 +16,18 @@ import ocm
 import ocm.gardener
 import version
 
+_BOT_AUTHOR = 'federated-github-access[bot]'
+_BOT_BRANCH_RE = re.compile(r'^ci-[a-z]{9}$')
+_UPGRADE_PR_TITLE_RE = re.compile(
+    r'^\[ci:'
+    r'(?P<kind>component|name):'
+    r'(?P<target>[^:\[\]]+):'
+    r'(?P<whence>[A-Za-z0-9][A-Za-z0-9._+\-]*)'
+    r'->'
+    r'(?P<whither>[A-Za-z0-9][A-Za-z0-9._+\-]*)'
+    r'\]$'
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -85,8 +97,18 @@ class UpgradePullRequest:
 
     def purge(self):
         self.pull_request.close()
-        head_ref = f'heads/{self.pull_request.head.ref}'
-        self.pull_request.repository.ref(head_ref).delete()
+        pr = self.pull_request
+        # Only delete the branch when it lives in the base repo and was created by the bot.
+        # This prevents a fork PR from steering us to delete an arbitrary base-repo branch.
+        if (
+            pr.head.repo is not None
+            and pr.head.repo.id == pr.base.repo.id
+            and _BOT_BRANCH_RE.fullmatch(pr.head.ref)
+        ):
+            try:
+                pr.repository.ref(f'heads/{pr.head.ref}').delete()
+            except github3.exceptions.NotFoundError:
+                pass  # already deleted, nothing to do
 
 
 def get_component_name_from_reference_name(
@@ -102,22 +124,19 @@ def get_component_name_from_reference_name(
 def parse_pullrequest_title(
     title: str,
     invalid_ok=False,
-    title_regex_pattern: str | None=None,
     reference_component: ocm.Component | None=None,
-) -> ocm.gardener.UpgradeVector | tuple[ocm.gardener.UpgradeVector, str]:
-    if not title_regex_pattern:
-        title_regex_pattern = r'^\[ci:(\S*):(\S*):(\S*)->(\S*)\]$'
+) -> ocm.gardener.UpgradeVector | tuple[ocm.gardener.UpgradeVector, str] | None:
+    match = _UPGRADE_PR_TITLE_RE.fullmatch(title)
 
-    title_pattern = re.compile(title_regex_pattern)
-    if not title_pattern.fullmatch(title):
+    if not match:
         if invalid_ok:
             return None
         raise ValueError(f'{title=} is not a valid upgrade-pullrequest-title')
 
-    title = title.removeprefix('[ci:').removesuffix(']')
-
-    kind, component_name_or_reference_name, version_vector = title.split(":")
-    version_whence, version_whither = version_vector.split("->")
+    kind = match.group('kind')
+    component_name_or_reference_name = match.group('target')
+    version_whence = match.group('whence')
+    version_whither = match.group('whither')
 
     reference_name = None
     if kind == "name":
@@ -127,10 +146,8 @@ def parse_pullrequest_title(
                 'reference_component must be given when parsing pullrequest title with kind=name'
             )
         component_name = get_component_name_from_reference_name(reference_name, reference_component)
-    elif kind == "component":
+    else:  # kind == "component" (regex only matches component|name)
         component_name = component_name_or_reference_name
-    else:
-        raise ValueError(f'upgrade-target-type {kind=} not implemented')
 
     upgrade_vector = ocm.gardener.UpgradeVector(
         whence=ocm.ComponentIdentity(
@@ -191,14 +208,25 @@ def upgrade_pullrequest_title(
 def iter_upgrade_pullrequests(
     repository: github3.repos.Repository,
     state: str='all',
-    title_regex_pattern: str | None=None,
     reference_component: ocm.Component | None=None,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
+    base_repo_id = repository.id
+
+    def is_bot_pr(pull_request) -> bool:
+        # Reject fork PRs: head.repo is None when the fork was deleted.
+        if pull_request.head.repo is None:
+            return False
+        if pull_request.head.repo.id != base_repo_id:
+            return False
+        # Airtight: only process PRs opened by the bot identity.
+        if pull_request.user.login != _BOT_AUTHOR:
+            return False
+        return True
+
     def has_upgrade_pr_title(pull_request):
         return parse_pullrequest_title(
             title=pull_request.title,
             invalid_ok=True,
-            title_regex_pattern=title_regex_pattern,
             reference_component=reference_component,
         ) is not None
 
@@ -206,6 +234,9 @@ def iter_upgrade_pullrequests(
         state=state,
         number=128, # avoid issueing more than one github-api-request
     ):
+        if not is_bot_pr(pull_request):
+            continue
+
         pull_request.title = pull_request.title.strip()
         if not has_upgrade_pr_title(pull_request):
             continue
