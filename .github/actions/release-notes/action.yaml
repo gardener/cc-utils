@@ -113,6 +113,8 @@ runs:
     - name: Prepare release-notes variants cfg
       id: prep-releaes-notes-variants-cfg
       shell: python
+      env:
+        RELEASE_NOTES_VARIANTS: ${{ inputs.release-notes-variants }}
       run: |
         import os
         import sys
@@ -121,9 +123,7 @@ runs:
         import yaml
         import release_notes_variants
 
-        release_notes_variant_cfg = '''\
-        ${{ inputs.release-notes-variants }}
-        '''
+        release_notes_variant_cfg = os.environ['RELEASE_NOTES_VARIANTS']
         release_notes_variant_cfg = yaml.safe_load(release_notes_variant_cfg)
         release_notes_variant_cfg = release_notes_variants.normalise_variant_cfg(
             release_notes_variant_cfg,
@@ -135,47 +135,53 @@ runs:
     - name: write-component-descriptor-from-input
       if: ${{ inputs.component-descriptor-artifact == '' }}
       shell: bash
+      env:
+        COMPONENT_DESCRIPTOR: ${{ inputs.component-descriptor }}
       run: |
-        cat <<'EOF' > component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
-        EOF
+        set -euo pipefail
+        printf '%s\n' "${COMPONENT_DESCRIPTOR}" > component-descriptor.yaml
 
     - name: Retrieve Release-Notes
       id: release-notes
       shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        DRAFT: ${{ inputs.draft }}
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+        INCLUDE_SUBCOMPONENT_RELEASE_NOTES: ${{ inputs.include-subcomponent-release-notes }}
       run: |
         set -eu
 
         echo 'Component-Descriptor:'
         cat component-descriptor.yaml
 
-        auth_token="${{ inputs.github-token }}"
+        auth_token="${INPUT_GITHUB_TOKEN}"
 
         if [ -z "${auth_token:-}" ]; then
           auth_token="${GITHUB_TOKEN}"
         fi
 
-        if [ "${{ inputs.draft }}" == 'true' ]; then
-          draft_arg='--draft'
+        extra_cli_args=()
+        if [ "${DRAFT}" == 'true' ]; then
+          extra_cli_args+=(--draft)
         fi
 
-        if [ -n "${{ inputs.ocm-repositories }}" ]; then
-          ocm_repositories_arg="--ocm-repositories ${{ inputs.ocm-repositories }}"
+        if [ -n "${OCM_REPOSITORIES}" ]; then
+          extra_cli_args+=(--ocm-repositories "${OCM_REPOSITORIES}")
         fi
 
-        if ! ${{ inputs.include-subcomponent-release-notes }}; then
-          extra_args='--no-subcomponent-release-notes'
+        if [ "${INCLUDE_SUBCOMPONENT_RELEASE_NOTES}" != 'true' ]; then
+          extra_cli_args+=(--no-subcomponent-release-notes)
         fi
 
         echo 'Fetching release-notes'
         "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
           --component-descriptor component-descriptor.yaml \
           --github-auth-token "${auth_token}" \
-          ${draft_arg:-} \
-          ${ocm_repositories_arg:-} \
           --release-notes-variants-cfg-path release-notes-variants-cfg.yaml \
           --local-release-notes local-release-notes.md \
-          --tar-output release-notes.tar ${extra_args:-}
+          --tar-output release-notes.tar \
+          "${extra_cli_args[@]}"
 
         echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
         cat local-release-notes.md >> ${GITHUB_STEP_SUMMARY}
