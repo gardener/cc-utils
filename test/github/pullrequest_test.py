@@ -85,17 +85,18 @@ def test_parse_no_brackets_rejected():
 # iter_upgrade_pullrequests — fork / author filter
 # ---------------------------------------------------------------------------
 
-def _make_repo(repo_id=1):
+def _make_repo(owner='myorg', name='myrepo'):
     repo = unittest.mock.MagicMock()
-    repo.id = repo_id
+    repo.owner.login = owner
+    repo.name = name
     return repo
 
 
 def _make_pr(
     title='[ci:component:github.com/gardener/foo:1.0.0->1.0.1]',
     author=gpr._BOT_AUTHOR,
-    head_repo_id=1,
-    base_repo_id=1,
+    is_fork=False,
+    head_deleted=False,
     head_ref='ci-abcdefghi',
     state='open',
 ):
@@ -103,14 +104,19 @@ def _make_pr(
     pr.title = title
     pr.user.login = author
     pr.head.ref = head_ref
-    pr.head.repo = _make_repo(head_repo_id) if head_repo_id is not None else None
-    pr.base.repo = _make_repo(base_repo_id)
     pr.state = state
+    # github3 sets head.repo to an (owner, name) tuple; a deleted fork yields ('', '')
+    if head_deleted:
+        pr.head.repo = ('', '')
+    elif is_fork:
+        pr.head.repo = ('attacker', 'myrepo')
+    else:
+        pr.head.repo = ('myorg', 'myrepo')
     return pr
 
 
-def _iter(prs, base_repo_id=1):
-    repo = _make_repo(base_repo_id)
+def _iter(prs, owner='myorg', name='myrepo'):
+    repo = _make_repo(owner=owner, name=name)
     repo.pull_requests.return_value = prs
     return list(gpr.iter_upgrade_pullrequests(repository=repo))
 
@@ -121,14 +127,12 @@ def test_iter_accepts_bot_pr():
 
 
 def test_iter_rejects_fork_pr():
-    # head.repo.id differs from base repo id
-    results = _iter([_make_pr(head_repo_id=99)])
+    results = _iter([_make_pr(is_fork=True)])
     assert results == []
 
 
 def test_iter_rejects_deleted_fork_pr():
-    # head.repo is None when the fork was deleted
-    results = _iter([_make_pr(head_repo_id=None)])
+    results = _iter([_make_pr(head_deleted=True)])
     assert results == []
 
 
@@ -145,8 +149,8 @@ def test_iter_rejects_invalid_title():
 def test_iter_multiple_mixed():
     prs = [
         _make_pr(),                              # good
-        _make_pr(head_repo_id=99),               # fork
-        _make_pr(head_repo_id=None),             # deleted fork
+        _make_pr(is_fork=True),                  # fork
+        _make_pr(head_deleted=True),             # deleted fork
         _make_pr(author='attacker'),             # non-bot
         _make_pr(title='[ci:bogus:x:1->2]'),    # bad title
     ]
@@ -157,8 +161,10 @@ def test_iter_multiple_mixed():
 # purge — branch deletion guard
 # ---------------------------------------------------------------------------
 
-def _make_upr(head_repo_id=1, base_repo_id=1, head_ref='ci-abcdefghi'):
-    pr = _make_pr(head_repo_id=head_repo_id, base_repo_id=base_repo_id, head_ref=head_ref)
+def _make_upr(is_fork=False, head_deleted=False, head_ref='ci-abcdefghi'):
+    pr = _make_pr(is_fork=is_fork, head_deleted=head_deleted, head_ref=head_ref)
+    # purge() checks head.repo against base.repo via the tuple; align them
+    pr.base.repo = ('myorg', 'myrepo')
     upr = gpr.UpgradePullRequest(
         pull_request=pr,
         upgrade_vector=unittest.mock.MagicMock(),
@@ -175,14 +181,14 @@ def test_purge_deletes_bot_branch():
 
 
 def test_purge_skips_deletion_for_fork():
-    upr = _make_upr(head_repo_id=99)
+    upr = _make_upr(is_fork=True)
     upr.purge()
     upr.pull_request.close.assert_called_once()
     upr.pull_request.repository.ref.assert_not_called()
 
 
 def test_purge_skips_deletion_for_deleted_fork():
-    upr = _make_upr(head_repo_id=None)
+    upr = _make_upr(head_deleted=True)
     upr.purge()
     upr.pull_request.close.assert_called_once()
     upr.pull_request.repository.ref.assert_not_called()

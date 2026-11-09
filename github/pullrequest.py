@@ -100,9 +100,9 @@ class UpgradePullRequest:
         pr = self.pull_request
         # Only delete the branch when it lives in the base repo and was created by the bot.
         # This prevents a fork PR from steering us to delete an arbitrary base-repo branch.
+        # github3 sets head.repo / base.repo to (owner, name) tuples.
         if (
-            pr.head.repo is not None
-            and pr.head.repo.id == pr.base.repo.id
+            pr.head.repo == pr.base.repo
             and _BOT_BRANCH_RE.fullmatch(pr.head.ref)
         ):
             try:
@@ -210,15 +210,15 @@ def iter_upgrade_pullrequests(
     state: str='all',
     reference_component: ocm.Component | None=None,
 ) -> collections.abc.Generator[UpgradePullRequest, None, None]:
-    base_repo_id = repository.id
+    # github3 sets head.repo to an (owner, name) tuple (see PullDestination);
+    # for a deleted fork it becomes ('', ''), never matching the base repo.
+    base_repo_tuple = (repository.owner.login, repository.name)
 
     def is_bot_pr(pull_request) -> bool:
-        # Reject fork PRs: head.repo is None when the fork was deleted.
-        if pull_request.head.repo is None:
+        # reject PRs whose head is not a branch in the base repository (i.e. forks)
+        if pull_request.head.repo != base_repo_tuple:
             return False
-        if pull_request.head.repo.id != base_repo_id:
-            return False
-        # Airtight: only process PRs opened by the bot identity.
+        # only process PRs opened by the automation identity
         if pull_request.user.login != _BOT_AUTHOR:
             return False
         return True
