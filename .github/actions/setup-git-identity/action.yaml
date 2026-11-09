@@ -26,26 +26,32 @@ runs:
   steps:
     - name: Set Git user identity
       shell: bash
+      env:
+        SCOPE: ${{ inputs.scope }}
+        USER_NAME: ${{ inputs.user_name }}
+        USER_EMAIL: ${{ inputs.user_email }}
+        GITHUB_HOSTNAME: ${{ inputs.github_hostname }}
       run: |
-        git config --global --add safe.directory $PWD
+        set -euo pipefail
+        git config --global --add safe.directory "$PWD"
 
-        if [[ "${{ inputs.scope }}" == "global" ]]; then
-          config_scope="--global"
-        elif [[ "${{ inputs.scope }}" == "local" ]]; then
-          config_scope="--local"
-        else
-          config_scope="--file ${{ inputs.scope }}"
+        # build scope as an array so a "--file <path>" value cannot be split or
+        # interpreted as shell by an unquoted expansion
+        case "$SCOPE" in
+          global) config_scope=(--global) ;;
+          local)  config_scope=(--local) ;;
+          *)      config_scope=(--file "$SCOPE") ;;
+        esac
+
+        if ! git config "${config_scope[@]}" user.name >/dev/null; then
+          git config "${config_scope[@]}" user.name "$USER_NAME"
         fi
 
-        if ! git config $config_scope user.name >/dev/null; then
-          git config $config_scope user.name "${{ inputs.user_name }}"
-        fi
-
-        if ! git config $config_scope user.email >/dev/null; then
-          user_email=${{ inputs.user_email }}
+        if ! git config "${config_scope[@]}" user.email >/dev/null; then
+          user_email="$USER_EMAIL"
 
           if [[ -z "$user_email" ]]; then
-            github_host=${{ inputs.github_hostname }}
+            github_host="$GITHUB_HOSTNAME"
 
             if [[ -z "$github_host" ]]; then
               # determine user email address based on current GH-instance
@@ -71,5 +77,5 @@ runs:
             user_email="${user_id}+github-actions[bot]@users.noreply.${github_host}"
           fi
 
-          git config $config_scope user.email "$user_email"
+          git config "${config_scope[@]}" user.email "$user_email"
         fi
