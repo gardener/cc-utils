@@ -1,0 +1,16 @@
+name: Test Upgrade Dependencies (temp)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test-f002-deleteme
+
+jobs:
+  upgrade-pullrequests:
+    uses: ./.github/workflows/upgrade-dependencies.yaml
+    secrets: inherit
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
