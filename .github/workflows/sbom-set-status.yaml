@@ -123,6 +123,22 @@ jobs:
           LIMIT: ${{ inputs.limit }}
         run: |
           set -euo pipefail
+          # validate before any arithmetic: bash $(( )) evaluates array-subscript
+          # expressions, so an unvalidated value like 'x[$(cmd)]' would execute cmd.
+          # allow letters, digits, and safe punctuation (covers semver, ISO timestamps,
+          # version prefixes); block $, (, ), [, ], backticks and whitespace.
+          if [[ "$RUN_KEY" =~ [^a-zA-Z0-9._:T/+\-] ]]; then
+            echo "::error::invalid run-key (unsafe characters): ${RUN_KEY}"
+            exit 1
+          fi
+          if [[ -z "$RUN_KEY" ]]; then
+            echo "::error::run-key must not be empty"
+            exit 1
+          fi
+          if ! [[ "$LIMIT" =~ ^[0-9]+$ ]]; then
+            echo "::error::invalid limit (expected non-negative integer): ${LIMIT}"
+            exit 1
+          fi
           IFS=. read -r major minor patch <<< "$RUN_KEY"
           {
             printf 'run-keys<<EOF\n'

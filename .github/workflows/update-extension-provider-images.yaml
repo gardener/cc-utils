@@ -114,22 +114,35 @@ jobs:
         if: steps.check_changes.outputs.changes_detected == 'true'
         env:
           GITHUB_TOKEN: ${{ steps.fed-token.outputs.token }}
+          BRANCH_NAME: ${{ inputs.branch-name }}
+          BASE_BRANCH: ${{ inputs.base-branch }}
+          IMAGES_YAML_PATH: ${{ inputs.images-yaml-path }}
+          NOTES_CONTENT: ${{ steps.release_notes.outputs.notes_content }}
+          UPDATE_SUMMARY: ${{ steps.image_update.outputs.summary }}
         run: |
-          pr_number=$(gh pr list --head ${{ inputs.branch-name }} --state open --json number --jq '.[].number')
+          set -euo pipefail
+          pr_number=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq '.[].number')
 
-          pr_body=$(cat <<-EOF
+          # build the body from env-vars only; never interpolate ${{ }} into the script,
+          # so attacker-controlled notes/summary/path cannot break out into shell
+          {
+            cat <<-'STATIC_HEAD'
           /area ops-productivity
           /kind enhancement
 
           **What this PR does / why we need it**:
-          This PR was auto-generated to update container image versions defined in \`${{ inputs.images-yaml-path }}\`.
+          STATIC_HEAD
+            printf 'This PR was auto-generated to update container image versions defined in `%s`.\n' "$IMAGES_YAML_PATH"
+            cat <<-'STATIC_MID1'
 
           ---
 
           # Component Changelogs
           This section lists the release notes for all updated components. Please review them for any breaking changes.
 
-          ${{ steps.release_notes.outputs.notes_content }}
+          STATIC_MID1
+            printf '%s\n' "$NOTES_CONTENT"
+            cat <<-'STATIC_MID2'
 
           ---
 
@@ -137,28 +150,30 @@ jobs:
           Please review the "Component Changelogs" section above and verify that no breaking changes require modifications to our Helm charts or code.
 
           **Release note**:
-          \`\`\`other dependency
-          ${{ steps.image_update.outputs.summary }}
-          \`\`\`
+          ```other dependency
+          STATIC_MID2
+            printf '%s\n' "$UPDATE_SUMMARY"
+            cat <<-'STATIC_MID3'
+          ```
 
           ---
 
           # ✅ Reviewer Checklist
           - [ ] I have reviewed the release notes for all updated components.
           - [ ] I have verified that no breaking changes require modifications to our Helm charts or code.
-          - [ ] I have confirmed that the changes in \`${{ inputs.images-yaml-path }}\` are correct.
-          EOF
-          )
+          STATIC_MID3
+            printf -- '- [ ] I have confirmed that the changes in `%s` are correct.\n' "$IMAGES_YAML_PATH"
+          } > /tmp/pr_body.md
 
           if [ -n "$pr_number" ]; then
             echo "Pull Request #$pr_number already exists, updating..."
             # Only update the body, leave the title as is
-            gh pr edit "$pr_number" --body "$pr_body"
+            gh pr edit "$pr_number" --body-file /tmp/pr_body.md
           else
             echo "Creating new Pull Request..."
             gh pr create \
-              --head ${{ inputs.branch-name }} \
-              --base ${{ inputs.base-branch }} \
+              --head "$BRANCH_NAME" \
+              --base "$BASE_BRANCH" \
               --title "🤖 Chore: Auto-update container image versions" \
-              --body "$pr_body"
+              --body-file /tmp/pr_body.md
           fi
