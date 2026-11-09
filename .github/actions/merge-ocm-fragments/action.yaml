@@ -140,22 +140,27 @@ runs:
     - name: preprocess
       id: preprocess
       shell: bash
+      env:
+        CTX: ${{ inputs.ctx }}
+        OUTDIR: ${{ inputs.outdir }}
       run: |
-        ctx="${{ inputs.ctx }}"
-        if [ -n "${ctx}" ]; then
-          artefact_name="${ctx}-*.ocm-artefacts"
+        set -euo pipefail
+        if [ -n "${CTX}" ]; then
+          artefact_name="${CTX}-*.ocm-artefacts"
         else
           artefact_name="*.ocm-artefacts"
         fi
         echo "artefact-name=${artefact_name}" >> "${GITHUB_OUTPUT}"
-        mkdir -p "${{ inputs.outdir }}"
+        mkdir -p "${OUTDIR}"
     - name: import-component-descriptor
       shell: bash
       if: ${{ inputs.component-descriptor != '' }}
+      env:
+        COMPONENT_DESCRIPTOR: ${{ inputs.component-descriptor }}
+        OUTDIR: ${{ inputs.outdir }}
       run: |
-        cat <<EOF > "${{ inputs.outdir }}/base-component-descriptor.yaml"
-        ${{ inputs.component-descriptor }}
-        EOF
+        set -euo pipefail
+        printf '%s\n' "${COMPONENT_DESCRIPTOR}" > "${OUTDIR}/base-component-descriptor.yaml"
     - name: import-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@master
@@ -164,25 +169,31 @@ runs:
     - name: extract-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
       shell: bash
+      env:
+        OUTDIR: ${{ inputs.outdir }}
       run: |
+        set -euo pipefail
         archive=component-descriptor.tar.gz
         if [ ! -f "${archive}" ]; then
           echo "Error: expected file not present: ${archive}"
           exit 1
         fi
-        tar xf ${archive}
+        tar xf "${archive}"
         component_descriptor_path='component-descriptor.yaml'
         if [ ! -f "${component_descriptor_path}" ]; then
           echo "Error: archive did not contain expected ${component_descriptor_path} file"
           exit 1
         fi
-        mv "${component_descriptor_path}" "${{ inputs.outdir }}/base-component-descriptor.yaml"
+        mv "${component_descriptor_path}" "${OUTDIR}/base-component-descriptor.yaml"
     - name: prepare-component-descriptor
       shell: bash
+      env:
+        OUTDIR: ${{ inputs.outdir }}
       run: |
-        base=${{ inputs.outdir }}/base-component-descriptor.yaml
-        component_descriptor=${{ inputs.outdir }}/component-descriptor.yaml
-        if [ -f ${base} ]; then
+        set -euo pipefail
+        base="${OUTDIR}/base-component-descriptor.yaml"
+        component_descriptor="${OUTDIR}/component-descriptor.yaml"
+        if [ -f "${base}" ]; then
           mv "${base}" "${component_descriptor}"
         else
           # create minimal base component-descriptor
@@ -197,10 +208,14 @@ runs:
         merge-multiple: true
     - name: extract-ocm-fragments
       shell: bash
-      run: '"${{ github.action_path }}/extract.sh" "${{ inputs.outdir }}"'
+      env:
+        OUTDIR: ${{ inputs.outdir }}
+      run: '"${{ github.action_path }}/extract.sh" "${OUTDIR}"'
     - name: merge-fragments
       id: merge
       shell: python
+      env:
+        OUTDIR: ${{ inputs.outdir }}
       run: |
         import os
         import pprint
@@ -211,7 +226,7 @@ runs:
         sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
         import merge_ocm
 
-        out_dir = '${{ inputs.outdir }}'
+        out_dir = os.environ['OUTDIR']
         with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
           component_descriptor = yaml.safe_load(f)
 
@@ -242,6 +257,9 @@ runs:
     - name: post-process
       if: ${{ inputs.post-process == 'component-cli' }}
       shell: python
+      env:
+        OUTDIR: ${{ inputs.outdir }}
+        OCM_COMPONENT_PREFIXES: ${{ inputs.ocm-component-prefixes }}
       run: |
         import dataclasses
         import logging
@@ -259,7 +277,7 @@ runs:
           logger.info('did not find imagevector')
           exit(0)
 
-        out_dir = '${{ inputs.outdir }}'
+        out_dir = os.environ['OUTDIR']
         with open(component_descriptor_path := f'{out_dir}/component-descriptor.yaml') as f:
           component_descriptor = ocm.ComponentDescriptor.from_dict(
             yaml.safe_load(f),
@@ -267,7 +285,7 @@ runs:
 
         component = component_descriptor.component
 
-        prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
+        prefixes = os.environ['OCM_COMPONENT_PREFIXES'].split(',')
         prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
         logger.info(f'{prefixes=}')
 
@@ -298,13 +316,15 @@ runs:
     - name: post-process
       if: ${{ inputs.post-process == 'callback' }}
       shell: bash
+      env:
+        OUTDIR: ${{ inputs.outdir }}
       run: |
         set -euo pipefail
 
-        export BASE_DEFINITION_PATH="${{ inputs.outdir }}/base-component-descriptor.yaml"
-        export COMPONENT_DESCRIPTOR_PATH="${{ inputs.outdir }}/component-descriptor.yaml"
+        export BASE_DEFINITION_PATH="${OUTDIR}/base-component-descriptor.yaml"
+        export COMPONENT_DESCRIPTOR_PATH="${OUTDIR}/component-descriptor.yaml"
         cname=$(
-          cat ${{ inputs.outdir }}/component-descriptor.yaml \
+          cat "${OUTDIR}/component-descriptor.yaml" \
           yq -r .component.name \
         )
         export COMPONENT_NAME=$cname
@@ -349,6 +369,11 @@ runs:
     - name: spdx-external-resources
       if: ${{ inputs.oci-registry != '' }}
       shell: python
+      env:
+        OUTDIR: ${{ inputs.outdir }}
+        OCI_REGISTRY: ${{ inputs.oci-registry }}
+        SBOM_CACHE_REPO_PREFIX: ${{ inputs.sbom-cache-repo-prefix }}
+        SPDX_FORCE_RESCAN: ${{ inputs.spdx-force-rescan }}
       run: |
         import logging
         import os
@@ -359,21 +384,24 @@ runs:
 
         logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 
+        out_dir = os.environ['OUTDIR']
         spdx_external.process_external_resources(
-            component_descriptor_path='${{ inputs.outdir }}/component-descriptor.yaml',
-            out_dir='${{ inputs.outdir }}',
-            cache_registry='${{ inputs.oci-registry }}',
-            cache_repo_prefix='${{ inputs.sbom-cache-repo-prefix }}',
-            force_rescan='${{ inputs.spdx-force-rescan }}' == 'true',
+            component_descriptor_path=f'{out_dir}/component-descriptor.yaml',
+            out_dir=out_dir,
+            cache_registry=os.environ['OCI_REGISTRY'],
+            cache_repo_prefix=os.environ['SBOM_CACHE_REPO_PREFIX'],
+            force_rescan=os.environ['SPDX_FORCE_RESCAN'] == 'true',
         )
 
     - name: upload-component-descriptor-artifact
       if: ${{ inputs.upload-artifact-name != '' }}
       shell: bash
+      env:
+        OUTDIR: ${{ inputs.outdir }}
       run: |
         set -eu
         tar czf /tmp/component-descriptor.tar.gz \
-          -C "${{ inputs.outdir }}" component-descriptor.yaml
+          -C "${OUTDIR}" component-descriptor.yaml
     - uses: gardener/cc-utils/.github/actions/upload-artifact@master
       if: ${{ inputs.upload-artifact-name != '' }}
       with:
