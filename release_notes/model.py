@@ -135,7 +135,7 @@ class ReleaseNotesDoc:
         # generate a random filename for now, we might use a stable one later
         return f'{uuid.uuid4()}{RELEASE_NOTES_DOC_SUFFIX}'
 
-    def as_markdown(self) -> str | None:
+    def as_markdown(self, escape_authors: bool=False) -> str | None:
         if not self.release_notes:
             return None
 
@@ -170,7 +170,9 @@ class ReleaseNotesDoc:
 
             for release_note in sorted_release_notes:
                 release_note: ReleaseNoteEntry
-                author = f'`@{release_note.author.username}`'
+                author = f'@{release_note.author.username}'
+                if escape_authors:
+                    author = f'`{author}`'
                 audience = release_note.audience.name
                 reference = release_note.reference
                 # Replace newlines with two spaces _followed by_ newlines, as this is the proper way
