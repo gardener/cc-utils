@@ -261,6 +261,7 @@ def group_release_notes_docs(
 def release_notes_docs_as_markdown(
     release_notes_docs: collections.abc.Sequence[rnm.ReleaseNotesDoc],
     prepend_title: bool=False,
+    escape_authors: bool=False,
 ) -> str:
     if not release_notes_docs:
         return ''
@@ -273,7 +274,7 @@ def release_notes_docs_as_markdown(
     return release_notes_md + '\n\n'.join(
         markdown
         for release_notes_doc in release_notes_docs
-        if (markdown := release_notes_doc.as_markdown())
+        if (markdown := release_notes_doc.as_markdown(escape_authors=escape_authors))
     )
 
 

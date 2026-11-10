@@ -109,9 +109,10 @@ above:
 4. On release of the target component the release notes text is generated
 5. It will start over again for the next component with step 1
 
-.. note:: In rendered release notes, authors are formatted as inline-code (rather than plain
-   ``@username``), so they are not mentioned (and thus not notified) by GitHub when release
-   notes are transported into pull requests of other repositories.
+.. note:: In release notes rendered for upgrade-pull-requests of other repositories, authors are
+   formatted as inline-code (rather than plain ``@username``), so they are not mentioned (and
+   thus not notified) by GitHub. In GitHub-releases, authors are rendered as plain mentions
+   so they are considered as release contributors.
 
 Posting Release Notes To Slack
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

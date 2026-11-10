@@ -78,11 +78,12 @@ def test_release_notes_detail_filter(
 def test_as_markdown_does_not_mention_authors(
     release_notes_doc: rnm.ReleaseNotesDoc,
 ):
-    markdown = release_notes_doc.as_markdown()
+    markdown = release_notes_doc.as_markdown(escape_authors=True)
 
     # authors must be rendered as inline-code so GitHub does not notify them (e.g. in upgrade-PRs)
     assert 'by `@gardener-ci-robot`' in markdown
     assert 'by @gardener-ci-robot' not in markdown
+    assert 'by @gardener-ci-robot' in release_notes_doc.as_markdown()
 
 
 def make_mock_commit(sha: str):

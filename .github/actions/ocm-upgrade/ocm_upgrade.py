@@ -344,6 +344,7 @@ def create_upgrade_pullrequest(
     release_notes_markdown = rno.release_notes_docs_as_markdown(
         release_notes_docs=grouped_release_notes_docs,
         prepend_title=True,
+        escape_authors=True,
     )
 
     bom_diff_markdown = github.pullrequest.bom_diff(
