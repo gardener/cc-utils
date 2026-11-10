@@ -79,12 +79,12 @@ runs:
 
     - name: import-release-commit
       if: ${{ inputs.release-commit-objects-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/import-commit@master
+      uses: gardener/cc-utils/.github/actions/import-commit@83f9b4d6d6fbb27e007882b8a7590c176ee95a3f
       with:
         commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         after-import: noop
 
-    - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@deb2a869d9b31d91ef7ffcedac35eb304a6bce67
       id: bundle
       if: ${{ inputs.bundle-dir == '' }}
 
