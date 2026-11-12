@@ -85,6 +85,7 @@
   identity_provider_name: github-wdf-actions-provider
   oci_repository_prefixes:
     - europe-docker.pkg.dev/sap-se-gcp-k8s-delivery
+    - europe-docker.pkg.dev/sap-se-gcp-gardenlinux/releases
   github_host: gh-wdf
   github_orgs:
     - kubernetes
