@@ -1,12 +1,17 @@
 import datetime
 import enum
+import gzip
+import io
+import tarfile
 import unittest.mock as mock
+import zlib
 
 import dacite
 import pytest
 
 import ocm
 import release_notes.model as rnm
+import release_notes.ocm as rn_ocm
 import release_notes.utils as rnu
 
 
@@ -177,3 +182,40 @@ def test_open_prs_not_included_in_release_notes(github_access, component):
     cached_prs = cached_docs[0]['meta']['data']['prs']
     assert 100 in cached_prs, 'merged PR should be in cached metadata'
     assert 101 not in cached_prs, 'open PR must not be in cached metadata'
+
+
+# --- release_notes.ocm: robust decoding of "old" single-blob release-notes ---
+
+
+def _make_tar(name: str, content: bytes) -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode='w') as tar:
+        info = tarfile.TarInfo(name=name)
+        info.size = len(content)
+        tar.addfile(info, io.BytesIO(content))
+    return buf.getvalue()
+
+
+def test_looks_like_tar():
+    tar_bytes = _make_tar('release-notes.md', b'# notes\n')
+    assert rn_ocm._looks_like_tar(tar_bytes) is True
+
+    assert rn_ocm._looks_like_tar(b'# just markdown\n') is False
+    assert rn_ocm._looks_like_tar(b'') is False
+    # gzip magic is not a tar
+    assert rn_ocm._looks_like_tar(b'\x1f\x8b\x08\x00') is False
+
+
+def test_tar_into_prerendered_markdown_concatenates_file_members():
+    tar_bytes = _make_tar('release-notes.md', b'# release notes\n\n- item\n')
+    assert rn_ocm._tar_into_prerendered_markdown(tar_bytes) == '# release notes\n\n- item\n'
+
+
+def test_tar_into_prerendered_markdown_handles_gzipped_tar_roundtrip():
+    md = b'# [github.com/acme/comp:v1.2.3]\n\n## Bug Fixes\n- fixed it\n'
+    gztar = gzip.compress(_make_tar('release-notes.md', md))
+    # emulate the decode path: detect gzip by magic, decompress, detect tar, extract
+    assert gztar[:2] == b'\x1f\x8b'
+    raw = zlib.decompress(gztar, wbits=31)
+    assert rn_ocm._looks_like_tar(raw)
+    assert rn_ocm._tar_into_prerendered_markdown(raw) == md.decode('utf-8')

@@ -5,6 +5,7 @@ OCM-Component-Descriptors
 
 import collections.abc
 import enum
+import io
 import logging
 import os
 import tarfile
@@ -38,6 +39,36 @@ release_notes_resource_name = 'release-notes-archive'
 release_notes_resource_name_old = 'release-notes'
 
 
+def _looks_like_tar(data: bytes) -> bool:
+    '''
+    Heuristically determine whether `data` is an (uncompressed) tar archive by
+    checking for the POSIX `ustar` magic at offset 257. This is used to tolerate
+    producers that attach a tar of release-notes under the "old" single-blob
+    resource-name instead of plain markdown.
+    '''
+    return len(data) > 262 and data[257:262] == b'ustar'
+
+
+def _tar_into_prerendered_markdown(data: bytes) -> str:
+    '''
+    Extract regular-file members from the (uncompressed) tar `data` and return
+    their concatenated utf-8-decoded contents. Used to recover prerendered
+    release-notes markdown from producers that (erroneously) tar the markdown
+    file before attaching it under the "old" single-blob resource-name.
+    '''
+    parts: list[str] = []
+    with tarfile.open(fileobj=io.BytesIO(data), mode='r:*') as tar:
+        for member in tar.getmembers():
+            if not member.isfile():
+                continue
+            fileobj = tar.extractfile(member)
+            if fileobj is None:
+                continue
+            parts.append(fileobj.read().decode('utf-8'))
+
+    return '\n'.join(parts)
+
+
 def iter_parsed_release_notes(
     component: ocm.Component,
     resource: ocm.Resource,
@@ -57,10 +88,30 @@ def iter_parsed_release_notes(
             digest=digest,
         )
 
-        if access.mediaType.endswith('/gzip'):
-            release_notes_bytes = zlib.decompress(release_notes_blob.content, wbits=31)
+        release_notes_bytes = release_notes_blob.content
+
+        # Be robust about how the blob is encoded: `access.mediaType` is not
+        # reliably populated by all producers (it may be absent/None, or carry
+        # the compression hint only in the resource-`type` or the OCI layer
+        # mediaType instead). Rather than trust the declared mediaType, detect
+        # gzip from its magic bytes (1f 8b) and decompress if present.
+        media_type = access.mediaType or ''
+        is_gzip = (
+            media_type.endswith('/gzip')
+            or release_notes_bytes[:2] == b'\x1f\x8b'
+        )
+        if is_gzip:
+            release_notes_bytes = zlib.decompress(release_notes_bytes, wbits=31)
+
+        # Some producers (erroneously) attach a *tar* of the prerendered
+        # release-notes markdown under the "old" single-blob resource-name,
+        # rather than the markdown itself. Decoding tar bytes as UTF-8 would
+        # yield garbage (tar headers/padding) or crash, so detect that case and
+        # recover the markdown from the archived file(s).
+        if _looks_like_tar(release_notes_bytes):
+            contents = _tar_into_prerendered_markdown(release_notes_bytes)
         else:
-            release_notes_bytes = release_notes_blob.content
+            contents = release_notes_bytes.decode('utf-8')
 
         yield rnm.ReleaseNotesDoc(
             ocm=rnm.ReleaseNotesOcmRef(
@@ -70,8 +121,8 @@ def iter_parsed_release_notes(
             release_notes=[
                 rnm.ReleaseNoteEntry(
                     type=rnm.ReleaseNotesType.PRERENDERED,
-                    contents=release_notes_bytes.decode('utf-8'),
-                    mimetype=access.mediaType.split('.')[0],
+                    contents=contents,
+                    mimetype=(media_type or 'text/markdown').split('.')[0],
                 ),
             ],
         )
