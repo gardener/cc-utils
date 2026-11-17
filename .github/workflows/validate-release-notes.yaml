@@ -29,12 +29,16 @@ jobs:
 
       - name: raise-on-malformed-release-notes
         shell: python
+        env:
+          PULL_REQUEST_BODY: ${{ inputs.pull-request-body }}
         run: |
+          import os
+
           import release_notes.model
 
           _, malformed = release_notes.model.iter_source_blocks(
               source={},
-              content="""${{ inputs.pull-request-body }}\n"""
+              content=os.environ["PULL_REQUEST_BODY"] + "\n",
           )
 
           if malformed:
