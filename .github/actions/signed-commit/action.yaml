@@ -1,0 +1,89 @@
+name: signed-commit
+description: |
+  Creates a GitHub-signed ("Verified") commit from the current worktree-diff via the GraphQL
+  `createCommitOnBranch` mutation, committing onto `branch`.
+
+  Unlike a local `git commit` + `git push`, the commit-object is authored server-side (while
+  authenticated using the passed installation-token), which causes GitHub to sign it. The commit
+  therefore shows up as "Verified".
+
+  The action diffs the checked-out worktree against `expected-head-oid` (defaulting to the current
+  HEAD), optionally restricted to `paths`, and includes all added/modified/deleted files in a
+  single commit. The mutation is rejected if the branch has advanced past `expected-head-oid`.
+
+  Requires a checked-out git-repository and performs `install-gardener-gha-libs` itself.
+
+  Caveat: `createCommitOnBranch` cannot set per-file modes (executable-bit / symlink). Modes are
+  inherited from the tree at `expected-head-oid`.
+
+inputs:
+  token:
+    required: true
+    description: |
+      a GitHub access-token with `contents: write` permission (typically minted by the
+      `github-auth` action). Must be an app-/installation-token for the commit to be signed.
+  repository:
+    required: false
+    default: ${{ github.repository }}
+    description: the `<org>/<repo>` to commit to.
+  branch:
+    required: true
+    description: the branch (short name, without `refs/heads/`) to commit onto. Must already exist.
+  message:
+    required: true
+    description: the commit-message (headline).
+  expected-head-oid:
+    required: false
+    default: ''
+    description: |
+      the oid the branch is expected to be at. If empty, the current HEAD is used. The mutation is
+      rejected if the branch has advanced past this oid.
+  paths:
+    required: false
+    default: ''
+    description: |
+      optional newline-separated list of pathspecs (files or directories) to restrict the commit
+      to. If empty, the full worktree-diff is committed.
+  allow-empty:
+    required: false
+    default: 'false'
+    description: |
+      create an empty commit (same tree as `expected-head-oid`) when there are no changes, akin to
+      `git commit --allow-empty`. Needed for release-commits, which frequently carry no diff.
+
+outputs:
+  commit-sha:
+    value: ${{ steps.commit.outputs.commit-sha }}
+    description: the oid of the created (signed) commit.
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: signed-commit
+      id: commit
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        REPOSITORY: ${{ inputs.repository }}
+        BRANCH: ${{ inputs.branch }}
+        MESSAGE: ${{ inputs.message }}
+        EXPECTED_HEAD_OID: ${{ inputs.expected-head-oid }}
+        PATHS: ${{ inputs.paths }}
+        ALLOW_EMPTY: ${{ inputs.allow-empty }}
+      run: |
+        set -euo pipefail
+        args=(
+          --repository "${REPOSITORY}"
+          --branch "${BRANCH}"
+          --message "${MESSAGE}"
+          --paths "${PATHS}"
+        )
+        if [ -n "${EXPECTED_HEAD_OID}" ]; then
+          args+=(--expected-head-oid "${EXPECTED_HEAD_OID}")
+        fi
+        if [ "${ALLOW_EMPTY}" = 'true' ]; then
+          args+=(--allow-empty)
+        fi
+        python3 "${GITHUB_ACTION_PATH}/signed_commit.py" "${args[@]}"
