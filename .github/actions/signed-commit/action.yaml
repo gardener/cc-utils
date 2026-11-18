@@ -1,0 +1,86 @@
+name: signed-commit
+description: |
+  Creates a GitHub-signed ("Verified") commit from the current worktree-diff via the GitHub
+  git-data-API, and updates a branch-ref to point at it.
+
+  Unlike a local `git commit` + `git push`, the commit-object is created server-side (while
+  authenticated using the passed installation-token), which causes GitHub to sign it. The commit
+  therefore shows up as "Verified".
+
+  The action diffs the checked-out worktree against `parent-sha` (defaulting to the current tip
+  of `branch`), optionally restricted to `paths`, and includes all added/modified/deleted files
+  in a single commit. Binary files and deletions are handled.
+
+  Requires a prior `install-gardener-gha-libs` step (performed by this action) and a checked-out
+  git-repository.
+
+inputs:
+  token:
+    required: true
+    description: |
+      a GitHub access-token with `contents: write` permission (typically minted by the
+      `github-auth` action). Must be an app-/installation-token for the commit to be signed.
+  repository:
+    required: false
+    default: ${{ github.repository }}
+    description: the `<org>/<repo>` the commit should be created in.
+  branch:
+    required: true
+    description: the branch (short name, without `refs/heads/`) whose ref should be updated.
+  message:
+    required: true
+    description: the commit-message.
+  parent-sha:
+    required: false
+    default: ''
+    description: |
+      the commit to use as parent. If empty, the current tip of `branch` is used. Pass an
+      explicit value (e.g. the tip of a base-branch) to reset a feature-branch to a single fresh
+      commit (combine with `force: true`).
+  force:
+    required: false
+    default: 'false'
+    description: allow non-fast-forward updates of the branch-ref.
+  paths:
+    required: false
+    default: ''
+    description: |
+      optional newline-separated list of pathspecs (files or directories) to restrict the commit
+      to. If empty, the full worktree-diff is committed.
+
+outputs:
+  commit-sha:
+    value: ${{ steps.commit.outputs.commit-sha }}
+    description: the sha of the created (signed) commit.
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - name: signed-commit
+      id: commit
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        REPOSITORY: ${{ inputs.repository }}
+        BRANCH: ${{ inputs.branch }}
+        MESSAGE: ${{ inputs.message }}
+        PARENT_SHA: ${{ inputs.parent-sha }}
+        FORCE: ${{ inputs.force }}
+        PATHS: ${{ inputs.paths }}
+      run: |
+        set -euo pipefail
+        args=(
+          --repository "${REPOSITORY}"
+          --branch "${BRANCH}"
+          --message "${MESSAGE}"
+          --paths "${PATHS}"
+        )
+        if [ -n "${PARENT_SHA}" ]; then
+          args+=(--parent-sha "${PARENT_SHA}")
+        fi
+        if [ "${FORCE}" = 'true' ]; then
+          args+=(--force)
+        fi
+        python3 "${GITHUB_ACTION_PATH}/signed_commit.py" "${args[@]}"

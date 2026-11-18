@@ -385,6 +385,11 @@ def create_pinned_branch(
                     for fname in fnames
                 ]
                 worktree_repo.index.add(bundle_files)
+                # FOLLOW-UP(signed-commits): this creates an unsigned local commit. It is part of
+                # a commit-chain whose exact digests are later preserved via `fixated/<sha>` tags
+                # (see below) and relied upon downstream; creating it via the GitHub-API would
+                # re-sign it and change the digest, breaking that contract. Converting this site
+                # to signed commits requires rethinking the digest-preservation scheme first.
                 worktree_repo.index.commit(
                     f'pin: bundle own sources into {bundle_action_prefix}/{bundle_rel}\n\n'
                     f'own-commit: {own_digest}\n'
@@ -426,6 +431,9 @@ def create_pinned_branch(
                     yaml.dump(parsed, f)
 
                 worktree_repo.index.add([blob.path])
+                # FOLLOW-UP(signed-commits): see note on the bundle-commit above - this commit's
+                # digest is preserved/relied upon, so it is intentionally NOT created via the
+                # GitHub-API (which would re-sign and change the digest).
                 worktree_repo.index.commit(
                     f'pin: rewrite references in {blob.path}\n\n'
                     f'own-commit: {own_digest}\n'

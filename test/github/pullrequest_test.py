@@ -3,6 +3,7 @@ import unittest.mock
 import github3.exceptions
 import pytest
 
+import github.commit
 import github.pullrequest as gpr
 
 
@@ -224,3 +225,107 @@ def test_purge_propagates_other_errors():
     )
     with pytest.raises(github3.exceptions.ForbiddenError):
         upr.purge()
+
+
+# ---------------------------------------------------------------------------
+# commit_and_push_to_tmp_branch — signed-commit creation via the GitHub-API
+# ---------------------------------------------------------------------------
+
+import os
+import subprocess
+
+import git
+
+import gitutil
+
+
+def _init_repo(path):
+    def g(*args):
+        subprocess.run(('git', '-C', path, *args), check=True, capture_output=True, text=True)
+    g('init', '-q')
+    g('config', 'user.email', 't@example.org')
+    g('config', 'user.name', 'tester')
+    g('config', 'commit.gpgsign', 'false')
+    with open(os.path.join(path, 'VERSION'), 'w') as f:
+        f.write('1.0.0\n')
+    g('add', '-A')
+    g('commit', '-qm', 'init')
+
+
+def test_commit_and_push_creates_signed_commit_and_ref(tmp_path):
+    repo_dir = str(tmp_path)
+    _init_repo(repo_dir)
+    repo = git.Repo(repo_dir)
+    parent_sha = repo.head.commit.hexsha
+
+    # produce a worktree-diff (modify tracked + add untracked)
+    with open(os.path.join(repo_dir, 'VERSION'), 'w') as f:
+        f.write('2.0.0\n')
+    with open(os.path.join(repo_dir, 'NEW.txt'), 'w') as f:
+        f.write('new\n')
+
+    git_helper = gitutil.GitHelper(repo=repo, git_cfg=unittest.mock.Mock())
+
+    repository = unittest.mock.Mock()
+
+    with unittest.mock.patch.object(
+        github.commit, 'create_signed_commit', return_value='signed-sha',
+    ) as create_signed_commit:
+        with gpr.commit_and_push_to_tmp_branch(
+            repository=repository,
+            git_helper=git_helper,
+            commit_message='Upgrade foo',
+        ) as branch_name:
+            assert gpr._BOT_BRANCH_RE.match(branch_name)
+
+    # signed commit created via the API against the local HEAD as parent
+    create_signed_commit.assert_called_once()
+    _, kwargs = create_signed_commit.call_args
+    assert kwargs['parent_sha'] == parent_sha
+    assert kwargs['message'] == 'Upgrade foo'
+    changed_paths = {fc.path for fc in kwargs['files']}
+    assert changed_paths == {'VERSION', 'NEW.txt'}
+
+    # branch-ref points at the signed commit; nothing pushed via git
+    repository.create_ref.assert_called_once_with(
+        f'refs/heads/{branch_name}', 'signed-sha',
+    )
+
+
+def test_commit_and_push_rejects_empty_worktree(tmp_path):
+    repo_dir = str(tmp_path)
+    _init_repo(repo_dir)
+    repo = git.Repo(repo_dir)
+    git_helper = gitutil.GitHelper(repo=repo, git_cfg=unittest.mock.Mock())
+
+    with pytest.raises(RuntimeError):
+        with gpr.commit_and_push_to_tmp_branch(
+            repository=unittest.mock.Mock(),
+            git_helper=git_helper,
+            commit_message='noop',
+        ):
+            pass
+
+
+def test_commit_and_push_purges_branch_on_body_exception(tmp_path):
+    repo_dir = str(tmp_path)
+    _init_repo(repo_dir)
+    repo = git.Repo(repo_dir)
+    with open(os.path.join(repo_dir, 'VERSION'), 'w') as f:
+        f.write('2.0.0\n')
+    git_helper = gitutil.GitHelper(repo=repo, git_cfg=unittest.mock.Mock())
+    repository = unittest.mock.Mock()
+
+    with unittest.mock.patch.object(
+        github.commit, 'create_signed_commit', return_value='signed-sha',
+    ):
+        with pytest.raises(ValueError):
+            with gpr.commit_and_push_to_tmp_branch(
+                repository=repository,
+                git_helper=git_helper,
+                commit_message='x',
+            ) as branch_name:
+                raise ValueError('boom')
+
+    repository.ref.assert_called_with(f'heads/{branch_name}')
+    repository.ref.return_value.delete.assert_called()

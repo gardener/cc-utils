@@ -10,6 +10,7 @@ import github3.pulls
 import ci.util
 import ocm.diff
 import ocm.retrieve
+import github.commit
 import github.limits
 import gitutil
 import ocm
@@ -450,6 +451,50 @@ def reset_worktree(git_helper: gitutil.GitHelper):
     git_helper.repo.git.clean('-fd')
 
 
+def _file_changes_from_worktree(
+    git_helper: gitutil.GitHelper,
+    parent_sha: str,
+) -> list[github.commit.FileChange]:
+    '''
+    determines added/modified/deleted files between `parent_sha` and the current worktree of the
+    repository managed by `git_helper`, expressed as `github.commit.FileChange`s.
+
+    All worktree-changes (including untracked files) are considered: the index is first updated
+    via `git add -A` (matching the previous `index_to_commit`-based behaviour), then the staged
+    tree is diffed against `parent_sha`.
+    '''
+    repo = git_helper.repo
+    worktree_dir = repo.working_tree_dir
+
+    # stage everything (incl. untracked + deletions) so new release-note files etc. are captured
+    repo.git.add('-A')
+
+    # -z, name-status, no rename-detection: stable machine-readable output
+    raw = repo.git.diff('--no-renames', '--name-status', '-z', '--cached', parent_sha)
+    tokens = [token for token in raw.split('\0') if token]
+
+    changes: list[github.commit.FileChange] = []
+    token_iter = iter(tokens)
+    for status in token_iter:
+        path = next(token_iter)
+        if status.startswith('D'):
+            changes.append(github.commit.FileChange(path=path, delete=True))
+            continue
+
+        abs_path = os.path.join(worktree_dir, path)
+        if os.path.islink(abs_path):
+            mode = '120000'
+        elif os.access(abs_path, os.X_OK):
+            mode = '100755'
+        else:
+            mode = '100644'
+        with open(abs_path, 'rb') as f:
+            content = f.read()
+        changes.append(github.commit.FileChange(path=path, content=content, mode=mode))
+
+    return changes
+
+
 @contextlib.contextmanager
 def commit_and_push_to_tmp_branch(
     repository: github3.repos.repo.Repository,
@@ -458,27 +503,32 @@ def commit_and_push_to_tmp_branch(
     delete_on_exit: bool=False,
 ):
     '''
-    creates a commit from existing diff and pushes it to a temporary branch w/ random name. The
-    temporary branch-name is yielded.
+    creates a GitHub-signed commit from the existing worktree-diff (via the git-data-API) and
+    points a temporary branch w/ random name at it. The temporary branch-name is yielded.
+
+    The commit is created server-side (rather than locally via git) so that GitHub signs it,
+    causing it to show up as "Verified".
 
     In case of exceptions, the branch will be purged.
     '''
-    commit = git_helper.index_to_commit(message=commit_message)
-    logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
-    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    # use the local commit's parent rather than a live API call to heads/{target_branch}:
+    # use the local HEAD as parent rather than a live API call to heads/{target_branch}:
     # if master advances between checkout and here (e.g. during a long set_dependency_version
-    # callback), the API would return a newer SHA that is not an ancestor of our local commit,
-    # making the push a non-fast-forward → rejected.
-    head_sha = commit.parents[0].hexsha
-    repository.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+    # callback), the API would return a newer SHA that is not an ancestor of our local state.
+    parent_sha = git_helper.repo.head.commit.hexsha
+    files = _file_changes_from_worktree(git_helper=git_helper, parent_sha=parent_sha)
+    if not files:
+        raise RuntimeError('no changes present in worktree - refusing to create empty commit')
 
-    try:
-        git_helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
-    except:
-        logger.warning('an error occurred - removing now useless pr-branch')
-        repository.ref(f'heads/{new_branch_name}').delete()
-        raise
+    commit_sha = github.commit.create_signed_commit(
+        repository=repository,
+        parent_sha=parent_sha,
+        message=commit_message,
+        files=files,
+    )
+    logger.info(f'signed commit for upgrade-PR: {commit_sha=}')
+
+    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
+    repository.create_ref(f'refs/heads/{new_branch_name}', commit_sha)
 
     try:
         yield new_branch_name

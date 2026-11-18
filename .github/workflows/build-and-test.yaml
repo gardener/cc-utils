@@ -404,6 +404,7 @@ jobs:
     permissions:
       contents: write
       packages: read
+      id-token: write
     needs:
       - documentation
     steps:
@@ -415,18 +416,31 @@ jobs:
         with:
           name: documentation
           path: /tmp/documentation-out.d
-      - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
-      - name: Publish Documentation
+      - uses: gardener/cc-utils/.github/actions/github-auth@master
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          permissions: |
+            contents: write
+      - name: Prepare Documentation
+        id: prepare
         run: |
           tar c -C /tmp/documentation-out.d . | tar x -C.
           git status
           if [ -z "$(git status --porcelain)" ]; then
             echo "no changes in documentation - no need to update documentation"
-            exit 0
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
-          git add -A
-          git commit -m "update documentation"
-          git push origin refs/heads/gh-pages
+      - name: Publish Documentation
+        if: ${{ steps.prepare.outputs.changed == 'true' }}
+        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        with:
+          token: ${{ steps.fed-token.outputs.token || github.token }}
+          branch: gh-pages
+          message: update documentation
 
   test-ctt-sbom-inject:
     name: integration-test ctt-sbom-inject

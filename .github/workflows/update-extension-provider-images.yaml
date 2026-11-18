@@ -83,6 +83,7 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
           permissions: |
+            contents: write
             pull-requests: write
 
       - name: Setup Git Identity
@@ -100,15 +101,24 @@ jobs:
             echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit and Push Changes
+      - name: Resolve base-branch tip
+        id: base_sha
         if: steps.check_changes.outputs.changes_detected == 'true'
         run: |
-          images_path="${{ inputs.images-yaml-path }}"
-          git add "$images_path"
-          git add .ocm/release-notes/ 2>/dev/null || true
-          git commit -m "Chore: Auto-update image versions"
-          git checkout -B ${{ inputs.branch-name }}
-          git push origin ${{ inputs.branch-name }} --force
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Commit Changes
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        with:
+          token: ${{ steps.fed-token.outputs.token }}
+          branch: ${{ inputs.branch-name }}
+          parent-sha: ${{ steps.base_sha.outputs.sha }}
+          force: 'true'
+          message: 'Chore: Auto-update image versions'
+          paths: |
+            ${{ inputs.images-yaml-path }}
+            .ocm/release-notes/
 
       - name: Create or Update Pull Request
         if: steps.check_changes.outputs.changes_detected == 'true'
