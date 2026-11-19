@@ -351,7 +351,7 @@ runs:
           (
             'git',
             '-C',  repo_path,
-            'checkout', '-B', '${{ github.head_ref }}', checkout_ref,
+            'checkout', '-B', head_ref, checkout_ref,
           ),
           check=True,
         )
