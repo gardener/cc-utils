@@ -169,7 +169,7 @@ runs:
         fi
 
     - name: create-token-via-federated-github-access-token-server
-      uses: gardener/cc-utils/.github/actions/github-auth@master
+      uses: gardener/cc-utils/.github/actions/github-auth@2e19b69463e60ab224f6a4ce712af69dac6cdc55
       if: ${{ inputs.token-server != '' }}
       id: fed-token
       with:
@@ -356,7 +356,7 @@ runs:
           check=True,
         )
     - if: ${{ steps.calc.outputs.remove-label }}
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@2e19b69463e60ab224f6a4ce712af69dac6cdc55
     - name: remove-trusted-label
       if: ${{ steps.calc.outputs.remove-label != '' && inputs.remove-trusted-label == 'true' }}
       shell: python
@@ -385,6 +385,6 @@ runs:
           # is an expected, and of course, acceptable case
           exit(0)
     - if: ${{ inputs.init-git-identity == 'true' }}
-      uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+      uses: gardener/cc-utils/.github/actions/setup-git-identity@cb0ca9ef8b8492c20693dd28c95502ed03c06bd4
       with:
         scope: ${{ inputs.path || '.' }}/.git/config
