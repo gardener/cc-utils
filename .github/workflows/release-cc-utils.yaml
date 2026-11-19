@@ -83,4 +83,4 @@ jobs:
           rm -rf dist/blobs.d dist/ocm_resources.yaml
           ls -lta dist/
       - name: publish to pypi
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1

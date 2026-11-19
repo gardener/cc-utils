@@ -35,7 +35,7 @@ runs:
     # keep python-version in sync with bundle-gardener-gha-libs (wheel ABIs)
     - name: setup-python
       if: ${{ ! steps.check.outputs.already-installed }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
       with:
         python-version: '3.12'
     - name: install-from-bundle
@@ -72,7 +72,7 @@ runs:
     # cc-utils' own pipelines always reference this action from master, even
     # when running on non-master branches.
     # removed on pinned branches (github.com path)
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       if: ${{ ! steps.check.outputs.already-installed && steps.bundle.outputs.no-bundle == 'true' && github.server_url == 'https://github.com' }}
       with:
         repository: gardener/cc-utils

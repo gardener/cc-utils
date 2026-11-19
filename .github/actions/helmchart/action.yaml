@@ -119,7 +119,7 @@ runs:
   using: composite
   steps:
     - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
-    - uses: azure/setup-helm@v4
+    - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
       uses: gardener/cc-utils/.github/actions/download-artifact@master
