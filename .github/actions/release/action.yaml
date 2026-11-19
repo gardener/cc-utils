@@ -728,10 +728,12 @@ runs:
     - name: prepare-push-bump-commit
       shell: bash
       run: |
+        set -euo pipefail
+
         # reset back to (current) head of branch for which release-job was started
-        # (this will avoid merge-conflicts)
+        # so the signed bump's expected-head-oid is the actual source-branch tip
         git fetch origin "${{ github.ref }}"
-        git rebase
+        git reset --hard FETCH_HEAD
 
     - name: create-bump-commit
       id: bump
