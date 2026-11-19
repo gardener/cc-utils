@@ -60,12 +60,12 @@ jobs:
       id-token: write
     steps:
       - name: Authenticate against OCI registries
-        uses: gardener/cc-utils/.github/actions/oci-auth@master
+        uses: gardener/cc-utils/.github/actions/oci-auth@563e59dbf13e3bfb42a66f1ce08dc3be726baaf3
         with:
           oci-image-reference: ${{ inputs.oci-image-reference }}
           extra-auths: ${{ secrets.extra-auths }}
       - name: Install gardener-gha-libs
-        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@e102d05f329167577d93e49f4126e4cf35ec0dc6
       - name: Prune OCM artefacts
         shell: python
         env:
