@@ -515,22 +515,8 @@ jobs:
           git fetch origin "${release_commit_digest}"
           git reset --hard "${release_commit_digest}"
 
-      - name: create-release-branch-bump-commit
-        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
-        uses: gardener/cc-utils/.github/actions/version@master
-        # must be kept in sync with version action called in release action (except "version-operation")
-        with:
-          versionfile: ${{ inputs.version-versionfile }}
-          read-callback: ${{ inputs.version-read-callback }}
-          write-callback: ${{ inputs.version-write-callback }}
-          callback-action-path: ${{ inputs.next-version-callback-action-path }}
-          commit-message: "next version: ${version}"
-          version-operation: bump-patch
-          prerelease: dev
-          repository-operation: commit-to-head
-          commit-kind: bump
-
-      - name: create-and-push-release-branch
+      - name: determine-release-branch
+        id: release-branch
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
         shell: bash
         run: |
@@ -539,10 +525,8 @@ jobs:
           version="${{ steps.component-descriptor.outputs.version }}"
 
           if [[ $version == v* ]]; then
-            prefix="v"
             semver_version="${version#v}"
           else
-            prefix=""
             semver_version="$version"
           fi
 
@@ -563,8 +547,57 @@ jobs:
           fi
 
           branch="$(echo $release_branch_template | envsubst)" # fill in values of major/minor/patch
+          echo "branch=${branch}" >> "${GITHUB_OUTPUT}"
 
-          git push origin "@:refs/heads/$branch"
+      - name: create-release-branch
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        shell: bash
+        env:
+          RELEASE_COMMIT_DIGEST: ${{ steps.release.outputs.release-commit-digest }}
+          BRANCH: ${{ steps.release-branch.outputs.branch }}
+        run: |
+          set -euo pipefail
+          # createCommitOnBranch (used to sign the bump below) needs an existing branch; create the
+          # release-branch at the SIGNED release-commit first.
+          git push origin "${RELEASE_COMMIT_DIGEST}:refs/heads/${BRANCH}"
+
+      - name: create-release-branch-bump-commit
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        uses: gardener/cc-utils/.github/actions/version@master
+        # must be kept in sync with version action called in release action (except "version-operation")
+        with:
+          versionfile: ${{ inputs.version-versionfile }}
+          read-callback: ${{ inputs.version-read-callback }}
+          write-callback: ${{ inputs.version-write-callback }}
+          callback-action-path: ${{ inputs.next-version-callback-action-path }}
+          commit-message: "next version: ${version}"
+          version-operation: bump-patch
+          prerelease: dev
+          repository-operation: commit-to-head
+          commit-kind: bump
+
+      - name: capture-release-branch-bump
+        id: release-branch-bump
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "bump-oid=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+          {
+            echo "message<<__BUMP_COMMIT_MSG__"
+            git log -1 --format=%B HEAD
+            echo "__BUMP_COMMIT_MSG__"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: push-release-branch-bump-signed
+        if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
+        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        with:
+          token: ${{ steps.fed-token.outputs.token || secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.release-branch.outputs.branch }}
+          expected-head-oid: ${{ steps.release.outputs.release-commit-digest }}
+          source-commit: ${{ steps.release-branch-bump.outputs.bump-oid }}
+          message: ${{ steps.release-branch-bump.outputs.message }}
 
       - name: cleanup-stale-release-branches
         if: ${{ inputs.cleanup-release-branches }}

@@ -13,8 +13,10 @@ description: |
 
   Requires a checked-out git-repository and performs `install-gardener-gha-libs` itself.
 
-  Caveat: `createCommitOnBranch` cannot set per-file modes (executable-bit / symlink). Modes are
-  inherited from the tree at `expected-head-oid`.
+  File-contents are read from git blobs (via `git cat-file`), not the worktree, so symlinks and
+  filtered/LFS content cannot make the created commit differ from git's tree. Changes that
+  `createCommitOnBranch` cannot represent (symlinks, submodules/gitlinks, executable-bit mode
+  changes) are rejected rather than silently altered.
 
 inputs:
   token:
@@ -43,7 +45,14 @@ inputs:
     default: ''
     description: |
       optional newline-separated list of pathspecs (files or directories) to restrict the commit
-      to. If empty, the full worktree-diff is committed.
+      to. If empty, the full worktree-diff is committed. Ignored when `source-commit` is set.
+  source-commit:
+    required: false
+    default: ''
+    description: |
+      if set, reproduce exactly this (local) commit's tree by diffing it against `expected-head-oid`,
+      instead of staging the worktree. Use this to sign a commit that was already created locally
+      (avoids restaging untracked files). File-contents are read from git blobs either way.
   allow-empty:
     required: false
     default: 'false'
@@ -71,6 +80,7 @@ runs:
         MESSAGE: ${{ inputs.message }}
         EXPECTED_HEAD_OID: ${{ inputs.expected-head-oid }}
         PATHS: ${{ inputs.paths }}
+        SOURCE_COMMIT: ${{ inputs.source-commit }}
         ALLOW_EMPTY: ${{ inputs.allow-empty }}
       run: |
         set -euo pipefail
@@ -82,6 +92,9 @@ runs:
         )
         if [ -n "${EXPECTED_HEAD_OID}" ]; then
           args+=(--expected-head-oid "${EXPECTED_HEAD_OID}")
+        fi
+        if [ -n "${SOURCE_COMMIT}" ]; then
+          args+=(--source-commit "${SOURCE_COMMIT}")
         fi
         if [ "${ALLOW_EMPTY}" = 'true' ]; then
           args+=(--allow-empty)

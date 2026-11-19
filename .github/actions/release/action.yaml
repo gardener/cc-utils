@@ -726,28 +726,20 @@ runs:
           fh.close() # as execution will end on errors, it should be okay to not guard against that
 
     - name: prepare-push-bump-commit
+      id: prepare-push-bump-commit
       shell: bash
       run: |
-        # reset back to (current) head of branch for which release-job was started
-        # (this will avoid merge-conflicts)
+        set -euo pipefail
+        # make the current remote branch-tip authoritative as the bump's base. For
+        # release-commit-target=tag the signed release-commit was NOT pushed to the branch, so the
+        # remote tip is the pre-release tip; for =branch it is the signed release-commit. Either
+        # way, reset onto it so the bump (and its expected-head-oid) match the real remote tip.
         git fetch origin "${{ github.ref }}"
-        git rebase
+        git reset --hard FETCH_HEAD
+        echo "remote-tip=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
-    - name: create-bump-commit
-      id: bump
-      uses: gardener/cc-utils/.github/actions/version@master
-      # must be kept in sync with version action called in release workflow (except "version-operation")
-      with:
-        versionfile: ${{ inputs.version-versionfile }}
-        read-callback: ${{ inputs.version-read-callback }}
-        write-callback: ${{ inputs.version-write-callback }}
-        version-operation: ${{ inputs.next-version }}
-        callback-action-path: ${{ inputs.next-version-callback-action-path }}
-        prerelease: ${{ steps.preprocess.outputs.next-version-prerelease }}
-        commit-message: ${{ inputs.next-version-commit-message }}
-        repository-operation: commit-to-head
-        commit-kind: bump
-
+    # purge consumed release-notes BEFORE creating the bump-commit, so the deletions are folded
+    # into the bump tree (the version action's `git add -A` captures them)
     - name: reset-release-notes-directory
       if: ${{ inputs.release-notes-path }}
       shell: python
@@ -782,38 +774,44 @@ runs:
           files_rel_path=release_notes_files_rel_path,
         )
 
-    - name: push-bump-commit
+    - name: create-bump-commit
+      id: bump
+      uses: gardener/cc-utils/.github/actions/version@master
+      # must be kept in sync with version action called in release workflow (except "version-operation")
+      with:
+        versionfile: ${{ inputs.version-versionfile }}
+        read-callback: ${{ inputs.version-read-callback }}
+        write-callback: ${{ inputs.version-write-callback }}
+        version-operation: ${{ inputs.next-version }}
+        callback-action-path: ${{ inputs.next-version-callback-action-path }}
+        prerelease: ${{ steps.preprocess.outputs.next-version-prerelease }}
+        commit-message: ${{ inputs.next-version-commit-message }}
+        repository-operation: commit-to-head
+        commit-kind: bump
+
+    - name: capture-bump-commit
       id: push-bump-commit
       shell: bash
-      env:
-        RELEASE_NOTES_PATH: ${{ inputs.release-notes-path }}
       run: |
         set -euo pipefail
-
-        if [ -n "${RELEASE_NOTES_PATH}" -a -d "${RELEASE_NOTES_PATH}" ]; then
-          git add "${RELEASE_NOTES_PATH}"
-        fi
-
-        # HEAD is the local (unsigned) bump-commit, HEAD~1 the branch-tip.
-        # capture the bump message from HEAD (the `version` action already expanded ${version}) so
-        # the signed commit reuses the expanded message rather than the raw template.
+        # the version action created the bump as a local commit on top of the remote tip. Capture
+        # its oid + (already-expanded) message so signed-commit can reproduce its exact tree (via
+        # --source-commit), rather than restaging the worktree (which would pull in stray untracked
+        # files such as capture-commit's `commit-digest`).
+        echo "bump-oid=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
         {
           echo "message<<__BUMP_COMMIT_MSG__"
           git log -1 --format=%B HEAD
           echo "__BUMP_COMMIT_MSG__"
         } >> "${GITHUB_OUTPUT}"
 
-        # soft-reset so the bump (+ release-notes purge) become worktree-changes for signed re-creation
-        branch_tip="$(git rev-parse 'HEAD~1')"
-        echo "branch-tip=${branch_tip}" >> "${GITHUB_OUTPUT}"
-        git reset --soft "${branch_tip}"
-
     - name: push-bump-commit-signed
       uses: gardener/cc-utils/.github/actions/signed-commit@master
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
         branch: ${{ github.ref_name }}
-        expected-head-oid: ${{ steps.push-bump-commit.outputs.branch-tip }}
+        expected-head-oid: ${{ steps.prepare-push-bump-commit.outputs.remote-tip }}
+        source-commit: ${{ steps.push-bump-commit.outputs.bump-oid }}
         message: ${{ steps.push-bump-commit.outputs.message }}
 
     - name: cleanup-release-signing-branch

@@ -103,6 +103,77 @@ def test_no_changes_returns_empty(repo):
     assert sc.changes_from_worktree(parent_sha=_head(repo)) == []
 
 
+# --- git-blob reading: unsupported changes are rejected (not silently altered) ---
+
+def test_symlink_change_rejected(repo):
+    # a changed symlink must be rejected rather than following the link and uploading target bytes
+    os.symlink('/etc/passwd', repo / 'evil-link')
+    _git(str(repo), 'add', '-A')
+    with pytest.raises(sc.UnsupportedChange, match='120000'):
+        sc.changes_from_worktree(parent_sha=_head(repo))
+
+
+def test_exec_bit_change_rejected(repo):
+    # additions carry no mode field, so an exec-bit flip would produce a differing server tree
+    os.chmod(repo / 'VERSION', 0o755)
+    _git(str(repo), 'add', '-A')
+    with pytest.raises(sc.UnsupportedChange, match='mode change'):
+        sc.changes_from_worktree(parent_sha=_head(repo))
+
+
+def test_gitlink_rejected(repo):
+    # a submodule/gitlink (mode 160000) cannot be represented. Commit it, then diff via Mode B
+    # (changes_from_worktree's `git add -A` would drop a phantom gitlink without a worktree).
+    parent = _head(repo)
+    _git(str(repo), 'update-index', '--add', '--cacheinfo',
+         '160000', parent, 'submodule')
+    _git(str(repo), 'commit', '-qm', 'add gitlink')
+    with pytest.raises(sc.UnsupportedChange, match='160000'):
+        sc.changes_from_commit(parent_sha=parent, source_commit=_head(repo))
+
+
+def test_symlink_content_not_followed(repo):
+    # sanity: the staged blob for a symlink is its target-string, never the followed file
+    (repo / 'target.txt').write_text('a' * 5000 + '\n')
+    _git(str(repo), 'add', '-A')
+    _git(str(repo), 'commit', '-qm', 'add target')
+    os.symlink('target.txt', repo / 'link')
+    _git(str(repo), 'add', '-A')
+    # prove _blob_bytes reads the link blob (the target string), not the 5001-byte target file
+    staged = subprocess.run(
+        ('git', '-C', str(repo), 'ls-files', '--stage', 'link'),
+        check=True, capture_output=True, text=True,
+    ).stdout.split()
+    assert staged[0] == '120000'
+    assert sc._blob_bytes(staged[1]) == b'target.txt'  # the link target string, ~10 bytes
+
+
+# --- Mode B (source-commit): reproduce a commit's exact tree, ignore untracked junk ---
+
+def test_source_commit_ignores_untracked(repo):
+    # reproduces the P2-a scenario: capture-commit leaves a stray `commit-digest` file; Mode B
+    # (diffing the local commit) must NOT include it
+    parent = _head(repo)
+    (repo / 'VERSION').write_text('2.0.0\n')
+    _git(str(repo), 'add', '-A')
+    _git(str(repo), 'commit', '-qm', 'bump')
+    bump = _head(repo)
+    (repo / 'commit-digest').write_text('deadbeefdeadbeef\n')  # stray untracked file
+
+    changes = sc.changes_from_commit(parent_sha=parent, source_commit=bump)
+    assert [c.path for c in changes] == ['VERSION']
+    assert changes[0].content == b'2.0.0\n'
+
+
+def test_source_commit_captures_deletion(repo):
+    parent = _head(repo)
+    (repo / '.ocm' / 'release-notes' / 'old.yaml').unlink()
+    _git(str(repo), 'add', '-A')
+    _git(str(repo), 'commit', '-qm', 'purge notes')
+    changes = sc.changes_from_commit(parent_sha=parent, source_commit=_head(repo))
+    assert [(c.path, c.delete) for c in changes] == [('.ocm/release-notes/old.yaml', True)]
+
+
 # --- create_signed_commit: GraphQL payload (mocked POST) ---
 
 import base64
