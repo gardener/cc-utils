@@ -284,12 +284,28 @@ runs:
         PARENT: ${{ steps.release-parent.outputs.parent }}
       run: |
         set -euo pipefail
-        # createCommitOnBranch commits onto (and moves) an existing branch. Use a throwaway branch
-        # so the real release-branch is not moved until the release succeeds. Force-push tolerates a
-        # leftover ref from a re-run.
-        signing_branch="release-signing/${RUN_ID}-${RUN_ATTEMPT}"
+        # createCommitOnBranch commits onto (and moves) an existing branch. Give each invocation
+        # its own throwaway branch, including invocations in the same workflow run/attempt.
+        nonce="$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+        signing_branch="release-signing/${RUN_ID}-${RUN_ATTEMPT}-${nonce}"
+        signing_ref="refs/heads/${signing_branch}"
+        # An empty expected OID makes this a create-only push. Do not claim an existing ref even
+        # if it already points at PARENT (Git reports that no-op as a successful push).
+        push_result="$(git push --porcelain --force-with-lease="${signing_ref}:" \
+          origin "${PARENT}:${signing_ref}")"
+        printf '%s\n' "${push_result}"
+        created=false
+        while IFS=$'\t' read -r status refspec summary; do
+          if [ "${status}" = '*' ] && [ "${refspec}" = "${PARENT}:${signing_ref}" ]; then
+            created=true
+          fi
+        done <<< "${push_result}"
+        if [ "${created}" != true ]; then
+          echo "error: signing-branch was not newly created"
+          exit 1
+        fi
+        echo "expected-oid=${PARENT}" >> "${GITHUB_OUTPUT}"
         echo "name=${signing_branch}" >> "${GITHUB_OUTPUT}"
-        git push --force origin "${PARENT}:refs/heads/${signing_branch}"
     - name: sign-release-commit
       id: sign-release-commit
       uses: gardener/cc-utils/.github/actions/signed-commit@master
@@ -823,10 +839,16 @@ runs:
       shell: bash
       env:
         SIGNING_BRANCH: ${{ steps.signing-branch.outputs.name }}
+        EXPECTED_OID: ${{ steps.sign-release-commit.outputs.commit-sha || steps.signing-branch.outputs.expected-oid }}
       run: |
-        # best-effort removal of the throwaway signing-branch
+        # Remove only the ref we created, at either the known signed commit or its initial OID
+        # if signing failed. Never infer ownership from the current remote-tracking branch.
         set +e
-        git push origin --delete "${SIGNING_BRANCH}" \
+        if [ -z "${SIGNING_BRANCH}" ] || [ -z "${EXPECTED_OID}" ]; then
+          echo "warning: signing-branch ownership is unknown - skipping cleanup"
+          exit 0
+        fi
+        signing_ref="refs/heads/${SIGNING_BRANCH}"
+        git push --force-with-lease="${signing_ref}:${EXPECTED_OID}" origin ":${signing_ref}" \
           && echo "deleted signing-branch ${SIGNING_BRANCH}" \
-          || echo "warning: could not delete signing-branch (may already be gone)"
-
+          || echo "warning: could not delete signing-branch (may have moved or already be gone)"
