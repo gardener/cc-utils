@@ -92,7 +92,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
       - uses: gardener/cc-utils/.github/actions/setup-testrunner@master
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         with:

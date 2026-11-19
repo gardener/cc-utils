@@ -45,10 +45,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/bundle-gardener-gha-libs
         id: bundle
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gardener-gha-libs-bundle-${{ matrix.arch }}
           path: ${{ steps.bundle.outputs.bundle-dir }}
@@ -59,11 +59,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: gardener-gha-libs-bundle-amd64
           path: /tmp/bundle-amd64
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: gardener-gha-libs-bundle-arm64
           path: /tmp/bundle-arm64
@@ -73,7 +73,7 @@ jobs:
           set -euo pipefail
           cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
           cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: gardener-gha-libs-bundle
           path: /tmp/gardener-gha-libs-bundle
@@ -93,11 +93,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: gardener-gha-libs-bundle
           path: /tmp/gardener-gha-libs-bundle
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: ./.github/actions/install-gardener-gha-libs
         with:
           bundle-dir: /tmp/gardener-gha-libs-bundle
@@ -150,7 +150,7 @@ jobs:
           pip3 install --root-user-action ignore \
             setuptools \
             pyyaml
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: create distribution package
         id: package
         run: |
@@ -229,7 +229,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Retrieve Distribution Packages
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
@@ -293,7 +293,7 @@ jobs:
       contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Retrieve Distribution Packages
         uses: gardener/cc-utils/.github/actions/download-artifact@master
         with:
@@ -363,7 +363,7 @@ jobs:
         with:
           remove-trusted-label: false
       - name: setup-python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
       - name: install-act
@@ -382,7 +382,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Install Sphinx
         run: pip3 install --break-system-packages sphinx sphinx-rtd-theme
       - name: Generate Documentation
@@ -407,7 +407,7 @@ jobs:
     needs:
       - documentation
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: refs/heads/gh-pages
       - name: Retrieve Documentation
