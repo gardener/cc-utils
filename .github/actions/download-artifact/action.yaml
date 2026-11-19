@@ -29,9 +29,9 @@ runs:
       run: |
         set -eu
         if ${{ github.server_url == 'https://github.com' }}; then
-          version='v7'
+          version='37930b1c2abaa49bbe596cd826c3c89aef350131' # v7
         else
-          version='v3'
+          version='9bc31d5ccc31df68ecc42ccf4149144866c47d8a' # v3
         fi
 
         mkdir -p ../download-artifact

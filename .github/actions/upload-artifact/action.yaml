@@ -21,9 +21,9 @@ runs:
       run: |
         set -eu
         if ${{ github.server_url == 'https://github.com' }}; then
-          version='v6'
+          version='b7c566a772e6b6bfb58ed0dc250532a479d7789f' # v6
         else
-          version='v3'
+          version='ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5' # v3
         fi
         echo "using  upload-artifact@${version}"
 
