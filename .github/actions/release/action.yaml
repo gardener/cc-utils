@@ -220,13 +220,13 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@44c6fc9c03108a94841da2b0e356e6d64146c729
     - uses: actions/checkout@v6
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@44c6fc9c03108a94841da2b0e356e6d64146c729
       with:
         name: ${{ inputs.component-descriptor-artifact }}
         path: /tmp/cd-artifact
@@ -257,13 +257,13 @@ runs:
         echo "tag-ref=${tag_ref}" >> "${GITHUB_OUTPUT}"
         echo "tag-name=${tag_name}" >> "${GITHUB_OUTPUT}"
     - name: import-release-commit
-      uses: gardener/cc-utils/.github/actions/import-commit@master
+      uses: gardener/cc-utils/.github/actions/import-commit@0af4b5c7ab6a122eca0cdc64c37bbd042a97feaa
       with:
         commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
         commit-objects: ${{ inputs.release-commit-objects }}
         commit-digest: ${{ inputs.release-commit-digest }}
         after-import: rebase
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@44c6fc9c03108a94841da2b0e356e6d64146c729
     # A retry must keep the already-published signed digest. Reject a conflicting/unsigned tag
     # before changing refs, signing another commit, or publishing/overwriting the descriptor.
     - name: reuse-existing-release-commit
@@ -341,7 +341,7 @@ runs:
     - name: sign-release-commit
       if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       id: sign-release-commit
-      uses: gardener/cc-utils/.github/actions/signed-commit@master
+      uses: gardener/cc-utils/.github/actions/signed-commit@3837267988a0a13b5c9bbc303d9e0a422214cf2d
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
         branch: ${{ steps.signing-branch.outputs.name }}
@@ -394,7 +394,7 @@ runs:
         fi
 
     - name: fetch-prepare-values
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@44c6fc9c03108a94841da2b0e356e6d64146c729
       with:
         name: prepare-workflow-values
 
@@ -412,13 +412,13 @@ runs:
         echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
 
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@43a4ee8068f092393e65788ad81244363489689f
       with:
         oci-image-reference: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
         gh-token: ${{ inputs.github-token }}
 
     - name: fetch-release-notes
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@44c6fc9c03108a94841da2b0e356e6d64146c729
       with:
         name: release-notes
         path: /tmp
@@ -518,7 +518,7 @@ runs:
             stream=f,
           )
     - name: validate OCM Component-Descriptor
-      uses: gardener/cc-utils/.github/actions/ocm-validate@master
+      uses: gardener/cc-utils/.github/actions/ocm-validate@adff0265565e7692bf3b71ec61ce72d045cec255
       with:
         component-descriptor-path: /tmp/component-descriptor.yaml
         on-validation-errors: ${{ inputs.on-validation-errors }}
@@ -584,7 +584,7 @@ runs:
         tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
 
     - name: upload OCM Component-Descriptor as artifact
-      uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      uses: gardener/cc-utils/.github/actions/upload-artifact@44c6fc9c03108a94841da2b0e356e6d64146c729
       with:
         path: /tmp/component-descriptor.tar.gz
         name: component-descriptor
@@ -784,7 +784,7 @@ runs:
 
     - name: create-bump-commit
       id: bump
-      uses: gardener/cc-utils/.github/actions/version@master
+      uses: gardener/cc-utils/.github/actions/version@bc928160c35e2a511e0184b1fb93be0579294d72
       # must be kept in sync with version action called in release workflow (except "version-operation")
       with:
         versionfile: ${{ inputs.version-versionfile }}
@@ -864,7 +864,7 @@ runs:
         echo "source-commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
     - name: push-bump-commit-signed
-      uses: gardener/cc-utils/.github/actions/signed-commit@master
+      uses: gardener/cc-utils/.github/actions/signed-commit@3837267988a0a13b5c9bbc303d9e0a422214cf2d
       with:
         token: ${{ inputs.git-push-token || inputs.github-token }}
         branch: ${{ github.ref_name }}
