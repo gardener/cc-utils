@@ -5,10 +5,9 @@
 '''
 helper used by the `signed-commit` composite-action.
 
-Computes the set of file-changes between the current worktree and `--expected-head-oid`
-(optionally restricted to `--paths`), and creates a GitHub-signed commit onto `--branch` via the
-`createCommitOnBranch` GraphQL-mutation. Supports a dry-run mode that only prints what would be
-committed.
+Computes exact Git-tree changes from an immutable `--source-commit`, or from the staged worktree
+(optionally restricted to `--paths`), against `--expected-head-oid`. Creates a GitHub-signed commit
+onto `--branch` via `createCommitOnBranch` and checks its tree. Supports a dry-run mode.
 
 The GraphQL-logic is kept self-contained in this script (rather than importing `github.commit`)
 on purpose: this file is always loaded from the pinned action-ref via `GITHUB_ACTION_PATH`,
@@ -23,6 +22,7 @@ import base64
 import dataclasses
 import os
 import subprocess
+import tempfile
 
 import github
 
@@ -32,6 +32,7 @@ mutation ($input: CreateCommitOnBranchInput!) {
   createCommitOnBranch(input: $input) {
     commit {
       oid
+      tree { oid }
       signature { isValid state wasSignedByGitHub }
     }
   }
@@ -46,13 +47,30 @@ class FileChange:
     delete: bool = False
 
 
-def _run_git(*args: str) -> str:
+@dataclasses.dataclass
+class _TreeChange:
+    path: str
+    old_mode: str
+    new_mode: str
+    new_oid: str
+
+
+def _run_git_bytes(*args: str, input: bytes | None=None, env=None) -> bytes:
     return subprocess.run(
         ('git', *args),
         check=True,
         capture_output=True,
-        text=True,
+        input=input,
+        env=env,
     ).stdout
+
+
+def _run_git(*args: str) -> str:
+    return _run_git_bytes(*args).decode('utf-8')
+
+
+def _commit_oid(revision: str) -> str:
+    return _run_git('rev-parse', '--verify', '--end-of-options', f'{revision}^{{commit}}').strip()
 
 
 def _stage(paths: list[str] | None) -> None:
@@ -72,38 +90,96 @@ def _stage(paths: list[str] | None) -> None:
             pass  # pathspec matched nothing - skip it
 
 
+def _tree_changes(
+    parent_sha: str,
+    tree_oid: str,
+    paths: list[str] | None=None,
+) -> list[_TreeChange]:
+    raw = _run_git_bytes(
+        'diff', '--raw', '--no-abbrev', '--no-renames', '--no-ext-diff',
+        '--ignore-submodules=none', '-z', parent_sha, tree_oid, '--', *(paths or []),
+    )
+    # Raw -z output: :<old-mode> <new-mode> <old-oid> <new-oid> <status>\0<path>\0
+    tokens = iter(raw.split(b'\0')[:-1])
+    changes = []
+    for metadata in tokens:
+        old_mode, new_mode, _, new_oid, _ = metadata.decode('ascii').removeprefix(':').split()
+        path = next(tokens).decode('utf-8')
+        # FileAddition has no mode. Existing regular files retain theirs, new files are 100644.
+        # Do not turn symlinks/gitlinks into regular files or try to manufacture executable bits.
+        if new_mode == '000000':
+            supported = old_mode in ('100644', '100755', '120000')
+        elif old_mode == '000000':
+            supported = new_mode == '100644'
+        else:
+            supported = old_mode == new_mode and new_mode in ('100644', '100755')
+        if not supported:
+            raise ValueError(
+                f'unsupported Git mode transition for {path!r}: {old_mode} -> {new_mode}; '
+                'createCommitOnBranch cannot set file modes'
+            )
+        changes.append(_TreeChange(path, old_mode, new_mode, new_oid))
+    return changes
+
+
+def _restricted_tree(parent_sha: str, changes: list[_TreeChange]) -> str:
+    '''Construct the selected tree without disturbing unrelated entries in the real index.'''
+    with tempfile.TemporaryDirectory(prefix='signed-commit-') as tmp:
+        env = dict(os.environ, GIT_INDEX_FILE=os.path.join(tmp, 'index'))
+        _run_git_bytes('read-tree', parent_sha, env=env)
+        # Remove old paths first so file/directory replacements are valid in either direction.
+        index_info = b''.join(
+            f'{change.new_mode} {change.new_oid}\t{change.path}\0'.encode('utf-8')
+            for change in sorted(changes, key=lambda c: c.new_mode != '000000')
+        )
+        _run_git_bytes('update-index', '-z', '--index-info', input=index_info, env=env)
+        return _run_git_bytes('write-tree', env=env).decode('ascii').strip()
+
+
+def _prepare_changes(
+    parent_sha: str,
+    paths: list[str] | None=None,
+    source_commit: str | None=None,
+) -> tuple[list[FileChange], str]:
+    parent_sha = _commit_oid(parent_sha)
+    if source_commit:
+        if paths:
+            raise ValueError('source-commit cannot be combined with paths')
+        source_oid = _commit_oid(source_commit)
+        # Read the actual commit headers: rev-list hides parents at shallow boundaries.
+        headers = _run_git_bytes('cat-file', 'commit', source_oid).split(b'\n\n', 1)[0].splitlines()
+        parents = [line.removeprefix(b'parent ').decode('ascii')
+                   for line in headers if line.startswith(b'parent ')]
+        if parents != [parent_sha]:
+            raise ValueError(
+                f'source-commit {source_oid} must have exactly one parent matching '
+                f'expected-head-oid {parent_sha}; got {parents}'
+            )
+        tree_oid = _run_git('rev-parse', f'{source_oid}^{{tree}}').strip()
+    else:
+        _stage(paths)
+        tree_oid = _run_git('write-tree').strip()
+
+    tree_changes = _tree_changes(parent_sha, tree_oid, paths)
+    if paths:
+        tree_oid = _restricted_tree(parent_sha, tree_changes)
+    changes = [
+        FileChange(path=c.path, delete=True) if c.new_mode == '000000' else
+        FileChange(path=c.path, content=_run_git_bytes('cat-file', 'blob', c.new_oid))
+        for c in tree_changes
+    ]
+    return changes, tree_oid
+
+
 def changes_from_worktree(
     parent_sha: str,
     paths: list[str] | None=None,
 ) -> list[FileChange]:
     '''
-    determines added/modified/deleted files between `parent_sha` and the current worktree.
-
-    All worktree-changes (including untracked files) are considered: the index is first updated
-    via `git add -A` (restricted to `paths` if given), then the staged tree is diffed against
-    `parent_sha`.
+    stages worktree-changes (including untracked files) and reads the resulting Git blobs.
+    `paths` restricts both staging and the diff. Unrepresentable mode changes are rejected.
     '''
-    _stage(paths)
-
-    diff_args = ['diff', '--no-renames', '--name-status', '-z', '--cached', parent_sha, '--']
-    if paths:
-        diff_args += paths
-
-    raw = _run_git(*diff_args)
-    # -z output: <status>\0<path>\0<status>\0<path>... (renames excluded via --no-renames)
-    tokens = [token for token in raw.split('\0') if token]
-
-    changes: list[FileChange] = []
-    it = iter(tokens)
-    for status in it:
-        path = next(it)
-        if status.startswith('D'):
-            changes.append(FileChange(path=path, delete=True))
-        else:  # A, M, T, ...
-            with open(path, 'rb') as f:
-                content = f.read()
-            changes.append(FileChange(path=path, content=content))
-
+    changes, _ = _prepare_changes(parent_sha=parent_sha, paths=paths)
     return changes
 
 
@@ -123,6 +199,7 @@ def create_signed_commit(
     changes: list[FileChange],
     host: str | None=None,
     allow_empty: bool=False,
+    expected_tree_oid: str | None=None,
 ) -> str:
     '''
     creates a GitHub-signed commit on `branch` via the `createCommitOnBranch` mutation and returns
@@ -130,8 +207,9 @@ def create_signed_commit(
     The returned signature is checked afterwards; verification failure does not undo the mutation.
 
     If `changes` is empty and `allow_empty` is set, an empty commit (same tree as
-    `expected_head_oid`) is created - `fileChanges` is omitted from the mutation. This mirrors
-    `git commit --allow-empty` and is needed for release-commits, which frequently carry no diff.
+    `expected_head_oid`) is created. This mirrors `git commit --allow-empty` and is needed for
+    release-commits, which frequently carry no diff. If `expected_tree_oid` is given, the returned
+    commit's tree must match it. The CLI always supplies the exact intended tree.
     '''
     if not changes and not allow_empty:
         raise ValueError('refusing to create a commit without any file-changes')
@@ -184,6 +262,13 @@ def create_signed_commit(
             'and the GitHub host signing configuration before retrying.'
         )
 
+    if expected_tree_oid is not None:
+        actual_tree_oid = commit['tree']['oid']
+        if actual_tree_oid != expected_tree_oid:
+            raise RuntimeError(
+                f'created commit {commit["oid"]} tree mismatch: '
+                f'expected {expected_tree_oid}, got {actual_tree_oid}'
+            )
     return oid
 
 
@@ -193,6 +278,11 @@ def main():
     parser.add_argument('--branch', required=True, help='branch to commit onto (unqualified)')
     parser.add_argument('--message', required=True, help='commit headline')
     parser.add_argument('--token', default=os.environ.get('GITHUB_TOKEN'))
+    parser.add_argument(
+        '--source-commit',
+        default='',
+        help='sign this immutable commit tree; its single parent must equal expected-head-oid',
+    )
     parser.add_argument(
         '--expected-head-oid',
         default=None,
@@ -214,9 +304,11 @@ def main():
 
     paths = [line.strip() for line in parsed.paths.splitlines() if line.strip()] or None
 
-    expected_head_oid = parsed.expected_head_oid or _run_git('rev-parse', 'HEAD').strip()
+    expected_head_oid = _commit_oid(parsed.expected_head_oid or 'HEAD')
 
-    changes = changes_from_worktree(parent_sha=expected_head_oid, paths=paths)
+    changes, tree_oid = _prepare_changes(
+        parent_sha=expected_head_oid, paths=paths, source_commit=parsed.source_commit,
+    )
     if not changes and not parsed.allow_empty:
         print('no changes to commit - nothing to do')
         return
@@ -242,6 +334,7 @@ def main():
         changes=changes,
         host=host,
         allow_empty=parsed.allow_empty,
+        expected_tree_oid=tree_oid,
     )
 
     print(f'created signed commit {commit_oid} on {parsed.branch}')

@@ -1,6 +1,6 @@
 name: signed-commit
 description: |
-  Creates a GitHub-signed ("Verified") commit from the current worktree-diff via the GraphQL
+  Creates a GitHub-signed ("Verified") commit from an exact Git tree via the GraphQL
   `createCommitOnBranch` mutation, committing onto `branch`.
 
   Unlike a local `git commit` + `git push`, the commit-object is authored server-side (while
@@ -8,13 +8,15 @@ description: |
   therefore shows up as "Verified".
 
   The action diffs the checked-out worktree against `expected-head-oid` (defaulting to the current
-  HEAD), optionally restricted to `paths`, and includes all added/modified/deleted files in a
-  single commit. The mutation is rejected if the branch has advanced past `expected-head-oid`.
+  HEAD), optionally restricted to `paths`. With `source-commit`, it instead signs that immutable
+  commit's complete tree without staging workspace files. The mutation is rejected if the branch
+  has advanced past `expected-head-oid`. The returned commit tree must match the intended tree.
 
   Requires a checked-out git-repository and performs `install-gardener-gha-libs` itself.
 
-  Caveat: `createCommitOnBranch` cannot set per-file modes (executable-bit / symlink). Modes are
-  inherited from the tree at `expected-head-oid`.
+  Caveat: `createCommitOnBranch` cannot set per-file modes. New executable files, mode changes,
+  symlink writes, and gitlink changes are rejected before mutation. Existing regular-file modes
+  are inherited from the tree at `expected-head-oid`.
 
 inputs:
   token:
@@ -44,6 +46,12 @@ inputs:
     description: |
       optional newline-separated list of pathspecs (files or directories) to restrict the commit
       to. If empty, the full worktree-diff is committed.
+  source-commit:
+    required: false
+    default: ''
+    description: |
+      optional immutable commit to sign instead of the worktree. Its single parent must match
+      `expected-head-oid`. Signs the complete commit tree; cannot be combined with `paths`.
   allow-empty:
     required: false
     default: 'false'
@@ -70,6 +78,7 @@ runs:
         BRANCH: ${{ inputs.branch }}
         MESSAGE: ${{ inputs.message }}
         EXPECTED_HEAD_OID: ${{ inputs.expected-head-oid }}
+        SOURCE_COMMIT: ${{ inputs.source-commit }}
         PATHS: ${{ inputs.paths }}
         ALLOW_EMPTY: ${{ inputs.allow-empty }}
       run: |
@@ -82,6 +91,9 @@ runs:
         )
         if [ -n "${EXPECTED_HEAD_OID}" ]; then
           args+=(--expected-head-oid "${EXPECTED_HEAD_OID}")
+        fi
+        if [ -n "${SOURCE_COMMIT}" ]; then
+          args+=(--source-commit "${SOURCE_COMMIT}")
         fi
         if [ "${ALLOW_EMPTY}" = 'true' ]; then
           args+=(--allow-empty)

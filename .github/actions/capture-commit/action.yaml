@@ -76,18 +76,21 @@ runs:
         set -euo pipefail
 
         objects_out='commit-objects.bundle'
-        commit_out='commit-digest'
-        GIT_DIR=$PWD/.git \
-          ${GITHUB_ACTION_PATH}/capture-commit \
-            ${objects_out} \
+        # The digest is invocation-owned scratch data, not a checkout file. A later
+        # version action stages all worktree changes, so leaving it there pollutes its commit.
+        commit_out="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/capture-commit-digest.XXXXXX")"
+        trap 'rm -f -- "${commit_out}"' EXIT
+        GIT_DIR="$PWD/.git" \
+          "${GITHUB_ACTION_PATH}/capture-commit" \
+            "${objects_out}" \
             '${{ inputs.timestamp-reference }}' \
-            ${commit_out} \
+            "${commit_out}" \
             ${{ inputs.commit }}
 
         objects_size=$(stat --format=%s ${objects_out})
         objects_max_size=65536 # 64 KiB
 
-        echo "commit-digest=$(cat ${commit_out})" >> ${GITHUB_OUTPUT}
+        echo "commit-digest=$(cat "${commit_out}")" >> ${GITHUB_OUTPUT}
         if [ ${objects_size} -lt ${objects_max_size} ]; then
           echo "commit-objects=$(base64 -w0 < ${objects_out})" >> ${GITHUB_OUTPUT}
         else
@@ -104,7 +107,7 @@ runs:
             <h2>Capture-Commit Summary</h2>
           </summary>
 
-        commit-digest: \`$(cat ${commit_out})\`
+        commit-digest: \`$(cat "${commit_out}")\`
         bundle-refs:
         $(git bundle list-heads ${objects_out})
         commit-message:
@@ -119,7 +122,7 @@ runs:
             <h2>Capture-Commit Summary</h2>
           </summary>
 
-        commit-digest: \`$(cat ${commit_out})\`
+        commit-digest: \`$(cat "${commit_out}")\`
         bundle-refs:
         $(git bundle list-heads ${objects_out})
         </details>

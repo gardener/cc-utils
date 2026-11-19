@@ -253,13 +253,13 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        # read the message before the soft-reset below moves HEAD off the commit
+        # Preserve the imported commit's expanded message for signed re-creation.
         {
           echo "message<<__RELEASE_COMMIT_MSG__"
           git log -1 --format=%B HEAD
           echo "__RELEASE_COMMIT_MSG__"
         } >> "${GITHUB_OUTPUT}"
-    - name: expose-release-commit-as-worktree-changes
+    - name: capture-release-commit-for-signing
       id: release-parent
       shell: bash
       run: |
@@ -273,8 +273,7 @@ runs:
           exit 1
         fi
         echo "parent=${parent}" >> "${GITHUB_OUTPUT}"
-        # soft-reset so the release-commit's changes become worktree-changes for the signed-commit action
-        git reset --soft "${parent}"
+        echo "source-commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
     - name: create-release-signing-branch
       id: signing-branch
       shell: bash
@@ -313,6 +312,7 @@ runs:
         token: ${{ inputs.git-push-token || inputs.github-token }}
         branch: ${{ steps.signing-branch.outputs.name }}
         expected-head-oid: ${{ steps.release-parent.outputs.parent }}
+        source-commit: ${{ steps.release-parent.outputs.source-commit }}
         message: ${{ steps.release-commit-message.outputs.message }}
         # release-commits often have no diff - still sign an empty commit (as `git commit --allow-empty` did)
         allow-empty: 'true'
@@ -808,8 +808,14 @@ runs:
       run: |
         set -euo pipefail
 
-        if [ -n "${RELEASE_NOTES_PATH}" -a -d "${RELEASE_NOTES_PATH}" ]; then
-          git add "${RELEASE_NOTES_PATH}"
+        if [ -n "${RELEASE_NOTES_PATH}" ] &&
+            [ -n "$(git ls-tree -r --name-only HEAD -- "${RELEASE_NOTES_PATH}")" ]; then
+          # Stage tracked note deletions even when the purge removed the entire directory.
+          # Do not add untracked capture artifacts (or unrelated generated files).
+          git add -u -- "${RELEASE_NOTES_PATH}"
+          if ! git diff --cached --quiet -- "${RELEASE_NOTES_PATH}"; then
+            git commit --amend --no-edit --only -- "${RELEASE_NOTES_PATH}"
+          fi
         fi
 
         # HEAD is the local (unsigned) bump-commit, HEAD~1 the branch-tip.
@@ -821,10 +827,10 @@ runs:
           echo "__BUMP_COMMIT_MSG__"
         } >> "${GITHUB_OUTPUT}"
 
-        # soft-reset so the bump (+ release-notes purge) become worktree-changes for signed re-creation
+        # Capture the amended commit's immutable tree, not the surrounding worktree.
         branch_tip="$(git rev-parse 'HEAD~1')"
         echo "branch-tip=${branch_tip}" >> "${GITHUB_OUTPUT}"
-        git reset --soft "${branch_tip}"
+        echo "source-commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
     - name: push-bump-commit-signed
       uses: gardener/cc-utils/.github/actions/signed-commit@master
@@ -832,6 +838,7 @@ runs:
         token: ${{ inputs.git-push-token || inputs.github-token }}
         branch: ${{ github.ref_name }}
         expected-head-oid: ${{ steps.push-bump-commit.outputs.branch-tip }}
+        source-commit: ${{ steps.push-bump-commit.outputs.source-commit }}
         message: ${{ steps.push-bump-commit.outputs.message }}
 
     - name: cleanup-release-signing-branch

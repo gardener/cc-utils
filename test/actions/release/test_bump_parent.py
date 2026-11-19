@@ -101,6 +101,7 @@ def test_bump_parent_is_current_source_branch_tip(
     (checkout / 'VERSION').write_text('1.1.0-dev\n')
     _git(checkout, 'add', 'VERSION')
     _git(checkout, 'commit', '-qm', 'next version: 1.1.0-dev')
+    bump_oid = _git(checkout, 'rev-parse', 'HEAD')
     assert _git(checkout, 'rev-parse', 'HEAD~1') == remote_tip
 
     output = tmp_path / 'github-output'
@@ -112,8 +113,11 @@ def test_bump_parent_is_current_source_branch_tip(
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert f'branch-tip={remote_tip}' in output.read_text().splitlines()
-    assert _git(checkout, 'rev-parse', 'HEAD') == remote_tip
-    assert _git(checkout, 'diff', '--cached', '--name-only') == 'VERSION'
+    assert f'source-commit={bump_oid}' in output.read_text().splitlines()
+    assert _git(checkout, 'rev-parse', 'HEAD') == bump_oid
+    assert _git(checkout, 'rev-parse', f'{bump_oid}~1') == remote_tip
+    assert _git(checkout, 'diff', '--name-only', remote_tip, bump_oid) == 'VERSION'
+    assert _git(checkout, 'diff', '--cached', '--name-only') == ''
     assert (checkout / 'release-only.txt').exists() == (release_target == 'branch')
     if upstream_update:
         assert (checkout / 'upstream-only.txt').read_text() == 'concurrent upstream content\n'
