@@ -30,7 +30,10 @@ import github
 _MUTATION = '''
 mutation ($input: CreateCommitOnBranchInput!) {
   createCommitOnBranch(input: $input) {
-    commit { oid }
+    commit {
+      oid
+      signature { isValid state wasSignedByGitHub }
+    }
   }
 }
 '''
@@ -124,6 +127,7 @@ def create_signed_commit(
     '''
     creates a GitHub-signed commit on `branch` via the `createCommitOnBranch` mutation and returns
     the resulting (signed) commit-oid. The branch-ref is advanced atomically by the mutation.
+    The returned signature is checked afterwards; verification failure does not undo the mutation.
 
     If `changes` is empty and `allow_empty` is set, an empty commit (same tree as
     `expected_head_oid`) is created - `fileChanges` is omitted from the mutation. This mirrors
@@ -164,7 +168,23 @@ def create_signed_commit(
     if payload.get('errors'):
         raise RuntimeError(f'createCommitOnBranch failed: {payload["errors"]}')
 
-    return payload['data']['createCommitOnBranch']['commit']['oid']
+    commit = payload['data']['createCommitOnBranch']['commit']
+    oid = commit['oid']
+    signature = commit.get('signature') or {}
+    if (
+        signature.get('isValid') is not True
+        or signature.get('state') != 'VALID'
+        or signature.get('wasSignedByGitHub') is not True
+    ):
+        raise RuntimeError(
+            f'createCommitOnBranch returned commit {oid} without a valid GitHub signature '
+            f'(isValid={signature.get("isValid")!r}, state={signature.get("state")!r}, '
+            f'wasSignedByGitHub={signature.get("wasSignedByGitHub")!r}). '
+            f'The branch {repository}:{branch} may already have advanced; inspect the commit '
+            'and the GitHub host signing configuration before retrying.'
+        )
+
+    return oid
 
 
 def main():
