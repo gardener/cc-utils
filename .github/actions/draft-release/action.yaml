@@ -17,10 +17,10 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@2e19b69463e60ab224f6a4ce712af69dac6cdc55
 
     - name: fetch-release-notes
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@cb0ca9ef8b8492c20693dd28c95502ed03c06bd4
       with:
         name: release-notes
         path: /tmp
