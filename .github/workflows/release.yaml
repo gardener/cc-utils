@@ -507,7 +507,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git reset --hard "${{ steps.release.outputs.release-commit-digest }}"
+          # use the SIGNED release-commit digest emitted by the release action (not the pre-action
+          # refs/capture-commit, which holds the unsigned digest that signing has replaced).
+          release_commit_digest="${{ steps.release.outputs.release-commit-digest }}"
+          # the release-commit is signed/re-created server-side, so its object may not be in this
+          # job's local pack - fetch it before resetting onto it
+          git fetch origin "${release_commit_digest}"
+          git reset --hard "${release_commit_digest}"
 
       - name: create-release-branch-bump-commit
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}

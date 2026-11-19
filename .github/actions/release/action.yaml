@@ -207,7 +207,9 @@ outputs:
     value: component-descriptor
   release-commit-digest:
     description: |
-      the digest of the release commit (as imported from release-commit-objects)
+      the digest of the (signed) release-commit, as created server-side via `createCommitOnBranch`.
+      Callers that need to reset onto the release-commit (e.g. for a release-branch) must use this
+      value - the pre-action `refs/capture-commit` holds the unsigned digest, which signing replaces.
     value: ${{ steps.save-release-commit-digest.outputs.digest }}
 
 defaults:
@@ -242,13 +244,73 @@ runs:
         commit-objects: ${{ inputs.release-commit-objects }}
         commit-digest: ${{ inputs.release-commit-digest }}
         after-import: rebase
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    # The imported release-commit is authored locally, hence unsigned. Re-create it server-side via
+    # createCommitOnBranch so it is "Verified". After import, HEAD is the release-commit, HEAD~1 its
+    # parent.
+    - name: read-release-commit-message
+      id: release-commit-message
+      shell: bash
+      run: |
+        set -euo pipefail
+        # read the message before the soft-reset below moves HEAD off the commit
+        {
+          echo "message<<__RELEASE_COMMIT_MSG__"
+          git log -1 --format=%B HEAD
+          echo "__RELEASE_COMMIT_MSG__"
+        } >> "${GITHUB_OUTPUT}"
+    - name: expose-release-commit-as-worktree-changes
+      id: release-parent
+      shell: bash
+      run: |
+        set -euo pipefail
+        parent="$(git rev-parse 'HEAD~1')"
+        # the release-commit must be a single commit above its parent, else HEAD~1 is the wrong
+        # base to sign against - fail loudly rather than sign the wrong parent
+        commit_count="$(git rev-list --count "${parent}..HEAD")"
+        if [ "${commit_count}" != "1" ]; then
+          echo "error: expected exactly 1 commit above the release-commit parent, got ${commit_count}"
+          exit 1
+        fi
+        echo "parent=${parent}" >> "${GITHUB_OUTPUT}"
+        # soft-reset so the release-commit's changes become worktree-changes for the signed-commit action
+        git reset --soft "${parent}"
+    - name: create-release-signing-branch
+      id: signing-branch
+      shell: bash
+      env:
+        RUN_ID: ${{ github.run_id }}
+        RUN_ATTEMPT: ${{ github.run_attempt }}
+        PARENT: ${{ steps.release-parent.outputs.parent }}
+      run: |
+        set -euo pipefail
+        # createCommitOnBranch commits onto (and moves) an existing branch. Use a throwaway branch
+        # so the real release-branch is not moved until the release succeeds. Force-push tolerates a
+        # leftover ref from a re-run.
+        signing_branch="release-signing/${RUN_ID}-${RUN_ATTEMPT}"
+        echo "name=${signing_branch}" >> "${GITHUB_OUTPUT}"
+        git push --force origin "${PARENT}:refs/heads/${signing_branch}"
+    - name: sign-release-commit
+      id: sign-release-commit
+      uses: gardener/cc-utils/.github/actions/signed-commit@master
+      with:
+        token: ${{ inputs.git-push-token || inputs.github-token }}
+        branch: ${{ steps.signing-branch.outputs.name }}
+        expected-head-oid: ${{ steps.release-parent.outputs.parent }}
+        message: ${{ steps.release-commit-message.outputs.message }}
+        # release-commits often have no diff - still sign an empty commit (as `git commit --allow-empty` did)
+        allow-empty: 'true'
     - name: save-release-commit-digest
       id: save-release-commit-digest
       shell: bash
+      env:
+        SIGNED_OID: ${{ steps.sign-release-commit.outputs.commit-sha }}
       run: |
-        # capture before create-bump-commit overwrites refs/capture-commit
-        echo "digest=$(git rev-parse refs/capture-commit)" >> $GITHUB_OUTPUT
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+        set -euo pipefail
+        # make the signed commit local HEAD so the later tag-push / release-commit-push use it
+        git fetch origin "${SIGNED_OID}"
+        git reset --hard "${SIGNED_OID}"
+        echo "digest=${SIGNED_OID}" >> "${GITHUB_OUTPUT}"
     - name: write-component-descriptor-from-input
       if: ${{ inputs.component-descriptor-artifact == '' }}
       shell: bash
@@ -421,6 +483,50 @@ runs:
           schema: fail
           access: fail
           artefact-uniqueness: fail
+    # prepare embedded the UNSIGNED release-commit digest in main-source. Signing changed it, so
+    # correct main-source.access.commit to the signed digest before the descriptor is published.
+    - name: patch-descriptor-main-source-commit
+      shell: python
+      env:
+        SIGNED_OID: ${{ steps.save-release-commit-digest.outputs.digest }}
+      run: |
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import dataclasses
+
+        import yaml
+
+        import ocm
+        import ocm.util
+
+        signed_oid = os.environ['SIGNED_OID']
+        assert signed_oid, 'signed release-commit oid is empty'
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+        main_source = ocm.util.main_source(component_descriptor, no_source_ok=False)
+        if not isinstance(main_source.access, ocm.GithubAccess):
+          raise TypeError(f'main-source access is not GithubAccess: {type(main_source.access)}')
+        main_source.access.commit = signed_oid
+
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
+          yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
+          )
+
+        # reload and assert the serialised descriptor carries the signed digest
+        with open('/tmp/component-descriptor.yaml') as f:
+          reloaded = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+        patched = ocm.util.main_source(reloaded, no_source_ok=False)
+        assert patched.access.commit == signed_oid, (
+          f'descriptor patch failed: {patched.access.commit!r} != {signed_oid!r}'
+        )
+        print(f'patched main-source access.commit -> {signed_oid}')
     - name: publish OCM Component-Descriptor
       shell: bash
       id: publish-component-descriptor
@@ -677,11 +783,48 @@ runs:
         )
 
     - name: push-bump-commit
+      id: push-bump-commit
       shell: bash
+      env:
+        RELEASE_NOTES_PATH: ${{ inputs.release-notes-path }}
       run: |
-        if [ -n "${{ inputs.release-notes-path }}" -a -d "${{ inputs.release-notes-path }}" ]; then
-          git add "${{ inputs.release-notes-path }}"
-          git commit --amend --no-edit --allow-empty
+        set -euo pipefail
+
+        if [ -n "${RELEASE_NOTES_PATH}" -a -d "${RELEASE_NOTES_PATH}" ]; then
+          git add "${RELEASE_NOTES_PATH}"
         fi
 
-        git push origin "${{ github.ref }}"
+        # HEAD is the local (unsigned) bump-commit, HEAD~1 the branch-tip.
+        # capture the bump message from HEAD (the `version` action already expanded ${version}) so
+        # the signed commit reuses the expanded message rather than the raw template.
+        {
+          echo "message<<__BUMP_COMMIT_MSG__"
+          git log -1 --format=%B HEAD
+          echo "__BUMP_COMMIT_MSG__"
+        } >> "${GITHUB_OUTPUT}"
+
+        # soft-reset so the bump (+ release-notes purge) become worktree-changes for signed re-creation
+        branch_tip="$(git rev-parse 'HEAD~1')"
+        echo "branch-tip=${branch_tip}" >> "${GITHUB_OUTPUT}"
+        git reset --soft "${branch_tip}"
+
+    - name: push-bump-commit-signed
+      uses: gardener/cc-utils/.github/actions/signed-commit@master
+      with:
+        token: ${{ inputs.git-push-token || inputs.github-token }}
+        branch: ${{ github.ref_name }}
+        expected-head-oid: ${{ steps.push-bump-commit.outputs.branch-tip }}
+        message: ${{ steps.push-bump-commit.outputs.message }}
+
+    - name: cleanup-release-signing-branch
+      if: ${{ always() && steps.signing-branch.outputs.name != '' }}
+      shell: bash
+      env:
+        SIGNING_BRANCH: ${{ steps.signing-branch.outputs.name }}
+      run: |
+        # best-effort removal of the throwaway signing-branch
+        set +e
+        git push origin --delete "${SIGNING_BRANCH}" \
+          && echo "deleted signing-branch ${SIGNING_BRANCH}" \
+          || echo "warning: could not delete signing-branch (may already be gone)"
+
