@@ -237,6 +237,25 @@ runs:
         set -eu
         tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
           -C /tmp component-descriptor.yaml
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<"EOF" > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
+    - name: read-release-tag
+      id: release-tag
+      shell: bash
+      run: |
+        set -euo pipefail
+        version=$(yq .component.version /tmp/component-descriptor.yaml)
+        tag_name="${{ inputs.github-tag-template }}"
+        tag_ref="refs/tags/${tag_name}"
+        git check-ref-format "${tag_ref}"
+        echo "version=${version}" >> "${GITHUB_OUTPUT}"
+        echo "tag-ref=${tag_ref}" >> "${GITHUB_OUTPUT}"
+        echo "tag-name=${tag_name}" >> "${GITHUB_OUTPUT}"
     - name: import-release-commit
       uses: gardener/cc-utils/.github/actions/import-commit@master
       with:
@@ -245,10 +264,22 @@ runs:
         commit-digest: ${{ inputs.release-commit-digest }}
         after-import: rebase
     - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    # A retry must keep the already-published signed digest. Reject a conflicting/unsigned tag
+    # before changing refs, signing another commit, or publishing/overwriting the descriptor.
+    - name: reuse-existing-release-commit
+      id: existing-release-commit
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.git-push-token || inputs.github-token }}
+        TAG_REF: ${{ steps.release-tag.outputs.tag-ref }}
+      run: |
+        set -euo pipefail
+        python3 "${GITHUB_ACTION_PATH}/release_retry.py" --tag-ref "${TAG_REF}"
     # The imported release-commit is authored locally, hence unsigned. Re-create it server-side via
     # createCommitOnBranch so it is "Verified". After import, HEAD is the release-commit, HEAD~1 its
     # parent.
     - name: read-release-commit-message
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       id: release-commit-message
       shell: bash
       run: |
@@ -260,6 +291,7 @@ runs:
           echo "__RELEASE_COMMIT_MSG__"
         } >> "${GITHUB_OUTPUT}"
     - name: capture-release-commit-for-signing
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       id: release-parent
       shell: bash
       run: |
@@ -275,6 +307,7 @@ runs:
         echo "parent=${parent}" >> "${GITHUB_OUTPUT}"
         echo "source-commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
     - name: create-release-signing-branch
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       id: signing-branch
       shell: bash
       env:
@@ -306,6 +339,7 @@ runs:
         echo "expected-oid=${PARENT}" >> "${GITHUB_OUTPUT}"
         echo "name=${signing_branch}" >> "${GITHUB_OUTPUT}"
     - name: sign-release-commit
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       id: sign-release-commit
       uses: gardener/cc-utils/.github/actions/signed-commit@master
       with:
@@ -320,34 +354,29 @@ runs:
       id: save-release-commit-digest
       shell: bash
       env:
-        SIGNED_OID: ${{ steps.sign-release-commit.outputs.commit-sha }}
+        REUSED_OID: ${{ steps.existing-release-commit.outputs.digest }}
+        SIGNED_OID: ${{ steps.existing-release-commit.outputs.digest || steps.sign-release-commit.outputs.commit-sha }}
       run: |
         set -euo pipefail
+        test -n "${SIGNED_OID}"
         # make the signed commit local HEAD so the later tag-push / release-commit-push use it
-        git fetch origin "${SIGNED_OID}"
+        if [ -z "${REUSED_OID}" ]; then
+          git fetch --no-tags origin "${SIGNED_OID}"
+        fi
         git reset --hard "${SIGNED_OID}"
         echo "digest=${SIGNED_OID}" >> "${GITHUB_OUTPUT}"
-    - name: write-component-descriptor-from-input
-      if: ${{ inputs.component-descriptor-artifact == '' }}
-      shell: bash
-      run: |
-        cat <<"EOF" > /tmp/component-descriptor.yaml
-        ${{ inputs.component-descriptor }}
-        EOF
     - name: preprocess
       id: preprocess
       shell: bash
       env:
         inputs_rc: ${{ inputs.release-candidate }}
+        VERSION: ${{ steps.release-tag.outputs.version }}
+        TAG_REF: ${{ steps.release-tag.outputs.tag-ref }}
+        TAG_NAME: ${{ steps.release-tag.outputs.tag-name }}
       run: |
-        version=$(yq .component.version /tmp/component-descriptor.yaml)
-        echo "version=${version}" >> $GITHUB_OUTPUT
-
-        # main git tag
-        tag_name="${{ inputs.github-tag-template }}"
-        tag_ref="refs/tags/${tag_name}"
-        echo "tag-ref=${tag_ref}" >> $GITHUB_OUTPUT
-        echo "tag-name=${tag_name}" >> $GITHUB_OUTPUT
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "tag-ref=${TAG_REF}" >> "$GITHUB_OUTPUT"
+        echo "tag-name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
 
         orig_ref="$(git rev-parse @)"
         echo "orig-ref=${orig_ref}" >> $GITHUB_OUTPUT
@@ -561,6 +590,8 @@ runs:
         name: component-descriptor
 
     - name: push tag-ref
+      # In particular, do not replace an existing annotated tag with its peeled commit.
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       shell: bash
       run: |
         set -eu
