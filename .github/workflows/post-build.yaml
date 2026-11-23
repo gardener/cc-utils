@@ -283,7 +283,7 @@ jobs:
           regex="${regex//\./\\.}"
           regex="^${regex}$"
 
-          if [[ "${{ github.ref_name }}" =~ $regex ]]; then
+          if [[ "$GITHUB_REF_NAME" =~ $regex ]]; then
             info="INFO: On release branch, creating draft release."
             echo "$info"
             echo "$info" >> ${GITHUB_STEP_SUMMARY}
