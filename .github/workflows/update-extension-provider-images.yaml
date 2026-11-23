@@ -51,6 +51,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.base-branch }}
 
       - name: Run image update action
         id: image_update
@@ -83,14 +85,13 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
           permissions: |
+            contents: write
             pull-requests: write
-
-      - name: Setup Git Identity
-        uses: gardener/cc-utils/.github/actions/setup-git-identity@master
 
       - name: Check for Changes
         id: check_changes
         run: |
+          set -euo pipefail
           images_path="${{ inputs.images-yaml-path }}"
           if git diff --quiet "$images_path"; then
             echo "No changes detected in $images_path. Exiting."
@@ -100,15 +101,30 @@ jobs:
             echo "changes_detected=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit and Push Changes
+      - name: Prepare PR branch
         if: steps.check_changes.outputs.changes_detected == 'true'
+        id: prepare_branch
+        env:
+          BRANCH_NAME: ${{ inputs.branch-name }}
         run: |
-          images_path="${{ inputs.images-yaml-path }}"
-          git add "$images_path"
-          git add .ocm/release-notes/ 2>/dev/null || true
-          git commit -m "Chore: Auto-update image versions"
-          git checkout -B ${{ inputs.branch-name }}
-          git push origin ${{ inputs.branch-name }} --force
+          set -euo pipefail
+          parent=$(git rev-parse HEAD)
+          # Reset remote branch
+          git push origin "HEAD:refs/heads/$BRANCH_NAME" --force
+          echo "parent=$parent" >> "$GITHUB_OUTPUT"
+
+      - name: Create signed upgrade commit
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        id: sign-commit
+        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        with:
+          token: ${{ steps.fed-token.outputs.token }}
+          branch: ${{ inputs.branch-name }}
+          expected-head-oid: ${{ steps.prepare_branch.outputs.parent }}
+          message: "Chore: Auto-update image versions"
+          paths: |
+            ${{ inputs.images-yaml-path }}
+            .ocm/release-notes/
 
       - name: Create or Update Pull Request
         if: steps.check_changes.outputs.changes_detected == 'true'
