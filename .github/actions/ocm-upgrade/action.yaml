@@ -282,6 +282,8 @@ runs:
             ignore_prerelease_versions=True,
             pr_naming_pattern='${{ inputs.pr-naming-pattern }}',
             component_policies=component_policies,
+            github_token=github_token,
+            host=host,
           ):
           if isinstance(result, ocm_upgrade.UpgradeError):
             upgrade_errors.append(result)

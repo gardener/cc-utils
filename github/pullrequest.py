@@ -450,44 +450,66 @@ def reset_worktree(git_helper: gitutil.GitHelper):
     git_helper.repo.git.clean('-fd')
 
 
+def _purge_ref(repository: github3.repos.repo.Repository, branch_name: str):
+    '''
+    deletes heads/{branch_name}, swallowing (and logging) any error so cleanup never masks a
+    propagating exception.
+    '''
+    try:
+        repository.ref(f'heads/{branch_name}').delete()
+    except Exception as e:
+        logger.warning(f'failed to purge pr-branch {branch_name!r}: {e!r}')
+
+
 @contextlib.contextmanager
 def commit_and_push_to_tmp_branch(
     repository: github3.repos.repo.Repository,
     git_helper: gitutil.GitHelper,
     commit_message: str,
+    *,
+    github_token: str,
+    sign,
+    host: str | None=None,
     delete_on_exit: bool=False,
 ):
     '''
-    creates a commit from existing diff and pushes it to a temporary branch w/ random name. The
-    temporary branch-name is yielded.
+    creates a GitHub-signed commit from the current worktree-diff onto a temporary branch w/ random
+    name via `createCommitOnBranch` and yields the temporary branch-name.
+
+    `sign` is a callable with the shape of
+    `sign_upgrade_commit.sign_commit_onto_branch`; it is injected by the caller so this module (which
+    ships in the `gardener-gha-libs` bundle) does not import the action-path signer directly.
 
     In case of exceptions, the branch will be purged.
     '''
-    commit = git_helper.index_to_commit(message=commit_message)
-    logger.info(f'commit for upgrade-PR: {commit.hexsha=}')
-    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
-    # use the local commit's parent rather than a live API call to heads/{target_branch}:
+    # capture the parent from local HEAD rather than a live API call to heads/{target_branch}:
     # if master advances between checkout and here (e.g. during a long set_dependency_version
-    # callback), the API would return a newer SHA that is not an ancestor of our local commit,
-    # making the push a non-fast-forward → rejected.
-    head_sha = commit.parents[0].hexsha
-    repository.create_ref(f'refs/heads/{new_branch_name}', head_sha)
+    # callback), the API would return a newer SHA that is not an ancestor of our local tree.
+    parent = git_helper.repo.head.commit.hexsha
+    new_branch_name = ci.util.random_str(prefix='ci-', length=12)
+    repository.create_ref(f'refs/heads/{new_branch_name}', parent)
 
     try:
-        git_helper.push(from_ref=commit.hexsha, to_ref=f'refs/heads/{new_branch_name}')
+        commit_oid = sign(
+            repo_dir=git_helper.repo.working_tree_dir,
+            token=github_token,
+            repository_full_name=f'{repository.owner.login}/{repository.name}',
+            branch=new_branch_name,
+            expected_head_oid=parent,
+            message=commit_message,
+            host=host,
+        )
+        logger.info(f'signed commit for upgrade-PR: {commit_oid=}')
     except:
         logger.warning('an error occurred - removing now useless pr-branch')
-        repository.ref(f'heads/{new_branch_name}').delete()
+        _purge_ref(repository, new_branch_name)
         raise
 
     try:
         yield new_branch_name
     except:
-        repository.ref(f'heads/{new_branch_name}').delete()
+        _purge_ref(repository, new_branch_name)
         raise
     finally:
         if delete_on_exit:
-            try:
-                repository.ref(f'heads/{new_branch_name}').delete()
-            except github3.exceptions.NotFoundError:
-                pass
+            _purge_ref(repository, new_branch_name)
