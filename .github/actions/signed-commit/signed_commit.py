@@ -200,6 +200,7 @@ def create_signed_commit(
     host: str | None=None,
     allow_empty: bool=False,
     expected_tree_oid: str | None=None,
+    body: str='',
 ) -> str:
     '''
     creates a GitHub-signed commit on `branch` via the `createCommitOnBranch` mutation and returns
@@ -226,7 +227,7 @@ def create_signed_commit(
             'branchName': branch,
         },
         'expectedHeadOid': expected_head_oid,
-        'message': {'headline': headline, 'body': ''},
+        'message': {'headline': headline, 'body': body},
         # always send fileChanges (even with empty additions/deletions): omitting it entirely
         # makes createCommitOnBranch fail server-side with an opaque "Something went wrong" error.
         # Empty arrays produce an empty commit (same tree as expected_head_oid).

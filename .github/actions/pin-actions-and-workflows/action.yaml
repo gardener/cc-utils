@@ -60,6 +60,12 @@ inputs:
       Optional name of an artifact produced by `capture-commit` (e.g. `release-commit-objects`).
       If set, the artifact is imported before pinning so that the commit it contains is
       reachable and can be passed as `own-ref`.
+  token:
+    type: string
+    required: true
+    description: |
+      GitHub token used to author the signed pinning-commits (via createCommitOnBranch) and to
+      move the target branch. Must grant `contents: write`.
 
 runs:
   using: composite
@@ -90,6 +96,8 @@ runs:
 
     - name: pin
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
       run: |
         set -euo pipefail
 
@@ -113,10 +121,3 @@ runs:
           --own-org "${own_org}" \
           --own-repo "${own_repo}" \
           --bundle-dir "${bundle_dir}"
-
-    - name: push
-      shell: bash
-      run: |
-        set -euo pipefail
-        git push --force origin 'refs/heads/${{ inputs.target-branch }}'
-        git push origin "refs/tags/fixated/$(git rev-parse '${{ inputs.own-ref }}')"

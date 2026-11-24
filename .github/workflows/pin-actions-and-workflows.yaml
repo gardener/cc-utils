@@ -82,6 +82,7 @@ jobs:
       id-token: write  # required for OIDC federated token exchange
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+        id: checkout
         with:
           fetch-depth: 0  # full history required for git worktree operations
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -112,3 +113,4 @@ jobs:
           own-repo: ${{ inputs.own-repo }}
           release-commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
           bundle-dir: /tmp/gardener-gha-libs-bundle
+          token: ${{ steps.checkout.outputs.token || secrets.GITHUB_TOKEN }}
