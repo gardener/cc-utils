@@ -44,6 +44,18 @@ class OciTagType(enum.Enum):
     NO_TAG = 'no_tag'
 
 
+class OCIRegistrySuffix(enum.StrEnum):
+    GAR = 'pkg.dev'
+    GCR = 'gcr.io'
+    DOCKERHUB = 'docker.io'
+    GHCR = 'ghcr.io'
+    ALIYUN = 'cr.aliyuncs.com'
+    AWS_PRIVATE = 'amazonaws.com'
+    AWS_ECR_PUBLIC = 'public.ecr.aws'
+    AZURE = 'azurecr.io'
+    KEPPEL = 'keppel.'
+
+
 class OciRegistryType(enum.Enum):
     AWS = 'aws'
     AZURE = 'azure'
@@ -56,30 +68,34 @@ class OciRegistryType(enum.Enum):
     KEPPEL = 'keppel'
     UNKNOWN = 'unknown'
 
+
     @staticmethod
     def from_image_ref(
         image_reference: str | 'OciImageReference',
     ) -> 'OciRegistryType':
         netloc = OciImageReference.to_image_ref(image_reference=image_reference).netloc
 
-        if 'pkg.dev' in netloc:
+        if netloc == OCIRegistrySuffix.GAR or netloc.endswith('.' + OCIRegistrySuffix.GAR):
             return OciRegistryType.GAR
-        if 'gcr.io' in netloc:
+        if netloc == OCIRegistrySuffix.GCR or netloc.endswith('.' + OCIRegistrySuffix.GCR):
             return OciRegistryType.GCR
-        if 'docker.io' in netloc:
+        if netloc == OCIRegistrySuffix.DOCKERHUB or netloc.endswith('.' + OCIRegistrySuffix.DOCKERHUB):
             return OciRegistryType.DOCKERHUB
-        if 'ghcr.io' in netloc:
+        if netloc == OCIRegistrySuffix.GHCR or netloc.endswith('.' + OCIRegistrySuffix.GHCR):
             return OciRegistryType.GHCR
-        if 'cr.aliyuncs.com' in netloc:
+        if netloc == OCIRegistrySuffix.ALIYUN or netloc.endswith('.' + OCIRegistrySuffix.ALIYUN):
             return OciRegistryType.ALIYUN
-        if 'keppel.' in netloc:
-            return OciRegistryType.KEPPEL
-        if 'amazonaws.com' in netloc: # AWS ECR private
+        if (
+            netloc == OCIRegistrySuffix.AWS_PRIVATE
+            or netloc.endswith('.' + OCIRegistrySuffix.AWS_PRIVATE)
+            or netloc == OCIRegistrySuffix.AWS_ECR_PUBLIC
+            or netloc.endswith('.' + OCIRegistrySuffix.AWS_ECR_PUBLIC)
+          ):
             return OciRegistryType.AWS
-        if 'public.ecr.aws' in netloc: # AWS ECR public
-            return OciRegistryType.AWS
-        if 'azurecr.io' in netloc:
+        if netloc == OCIRegistrySuffix.AZURE or netloc.endswith('.' + OCIRegistrySuffix.AZURE):
             return OciRegistryType.AZURE
+        if netloc == OCIRegistrySuffix.KEPPEL or netloc.endswith('.' + OCIRegistrySuffix.KEPPEL):
+            return OciRegistryType.KEPPEL
 
         return OciRegistryType.UNKNOWN
 
