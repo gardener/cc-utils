@@ -241,22 +241,18 @@ def resolve_digest(
     oci_api: oci_client.Client,
 ) -> str:
     """
-    Resolve the image index digest for a given repository:tag.
+    Resolve the manifest digest for a given repository:tag.
 
     Returns the digest string (e.g. 'sha256:abc...'). Exits with code 1 on failure.
-    Reads the Content-Digest header returned by the registry so the result
-    covers the full manifest index (all platforms), not a single-platform digest.
+    Prefers a multiarch manifest index but falls back to single-arch images.
     """
     ref = f'{repository}:{tag}'
     try:
         res = oci_api.manifest_raw(
             image_reference=om.OciImageReference(ref),
-            accept=om.MimeTypes.multiarch,
+            accept=om.MimeTypes.prefer_multiarch,
         )
-        digest = res.headers.get('Docker-Content-Digest')
-        if not digest:
-            digest = 'sha256:' + hashlib.sha256(res.content).hexdigest()
-        return digest
+        return 'sha256:' + hashlib.sha256(res.content).hexdigest()
     except (
         om.OciImageNotFoundException,
         requests.exceptions.HTTPError,
@@ -727,8 +723,7 @@ def create_minor_version_entries(
         else:
             target_version = f"{major}.{minor}.x"
 
-        template = image_list[-1]
-        new_entry = template.copy_as_template(highest_tag, target_version)
+        new_entry = image_list[-1].copy_as_template(highest_tag, target_version)
         refresh_digest(new_entry, oci_api)
         new_entries.append(new_entry)
 
