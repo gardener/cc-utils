@@ -373,7 +373,7 @@ jobs:
           branch_info = ocm.branch_info.BranchInfo.from_dict(branch_info_raw)
           branch_policy = branch_info.branch_policy
 
-          branch_name = '${{ github.ref_name }}'
+          branch_name = os.environ['GITHUB_REF_NAME']
 
           if branch_info.release_branch_pattern.fullmatch(branch_name):
             print(f'INFO: Running on release branch {branch_name}')
