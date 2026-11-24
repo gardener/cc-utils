@@ -719,14 +719,19 @@ runs:
         draft_tag_name = f'{release_tag_name}-draft'
         prerelease = '${{ steps.preprocess.outputs.is-rc }}' == 'true'
 
+        # Keep the release as a draft until all assets are uploaded. GitHub
+        # immutable-releases seal a release at publish-time, after which no
+        # further assets may be uploaded (422 "Cannot upload assets to an
+        # immutable release"). So we assemble as draft, then publish last.
         if not (gh_release := github.release.find_draft_release(
           repository=repository,
           name=draft_tag_name,
         )):
           gh_release = repository.create_release(
             tag_name=release_tag_name,
+            name=draft_tag_name,
             body=release_notes_markdown or 'no release-notes available',
-            draft=False,
+            draft=True,
             prerelease=prerelease,
           )
         else:
@@ -734,7 +739,7 @@ runs:
             tag_name=release_tag_name,
             name=release_tag_name,
             body=release_notes_markdown or 'no release-notes available',
-            draft=False,
+            draft=True,
             prerelease=prerelease,
           )
 
@@ -771,6 +776,17 @@ runs:
             asset=fh,
           )
           fh.close() # as execution will end on errors, it should be okay to not guard against that
+
+        # all assets uploaded successfully -> publish the release. With
+        # immutable-releases enabled, this seals the release (incl. its now
+        # fully-populated asset-set). Done last so no upload follows the seal.
+        gh_release.edit(
+          tag_name=release_tag_name,
+          name=release_tag_name,
+          body=release_notes_markdown or 'no release-notes available',
+          draft=False,
+          prerelease=prerelease,
+        )
 
     - name: prepare-push-bump-commit
       shell: bash
