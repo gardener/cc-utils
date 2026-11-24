@@ -1,0 +1,8 @@
+/* main content pane */
+.wy-nav-content {
+  max-width: 80%;
+}
+
+.wy-table-responsive table td {
+  white-space: unset !important;
+}

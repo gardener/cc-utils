@@ -1,0 +1,632 @@
+name: Build and Test
+run-name: Building and testing
+on:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the "mode" to use. passed to `prepare` (currently for selecting  target-registries)
+
+    outputs:
+      version-commit-digest:
+        description: commit-digest for version-commit
+        value: ${{ jobs.prepare.outputs.version-commit-digest }}
+      effective-version:
+        description: effective version used during build
+        value: ${{ jobs.prepare.outputs.version }}
+      base-component-descriptor:
+        description: |
+          name of the GHA artifact holding the base OCM Component-Descriptor
+          (use `merge-ocm-fragments` action to collect full component-descriptor):
+        value: ${{ jobs.prepare.outputs.component-descriptor-artefact }}
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yaml
+    permissions:
+      id-token: write
+    with:
+      mode: ${{ inputs.mode }}
+
+  build-bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            arch: amd64
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
+    name: build-bundle (${{ matrix.arch }})
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/bundle-gardener-gha-libs
+        id: bundle
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gardener-gha-libs-bundle-${{ matrix.arch }}
+          path: ${{ steps.bundle.outputs.bundle-dir }}
+
+  merge-bundle:
+    needs: build-bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gardener-gha-libs-bundle-amd64
+          path: /tmp/bundle-amd64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gardener-gha-libs-bundle-arm64
+          path: /tmp/bundle-arm64
+      - name: merge-wheelhouses
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
+          cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gardener-gha-libs-bundle
+          path: /tmp/gardener-gha-libs-bundle
+
+  smoke-test-bundle:
+    needs: merge-bundle
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ubuntu-latest
+            arch: amd64
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
+    name: smoke-test-bundle (${{ matrix.arch }})
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gardener-gha-libs-bundle
+          path: /tmp/gardener-gha-libs-bundle
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: ./.github/actions/install-gardener-gha-libs
+        with:
+          bundle-dir: /tmp/gardener-gha-libs-bundle
+      - name: smoketest
+        shell: python
+        run: |
+          import oci.model
+          import oci.auth
+          import ocm
+          import cnudie.util
+          import github.util
+          import version
+
+          # oci
+          ref = oci.model.OciImageReference('example.com/org/repo:tag')
+          assert ref.tag == 'tag', ref
+
+          # ocm
+          assert ocm.AccessType.OCI_REGISTRY in list(ocm.AccessType)
+
+          # ocm schema file must be present (regression: was missing from bundle)
+          import ocm.validate
+          import importlib.resources
+          schema = importlib.resources.files('ocm').joinpath('ocm-component-descriptor-schema.yaml')
+          assert schema.is_file(), f'schema file missing: {schema}'
+
+          # gha-libs
+          v = version.parse_to_semver('1.2.3')
+          assert v.major == 1 and v.minor == 2 and v.patch == 3, v
+
+  package:
+    runs-on: ubuntu-latest
+    environment: build
+    needs:
+      - prepare
+    permissions:
+      contents: read
+    steps:
+      - name: compute-setuptools-version
+        id: version
+        run: |
+          set -eu
+          version=${{ needs.prepare.outputs.version }}
+          if [[ "${version}" == *-* ]]; then
+            version="${version%%-*}-dev0"
+          fi
+          echo "setuptools-version=${version}" >> "${GITHUB_OUTPUT}"
+      - name: Install setuptools
+        run: |
+          pip3 install --root-user-action ignore \
+            setuptools \
+            pyyaml
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: create distribution package
+        id: package
+        run: |
+          set -eu
+          version=${{ steps.version.outputs.setuptools-version }}
+          echo "version: ${version}"
+          echo "${version}" | .ci/write-version
+          pkg_dir=dist
+          mkdir -p ${pkg_dir}
+          pkg_dir="$(readlink -f dist)"
+          echo "pkgdir: ${pkg_dir}"
+          for path in \
+            setup.py \
+            setup.gha.py \
+            setup.oci.py \
+            setup.ocm.py \
+          ; do
+           echo "building distribution package from ${path}"
+           python3 ${path} \
+              bdist_wheel \
+              --dist-dir ${pkg_dir}
+           rm -rf build
+          done
+
+          echo "Built packages"
+          ls "${pkg_dir}"
+          blobs_dir="${pkg_dir}/blobs.d"
+          mkdir ${blobs_dir}
+          resources_file=resources.yaml
+          for package in \
+            gardener-cicd-libs \
+            gardener-gha-libs \
+            gardener-oci \
+            gardener-ocm \
+            ; do
+            path="$(echo $package | tr - _)-*"
+            prefix=dist
+            access_type='localBlob'
+            outf="${pkg_dir}/${package}.tar.gz"
+            tar cJf ${outf} -C ${pkg_dir} $(cd ${pkg_dir}; ls ${path})
+            mimetype=$(file -i ${outf} | cut -d: -f2 | cut -d' ' -f2- | cut -d';' -f1)
+            leng=$(stat -c"%s" ${outf})
+            digest="$(sha256sum ${outf} | cut -d' ' -f1)"
+            echo "\
+          - name: ${package}
+            version: ${version}
+            type: ${mimetype}
+            relation: local
+            access:
+              type: localBlob
+              localReference: sha256:${digest}
+              size: ${leng}
+              mediaType: ${mimetype}" \
+            >> ${resources_file}
+            mv ${outf} ${blobs_dir}/${digest}
+          done
+          cp "${resources_file}" dist/ocm_resources.yaml
+          echo "ocm_resources=dist/ocm_resources.yaml" >> "${GITHUB_OUTPUT}"
+          find "${pkg_dir}"
+          tar czf distribution-packages.tar.gz dist
+      - name: export-ocm-fragments
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+        with:
+          ocm-resources-file: dist/ocm_resources.yaml
+          blobs-directory: dist/blobs.d
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+        with:
+          name: distribution-packages
+          path: distribution-packages.tar.gz
+
+  lint:
+    runs-on: ubuntu-latest
+    needs:
+      - package
+      - prepare
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Retrieve Distribution Packages
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: distribution-packages
+      - name: lint
+        run: |
+          tar xf distribution-packages.tar.gz -C /tmp
+          echo "installing linters"
+          export CFLAGS='-Wno-int-conversion'
+          if ! pip3 install --pre --upgrade --break-system-packages \
+            --find-links /tmp/dist \
+            gardener-cicd-libs \
+            'gardener-oci[async]' \
+            gardener-ocm \
+            bandit \
+            flake8 \
+            jq \
+            setuptools \
+            pylint \
+            > /tmp/pip3-install.log; then
+            echo "error while trying to install packages:"
+            cat /tmp/pip3-install.log
+          fi
+
+          echo "running linters"
+          blobs_dir=blobs.d
+          mkdir $blobs_dir
+          bandit_logfile=bandit.log
+          bandit_evidence="${blobs_dir}/bandit.tar.gz"
+
+          bandit_extra_args="-f txt -o ${bandit_logfile}" \
+            .ci/lint
+
+          # pass bandit.log + used cfg (pyproject.toml) as evidence
+          tar czf $bandit_evidence $bandit_logfile pyproject.toml
+
+      - uses: ./.github/actions/export-ocm-fragments
+        with:
+          ocm-resources: |
+            name: sast-linting-evidence
+            relation: local
+            access:
+              type: localBlob
+              localReference: bandit.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - pybandit
+              - name: gardener.cloud/comment
+                value: |
+                  we use bandit (linter) for SAST-Scans.
+                  See: https://bandit.readthedocs.io/en/latest/
+          blobs-directory: blobs.d
+
+  unittests:
+    needs:
+      - package
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Retrieve Distribution Packages
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: distribution-packages
+      - name: run-tests
+        run: |
+          set -euo pipefail
+          echo "install dependencies for python-packages"
+          echo "install packages"
+          tar xf distribution-packages.tar.gz -C /tmp
+          export CFLAGS='-Wno-int-conversion'
+          if ! pip3 install --pre --break-system-packages \
+            --find-links /tmp/dist \
+            gardener-cicd-libs \
+            gardener-oci \
+            gardener-ocm \
+            pytest \
+            setuptools \
+              > /tmp/pip3-install.log; then
+            echo "error while trying to install packages:"
+            cat /tmp/pip3-install.log
+          fi
+
+          echo "running tests"
+          mkdir /tmp/fake-cfg.d
+          touch /tmp/fake-cfg.d/config_types.yaml
+          export CC_CONFIG_DIR=/tmp/fake-cfg.d
+
+          mkdir /tmp/blobs.d
+
+          .ci/test 2>&1 | tee /tmp/blobs.d/test-log.txt
+
+          tar czf /tmp/blobs.d/test-log.tar.gz -C/tmp/blobs.d test-log.txt
+      - name: add-unittests-results-to-component-descriptor
+        uses: ./.github/actions/export-ocm-fragments
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            - name: test-results
+              relation: local
+              access:
+                type: localBlob
+                localReference: test-log.tar.gz
+              labels:
+                - name: gardener.cloud/purposes
+                  value:
+                    - test
+
+  test-merge-ocm-fragments-extract:
+    name: integration-test merge-ocm-fragments extract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - name: run
+        run: test/actions/test-extract-ocm-fragments.sh
+
+  test-actions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - name: setup-python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: install-act
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/nektos/act/master/install.sh \
+            | sudo bash -s -- -b /usr/local/bin
+      - name: run-act-tests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: test/actions/run-act-tests.sh
+
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    environment: build
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install Sphinx
+        run: pip3 install --break-system-packages sphinx sphinx-rtd-theme
+      - name: Generate Documentation
+        run: |
+          mkdir documentation-out.d
+          GH_PAGES_PATH=$PWD/documentation-out.d .ci/generate_documentation
+          ls documentation-out.d
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+        with:
+          name: documentation
+          path: documentation-out.d
+
+  publish-documentation:
+    if: >-
+      ${{ github.ref_name == github.event.repository.default_branch  &&
+          github.repository == 'gardener/cc-utils'
+      }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: read
+    needs:
+      - documentation
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: refs/heads/gh-pages
+      - name: Retrieve Documentation
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: documentation
+          path: /tmp/documentation-out.d
+      - uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+      - name: Publish Documentation
+        run: |
+          tar c -C /tmp/documentation-out.d . | tar x -C.
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no changes in documentation - no need to update documentation"
+            exit 0
+          fi
+          git add -A
+          git commit -m "update documentation"
+          git push origin refs/heads/gh-pages
+
+  test-ctt-sbom-inject:
+    name: integration-test ctt-sbom-inject
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare.outputs.can-push == 'true' }}
+    needs:
+      - prepare
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+      - name: install-syft
+        uses: ./.github/actions/install-syft
+      - name: install-cbomkit-theia
+        uses: ./.github/actions/install-cbomkit-theia
+      - uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+        with:
+          oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
+          gh-token: ${{ github.token }}
+      - name: run
+        shell: python
+        run: |
+          import os
+          import sys
+          sys.path.insert(0, '.')
+          import ctt.test.test_ctt_sbom_inject as t
+          t.run(run_id=os.environ['GITHUB_RUN_ID'])
+
+  test-spdx-external:
+    name: integration-test spdx-external
+    runs-on: ubuntu-latest
+    if: ${{ needs.prepare.outputs.can-push == 'true' }}
+    needs:
+      - prepare
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+      - name: install-syft
+        uses: ./.github/actions/install-syft
+      - name: install-cbomkit-theia
+        uses: ./.github/actions/install-cbomkit-theia
+      - uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+        with:
+          oci-image-reference: ${{ needs.prepare.outputs.oci-registry }}
+          gh-token: ${{ github.token }}
+      - name: run
+        shell: python
+        run: |
+          import logging
+          import os
+          import sys
+          import tempfile
+
+          import yaml
+
+          sys.path.insert(0, '.github/actions/merge-ocm-fragments')
+          import spdx_external
+
+          logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+
+          oci_registry = '${{ needs.prepare.outputs.oci-registry }}'
+          run_id = '${{ github.run_id }}'
+
+          component_descriptor = {
+              'meta': {'schemaVersion': 'v2'},
+              'component': {
+                  'name': 'github.com/gardener/cc-utils',
+                  'version': '0.0.0-spdx-inttest',
+                  'provider': 'internal',
+                  'repositoryContexts': [],
+                  'sources': [],
+                  'componentReferences': [],
+                  'resources': [
+                      {
+                          'name': 'local-placeholder',
+                          'version': '0.0.0',
+                          'type': 'ociImage',
+                          'relation': 'local',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'alpine:3',
+                          },
+                      },
+                      {
+                          'name': 'alpine',
+                          'version': '3',
+                          'type': 'ociImage',
+                          'relation': 'external',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'alpine:3',
+                          },
+                      },
+                      {
+                          'name': 'wolfi-base',
+                          'version': 'latest',
+                          'type': 'ociImage',
+                          'relation': 'external',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'cgr.dev/chainguard/wolfi-base:latest',
+                          },
+                      },
+                      {
+                          'name': 'busybox',
+                          'version': 'stable',
+                          'type': 'ociImage',
+                          'relation': 'external',
+                          'access': {
+                              'type': 'ociRegistry',
+                              'imageReference': 'busybox:stable',
+                          },
+                      },
+                  ],
+              },
+          }
+
+          with tempfile.TemporaryDirectory() as out_dir:
+              cd_path = os.path.join(out_dir, 'component-descriptor.yaml')
+              with open(cd_path, 'w') as f:
+                  yaml.safe_dump(component_descriptor, f)
+
+              spdx_external.process_external_resources(
+                  component_descriptor_path=cd_path,
+                  out_dir=out_dir,
+                  cache_registry=oci_registry,
+                  cache_repo_prefix=f'sbom-inttest/{run_id}',
+                  force_rescan=False,
+              )
+
+              with open(cd_path) as f:
+                  result = yaml.safe_load(f)
+
+          resources = result['component']['resources']
+          external_names = {'alpine', 'wolfi-base', 'busybox'}
+          sbom_resources = [
+              r for r in resources
+              if r.get('extraIdentity', {}).get('sbom-format')
+          ]
+          cbom_resources = [
+              r for r in resources
+              if r.get('extraIdentity', {}).get('cbom-format')
+          ]
+
+          assert len(sbom_resources) == 6, \
+              f'expected 6 SBOM resources (2 per image), got {len(sbom_resources)}: ' \
+              f'{[(r["name"], r.get("extraIdentity")) for r in sbom_resources]}'
+
+          assert len(cbom_resources) == 3, \
+              f'expected 3 CBOM resources (1 per image), got {len(cbom_resources)}: ' \
+              f'{[(r["name"], r.get("extraIdentity")) for r in cbom_resources]}'
+
+          for r in sbom_resources:
+              assert r['name'] in external_names, \
+                  f'unexpected SBOM resource name: {r["name"]}'
+              assert r['access']['type'] == 'localBlob/v1', \
+                  f'{r["name"]}: expected localBlob/v1, got {r["access"]["type"]}'
+              labels = {l['name']: l['value'] for l in r.get('labels', [])}
+              assert 'gardener.cloud/sbom/source-image' in labels, \
+                  f'{r["name"]}: missing source-image label'
+              assert 'gardener.cloud/sbom/source-image-digest' in labels, \
+                  f'{r["name"]}: missing source-image-digest label'
+              sbom_label = labels.get('gardener.cloud/sbom')
+              assert sbom_label is not None, f'{r["name"]}: missing gardener.cloud/sbom label'
+              tool_ver = sbom_label.get('data-source', {}).get('tool-version')
+              fmt = r['extraIdentity']['sbom-format']
+              logging.getLogger('assert').info(
+                  f'{r["name"]} ({fmt}): ok (syft {tool_ver})'
+              )
+
+          for r in cbom_resources:
+              assert r['name'] in external_names, \
+                  f'unexpected CBOM resource name: {r["name"]}'
+              assert r['access']['type'] == 'localBlob/v1', \
+                  f'{r["name"]}: expected localBlob/v1, got {r["access"]["type"]}'
+              labels = {l['name']: l['value'] for l in r.get('labels', [])}
+              assert 'gardener.cloud/cbom/source-image' in labels, \
+                  f'{r["name"]}: missing cbom source-image label'
+              assert 'gardener.cloud/cbom/source-image-digest' in labels, \
+                  f'{r["name"]}: missing cbom source-image-digest label'
+              logging.getLogger('assert').info(
+                  f'{r["name"]} (cbom-cyclonedx-1.6): ok'
+              )
+
+          # verify both SBOM formats are present for each image
+          for name in external_names:
+              fmts = {
+                  r['extraIdentity']['sbom-format']
+                  for r in sbom_resources if r['name'] == name
+              }
+              assert fmts == {'spdx-2.3', 'cyclonedx-1.6'}, \
+                  f'{name}: expected both spdx-2.3 and cyclonedx-1.6, got {fmts}'
+
+          logging.getLogger('assert').info('all assertions passed')

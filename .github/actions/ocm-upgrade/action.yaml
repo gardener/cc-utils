@@ -1,0 +1,326 @@
+name: OCM-Upgrade
+description: |
+  An action creating upgrade-pullrequests for referenced OCM-Components.
+
+  The action will firstly try to locate the "base-component" descriptor (`.ocm/base-component.yaml`).
+  If it exists, diffs for matching component-references will be created. In addition, the optional
+  `.ci/set_dependency_version`-callback will be called.
+
+  The latter callback is passed the following environment variables:
+    - DEPENDENCY_TYPE (always `component` - reserved for later extension)
+    - DEPENDENCY_NAME (the component-name to be upgraded)
+    - DEPENDENCY_VERSION (the target-version of component to be upgraded)
+
+  For backwards-compatibility-reasons, in addition, the environment variable `REPO_DIR`, pointing to
+  repository-worktree will be set. However, set_dependency_version callback-scripts should not rely
+  on it, and consider it deprecated.
+
+  If a component-upgrade cannot be done using "base-component", the `set_dependency_version` script
+  is _not_ optional (absence is in that case reported as an error).
+
+  Use `prepare-action-path` in case `set_dependency_version` needs additional setup (e.g. to install
+  golang toolchain).
+
+inputs:
+  component-descriptor:
+    description: |
+      The effective OCM-Component-Descriptor based on which Upgrade-Pullrequests should be
+      created. Prefer `component-descriptor-artifact`.
+    type: string
+    required: false
+  component-descriptor-artifact:
+    description: |
+      Name of a GHA artifact containing the component-descriptor (preferred over inline input).
+    type: string
+    required: false
+  ocm-repositories:
+    description: |
+      A comma-separated list of OCM-Repositories that should be used to lookup Component-Versions.
+    required: true
+  github-token:
+    description: |
+      auth-token used for pushing upgrade-pullrequest-commit and for creating PullRequests.
+    type: string
+    required: true
+  merge-policy:
+    description: |
+      Controls what should happen to newly created upgrade-pullrequests.
+    type: choice
+    default: manual
+    options:
+      - automerge
+      - manual
+  merge-method:
+    description: |
+      Sets the merge-method (only used if merge-policy is set to automerge)
+    type: choice
+    default: merge
+    options:
+      - rebase
+      - merge
+      - squash
+  merge-policies:
+    required: false
+    type: string
+    description: |
+      A YAML-formatted string defining merge-policies/-methods per component. Components which are
+      not contained in the list will fallback to the separate inputs `merge-policy` and `merge-method`.
+
+      Example:
+      ```
+      - components:
+          - acme.org/my-component
+          - acme.org/my-other-component
+        merge-policy: automerge # manual
+        merge-method: rebase # merge, squash
+      ```
+  prepare-action-path:
+    description: |
+      Path (relative to repository-root) to a local action. If given, this action will be called
+      prior to running `.ci/set_dependency_version` callback script. Useful to install preliminaries
+      required by said callback-script.
+    type: string
+    required: false
+  upstream-component-name:
+    description: Upstream component name to gate against
+    type: string
+    required: false
+    default: ""
+  upstream-update-policy:
+    description: Upstream policy
+    type: choice
+    options:
+      - strictly-follow
+      - accept-hotfixes
+    default: strictly-follow
+  component-policies:
+    description: |
+      A YAML-formatted list of per-component policies controlling upstream-gating. Each entry
+      requires a `components` selector (list of component names / regexes) and an optional
+      `upstream-component-name` (empty string disables upstream-gating for that component,
+      causing it to fall back to greatest-version lookup) and an optional
+      `upstream-update-policy` override.
+
+      Example:
+      ```
+      - components:
+          - acme.org/my-extra-component
+        upstream-component-name: ''
+      - components:
+          - acme.org/my-other-component
+        upstream-component-name: acme.org/other-upstream
+        upstream-update-policy: accept-hotfixes
+      ```
+    type: string
+    required: false
+  pr-naming-pattern:
+    description: |
+      Pattern to use for naming the created pull requests. Allowed values are:
+        - component-name: Use the component name (default behavior)
+        - reference-name: Use the component reference name. This allows for having multiple references to the same component but with different names and puposes (e.g. testing and production)
+    type: choice
+    options:
+      - component-name
+      - reference-name
+    default: component-name
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        token: ${{ inputs.github-token }}
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C /tmp component-descriptor.yaml
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<'EOF' > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
+    - name: write-ocm-repositories
+      shell: bash
+      run: |
+        cat <<EOF > /tmp/ocm-repositories
+        ${{ inputs.ocm-repositories }}
+        EOF
+        cat <<EOF > /tmp/github-token
+        ${{ inputs.github-token }}
+        EOF
+    - name: prepare-action
+      if: ${{ inputs.prepare-action-path != '' }}
+      shell: bash
+      run: |
+        set -eu
+        # cp outside of repository-tree so we do not have to cleanup afterwards; also, we need a
+        # static path, as github-actions do not allow using parameters
+        cp -r "${{ inputs.prepare-action-path }}" ../prepare-action
+    - name: call-prepare-action
+      if: ${{ inputs.prepare-action-path != '' }}
+      uses: ./../prepare-action
+    - name: authenticate-against-oci-registry
+      uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+      with:
+        oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
+        gh-token: ${{ github.server_url == 'https://github.com' && inputs.github-token || '' }} # only try to authenticate for gh-com
+    - name: create-and-update-upgrade-pullrequests
+      shell: python
+      run: |
+        import os
+        import sys
+
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import logging
+
+        import yaml
+
+        import github
+        import github.pullrequest
+        import ocm
+        import ocm.gardener
+
+        import ocm_upgrade
+
+        logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+        logger = logging.getLogger('upgrade-ocm')
+
+        # silence annoying loggers
+        logging.getLogger('github3').setLevel(logging.WARN)
+        logging.getLogger('urllib3').setLevel(logging.WARN)
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          raw = yaml.safe_load(f)
+
+        component_descriptor = ocm.ComponentDescriptor.from_dict(raw)
+        component = component_descriptor.component
+
+        with open('/tmp/ocm-repositories') as f:
+          ocm_repositories = f.read().strip().split(',')
+
+        logger.info(f'{ocm_repositories=}')
+
+        oci_client, component_descriptor_lookup, version_lookup = ocm_upgrade.create_ocm_lookups(
+          ocm_repositories=ocm_repositories,
+        )
+
+        merge_policy = ocm_upgrade.MergePolicy('${{ inputs.merge-policy }}')
+        merge_method = ocm_upgrade.MergeMethod('${{ inputs.merge-method }}')
+
+        merge_policy_configs_raw = yaml.safe_load('''\
+        ${{ inputs.merge-policies }}
+        ''') or []
+        merge_policy_configs = [
+          ocm_upgrade.MergePolicyConfig.from_dict(merge_policy_config_raw)
+          for merge_policy_config_raw in merge_policy_configs_raw
+        ]
+
+        component_policies_raw = yaml.safe_load('''\
+        ${{ inputs.component-policies }}
+        ''') or []
+        component_policies = [
+          ocm_upgrade.ComponentPolicy.from_dict(component_policy_raw)
+          for component_policy_raw in component_policies_raw
+        ]
+
+        with open('/tmp/github-token') as f:
+          github_token = f.read().strip()
+
+        host, org, repo = github.host_org_and_repo()
+        github_api = github.github_api(token=github_token)
+        repository = github_api.repository(org, repo)
+
+        repo_dir = os.getcwd()
+
+        logger.info('retrieving existing upgrade-pull-requests')
+
+        upgrade_pullrequests = list(
+          github.pullrequest.iter_upgrade_pullrequests(
+            repository=repository,
+            state='all',
+            reference_component=component,
+          )
+        )
+
+        logger.info(f'found {len(upgrade_pullrequests)=}')
+        upstream_component = '${{ inputs.upstream-component-name }}'.strip() or None
+        upstream_update_policy = ocm_upgrade.UpstreamUpdatePolicy(
+          '${{ inputs.upstream-update-policy }}'.strip()
+        )
+
+        created_upgrade_pullrequests = []
+        upgrade_errors = []
+        for result in ocm_upgrade.create_upgrade_pullrequests(
+            component=component,
+            component_descriptor_lookup=component_descriptor_lookup,
+            version_lookup=version_lookup,
+            upgrade_pullrequests=upgrade_pullrequests,
+            repo_dir=repo_dir,
+            repo_url=f'https://{host}/{org}/{repo}',
+            repository=repository,
+            merge_policy=merge_policy,
+            merge_method=merge_method,
+            merge_policy_configs=merge_policy_configs,
+            branch='${{ github.ref_name }}',
+            oci_client=oci_client,
+            upstream_component_name=upstream_component,
+            upstream_update_policy=upstream_update_policy,
+            ignore_prerelease_versions=True,
+            pr_naming_pattern='${{ inputs.pr-naming-pattern }}',
+            component_policies=component_policies,
+          ):
+          if isinstance(result, ocm_upgrade.UpgradeError):
+            upgrade_errors.append(result)
+          else:
+            created_upgrade_pullrequests.append(result)
+
+        upgrade_pullrequests.extend(created_upgrade_pullrequests)
+
+        for obsolete_pullrequest in github.pullrequest.iter_obsolete_upgrade_pull_requests(
+          upgrade_pull_requests=upgrade_pullrequests,
+          keep_hotfix_versions=True,
+          pr_naming_pattern='${{ inputs.pr-naming-pattern }}',
+          reference_component=component,
+        ):
+          obsolete_pullrequest.purge()
+
+        summary = f'''\
+        ## Upgrade-Dependencies-Summary
+
+        Found {len(upgrade_pullrequests)=}.
+        Created {len(created_upgrade_pullrequests)=}.
+        '''
+
+        if upgrade_errors:
+          summary += '\n        ## Warnings: Failed Upgrade-Attempts\n\n'
+          for ue in upgrade_errors:
+            uv = ue.upgrade_vector
+            summary += (
+              f'        - **{uv.component_name}**: '
+              f'`{uv.whence.version}` → `{uv.whither.version}` '
+              f'— {ue.error}\n'
+              f'        <details><summary>Traceback</summary>\n\n'
+              f'        ```\n{ue.formatted_traceback}```\n'
+              f'        </details>\n'
+            )
+
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+          f.write(summary)
+
+        if upgrade_errors:
+          logger.error(f'{len(upgrade_errors)} upgrade(s) failed — see summary for details')
+          sys.exit(1)

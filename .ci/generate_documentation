@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -eu
+
+if [ -z "${SOURCE_PATH:-}" ]; then
+  export repo_dir="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")/..")"
+else
+  export repo_dir="${SOURCE_PATH}"
+fi
+
+
+if [ ! -d "${repo_dir}" ]; then
+  echo "not a directory: ${repo_dir}"
+  exit 1
+fi
+
+if [ -z "${GH_PAGES_PATH:-}" ]; then
+  export out_dir="${repo_dir}/documentation.out"
+  mkdir -p "${out_dir}"
+else
+  out_dir="${GH_PAGES_PATH}"
+fi
+
+echo "repo_dir: ${repo_dir}, outdir: ${out_dir}"
+
+if [ ! -d ${out_dir} ]; then
+  echo "not a directory: ${out_dir}"
+  exit 1
+fi
+
+export SOURCE_DIR="${repo_dir}/doc"
+export PYTHONPATH="${repo_dir}"
+sphinx-build -E -av "${SOURCE_DIR}" "${out_dir}"
+
+# disable github's theme
+touch "${out_dir}/.nojekyll"
+
+# cp custom css
+cp -r "${SOURCE_DIR}/css" "${out_dir}/_static/"

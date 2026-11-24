@@ -1,0 +1,892 @@
+name: release
+description: |
+  An opinionated release-Action for creating releases adhering to conventions established within
+  Gardener-CICD.
+
+  This actions assumes the version to be released is contained within passed
+  OCM-Component-Descriptor. It also assumes a commit containing code-changes for said release was
+  created upfront (as output by `capture-commit` action).
+
+  Releases encompass:
+  - publishing of OCM Component-Descriptor
+  - pushing of a release-tag (pointing to release-commit)
+  - creating of a github-release (including release-notes + release-assets)
+  - pushing of "bump-commit" (to current branch)
+
+inputs:
+  component-descriptor:
+    description: |
+      Effective Component-Descriptor to publish. Any local-blobs are assumed to already be
+      present in target-OCI-Repository.
+
+      Either this input or `component-descriptor-artifact` must be provided.
+    required: false
+  component-descriptor-artifact:
+    description: |
+      Name of a GHA artifact containing the component-descriptor, as produced by
+      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+
+      Preferred over the inline `component-descriptor` input for large descriptors.
+    required: false
+  component-descriptor-blobs-dir:
+    description: |
+      Directory containing blobfiles referenced as local-blobs in component-descriptor
+      (name-scheme: <algorithm>:<hexdigest>).
+    required: false
+  release-commit-objects:
+    description: |
+      release-commit in serialised form (as output by `capture-commit` action)
+
+      Either this input, or `release-commit-objects-artefact` must be passed.
+    required: false
+  release-commit-objects-artefact:
+    description: |
+      name of artefact (as published from capture-commit action) to use.
+    required: false
+  release-commit-digest:
+    description: |
+      release-commit-digest (necessary, unless capture-commit's special-ref is not present)
+  release-commit-target:
+    type: choice
+    description: |
+      controls where to push release-commit (and tag) to. Using `tag` option is safest, as it is
+      guaranteed to succeed, also if current branch's head change during build. As release-commit
+      should ideally not change (as it is referenced, e.g. in Component-Descriptor), if using
+      `branch` option, merging back to current branch is attempted (instead of rebase).
+      tag: push to tag (outside of current branch)
+      branch: push to current branch (attempt merge if needed)
+    default: tag
+    options:
+      - tag
+      - branch
+  next-version:
+    type: string
+    description: |
+      passed to `version` action as `version-operation`. see this action for documentation
+    required: false
+    default: bump-minor
+  next-version-commit-message:
+    type: string
+    description: |
+      passed to `version` action as `commit-message`. see this action for documentation
+    required: false
+    default: 'next version: ${version}'
+  next-version-callback-action-path:
+    type: string
+    required: false
+    description: |
+      passed to `version` action as `callback-action-path`
+  version-read-callback:
+    type: string
+    description: |
+      passed to `version` action as `read-callback`. see this action for documentation
+    required: false
+  version-write-callback:
+    type: string
+    description: |
+      passed to `version` action as `write-callback`. see this action for documentation
+    required: false
+  version-versionfile:
+    type: string
+    description: |
+      passed to `version` action as `versionfile`. see this action for documentation
+    required: false
+  github-token:
+    description: |
+      the github-auth-token to use for authenticating against GitHub and OCI-Registry.
+      Use `secrets.GITHUB_TOKEN`
+    required: true
+  git-push-token:
+    description: |
+      an auth-token to use for pushing release- and bump-commits. Must grant the privilege to
+      bypass branch-protection-rules, if present.
+    required: false
+  release-on-github:
+    default: true
+    type: boolean
+    description: |
+      If set to `true`, the action will create a new GitHub release (or convert an existing draft
+      release to an actual release).
+  release-candidate:
+    default: ''
+    type: string
+    description: |
+      The number of the release candidate to publish. If set, the created GitHub release will be
+      marked as "prerelease" and the next version prerelease will be set to
+      "rc.{release-candidate + 1}" instead of "dev".
+  assets:
+    type: string
+    required: false
+    description: |
+      An optional list of release-assets in YAML-format that will be added to the GitHub-Release.
+      If creation of github-release is suppressed (via `release-on-github` input), this value
+      will be ignored.
+
+      Each element is expected to have the following form:
+
+      ```
+      name: <name, as it should be set for the release-asset>, required
+      mime-type: # optional (will be determined using libmagic, if absent)
+      type: ocm-resource # mandatory; only `ocm-resource` is supported; for future extensions
+      id:
+        name: <ocm-resource-name>, required
+        type: <ocm-resource-type>, optional
+        <extra-id-attr>: <value> # optional - any attributes from extraIdentity
+      ```
+
+      `id` must be specified such that a resource is identified unambiguously. Only resources
+      that are stored as a localBlob (access-type) are supported.
+
+      Example (assuming pipeline builds `helm` for multiple platforms):
+      ```
+      assets: |
+       - name: helm-linux-x86-64
+         mime-type: application/x-pie-executable
+         type: ocm-resource
+         id:
+          name: helm
+          os: linux
+          arch: x86_64
+      ```
+  github-tag-template:
+    default: '${version}'
+    type: string
+    description: |
+      GitHub tag template to use for the created release tag. Currently only supported template-var:
+      ${version} (bash-syntax): Version read from local component descriptor (i.e. previous version
+      operations are honoured).
+  github-additional-tag-templates:
+    required: false
+    type: string
+    description: |
+      Optional newline-separated list of additional tag templates. Each non-empty line will be
+      treated like `github-tag-template` (supporting ${version} substitution) and an additional
+      GitHub tag pointing to the release commit will be created.
+  on-existing-component-descriptor:
+    default: fail
+    type: choice
+    description: |
+      Defines how the action should behave if the (to-be-released) component-descriptor already
+      exists.
+    options:
+      - skip
+      - overwrite
+      - fail
+  on-validation-errors:
+    default: fail
+    type: choice
+    options:
+      - fail
+      - continue
+  ocm-validation-recursion-depth:
+    default: -1
+    type: number
+    description: |
+      Passed as `recursion-depth` to the `ocm-validate` action. -1 = full transitive closure
+      (default). 0 = top-level only. Requires `ocm-repositories` to be resolvable when non-zero.
+  extra-oci-registries:
+    required: false
+    type: string
+    description: |
+      Optional newline-separated list of additional OCI image references (or registry prefixes) to
+      authenticate against before running OCM validation. Useful when transitive component
+      references or artefacts are stored in registries not covered by `ocm-repositories`.
+  release-notes-path:
+    required: false
+    type: string
+    default: .ocm/release-notes
+    description: |
+      The relative path (from repository root) to the directory containing the release-notes docs.
+
+outputs:
+  component-descriptor-artifact:
+    description: |
+      name of the GHA artifact containing the published component-descriptor
+      (same artifact as uploaded by the `release` action: `component-descriptor`).
+    value: component-descriptor
+  release-commit-digest:
+    description: |
+      the digest of the (signed) release-commit, as created server-side via `createCommitOnBranch`.
+      Callers that need to reset onto the release-commit (e.g. for a release-branch) must use this
+      value - the pre-action `refs/capture-commit` holds the unsigned digest, which signing replaces.
+    value: ${{ steps.save-release-commit-digest.outputs.digest }}
+
+defaults:
+  run:
+    shell: bash
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        token: ${{ inputs.git-push-token || inputs.github-token }}
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C /tmp component-descriptor.yaml
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<"EOF" > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
+    - name: read-release-tag
+      id: release-tag
+      shell: bash
+      run: |
+        set -euo pipefail
+        version=$(yq .component.version /tmp/component-descriptor.yaml)
+        tag_name="${{ inputs.github-tag-template }}"
+        tag_ref="refs/tags/${tag_name}"
+        git check-ref-format "${tag_ref}"
+        echo "version=${version}" >> "${GITHUB_OUTPUT}"
+        echo "tag-ref=${tag_ref}" >> "${GITHUB_OUTPUT}"
+        echo "tag-name=${tag_name}" >> "${GITHUB_OUTPUT}"
+    - name: import-release-commit
+      uses: gardener/cc-utils/.github/actions/import-commit@a755376b7a3617b87124cc182b9dbee131e3b102
+      with:
+        commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
+        commit-objects: ${{ inputs.release-commit-objects }}
+        commit-digest: ${{ inputs.release-commit-digest }}
+        after-import: rebase
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+    # A retry must keep the already-published signed digest. Reject a conflicting/unsigned tag
+    # before changing refs, signing another commit, or publishing/overwriting the descriptor.
+    - name: reuse-existing-release-commit
+      id: existing-release-commit
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.git-push-token || inputs.github-token }}
+        TAG_REF: ${{ steps.release-tag.outputs.tag-ref }}
+      run: |
+        set -euo pipefail
+        python3 "${GITHUB_ACTION_PATH}/release_retry.py" --tag-ref "${TAG_REF}"
+    # The imported release-commit is authored locally, hence unsigned. Re-create it server-side via
+    # createCommitOnBranch so it is "Verified". After import, HEAD is the release-commit, HEAD~1 its
+    # parent.
+    - name: read-release-commit-message
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
+      id: release-commit-message
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Preserve the imported commit's expanded message for signed re-creation.
+        {
+          echo "message<<__RELEASE_COMMIT_MSG__"
+          git log -1 --format=%B HEAD
+          echo "__RELEASE_COMMIT_MSG__"
+        } >> "${GITHUB_OUTPUT}"
+    - name: capture-release-commit-for-signing
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
+      id: release-parent
+      shell: bash
+      run: |
+        set -euo pipefail
+        parent="$(git rev-parse 'HEAD~1')"
+        # the release-commit must be a single commit above its parent, else HEAD~1 is the wrong
+        # base to sign against - fail loudly rather than sign the wrong parent
+        commit_count="$(git rev-list --count "${parent}..HEAD")"
+        if [ "${commit_count}" != "1" ]; then
+          echo "error: expected exactly 1 commit above the release-commit parent, got ${commit_count}"
+          exit 1
+        fi
+        echo "parent=${parent}" >> "${GITHUB_OUTPUT}"
+        echo "source-commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+    - name: create-release-signing-branch
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
+      id: signing-branch
+      shell: bash
+      env:
+        RUN_ID: ${{ github.run_id }}
+        RUN_ATTEMPT: ${{ github.run_attempt }}
+        PARENT: ${{ steps.release-parent.outputs.parent }}
+      run: |
+        set -euo pipefail
+        # createCommitOnBranch commits onto (and moves) an existing branch. Give each invocation
+        # its own throwaway branch, including invocations in the same workflow run/attempt.
+        nonce="$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
+        signing_branch="release-signing/${RUN_ID}-${RUN_ATTEMPT}-${nonce}"
+        signing_ref="refs/heads/${signing_branch}"
+        # An empty expected OID makes this a create-only push. Do not claim an existing ref even
+        # if it already points at PARENT (Git reports that no-op as a successful push).
+        push_result="$(git push --porcelain --force-with-lease="${signing_ref}:" \
+          origin "${PARENT}:${signing_ref}")"
+        printf '%s\n' "${push_result}"
+        created=false
+        while IFS=$'\t' read -r status refspec summary; do
+          if [ "${status}" = '*' ] && [ "${refspec}" = "${PARENT}:${signing_ref}" ]; then
+            created=true
+          fi
+        done <<< "${push_result}"
+        if [ "${created}" != true ]; then
+          echo "error: signing-branch was not newly created"
+          exit 1
+        fi
+        echo "expected-oid=${PARENT}" >> "${GITHUB_OUTPUT}"
+        echo "name=${signing_branch}" >> "${GITHUB_OUTPUT}"
+    - name: sign-release-commit
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
+      id: sign-release-commit
+      uses: gardener/cc-utils/.github/actions/signed-commit@6a4e56dcf200208ce6df51ceca487c9adce26a42
+      with:
+        token: ${{ inputs.git-push-token || inputs.github-token }}
+        branch: ${{ steps.signing-branch.outputs.name }}
+        expected-head-oid: ${{ steps.release-parent.outputs.parent }}
+        source-commit: ${{ steps.release-parent.outputs.source-commit }}
+        message: ${{ steps.release-commit-message.outputs.message }}
+        # release-commits often have no diff - still sign an empty commit (as `git commit --allow-empty` did)
+        allow-empty: 'true'
+    - name: save-release-commit-digest
+      id: save-release-commit-digest
+      shell: bash
+      env:
+        REUSED_OID: ${{ steps.existing-release-commit.outputs.digest }}
+        SIGNED_OID: ${{ steps.existing-release-commit.outputs.digest || steps.sign-release-commit.outputs.commit-sha }}
+      run: |
+        set -euo pipefail
+        test -n "${SIGNED_OID}"
+        # make the signed commit local HEAD so the later tag-push / release-commit-push use it
+        if [ -z "${REUSED_OID}" ]; then
+          git fetch --no-tags origin "${SIGNED_OID}"
+        fi
+        git reset --hard "${SIGNED_OID}"
+        echo "digest=${SIGNED_OID}" >> "${GITHUB_OUTPUT}"
+    - name: preprocess
+      id: preprocess
+      shell: bash
+      env:
+        inputs_rc: ${{ inputs.release-candidate }}
+        VERSION: ${{ steps.release-tag.outputs.version }}
+        TAG_REF: ${{ steps.release-tag.outputs.tag-ref }}
+        TAG_NAME: ${{ steps.release-tag.outputs.tag-name }}
+      run: |
+        echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "tag-ref=${TAG_REF}" >> "$GITHUB_OUTPUT"
+        echo "tag-name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+        orig_ref="$(git rev-parse @)"
+        echo "orig-ref=${orig_ref}" >> $GITHUB_OUTPUT
+
+        cat <<"EOF" > /tmp/assets.yaml
+        ${{ inputs.assets }}
+        EOF
+
+        if [[ -n "$inputs_rc" ]]; then
+          echo "next-version-prerelease=rc.$((inputs_rc + 1))" >> "$GITHUB_OUTPUT"
+          echo "is-rc=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "next-version-prerelease=dev" >> "$GITHUB_OUTPUT"
+          echo "is-rc=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: fetch-prepare-values
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: prepare-workflow-values
+
+    - name: read-ocm-repositories
+      id: read-ocm-repositories
+      shell: bash
+      run: |
+        tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories
+        ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
+        rm -rf prepare-values.d prepare-workflow-values.tar
+        extra_oci_registries='${{ inputs.extra-oci-registries }}'
+        if [ -n "${extra_oci_registries}" ]; then
+          ocm_repositories="${ocm_repositories},$(printf '%s' "${extra_oci_registries}" | tr '\n' ',')"
+        fi
+        echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
+
+    - name: authenticate-against-oci-registry
+      uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+      with:
+        oci-image-reference: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
+        gh-token: ${{ inputs.github-token }}
+
+    - name: fetch-release-notes
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: release-notes
+        path: /tmp
+
+    - name: extract-release-notes
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir /tmp/release-notes
+        tar -xf /tmp/release-notes.tar -C /tmp/release-notes
+        # the artifact is attacker-influenceable (any job in the release run can replace it);
+        # reject symlinks/hardlinks/special files so a crafted tar cannot point release-notes
+        # processing at secrets outside the extraction dir (e.g. the checkout's git credentials)
+        if find /tmp/release-notes -mindepth 1 \! -type f \! -type d | grep -q .; then
+          echo '::error::release-notes archive contains non-regular files (symlinks?) - refusing'
+          find /tmp/release-notes -mindepth 1 \! -type f \! -type d -print
+          exit 1
+        fi
+
+    - name: attach-release-notes-to-component-descriptor
+      shell: python
+      run: |
+        import dataclasses
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import yaml
+
+        import oci.auth
+        import oci.client
+        import ocm
+        import release
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+        with open('/tmp/release-notes/legacy-release-notes.md') as f:
+          release_notes_markdown = f.read()
+        with open('/tmp/release-notes/release-notes-archive.tar', 'rb') as f:
+          tar_bytes = f.read()
+
+        oci_client = oci.client.Client(credentials_lookup=oci.auth.docker_credentials_lookup())
+
+        release.attach_release_notes(
+          component=component_descriptor.component,
+          release_notes_markdown=release_notes_markdown,
+          tar_bytes=tar_bytes,
+          oci_client=oci_client,
+        )
+
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
+          yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            Dumper=ocm.EnumValueYamlDumper,
+            stream=f,
+          )
+
+    - name: attach-branch-info-to-component-descriptor
+      shell: python
+      run: |
+        import dataclasses
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import yaml
+
+        import oci.client
+        import ocm
+        import release
+
+        if not os.path.isfile(branch_info_filename := '.ocm/branch-info.yaml'):
+          print(f'file "{branch_info_filename}" does not exist - will not attach to component descriptor')
+          exit(0)
+
+        print(f'found "{branch_info_filename}" - will attach contents to component descriptor')
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+        with open(branch_info_filename, 'rb') as f:
+          branch_info_bytes = f.read()
+
+        oci_client = oci.client.client_with_dockerauth()
+
+        release.attach_branch_info(
+          component=component_descriptor.component,
+          branch_info_bytes=branch_info_bytes,
+          oci_client=oci_client,
+        )
+
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
+          yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            Dumper=ocm.EnumValueYamlDumper,
+            stream=f,
+          )
+    - name: validate OCM Component-Descriptor
+      uses: gardener/cc-utils/.github/actions/ocm-validate@5cc630146e22dd5c44f5e3d196b3304b28d711e0
+      with:
+        component-descriptor-path: /tmp/component-descriptor.yaml
+        on-validation-errors: ${{ inputs.on-validation-errors }}
+        ocm-repositories: ${{ steps.read-ocm-repositories.outputs.ocm-repositories }}
+        recursion-depth: ${{ inputs.ocm-validation-recursion-depth }}
+        validation-cfg: |
+          schema: fail
+          access: fail
+          artefact-uniqueness: fail
+    # prepare embedded the UNSIGNED release-commit digest in main-source. Signing changed it, so
+    # correct main-source.access.commit to the signed digest before the descriptor is published.
+    - name: patch-descriptor-main-source-commit
+      shell: python
+      env:
+        SIGNED_OID: ${{ steps.save-release-commit-digest.outputs.digest }}
+      run: |
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import dataclasses
+
+        import yaml
+
+        import ocm
+        import ocm.util
+
+        signed_oid = os.environ['SIGNED_OID']
+        assert signed_oid, 'signed release-commit oid is empty'
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+        main_source = ocm.util.main_source(component_descriptor, no_source_ok=False)
+        if not isinstance(main_source.access, ocm.GithubAccess):
+          raise TypeError(f'main-source access is not GithubAccess: {type(main_source.access)}')
+        main_source.access.commit = signed_oid
+
+        with open('/tmp/component-descriptor.yaml', 'w') as f:
+          yaml.dump(
+            data=dataclasses.asdict(component_descriptor),
+            stream=f,
+            Dumper=ocm.EnumValueYamlDumper,
+          )
+
+        # reload and assert the serialised descriptor carries the signed digest
+        with open('/tmp/component-descriptor.yaml') as f:
+          reloaded = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+        patched = ocm.util.main_source(reloaded, no_source_ok=False)
+        assert patched.access.commit == signed_oid, (
+          f'descriptor patch failed: {patched.access.commit!r} != {signed_oid!r}'
+        )
+        print(f'patched main-source access.commit -> {signed_oid}')
+    - name: publish OCM Component-Descriptor
+      shell: bash
+      id: publish-component-descriptor
+      run: |
+        python -m ocm upload \
+          --file /tmp/component-descriptor.yaml \
+          --blobs-dir '${{ inputs.component-descriptor-blobs-dir }}' \
+          --on-exist ${{ inputs.on-existing-component-descriptor }}
+
+        tar czf /tmp/component-descriptor.tar.gz -C/tmp component-descriptor.yaml
+
+    - name: upload OCM Component-Descriptor as artifact
+      uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+      with:
+        path: /tmp/component-descriptor.tar.gz
+        name: component-descriptor
+
+    - name: push tag-ref
+      # In particular, do not replace an existing annotated tag with its peeled commit.
+      if: ${{ steps.existing-release-commit.outputs.digest == '' }}
+      shell: bash
+      run: |
+        set -eu
+
+        push_spec="@:${{ steps.preprocess.outputs.tag-ref }}"
+        echo "pushing tag ref using ${push_spec}"
+        git push origin "${push_spec}"
+
+    - name: push additional-tag-refs
+      if: ${{ inputs.github-additional-tag-templates != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # pass `version` to tag-template
+        export version="${{ steps.preprocess.outputs.version}}"
+
+        cat  <<EOF > /tmp/tags
+        ${{ inputs.github-additional-tag-templates }}
+        EOF
+
+        while IFS=$'\n' read -r tag; do
+            tag_name=$(echo "$tag" | xargs) # trim whitespace
+            if [ -z "${tag_name}" ]; then
+              echo "error: saw empty tag in github-additional-tag-templates input"
+              exit 1
+            fi
+            if [ "$tag_name" == "${{ inputs.github-tag-template }}" ]; then
+              echo "warning: saw duplicate tag in github-additional-tag-templates input:"
+              echo $tag_name
+              echo "-> ignoring"
+              continue
+            fi
+            git push origin @:refs/tags/$tag_name
+        done < /tmp/tags
+
+    - name: push release-commit
+      shell: bash
+      run: |
+        set -eu
+
+        orig_ref="${{ steps.preprocess.outputs.orig-ref }}"
+        case "${{ inputs.release-commit-target }}" in
+          tag)
+          echo "chose to not push tag to source-branch: exiting now"
+          exit 0
+          ;;
+          branch)
+          echo "will try to push against ${{ github.ref }}"
+          # fall-through (there is only error-case ahead)
+          ;;
+          *)
+          echo "error - don't know how to handle release-commit-target:"
+          echo "${{ inputs.release-commit-target }}"
+          exit 1
+          ;;
+        esac
+
+        # `branch`-case: we try to also push release-commit to branch that triggered us.
+        #                if that fails (due to concurrent head-update), we will try to do a
+        #                merge.
+
+        push_spec="@:${{ github.ref }}"
+        echo "trying to push release-commit using ${push_spec}"
+        if git push origin "${push_spec}"; then
+          echo "Successfully pushed release-commit to ${{ github.ref }}"
+          exit 0
+        fi
+
+        version="${{ steps.preprocess.outputs.version }}"
+        echo "we failed to push release-commit to ${{ github.ref }} - trying to merge"
+        git fetch origin "${{ github.ref }}"
+        git checkout -B "${{ github.ref_name }}" FETCH_HEAD
+        if git merge "${orig_ref}" -m "merge back from release ${version}"; then
+          git push origin "@:${{ github.ref }}"
+          exit 0
+        else
+          echo "Warning: failed to merge release-commit back to ${{ github.ref }}"
+          echo "release will continue as tag was successfully pushed"
+          # abort merge
+          rm -f .git/MERGE_HEAD
+          git reset --hard FETCH_HEAD
+          git checkout -B "${{ github.ref_name }}"
+          # at this point, repository should have clean checkout of source-branch, pointing to
+          # head-commit (discarding previous failed merge-attempt + also release-commit)
+          # -> this should be okay:
+          #   - tag was pushed
+          #   - we still might succeed in publishing bump-commit
+        fi
+
+    - name: create github-release
+      if: ${{ inputs.release-on-github == 'true' }}
+      shell: python
+      run: |
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import github3
+        import yaml
+
+        import github.release
+        import ocm
+
+        import release
+
+        host = os.environ['GITHUB_SERVER_URL'].removeprefix('https://')
+        org, repo = os.environ['GITHUB_REPOSITORY'].split('/')
+
+        token = '${{ inputs.github-token }}'
+        if host == 'github.com':
+          github_api = github3.GitHub(token=token)
+        else:
+          github_api = github3.GitHubEnterprise(
+            url=f'https://{host}',
+            token=token,
+          )
+
+        repository = github_api.repository(org, repo)
+
+        with open('/tmp/release-notes/github-release-notes.md') as f:
+          release_notes_markdown = f.read()
+
+        release_tag_name = '${{ steps.preprocess.outputs.tag-name }}'
+        draft_tag_name = f'{release_tag_name}-draft'
+        prerelease = '${{ steps.preprocess.outputs.is-rc }}' == 'true'
+
+        if not (gh_release := github.release.find_draft_release(
+          repository=repository,
+          name=draft_tag_name,
+        )):
+          gh_release = repository.create_release(
+            tag_name=release_tag_name,
+            body=release_notes_markdown or 'no release-notes available',
+            draft=False,
+            prerelease=prerelease,
+          )
+        else:
+          gh_release.edit(
+            tag_name=release_tag_name,
+            name=release_tag_name,
+            body=release_notes_markdown or 'no release-notes available',
+            draft=False,
+            prerelease=prerelease,
+          )
+
+        # application/yaml is (since 2024) a registered mimetype
+        # https://www.iana.org/assignments/media-types/media-types.xhtml
+        gh_release.upload_asset(
+          content_type='application/yaml',
+          name='component-descriptor.yaml',
+          asset=open('/tmp/component-descriptor.yaml'),
+        )
+
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f)
+          )
+
+        for asset in release.iter_assets(path='/tmp/assets.yaml'):
+          path, access = release.find_blob(
+            blobs_dir='${{ inputs.component-descriptor-blobs-dir }}',
+            asset=asset,
+            component=component_descriptor.component,
+          )
+
+          if asset.mime_type:
+            mime_type = asset.mime_type
+          else:
+            mime_type = access.mediaType
+
+          print(f'Uploading {asset=} as github-release-asset')
+          fh = open(path, 'rb')
+          gh_release.upload_asset(
+            content_type=mime_type,
+            name=asset.name,
+            asset=fh,
+          )
+          fh.close() # as execution will end on errors, it should be okay to not guard against that
+
+    - name: prepare-push-bump-commit
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # reset back to (current) head of branch for which release-job was started
+        # so the signed bump's expected-head-oid is the actual source-branch tip
+        git fetch origin "${{ github.ref }}"
+        git reset --hard FETCH_HEAD
+
+    - name: create-bump-commit
+      id: bump
+      uses: gardener/cc-utils/.github/actions/version@2236a0a58f11988b69f0b8d03541088b8aa957ec
+      # must be kept in sync with version action called in release workflow (except "version-operation")
+      with:
+        versionfile: ${{ inputs.version-versionfile }}
+        read-callback: ${{ inputs.version-read-callback }}
+        write-callback: ${{ inputs.version-write-callback }}
+        version-operation: ${{ inputs.next-version }}
+        callback-action-path: ${{ inputs.next-version-callback-action-path }}
+        prerelease: ${{ steps.preprocess.outputs.next-version-prerelease }}
+        commit-message: ${{ inputs.next-version-commit-message }}
+        repository-operation: commit-to-head
+        commit-kind: bump
+
+    - name: reset-release-notes-directory
+      if: ${{ inputs.release-notes-path }}
+      shell: python
+      run: |
+        import os
+        import subprocess
+
+        import release_notes.ocm
+
+        release_notes_path='${{ inputs.release-notes-path }}'.rstrip('/') + '/'
+
+        output = subprocess.run(
+          (
+            'git',
+            'ls-tree',
+            '${{ github.sha }}',
+            release_notes_path,
+            '--name-only',
+          ),
+          check=True,
+          capture_output=True,
+          encoding='utf-8',
+        ).stdout.strip()
+
+        if output:
+          release_notes_files_rel_path = output.split('\n')
+        else:
+          release_notes_files_rel_path = []
+
+        release_notes.ocm.purge_release_notes_dir(
+          repo_dir=os.getcwd(),
+          files_rel_path=release_notes_files_rel_path,
+        )
+
+    - name: push-bump-commit
+      id: push-bump-commit
+      shell: bash
+      env:
+        RELEASE_NOTES_PATH: ${{ inputs.release-notes-path }}
+      run: |
+        set -euo pipefail
+
+        if [ -n "${RELEASE_NOTES_PATH}" ] &&
+            [ -n "$(git ls-tree -r --name-only HEAD -- "${RELEASE_NOTES_PATH}")" ]; then
+          # Stage tracked note deletions even when the purge removed the entire directory.
+          # Do not add untracked capture artifacts (or unrelated generated files).
+          git add -u -- "${RELEASE_NOTES_PATH}"
+          if ! git diff --cached --quiet -- "${RELEASE_NOTES_PATH}"; then
+            git commit --amend --no-edit --only -- "${RELEASE_NOTES_PATH}"
+          fi
+        fi
+
+        # HEAD is the local (unsigned) bump-commit, HEAD~1 the branch-tip.
+        # capture the bump message from HEAD (the `version` action already expanded ${version}) so
+        # the signed commit reuses the expanded message rather than the raw template.
+        {
+          echo "message<<__BUMP_COMMIT_MSG__"
+          git log -1 --format=%B HEAD
+          echo "__BUMP_COMMIT_MSG__"
+        } >> "${GITHUB_OUTPUT}"
+
+        # Capture the amended commit's immutable tree, not the surrounding worktree.
+        branch_tip="$(git rev-parse 'HEAD~1')"
+        echo "branch-tip=${branch_tip}" >> "${GITHUB_OUTPUT}"
+        echo "source-commit=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+    - name: push-bump-commit-signed
+      uses: gardener/cc-utils/.github/actions/signed-commit@6a4e56dcf200208ce6df51ceca487c9adce26a42
+      with:
+        token: ${{ inputs.git-push-token || inputs.github-token }}
+        branch: ${{ github.ref_name }}
+        expected-head-oid: ${{ steps.push-bump-commit.outputs.branch-tip }}
+        source-commit: ${{ steps.push-bump-commit.outputs.source-commit }}
+        message: ${{ steps.push-bump-commit.outputs.message }}
+
+    - name: cleanup-release-signing-branch
+      if: ${{ always() && steps.signing-branch.outputs.name != '' }}
+      shell: bash
+      env:
+        SIGNING_BRANCH: ${{ steps.signing-branch.outputs.name }}
+        EXPECTED_OID: ${{ steps.sign-release-commit.outputs.commit-sha || steps.signing-branch.outputs.expected-oid }}
+      run: |
+        # Remove only the ref we created, at either the known signed commit or its initial OID
+        # if signing failed. Never infer ownership from the current remote-tracking branch.
+        set +e
+        if [ -z "${SIGNING_BRANCH}" ] || [ -z "${EXPECTED_OID}" ]; then
+          echo "warning: signing-branch ownership is unknown - skipping cleanup"
+          exit 0
+        fi
+        signing_ref="refs/heads/${SIGNING_BRANCH}"
+        git push --force-with-lease="${signing_ref}:${EXPECTED_OID}" origin ":${signing_ref}" \
+          && echo "deleted signing-branch ${SIGNING_BRANCH}" \
+          || echo "warning: could not delete signing-branch (may have moved or already be gone)"

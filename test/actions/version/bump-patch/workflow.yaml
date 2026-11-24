@@ -1,0 +1,21 @@
+name: test-version-bump-patch
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - id: version
+        uses: gardener/cc-utils/.github/actions/version@master
+        with:
+          version-operation: bump-patch
+          repository-operation: capture-commit
+      - name: assert
+        shell: bash
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          if [ "${version}" != '1.2.4' ]; then
+            echo "Expected version 1.2.4, got: ${version}"
+            exit 1
+          fi
+          echo "version=${version} OK"

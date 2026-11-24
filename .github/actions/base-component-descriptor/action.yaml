@@ -1,0 +1,244 @@
+name: OCM Base-Component-Descriptor
+description: |
+  Creates a base-component-descriptor, using metadata available from repository, default values,
+  as well as configuration read from an optional "Base Component" file, which is by default
+  expected at `.ocm/base-component.yaml`.
+
+  From said file, if present, values for Base-Component-Descriptor can be specified. With the
+  exception of `version`, and `creationTime`, all attributes valid for OCM Components can be
+  specified.
+
+  In addition, there is a shorthand for defining values for "main source" (which holds a reference
+  to repository-snapshot of current pipeline-run), named `main-source`.
+
+  A Base-Component-File might look like so:
+
+  ```
+  # set a custom component-name (defaults to repo-url if not specified)
+  name: acme.org/my-custom/component-name
+
+  # set a custom label for main-source using short-hand
+  main-source:
+    labels:
+      - name: my-custom-label
+        value: 42
+  ```
+
+  The resulting base-component-descriptor is exposed both as an output (`component-descriptor`), and
+  as an artefact (named `base-component-descriptor`). The latter consists of a single TARchive
+  named `component-descriptor.tar.gz`, containing a single file `component-descriptor.yaml`.
+
+inputs:
+  base-component:
+    required: false
+    type: string
+    default: .ocm/base-component.yaml
+    description: |
+      path to an optional base-component-file.
+
+      If a path different from default is passed, this is considered an error, otherwise presence
+      of base-component file is optional.
+  version:
+    required: true
+    type: string
+    description: |
+      the effective version to use
+  ocm-repository:
+    required: true
+    type: string
+    description: |
+      the OCM-Repository the Component-Descriptor is intended to be published to. Will be added
+      as first (and only) entry into the `repositoryContexts` attribute, unless there is already
+      an entry in base-component YAML document (which has predecence).
+  commit-digest:
+    required: false
+    type: string
+    description: |
+      the commit-digest for the commit the resulting component-descriptor should be published for.
+      if not passed-in, defaults to current HEAD.
+  provider:
+    required: false
+    type: string
+    default: SAP SE
+  ocm-component-prefixes:
+    required: false
+    type: string
+    default: europe-docker.pkg.dev/gardener-project/releases/gardener,europe-docker.pkg.dev/gardener-project/snapshots/gardener
+    description: |
+      used while translating Gardener's imagevector-files into OCM-Resources or
+      OCM Component-References.
+  post-process:
+    type: choice
+    default: none
+    options:
+      - component-cli
+      - none
+      - callback
+    description: |
+      configures how generated base-component-descriptor should be post-processed
+
+outputs:
+  component-descriptor-artifact:
+    description: |
+      name of the GHA artifact containing the base-component-descriptor
+      (artifact name: `base-component-descriptor`).
+    value: base-component-descriptor
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - name: base-component-descriptor
+      id: base-component-descriptor
+      shell: python
+      run: |
+        import os
+        import sys
+
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import dataclasses
+        import datetime
+        import logging
+        import shutil
+        import subprocess
+        import tarfile
+        import textwrap
+        import urllib.parse
+
+        import yaml
+
+        import ocm
+        import ocm.base_component
+        import ocm.gardener
+
+        import base_component_descriptor
+
+        logger = logging.getLogger('base-component-descriptor')
+
+        base_component_path = '${{ inputs.base-component }}'
+        version = '${{ inputs.version }}'
+        server_host = urllib.parse.urlparse('${{ github.server_url }}').hostname
+        repo_path = '${{ github.repository }}'
+
+        commit = '${{ inputs.commit-digest || github.sha }}'
+
+        if not os.path.isfile(base_component_path):
+          if base_component_path == '.ocm/base-component.yaml':
+            print(f'not a file: {base_component_path=} (will continue w/o custom values)')
+          else:
+            print(f'Error: {base_component_path=} is not a file')
+            exit(1)
+
+        base_component = ocm.base_component.load_base_component(
+          path=base_component_path,
+          absent_ok=True,
+        )
+
+        base_component = base_component_descriptor.fill_in_defaults(
+          component=base_component,
+          name=f'{server_host}/{repo_path}',
+          version=version,
+          provider='${{ inputs.provider }}',
+          ocm_repo='${{ inputs.ocm-repository }}',
+          main_source=ocm.Source(
+            name='main-source',
+            version=version,
+            type=ocm.ArtefactType.GIT,
+            access=ocm.GithubAccess(
+              repoUrl=f'{server_host}/{repo_path}',
+              commit=commit,
+              ref='${{ github.ref }}',
+            ),
+            labels=[
+              ocm.Label(
+                name='cloud.gardener/cicd/source',
+                value={
+                  'repository-classification': 'main',
+                },
+              ),
+            ],
+          ),
+          creation_time=datetime.datetime.now(),
+        )
+
+        if '${{ inputs.post-process }}' == 'component-cli':
+          imagevector_file = ocm.gardener.find_imagevector_file(repo_root=os.getcwd())
+        else:
+          imagevector_file = None
+
+        if imagevector_file:
+          prefixes = '${{ inputs.ocm-component-prefixes }}'.split(',')
+          prefixes = ocm.gardener.expand_ocm_component_prefixes(prefixes)
+
+          logger.info(f'{prefixes=}')
+
+          base_component = base_component_descriptor.add_resources_from_imagevector(
+            imagevector_file=imagevector_file,
+            component=base_component,
+            component_prefixes=prefixes,
+          )
+
+        base_component_dict = base_component_descriptor.as_component_descriptor_dict(
+          component=base_component,
+        )
+        component_descriptor_str = yaml.dump(
+          data=base_component_dict,
+          Dumper=ocm.EnumValueYamlDumper,
+        )
+
+        base_component_str = yaml.dump(
+          data=dataclasses.asdict(base_component),
+          Dumper=ocm.EnumValueYamlDumper,
+        )
+
+        with open('component-descriptor.yaml', 'w') as f:
+          f.write(component_descriptor_str)
+
+        if '${{ inputs.post-process }}' == 'callback':
+          env = os.environ.copy()
+          shutil.move('component-descriptor.yaml', 'component-descriptor.in')
+          env['BASE_DEFINITION_PATH'] = 'component-descriptor.in'
+          env['COMPONENT_DESCRIPTOR_PATH'] = 'component-descriptor.yaml'
+          env['COMPONENT_NAME'] = base_component.name
+          env['COMPONENT_VERSION'] = base_component.version
+
+          subprocess.run(
+            ('.ci/component_descriptor',),
+            check=True,
+            env=env,
+          )
+
+          if not os.path.isfile('component-descriptor.yaml'):
+            logger.error('callback did not write component-descripor.yaml')
+            exit(1)
+
+          with open('component-descriptor.yaml') as f:
+            component_descriptor_str = f.read()
+
+        with open('base-component.yaml', 'w') as f:
+          f.write(base_component_str)
+        with tarfile.open(name='component-descriptor.tar.gz', mode='w:gz') as tf:
+          tf.add(
+            name='component-descriptor.yaml',
+          )
+          tf.add(
+            name='base-component.yaml',
+          )
+
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+          f.write(textwrap.dedent(f'''\
+            <details>
+            <summary>
+             <h2>Base-Component-Descriptor</h2>
+            </summary>
+
+            ```
+          {textwrap.indent(component_descriptor_str, '  ')}
+            ```
+            </details>
+          '''))
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+      with:
+        name: base-component-descriptor
+        path: component-descriptor.tar.gz

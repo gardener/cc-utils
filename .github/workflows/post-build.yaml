@@ -1,0 +1,373 @@
+name: Post-Build
+
+# description: |
+#   A reusable workflow for performing common post-build steps, such as
+#   retrieving and uploading the OCM Component-Descriptor as created by a
+#   build using `prepare.yaml` and `export-ocm-fragment` action(s), or updating draft-releases.
+#
+#   Counterpart to `release.yaml` for non-release-jobs. Callers must ensure it is run only after
+#   build-job(s) emitted OCM-Fragments are finished prior to running this workflow.
+
+on:
+  workflow_call:
+    inputs:
+      ocm-repositories:
+        type: string
+        required: false
+        description: |
+          a comma-separated list of OCM-Repository-URLs to use for looking up
+          OCM-Component-Descriptors. If not passed, the value will be read from the
+          `prepare-workflow-values` artefact, which is by default emitted by the
+          `prepare.yaml` workflow (which must have been run prior to calling this workflow for
+          this to succeed).
+      on-existing-component-descriptor:
+        type: string
+        default: overwrite
+        description: |
+          defines how to behave in case the to-be-uploaded component-descriptor already exists.
+          allowed values are:
+            - overwrite
+            - skip # silently ignore
+            - fail
+      on-validation-errors:
+        type: string
+        default: fail
+        description: |
+          How to behave in case of validation-errors. Allowed values are:
+          - fail     # mark pipeline as failed
+          - continue # do not mark pipeline as failed (potentially run further jobs)
+      ocm-post-process:
+        type: string
+        default: component-cli
+        description: |
+          passed as `post-process`-input to merge-ocm-fragments. Allowed values are:
+
+          component-cli
+          callback
+          none
+
+          Defines how component-descriptor should be post-processed.
+      include-subcomponent-release-notes:
+        type: boolean
+        default: false
+        description: |
+          passed as same-named input to release-notes action. Controls whether copies of
+          release-notes of subcomponents should be included.
+      github-release-notes-audiences:
+        required: false
+        type: string
+        default: dependency,developer,operator,user
+        description: |
+          Specify a subset of release-notes, which is published to the github release.
+          By default, all audiences are included.
+          Audiences are expected as a comma-separated list of values.
+      github-release-notes-categories:
+        required: false
+        type: string
+        default: action,breaking,bugfix,doc,feature,fix,improvement,noteworthy,other
+        description: |
+          Specify a subset of release-notes, which is published to the github release.
+          By default, all categories are included.
+          Categories are expected as a comma-separated list of values.
+      github-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: |
+          Sspecify a subset of release-notes, which is published to the github release.
+          By default, no release-notes from subcomponents are included.
+
+          Possible values:
+          -1: no limit, include *all* subcomponents
+           0: no sub components
+           1: directly referenced subcomponents
+           2: ...
+      github-release-notes-resource-details:
+        required: false
+        type: boolean
+        default: true
+        description: |
+          Whether to include resource details (e.g. OCI Image references, Helm Charts, ...).
+      social-release-notes-audiences:
+        required: false
+        type: string
+        default: dependency,developer,operator,user
+        description: see partner input for details
+      social-release-notes-categories:
+        required: false
+        type: string
+        default: action,breaking,bugfix,doc,feature,fix,improvement,noteworthy,other
+        description: see partner input for details
+      social-release-notes-recursion-depth:
+        required: false
+        type: number
+        default: 0
+        description: see partner input for details
+      social-release-notes-resource-details:
+        required: false
+        type: boolean
+        default: true
+        description: see partner input for details
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
+    secrets:
+      oci-auth-token:
+        required: false
+        description: |
+          An optional authtoken to use for authenticating against oci-push-target (used to publish
+          OCM-Component-Descriptor). It is written
+          unchanged into `$HOME/.docker/config.json`, and is assumed to be base64-encoded output of
+          `<username>:<secret>`.
+
+          Note that it is only necessary to pass an auth-token if OIDC-authentication is not
+          possible. OIDC-Authentication should be preferred over using a static token.
+    outputs:
+      component-descriptor:
+        description: |
+          the final component-descriptor after base-component-descriptor and any emitted
+          fragments from other jobs.
+        value: ${{ jobs.component-descriptor.outputs.component-descriptor }}
+
+jobs:
+  component-descriptor:
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      component-descriptor: ${{ steps.collect.outputs.component-descriptor }}
+      version: ${{ steps.collect.outputs.version }}
+
+    steps:
+      - name: collect-component-descriptor
+        id: collect
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@c5a438205853a3133489ccbefcdd4af1e4431e1a
+        with:
+          component-descriptor-artefact: base-component-descriptor
+          outdir: /tmp/ocm
+          post-process: ${{ inputs.ocm-post-process }}
+
+      - name: fetch-prepare-values
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: prepare-workflow-values
+      - name: prepare-prepare-workflow-values
+        id: prep
+        run: |
+          tar xf prepare-workflow-values.tar prepare-values.d/can-push prepare-values.d/ocm-repositories prepare-values.d/ocm-repository
+          can_push="$(cat prepare-values.d/can-push)"
+          ocm_repositories="$(cat prepare-values.d/ocm-repositories)"
+          ocm_repository="$(cat prepare-values.d/ocm-repository)"
+          rm -rf prepare-values.d prepare-workflow-values.tar
+          echo "can-push=${can_push}" >> ${GITHUB_OUTPUT}
+          echo "ocm-repositories=${ocm_repositories}" >> ${GITHUB_OUTPUT}
+          echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
+
+      - name: create-extra-auth
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # we cannot check secrets on step-level
+          if [ -z "${{ secrets.oci-auth-token }}" ]; then
+            exit 0
+          fi
+          host=$(echo ${{ steps.prep.outputs.ocm-repository }} | cut -d/ -f1)
+          echo "extra-auths={\"$host\": {\"auth\": \"${{ secrets.oci-auth-token }}\"}}" \
+            >> $GITHUB_OUTPUT
+      - name: authenticate-against-oci-registry
+        if: ${{ steps.prep.outputs.can-push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+        with:
+          oci-image-reference: ${{ steps.prep.outputs.ocm-repositories }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+      - uses: gardener/cc-utils/.github/actions/ocm-validate@5cc630146e22dd5c44f5e3d196b3304b28d711e0
+        with:
+          component-descriptor-path: /tmp/ocm/component-descriptor.yaml
+          on-validation-errors: ${{ inputs.on-validation-errors }}
+          ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
+          recursion-depth: 0
+          validation-cfg: |
+            schema: fail
+            access: ${{ steps.prep.outputs.can-push == 'true' && 'fail' || 'skip' }}
+            artefact-uniqueness: fail
+      - name: upload-component-descriptor-to-ocm-repository
+        if: ${{ steps.prep.outputs.can-push == 'true' }}
+        run: |
+          python -m ocm upload \
+            --file /tmp/ocm/component-descriptor.yaml \
+            --blobs-dir /tmp/ocm/blobs.d \
+            --on-exist ${{ inputs.on-existing-component-descriptor }}
+          tar czf component-descriptor.tar.gz -C /tmp/ocm component-descriptor.yaml
+      - name: upload-component-descriptor-as-artefact
+        uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+        with:
+          path: component-descriptor.tar.gz
+          name: component-descriptor
+
+  repo-metadata:
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions: {}
+    outputs:
+      fork: ${{ steps.repo-metadata.outputs.fork }}
+    steps:
+      - id: repo-metadata
+        uses: gardener/cc-utils/.github/actions/repo-metadata@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+
+  draft-release:
+    name: Update / Create Draft-Release
+    needs:
+      - component-descriptor
+      - repo-metadata
+    # never run for forks and only for push events
+    if: ${{ ! fromJSON(needs.repo-metadata.outputs.fork) && github.event_name == 'push' }}
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Preprocess
+        id: preprocess
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ${{ github.ref_name == github.event.repository.default_branch }}; then
+            info="INFO: On default branch, creating draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=true" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+
+          if [ ! -f .ocm/branch-info.yaml ]; then
+            info="INFO: Not on default branch and no .ocm/branch-info.yaml file, skipping draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=false" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+
+          release_branch_template=$(cat .ocm/branch-info.yaml | yq .release-branch-template)
+
+          if [ $release_branch_template == "null" ]; then
+            info="INFO: Not on default branch and no release-branch-template found, skipping draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=false" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+
+          # replace $major/$minor/$patch with regex patterns and mark start/end of line
+          regex="${release_branch_template//\$major/[0-9]+}"
+          regex="${regex//\$minor/[0-9]+}"
+          regex="${regex//\$patch/[0-9]+}"
+          regex="${regex//\./\\.}"
+          regex="^${regex}$"
+
+          if [[ "${{ github.ref_name }}" =~ $regex ]]; then
+            info="INFO: On release branch, creating draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=true" >> ${GITHUB_OUTPUT}
+            exit 0
+          else
+            info="INFO: Not on release branch, skipping draft release."
+            echo "$info"
+            echo "$info" >> ${GITHUB_STEP_SUMMARY}
+            echo "create-draft-release=false" >> ${GITHUB_OUTPUT}
+            exit 0
+          fi
+      - name: fetch-prepare-values
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: prepare-workflow-values
+      - name: prepare-prepare-workflow-values
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
+        id: prep
+        run: |
+          tar xf prepare-workflow-values.tar prepare-values.d/ocm-repositories prepare-values.d/ocm-repository
+
+          if [ -n "${{ inputs.ocm-repositories }}" ]; then
+            ocm_repos="${{ inputs.ocm-repositories }}"
+          else
+            ocm_repos="$(cat prepare-values.d/ocm-repositories)"
+          fi
+          ocm_repository="$(cat prepare-values.d/ocm-repository)"
+
+          rm -rf prepare-values.d prepare-workflow-values.tar
+
+          echo "ocm-repositories=${ocm_repos}" >> ${GITHUB_OUTPUT}
+          echo "ocm-repository=${ocm_repository}" >> ${GITHUB_OUTPUT}
+      - uses: gardener/cc-utils/.github/actions/github-auth@a48a6f94d69833263b319780178654c0481c0556
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          repositories: |
+            ${{ github.event.repository.name }}
+          permissions: |
+            pull-requests: read
+      - name: create-extra-auth
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # we cannot check secrets on step-level
+          if [ -z "${{ secrets.oci-auth-token }}" ]; then
+            exit 0
+          fi
+          host=$(echo ${{ steps.prep.outputs.ocm-repository }} | cut -d/ -f1)
+          echo "extra-auths={\"$host\": {\"auth\": \"${{ secrets.oci-auth-token }}\"}}" \
+            >> $GITHUB_OUTPUT
+      - name: draft-release-notes
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
+        uses: gardener/cc-utils/.github/actions/release-notes@950592e6d32c3f14feb6a5a740a579189a95d058
+        with:
+          component-descriptor-artifact: component-descriptor
+          ocm-repositories: ${{ steps.prep.outputs.ocm-repositories }}
+          github-token: ${{ steps.fed-token.outputs.token || secrets.GITHUB_TOKEN }}
+          draft: true
+          include-subcomponent-release-notes: ${{ inputs.include-subcomponent-release-notes }}
+          release-notes-variants: |
+            - name: github
+              audiences: ${{ inputs.github-release-notes-audiences }}
+              categories: ${{ inputs.github-release-notes-categories }}
+              recursion_depth: ${{ inputs.github-release-notes-recursion-depth }}
+              include_resources: ${{ inputs.github-release-notes-resource-details }}
+            - name: slack
+              audiences: ${{ inputs.social-release-notes-audiences }}
+              categories: ${{ inputs.social-release-notes-categories }}
+              recursion_depth: ${{ inputs.social-release-notes-recursion-depth }}
+              include_resources: ${{ inputs.social-release-notes-resource-details }}
+            - name: legacy
+              audiences: ''
+              categories: ''
+              recursion_depth: 0
+              include_resources: true
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+      - name: update-draft-release
+        if: ${{ steps.preprocess.outputs.create-draft-release == 'true' }}
+        uses: gardener/cc-utils/.github/actions/draft-release@2a690257750d4c85898ccfbb09f11bbdcec1dd0c
+        with:
+          version: ${{ needs.component-descriptor.outputs.version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

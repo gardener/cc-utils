@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+
+import argparse
+import dataclasses
+import os
+import sys
+
+import yaml
+
+import ocm
+import ocm.gardener
+
+import ci.util
+
+own_dir = os.path.dirname(__file__)
+
+
+def component_archive_resource_add(argv):
+  if not argv:
+    fail_and_notify_about_unsupported_command(
+      f'Usage: {" ".join(sys.argv[:1])} resources'
+    )
+
+  subcmd = argv[0]
+  if not subcmd in ('resources', 'resource', 'res'):
+    fail_and_notify_about_unsupported_command(
+      'only sub-commands `resources`, `resource`, `res` are supported',
+    )
+
+  # the only supported subcmd is `add` (also the case in original component-cli)
+  if not len(argv) > 1:
+    fail_and_notify_about_unsupported_command(
+      f'Usage: {" ".join(sys.argv[:1])} resources add'
+    )
+
+  if not argv[1] == 'add':
+    fail_and_notify_about_unsupported_command(
+      'expected subcommand `add`',
+    )
+
+  if not len(argv) >= 3:
+    fail_and_notify_about_unsupported_command(
+      'expected two positional arguments after `add` subcommand',
+    )
+
+  component_descriptor_dir = argv[2]
+  try:
+    resources_file = argv[3]
+    if not os.path.isfile(resources_file):
+      resources_file = None
+  except IndexError:
+    resources_file = None
+
+  component_descriptor_file = os.path.join(component_descriptor_dir, 'component-descriptor.yaml')
+
+  if not os.path.isfile(component_descriptor_file):
+    print(f'ERROR: not an existing file: {component_descriptor_file=}')
+    exit(1)
+
+  template_vars = {}
+  saw_ddash = False
+  for v in argv[3:]:
+    if v == '--':
+      saw_ddash = True
+      continue
+    if not saw_ddash:
+      continue
+    k,v = v.split('=')
+    template_vars[k] = v
+
+  def iter_resources():
+    if resources_file:
+      with open(resources_file) as f:
+        raw = f.read()
+        for k,v in template_vars.items():
+          raw = raw.replace('${' + k + '}', v)
+
+        for parsed in yaml.safe_load_all(raw):
+          if 'resources' in parsed:
+            yield from parsed['resources']
+            continue
+          yield parsed
+
+    if not sys.stdin.isatty():
+      raw = sys.stdin.read()
+      for k,v in template_vars.items():
+        raw = raw.replace('${' + k + '}', v)
+
+      for parsed in yaml.safe_load_all(raw):
+        if 'resources' in parsed:
+          yield from parsed['resources']
+          continue
+        yield parsed
+
+  with open(component_descriptor_file) as f:
+    component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+  component = component_descriptor.component
+
+  print(f'adding resources from {resources_file=} to {component_descriptor_file=}')
+
+  resources_len = len(component.resources)
+
+  def resource_id(resource: dict):
+    if dataclasses.is_dataclass(resource):
+      resource = dataclasses.asdict(resource, dict_factory=ci.util.dict_factory_enum_serialisiation)
+    return resource.get('name'), resource.get('version'), resource.get('type')
+
+  for resource in iter_resources():
+    rid = resource_id(resource)
+    # existing resources w/ same id are merged with newly added ones
+    # more specifically: in case of OCI-Images, access.imageReference is kept; everything else
+    # is overwritten by data from imagevector
+    for existing_resource in component.resources:
+      if not resource_id(existing_resource) == rid:
+        continue
+
+      component.resources.remove(existing_resource)
+
+      if existing_resource.type is ocm.OCI_IMAGE:
+        resource.access.imageReference = existing_resource.access.imageReference
+
+    component.resources.append(resource)
+  added_resources_count = len(component.resources) - resources_len
+
+  with open(component_descriptor_file, 'w') as f:
+    yaml.dump(
+      data=dataclasses.asdict(component_descriptor),
+      stream=f,
+      Dumper=ocm.EnumValueYamlDumper,
+    )
+
+  print(f'added {added_resources_count} resource(s)')
+  log_argv(delegated=False)
+
+
+def image_vector(argv):
+  subcmd = argv[0]
+  if not subcmd in ('add',):
+    fail_and_notify_about_unsupported_command(
+      'only `add` subcommand is allowed',
+    )
+
+  # command `image-vector add`
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--comp-desc', required=True, dest='component_descriptor_path')
+  parser.add_argument('--image-vector', required=True,  dest='images_yaml_path')
+  parser.add_argument(
+    '--component-prefixes',
+    default='',
+    help='comma-separated image-prefixes (calculate component-names by stripping off)',
+  )
+  # todo: --generic-dependencies seems to have no effect in original component-cli
+  parser.add_argument(
+    '--generic-dependencies',
+    action='append',
+    required=False,
+    default=[],
+  )
+
+  parsed = parser.parse_args(argv[1:]) # strip subcommand (`add`)
+
+  with open(parsed.component_descriptor_path) as f:
+    component_descriptor = ocm.ComponentDescriptor.from_dict(yaml.safe_load(f))
+
+  component_descriptor.component = ocm.gardener.add_resources_from_imagevector(
+      component=component_descriptor.component,
+      images=ocm.gardener.iter_images_from_imagevector(
+          images_yaml_path=parsed.images_yaml_path,
+      ),
+      component_prefixes=parsed.component_prefixes.split(','),
+  )
+
+  # "normalise" (match component-cli's behaviour)
+  # this could (and should) be removed
+  component_descriptor_dict = dataclasses.asdict(component_descriptor)
+  component_dict = component_descriptor_dict['component']
+  component_dict.pop('creationTime', None)
+  if not component_dict.get('labels'):
+    del component_dict['labels']
+  for r in component_dict['resources']:
+    r.pop('digest', None)
+    r.pop('srcRefs', None)
+    if not r.get('extraIdentity'):
+      r.pop('extraIdentity', None)
+    if not r.get('labels'):
+      r.pop('labels', None)
+
+  for r in component_dict['sources']:
+    if not r.get('extraIdentity'):
+      r.pop('extraIdentity', None)
+
+  for cr in component_dict['componentReferences']:
+    cr.pop('digest', None)
+
+
+  with open(parsed.component_descriptor_path, 'w') as f:
+    yaml.dump(
+      data=component_descriptor_dict,
+      stream=f,
+      Dumper=ocm.EnumValueYamlDumper,
+    )
+    f.write('\n#generated by cc-utils\n')
+
+
+def fail_and_notify_about_unsupported_command(message: str):
+  print(f'ERROR: {message}')
+  print(f'{sys.argv=}')
+  print('')
+  print('component-cli (github.com/gardener/component-cli) is deprecated and no longer available')
+  exit(1)
+
+
+def log_argv(delegated=False):
+  if not (logfile := os.environ.get('commands_log')):
+    return
+
+  with open(logfile, 'a') as f:
+    entry = ''
+    if delegated:
+      entry = 'delegated: '
+
+    entry += ' '.join(sys.argv) + '\n'
+
+    f.write(entry)
+
+
+def main():
+  if not len(sys.argv) > 1:
+    print(f'Usage: {sys.argv[0]} component-archive | image-vector')
+    exit(1)
+
+  cmd = sys.argv[1]
+  if cmd in ('component-archive', 'componentarchive', 'archive', 'ca'):
+    return component_archive_resource_add(sys.argv[2:])
+  elif cmd in ('image-vector', 'imagevector', 'iv'):
+    return image_vector(sys.argv[2:])
+
+  fail_and_notify_about_unsupported_command(
+    'only commands `component-archive` and `imagevector` are allowed',
+  )
+
+if __name__ == '__main__':
+  main()

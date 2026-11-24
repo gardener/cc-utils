@@ -1,0 +1,132 @@
+=====================
+Release Notes Process
+=====================
+
+In order to support the developers when creating a new release of a
+component, a new process is established to gather all release-relevant
+information since the last release to build the release notes text.
+
+Format
+======
+
+The release-relevant information has to be flagged as such, thus we
+introduce the following format, which is based on the format that
+`kubernetes <https://raw.githubusercontent.com/kubernetes/kubernetes/master/.github/PULL_REQUEST_TEMPLATE.md>`__
+uses for building the release notes. ::
+
+  ```<category> <target group>
+
+  <your release note>
+
+  ```
+
+Possible values:
+
+  - category: breaking\|feature\|bugfix\|doc\|other
+  - target\_group: user\|operator\|developer\|dependency
+
+Example: ::
+
+  ```improvement user
+
+  This is my first release note
+
+  ```
+
+If no release note is required, just write :literal:`NONE` within the block or delete the block altogether.
+
+Category - Title Mapping
+^^^^^^^^^^^^^^^^^^^^^^^^
+
++---------------+------------------------------+
+| category      | release note section title   |
++===============+==============================+
+| improvement   | Improvement                  |
++---------------+------------------------------+
+| noteworthy    | Most notable changes         |
++---------------+------------------------------+
+| action        | Action Required              |
++---------------+------------------------------+
+
+How to Contribute to Release Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Now that we know the format for tagging release-relevant information,
+where do we put it so that it can be fetched automatically?
+
+There are two options:
+
+1. As description in *pull requests* (preferred)
+2. As *commit message*
+
+Pull Requests
+~~~~~~~~~~~~~
+
+The preferred option is to create a pull request that contains your
+proposed changes (to the code-basis) and in the description a code-block
+like above.
+
+**Example:** Here is an example pull request that contains release
+notes: https://github.com/gardener/dashboard/pull/147 The release notes
+appeared in the release
+https://github.com/gardener/dashboard/releases/tag/1.18.0.
+
+.. note:: Pull requests that are still open and not merged are not considered for the release notes.
+
+Even if the pull request is already merged you can still edit the
+description in case you need to make changes to your release note and it
+will be used once the release is created.
+
+To make it easier for the community to contribute to the release notes
+you can add a pull request template to your repository, e.g. like the
+`template <https://raw.githubusercontent.com/gardener/dashboard/master/.github/pull_request_template.md>`__
+used for the gardener dashboard.
+
+See
+https://help.github.com/articles/creating-a-pull-request-template-for-your-repository/
+on how to create pull request template for your repository.
+
+Commits
+~~~~~~~
+
+A second option on how to contribute to the release notes is to add a
+code-block like above to your commit message. This option is not
+preferred as once you have pushed your changes to the remote repository
+it cannot easily be changed anymore so you have to be very cautious.
+
+Transporting Release Notes
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A component can depend upon other components. When releasing a
+component, ideally the release notes of the source repository (for which
+the release was created) should be included in the target component.
+This can be achieved by reusing the pull request mechanism as explained
+above:
+
+1. On release of a source component, all pull requests (and commits are fetched since the last release)
+2. The release notes are extracted from the pull requests and commits
+3. A new pull request is created on the target component which contains the release notes within the description as code-blocks
+4. On release of the target component the release notes text is generated
+5. It will start over again for the next component with step 1
+
+.. note:: In release notes rendered for upgrade-pull-requests of other repositories, authors are
+   formatted as inline-code (rather than plain ``@username``), so they are not mentioned (and
+   thus not notified) by GitHub. In GitHub-releases, authors are rendered as plain mentions
+   so they are considered as release contributors.
+
+Posting Release Notes To Slack
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Specify a target slack-channel for input `slack-channel-id` for `release.yaml` workflow to
+enable release-notes to be conveyed to configured slack-channel.
+
+Example:
+
+.. code:: yaml
+
+   # release workflow local to repository to be released
+   jobs:
+    release-to-github-and-bump:
+      uses: gardener/cc-utils/.github/workflows/release.yaml@v1
+      with:
+        slack-channel-id: C0123ABCDEFG # replace this

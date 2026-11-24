@@ -1,0 +1,118 @@
+name: Authenticate against k8s-API using OIDC
+description: |
+  An opinionated action for authenticating against Gardener-managed k8s-clusters using OIDC from
+  GitHub-Action-Runs.
+
+  For authentication to succeed, trust needs to be established from target-cluster against
+  GitHub-Actions (including owner (aka org) and repository).
+
+inputs:
+  server:
+    type: string
+    required: true
+    description: |
+      the endpoint serving the k8s-endpoint against which to authenticate
+  server-ca:
+    type: string
+    description: |
+      the base64-encoded certificate-bundle for the server-endpoint.
+  server-ca-discovery-url:
+    type: string
+    description: |
+      url to the Gardener discovery server to retrieve the Kubernetes server CA, e.g.
+      `https://discovery.ingress.garden.example.com/projects/<project_name>/shoots/<shoot-uid>/cluster-ca`
+  audience:
+    type: string
+    default: gardener
+    description: |
+      the audience to request during OIDC-flow
+  kubeconfig-path:
+    type: string
+    default: kubeconfig.yaml
+    description: |
+      the path resulting kubeconfig should be generated to. If the empty string is passed,
+      no kubeconfig will be written.
+  service-account-name:
+    type: string
+    description: |
+      the service account in the target-cluster to authenticate request a token for.
+      It should be used by the testrunner invocation at a later stage.
+  service-account-namespace:
+    type: string
+    description: |
+      the namespace in which the service account resides.
+  service-account-token-expiration:
+    type: number
+    default: 3600
+    description: |
+      the requested expiration (in seconds) of the service account token.
+      Note that the actual expiration might differ, depending on the cluster's configuration.
+
+outputs:
+  kubeconfig:
+    description: |
+      the authenticated kubeconfig.
+    value: ${{ steps.auth.outputs.kubeconfig }}
+
+runs:
+  using: composite
+  steps:
+    - name: prepare server-ca
+      id: prepare-server-ca
+      if: ${{ inputs.server-ca == '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        server="${{ inputs.server }}"
+        server_ca_discovery_url="${{ inputs.server-ca-discovery-url }}"
+
+        if [ -n "${server_ca_discovery_url}" ]; then
+          server_ca=$(curl "${server_ca_discovery_url}" | jq -r .certs | base64 -w 0 | tr -d '\n')
+        else
+          # normalise api-url: remove `https://` prefix, trailing slash, and add `:443` suffix if required
+          normalised_api_url="${server#https://}"
+          normalised_api_url="${normalised_api_url%/}"
+          if [[ "${normalised_api_url}" != *:443 ]]; then
+            normalised_api_url="${normalised_api_url}:443"
+          fi
+
+          raw=$(echo | openssl s_client -showcerts -connect "${normalised_api_url}" 2>/dev/null || true)
+          server_ca=$(printf '%s' "${raw}" \
+            | sed -n '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/p' \
+            | base64 -w 0 \
+            | tr -d '\n')
+
+          if [ -z "${server_ca}" ]; then
+            echo "Error: failed to retrieve server CA from ${normalised_api_url}"
+            exit 1
+          fi
+        fi
+
+        echo "server_ca=$server_ca" >> "$GITHUB_OUTPUT"
+    - name: auth
+      id: auth
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        gh_token="${ACTIONS_ID_TOKEN_REQUEST_TOKEN}"
+        token_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
+
+        if [ -z "${gh_token}" -o -z "${token_url}" ]; then
+          echo 'Error: ACTIONS_ID_TOKEN_REQUEST_TOKEN and/or ACTIONS_ID_TOKEN_REQUEST_URL'
+          echo '       were not passed'
+          echo
+          echo 'that typically means this workflow was not run with `id-token: write`-permission'
+          exit 1
+        fi
+
+        INPUT_SERVER='${{ inputs.server }}' \
+        INPUT_SERVER_CA='${{ inputs.server-ca }}' \
+        PREP_SERVER_CA='${{ steps.prepare-server-ca.outputs.server_ca }}' \
+        INPUT_AUDIENCE='${{ inputs.audience }}' \
+        INPUT_SERVICE_ACCOUNT_NAME='${{ inputs.service-account-name }}' \
+        INPUT_SERVICE_ACCOUNT_NAMESPACE='${{ inputs.service-account-namespace }}' \
+        INPUT_SERVICE_ACCOUNT_TOKEN_EXPIRATION='${{ inputs.service-account-token-expiration }}' \
+        INPUT_KUBECONFIG_PATH='${{ inputs.kubeconfig-path }}' \
+          python3 "${{ github.action_path }}/kubernetes_auth.py"

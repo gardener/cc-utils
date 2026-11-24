@@ -1,0 +1,62 @@
+name: test-capture-import-noop
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: make-timestamp-reference
+        shell: bash
+        run: touch /tmp/ts-ref
+      - name: make-commit
+        shell: bash
+        run: |
+          echo 'extra content' >> hello.txt
+          git add hello.txt
+          git commit -m 'extra commit'
+      - id: capture
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref
+      - name: assert-capture
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects'
+            exit 1
+          fi
+      - name: reset-to-parent
+        shell: bash
+        run: git reset --hard HEAD~1
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture.outputs.commit-digest }}
+          after-import: noop
+      - name: assert-noop
+        shell: bash
+        run: |
+          expected='${{ steps.capture.outputs.commit-digest }}'
+          head="$(git rev-parse HEAD)"
+          if [ "${head}" = "${expected}" ]; then
+            echo "HEAD unexpectedly moved to imported commit under noop: ${head}"
+            exit 1
+          fi
+          # captured commit must be reachable via its digest (i.e. present in .git/objects)
+          if ! git cat-file -e "${expected}"; then
+            echo "expected imported commit ${expected} to be present as an object"
+            exit 1
+          fi
+          # refs/capture-commit must point at the captured commit
+          ref_digest="$(git rev-parse refs/capture-commit)"
+          if [ "${ref_digest}" != "${expected}" ]; then
+            echo "refs/capture-commit=${ref_digest}, expected ${expected}"
+            exit 1
+          fi
+          git fsck --no-dangling
+          echo "noop import: object=${expected} present; HEAD=${head} unchanged OK"

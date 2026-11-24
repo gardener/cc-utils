@@ -1,0 +1,117 @@
+name: Authenticate against OCI-Registries
+description: |
+  An opinionated action capable of authenticating against either ghcr.io (github's oci registry),
+  or Google-Artifact-Registry.
+
+  Contains hardcoded defaults for GAR for OIDC-auth against `gardener-project`-GCP-Project.
+  Permissions are pre-configured for GitHub-Actions running for repositories below
+  github.com/gardener organisation, only.
+
+  Specifically for forks (but also for other pipelines, where usage of GHCR is preferred), the
+  action also allows authentication against GHCR (gh-token must be passed in from
+  `secrets.GITHUB_TOKEN`).
+
+  For convenience, the correct authentication method is derived from passed-in
+  `oci-image-reference` (this is especially useful for workflows that should work both for
+  repositories below gardener-org, and for forks, where different push-targets are configured).
+
+  parameters specific to GHCR are prefixed w/ `gh-`.
+
+inputs:
+  oci-image-reference:
+    type: string
+    required: true
+    default: europe-docker.pkg.dev/gardener-project
+    description: |
+      The OCI-Image-Reference specifying the OCI-Registry to authenticate against.
+  gh-token:
+    type: string
+    required: false
+    description: |
+      The token from GitHub-Action (secrets.GITHUB_TOKEN). Note that it will be only honoured in case
+      it has been issued for the public GitHub instance "github.com".
+  extra-auths:
+    type: string
+    required: false
+    description: |
+      A JSON-Document containing a mapping of additional auth-cfgs of the following form:
+      { <host>: {"auth": <token>}}
+
+      example:
+      ```
+      {"registry-1.docker.io": {"auth": "abcd"}}
+      ```
+      Passed tokens will be _appended_ to resulting docker-cfg, and thus have precedence.
+
+outputs:
+  docker-cfg:
+    description: |
+      A $HOME/.docker/config.json containing the token (for convenience)
+    value: ${{ steps.oci-auth.outputs.docker-cfg }}
+  docker-cfg-path:
+    description: |
+      the path to which docker-cfg was written. Defaults to $HOME/.docker/config.json
+    value: ${{ steps.oci-auth.outputs.docker-cfg-path }}
+  oidc-cfgs:
+    description: |
+      JSON mapping of GAR/GCR registry-host -> resolved GAR OIDC configuration
+      (`{"audience": ..., "service_account": ...}`, matching oci.auth.GarOidcConfiguration).
+      Allows subsequent steps to build a refreshable GAR credentials-lookup (e.g. via
+      oci.auth.refreshable_gar_credentials_lookup) without re-resolving the config.
+    value: ${{ steps.oci-auth.outputs.oidc-cfgs }}
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - name: OCI Auth
+      id: oci-auth
+      shell: python
+      run: |
+        import json
+        import os
+        import sys
+        import textwrap
+
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+        import oidc
+
+
+        if '${{ github.server_url }}' == 'https://github.com':
+          os.environ['GITHUB_TOKEN'] = '${{ inputs.gh-token }}' # may be required for auth against GHCR
+
+        image_references = [
+          image_reference.strip()
+          for image_reference in '''${{ inputs.oci-image-reference }}'''.split(',')
+        ]
+
+        extra_auths = '''
+        ${{ inputs.extra-auths }}
+        '''.strip()
+
+        if extra_auths:
+          extra_auths = json.loads(extra_auths)
+          if not isinstance(extra_auths, dict):
+            print(f'expected a dict for extra-auths, but got: {type(extra_auths)=}')
+            exit(1)
+        else:
+          extra_auths = None
+
+        docker_cfg_dir = os.path.join(os.environ['HOME'], '.docker')
+        os.makedirs(docker_cfg_dir, exist_ok=True)
+        docker_cfg_path = os.path.join(docker_cfg_dir, 'config.json')
+
+        docker_cfg = oidc.write_docker_config(
+          image_references=image_references,
+          docker_cfg_path=docker_cfg_path,
+          extra_auths=extra_auths,
+        )
+
+        oidc_cfgs = oidc.export_gar_oidc_cfgs(
+          image_references=image_references,
+        )
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write(f'docker-cfg={json.dumps(docker_cfg)}\n')
+          f.write(f'docker-cfg-path={docker_cfg_path}\n')
+          f.write(f'oidc-cfgs={json.dumps(oidc_cfgs)}\n')

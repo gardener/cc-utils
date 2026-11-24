@@ -1,0 +1,192 @@
+name: release-notes
+description: |
+  retrieves release-notes following conventions from Gardener-Project
+
+inputs:
+  component-descriptor:
+    description: |
+      effective OCM component-descriptor. It is sufficient to pass a `base component-descriptor`,
+      as output by `base-component-descriptor` workflow. Its version must be set to next planned
+      version (e.g. `1.2.0-dev`, if greatest released version was `1.1.0`).
+
+      Either this input or `component-descriptor-artifact` must be provided.
+    required: false
+  component-descriptor-artifact:
+    description: |
+      Name of a GHA artifact containing the component-descriptor, as produced by
+      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+
+      Preferred over the inline `component-descriptor` input for large descriptors.
+    required: false
+  ocm-repositories:
+    description: |
+      a (commaseparated) list of ocm-repository-URLs where component-versions are to be looked up
+      (order is honoured).
+
+      Caveat: this action will only honour final versions. Hence, at least one ocm-repository
+      containing final/release versions must be passed.
+
+      If no ocm-repository is passed, this action will fallback to the current ocm-repository from
+      passed ocm-component-descriptor (see caveat above).
+  github-token:
+    description: |
+      the github-auth-token to use for authenticating against GitHub, use `secrets.GITHUB_TOKEN`.
+      If not passed-on via input, env-var GITHUB_TOKEN will be honoured
+  include-subcomponent-release-notes:
+    description: |
+      if set to `true`, release-notes of subcomponents will be included in full-release-notes
+    default: false
+    type: boolean
+  draft:
+    type: boolean
+    default: false
+    description: |
+      if true, will collect draft-release-notes
+  release-notes-variants:
+    required: true
+    type: string
+    description: |
+      Used to create different subsets of release-notes.
+      Each variant is rendered as markdown file and added to release-notes artifact.
+
+      Expected structure (see release workflow inputs for allowed values):
+      ```
+      - name: my-variant
+        audiences: 'developer,operator'
+        categories: 'bugfix,feature'
+        recursion_depth: 0
+        include_resources: true
+      - name: your-variant
+        audiences: 'operator'
+        categories: 'feature'
+        recursion_depth: -1
+        include_resources: false
+      ```
+
+      Only name is required.
+      Audiences and categories default to "include all", whereas recursion-depth defaults to 0.
+  extra-auths:
+    required: false
+    type: string
+    description: |
+      A JSON-Document containing a mapping of additional auth-cfgs of the following form:
+      { <host>: {"auth": <token>}}
+
+      example:
+      ```
+      {"registry-1.docker.io": {"auth": "abcd"}}
+      ```
+      Passed tokens will be _appended_ to resulting docker-cfg, and thus have precedence.
+
+runs:
+  using: composite
+  steps:
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - name: checkout
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        fetch-depth: 0 # release-notes code needs full commit-history and tags
+        fetch-tags: 0
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+    - name: authenticate-against-oci-registry
+      uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+      with:
+        oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
+        extra-auths: ${{ inputs.extra-auths }}
+
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C "${{ github.workspace }}" component-descriptor.yaml
+
+    - name: Prepare release-notes variants cfg
+      id: prep-releaes-notes-variants-cfg
+      shell: python
+      env:
+        RELEASE_NOTES_VARIANTS: ${{ inputs.release-notes-variants }}
+      run: |
+        import os
+        import sys
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+
+        import yaml
+        import release_notes_variants
+
+        release_notes_variant_cfg = os.environ['RELEASE_NOTES_VARIANTS']
+        release_notes_variant_cfg = yaml.safe_load(release_notes_variant_cfg)
+        release_notes_variant_cfg = release_notes_variants.normalise_variant_cfg(
+            release_notes_variant_cfg,
+        )
+
+        with open('release-notes-variants-cfg.yaml', 'w') as f:
+          yaml.dump(release_notes_variant_cfg, f)
+
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      env:
+        COMPONENT_DESCRIPTOR: ${{ inputs.component-descriptor }}
+      run: |
+        set -euo pipefail
+        printf '%s\n' "${COMPONENT_DESCRIPTOR}" > component-descriptor.yaml
+
+    - name: Retrieve Release-Notes
+      id: release-notes
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        DRAFT: ${{ inputs.draft }}
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+        INCLUDE_SUBCOMPONENT_RELEASE_NOTES: ${{ inputs.include-subcomponent-release-notes }}
+      run: |
+        set -eu
+
+        echo 'Component-Descriptor:'
+        cat component-descriptor.yaml
+
+        auth_token="${INPUT_GITHUB_TOKEN}"
+
+        if [ -z "${auth_token:-}" ]; then
+          auth_token="${GITHUB_TOKEN}"
+        fi
+
+        extra_cli_args=()
+        if [ "${DRAFT}" == 'true' ]; then
+          extra_cli_args+=(--draft)
+        fi
+
+        if [ -n "${OCM_REPOSITORIES}" ]; then
+          extra_cli_args+=(--ocm-repositories "${OCM_REPOSITORIES}")
+        fi
+
+        if [ "${INCLUDE_SUBCOMPONENT_RELEASE_NOTES}" != 'true' ]; then
+          extra_cli_args+=(--no-subcomponent-release-notes)
+        fi
+
+        echo 'Fetching release-notes'
+        "${GITHUB_ACTION_PATH}/release_notes_cli.py" \
+          --component-descriptor component-descriptor.yaml \
+          --github-auth-token "${auth_token}" \
+          --release-notes-variants-cfg-path release-notes-variants-cfg.yaml \
+          --local-release-notes local-release-notes.md \
+          --tar-output release-notes.tar \
+          "${extra_cli_args[@]}"
+
+        echo '## Release-Notes (local)' >> ${GITHUB_STEP_SUMMARY}
+        cat local-release-notes.md >> ${GITHUB_STEP_SUMMARY}
+
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+      with:
+        name: release-notes
+        path: release-notes.tar

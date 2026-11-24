@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -eu
+set -o pipefail
+
+helm_path=/usr/local/bin/helm
+
+if [ ! -f "${helm_path}" ]; then
+    export VERIFY_CHECKSUM=false
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    unset VERIFY_CHECKSUM
+fi
+
+exec ${helm_path} "$@"

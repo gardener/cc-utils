@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+repo_root="$(dirname "${BASH_SOURCE[0]}")/.."
+cat "${repo_root}/VERSION"

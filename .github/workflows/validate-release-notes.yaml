@@ -1,0 +1,45 @@
+name: Validate release-notes from PRs
+
+on:
+  workflow_call:
+    inputs:
+      pull-request-body:
+        type: string
+        required: true
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.ironment is used.
+
+jobs:
+  validate-release-notes:
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    environment: ${{ inputs.github-environment }}
+    steps:
+      - name: install-gardener-gha-libs
+        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+
+      - name: raise-on-malformed-release-notes
+        shell: python
+        env:
+          PULL_REQUEST_BODY: ${{ inputs.pull-request-body }}
+        run: |
+          import os
+
+          import release_notes.model
+
+          _, malformed = release_notes.model.iter_source_blocks(
+              source={},
+              content=os.environ["PULL_REQUEST_BODY"] + "\n",
+          )
+
+          if malformed:
+              raise ValueError(f'do not know how to handle malformed release-notes blocks: {malformed}')

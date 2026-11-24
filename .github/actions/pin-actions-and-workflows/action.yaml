@@ -1,0 +1,122 @@
+name: Pin Actions and Workflows
+description: |
+  Generates a snapshot of this repository's GitHub Actions and reusable workflows
+  on a separate target branch (default: `v1`), where all cross-references between
+  actions and workflows are pinned by commit digest rather than by branch name.
+
+  Consumers may reference the target branch for a rolling latest-pinned pointer,
+  or any specific commit digest it ever pointed to for full immutability.
+
+  See README.md in this action's directory for full rationale and usage guidance.
+
+inputs:
+  own-ref:
+    type: string
+    default: master
+    description: |
+      Ref (branch name or commit digest) to read from. Pinned commits are derived
+      from the commit this ref resolves to.
+  target-branch:
+    type: string
+    default: v1
+    description: |
+      Branch to push pinned commits to. Will be force-pushed. Consumers may
+      reference this branch (for a rolling latest-pinned pointer) or any specific
+      commit digest it ever pointed to (for full immutability).
+  own-org:
+    type: string
+    default: ''
+    description: |
+      GitHub organisation owning this repository (e.g. `gardener`). Used to
+      identify own `uses:` references that need to be rewritten. Defaults to the
+      organisation derived from `github.repository`.
+  own-repo:
+    type: string
+    default: ''
+    description: |
+      GitHub repository name (e.g. `cc-utils`). Used together with `own-org` to
+      identify own `uses:` references that need to be rewritten. Defaults to the
+      repository name derived from `github.repository`.
+  bundle-dir:
+    type: string
+    default: ''
+    description: |
+      Path to a pre-built bundle directory (as produced by bundle-gardener-gha-libs).
+      If set, the bundle-gardener-gha-libs step is skipped and this directory is used directly.
+  git-user-name:
+    type: string
+    default: github-actions[bot]
+    description: |
+      Git author name used for pinning commits.
+  git-user-email:
+    type: string
+    default: github-actions[bot]@users.noreply.github.com
+    description: |
+      Git author email used for pinning commits.
+  release-commit-objects-artefact:
+    type: string
+    default: ''
+    description: |
+      Optional name of an artifact produced by `capture-commit` (e.g. `release-commit-objects`).
+      If set, the artifact is imported before pinning so that the commit it contains is
+      reachable and can be passed as `own-ref`.
+
+runs:
+  using: composite
+  steps:
+    - name: install-dependencies
+      shell: bash
+      run: |
+        set -euo pipefail
+        pip install --quiet gitpython ruamel.yaml
+
+    - name: configure-git-identity
+      shell: bash
+      run: |
+        set -euo pipefail
+        git config --global user.name '${{ inputs.git-user-name }}'
+        git config --global user.email '${{ inputs.git-user-email }}'
+
+    - name: import-release-commit
+      if: ${{ inputs.release-commit-objects-artefact != '' }}
+      uses: gardener/cc-utils/.github/actions/import-commit@a755376b7a3617b87124cc182b9dbee131e3b102
+      with:
+        commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
+        after-import: noop
+
+    - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+      id: bundle
+      if: ${{ inputs.bundle-dir == '' }}
+
+    - name: pin
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        bundle_dir='${{ inputs.bundle-dir }}'
+        [ -z "${bundle_dir}" ] && bundle_dir='${{ steps.bundle.outputs.bundle-dir }}'
+
+        # derive org/repo from github.repository if not explicitly provided
+        own_org='${{ inputs.own-org }}'
+        own_repo='${{ inputs.own-repo }}'
+        if [ -z "${own_org}" ]; then
+          own_org='${{ github.repository_owner }}'
+        fi
+        if [ -z "${own_repo}" ]; then
+          own_repo='${{ github.event.repository.name }}'
+        fi
+
+        '${{ github.action_path }}/pin.py' \
+          --repo-root '${{ github.workspace }}' \
+          --own-ref '${{ inputs.own-ref }}' \
+          --target-branch '${{ inputs.target-branch }}' \
+          --own-org "${own_org}" \
+          --own-repo "${own_repo}" \
+          --bundle-dir "${bundle_dir}"
+
+    - name: push
+      shell: bash
+      run: |
+        set -euo pipefail
+        git push --force origin 'refs/heads/${{ inputs.target-branch }}'
+        git push origin "refs/tags/fixated/$(git rev-parse '${{ inputs.own-ref }}')"

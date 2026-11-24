@@ -1,0 +1,176 @@
+# SPDX-FileCopyrightText: Contributors to the Gardener project
+#
+# SPDX-License-Identifier: Apache-2.0
+
+
+import dataclasses
+
+import ci.util
+
+
+class ModelValidationError(ValueError):
+    '''
+    exception to be raised upon model validation errors
+    '''
+    pass
+
+
+class ConfigElementNotFoundError(ValueError):
+    pass
+
+
+class ModelValidationMixin:
+    def _required_attributes(self):
+        return ()
+
+    def _optional_attributes(self):
+        return ()
+
+    def _known_attributes(self):
+        return set(self._required_attributes()) | \
+                set(self._optional_attributes()) | \
+                set(self._defaults_dict().keys())
+
+    def validate(self):
+        self._validate_required_attributes()
+        self._validate_known_attributes()
+
+    def _validate_required_attributes(self):
+        missing_attributes = [a for a in self._required_attributes() if a not in self.raw]
+        if missing_attributes:
+            if hasattr(self, 'name'):
+                if callable(self.name):
+                    name = self.name()
+                else:
+                    name = str(self.name)
+            else:
+                name = '<unknown>'
+
+            raise ModelValidationError(
+                f'{type(self).__name__}:{name}: The following required attributes are '
+                f'absent: {", ".join(missing_attributes)}.'
+            )
+
+    def _validate_known_attributes(self):
+        unknown_attributes = [a for a in self.raw if a not in self._known_attributes()]
+        if unknown_attributes:
+            if hasattr(self, 'name'):
+                if callable(self.name):
+                    name = self.name()
+                else:
+                    name = str(self.name)
+            else:
+                name = '<unknown>'
+
+            raise ModelValidationError(
+                f'{type(self).__name__}:{name}: The following attributes are '
+                f'unknown: {", ".join(unknown_attributes)}.'
+            )
+
+
+class ModelDefaultsMixin:
+    def _defaults_dict(self):
+        return {}
+
+    def _apply_defaults(self, raw_dict):
+        self.raw = ci.util.merge_dicts(
+            self._defaults_dict(),
+            raw_dict,
+        )
+
+
+class ModelBase(ModelValidationMixin, ModelDefaultsMixin):
+    '''
+    Base class for 'dict-based' configuration classes (i.e. classes that expose contents
+    from a dict through a set of 'getter' methods.
+
+    Extenders _may_ overwrite `_required_attributes(self)` and return an iterable of attribute
+    identifiers. If such an iterable is returned, the ctor ensures that all specified attributes be
+    contained in the given dictionary (ModelValidationError is raised on absent attribs).
+    '''
+
+    def __init__(self, raw_dict):
+        self.raw = ci.util.not_none(raw_dict)
+
+    def __repr__(self):
+        return '{c} {a}'.format(
+            c=self.__class__.__name__,
+            a=str(self.raw),
+        )
+
+
+class NamedModelElement(ModelBase):
+    def __init__(
+        self,
+        name: str,
+        raw_dict: dict,
+        type_name: str=None,
+        *args,
+        **kwargs
+    ):
+        self._name = ci.util.not_none(name)
+        self._type_name = type_name
+        super().__init__(raw_dict=raw_dict, *args, **kwargs)
+
+    def _optional_attributes(self):
+        # workaround: NamedModelElement allows any attribute; it would
+        # obviously be a better way to disable this check (e.g. split into
+        # separate mixin and not add it to NME
+        return set(self.raw.keys())
+
+    def name(self):
+        return self._name
+
+    def __getattr__(self, name):
+        if name in self.raw:
+            return lambda: self.raw[name]
+
+        raise AttributeError(name)
+
+    def __repr__(self):
+        return f'{self.__class__.__qualname__}: {self.name()}'
+
+    def __str__(self):
+        return '{n}: {d}'.format(n=self.name(), d=self.raw)
+
+
+class BasicCredentials(ModelBase):
+    '''
+    Base class for configuration objects that contain basic authentication credentials
+    (i.e. a username and a password)
+
+    Not intended to be instantiated
+    '''
+
+    def username(self):
+        return self.raw.get('username')
+
+    def passwd(self):
+        return self.raw.get('password')
+
+    def as_tuple(self):
+        return (self.username(), self.passwd())
+
+    def _required_attributes(self):
+        return ['username', 'password']
+
+
+class TokenCredentials(ModelBase):
+    '''
+    Base class for configuration objects that use token-based authentication
+
+    Not intended to be instantiated
+    '''
+
+    def token(self):
+        return self.raw['token']
+
+    def _required_attributes(self):
+        return ['token']
+
+
+@dataclasses.dataclass(frozen=True)
+class CfgElementReference:
+    type_name: str
+    element_name: str
+    purpose: str | None = None

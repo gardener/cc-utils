@@ -1,0 +1,46 @@
+name: download-artifact
+description: |
+  a wrapper for actions/download-artifact.
+
+  depending on whether run on github.com, or a GHE-instance, it will dispatch to either v5 or v3
+  (v4+ is only available on github.com)
+
+inputs:
+  name:
+    type: string
+    required: true
+  path:
+    type: string
+    required: false
+  pattern:
+    type: string
+    required: false
+    default: ''
+  merge-multiple:
+    type: boolean
+    required: false
+    default: false
+
+runs:
+  using: composite
+  steps:
+    - name: render
+      shell: sh
+      run: |
+        set -eu
+        if ${{ github.server_url == 'https://github.com' }}; then
+          version='37930b1c2abaa49bbe596cd826c3c89aef350131' # v7
+        else
+          version='9bc31d5ccc31df68ecc42ccf4149144866c47d8a' # v3
+        fi
+
+        mkdir -p ../download-artifact
+        "${GITHUB_ACTION_PATH}/template.sh" \
+          ../download-artifact/action.yaml \
+          "${version}"
+    - uses: ./../download-artifact
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}
+        pattern: ${{ inputs.pattern }}
+        merge-multiple: ${{ inputs.merge-multiple }}

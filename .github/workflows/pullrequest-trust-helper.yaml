@@ -1,0 +1,82 @@
+name: Pull-Request-Trust Helper
+
+# description: |
+#   An opinionated re-usable workflow to help with trusting Pull-Requests. Depending on the
+#   trustedness of a pullrequest's author, the workflow will either add an indication
+#   that a label needs to be added, or automatically add a "trusted-label".
+#
+#   A user is considered trusted, if:
+#     - he is member of the pullrequest-target-repository's organisation
+#     - he is member of any of the `trusted-teams` (input to this workflow)
+#     - his association w/ target-repository is any of:
+#       - COLLABORATOR
+#       - MEMBER
+#       - OWNER
+#     - he is a GitHub App whose slug is listed in `trusted-github-apps`
+#
+#   Note: This workflow is intended to only by triggered for the following actions for pull-requests:
+#   - opened
+#   - edited
+#   - reopened
+#   - synchronize
+#
+#   If triggered from other sources, the workflow will early-exit with a warning, and have no
+#   effect.
+
+on:
+  workflow_call:
+    inputs:
+      trusted-label:
+        description: |
+          the label to set in order to trigger pipeline-runs trusting that label
+          needs to exist for the target-repository
+        type: string
+        required: false
+      trusted-teams:
+        description: |
+          an optional, comma-separated list of team-names. Members of any of those teams
+          are considered to be trusted.
+        type: string
+        default: ''
+      trusted-github-apps:
+        description: |
+          an optional, comma-separated list of GitHub App slugs (without the [bot] suffix)
+          to be considered trusted. E.g. "renovate,dependabot".
+        type: string
+        default: ''
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
+
+jobs:
+  pullrequest-trust-helper:
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      id-token: write
+    environment: ${{ inputs.github-environment }}
+    steps:
+      - uses: gardener/cc-utils/.github/actions/github-auth@a48a6f94d69833263b319780178654c0481c0556
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          repositories: |
+            ${{ github.event.repository.name }}
+          permissions: |
+            pull-requests: write
+            members: read
+      - uses: gardener/cc-utils/.github/actions/pullrequest-trust-helper@6139790688a1826426933735dc9208cb21446e2e
+        with:
+          trusted-label: ${{ inputs.trusted-label || vars.DEFAULT_LABEL_OK_TO_TEST || 'ok-to-test' }}
+          trusted-teams: ${{ inputs.trusted-teams }}
+          trusted-github-apps: ${{ inputs.trusted-github-apps }}
+          github-token: ${{ steps.fed-token.outputs.token }}

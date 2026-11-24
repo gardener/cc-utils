@@ -1,0 +1,13 @@
+*.pyc
+.*.swp
+.idea/
+.vscode/
+__pycache__/
+.cache/
+.claude/*
+!.claude/skills
+build/
+dist/
+tmp/
+.github/actions/install-gardener-gha-libs/_bundle/
+cumulus.md

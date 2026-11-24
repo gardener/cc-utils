@@ -1,0 +1,150 @@
+name: capture-commit
+description: |
+  captures the head commit in serialised form in order to be shared w/ other jobs.
+
+  This action is intended for the use-case of sharing a "release-commit" (where typically
+  some metadata-bearing files (e.g. containing version) are modified) with other jobs, without
+  persisting it, yet (as subsequent jobs might still fail).
+
+  This action will only work if git-repository is cloned using `git` (i.e. git-repository must be
+  present). It will work well if repository was cloned as `shallow`. Under the hood a `git bundle`
+  is created, containing the captured commit (and any of its ancestors not yet on a remote-tracking
+  ref). The bundle is race-free w.r.t. concurrent gc/repack.
+
+  As release-commits are commonly rather small (typically just changing some versions in a few
+  files), the resulting bundle is typically only a few kiBs in size, which allows it to be exported
+  as a (base64-encoded) output (thus making passing-around somewhat less cumbersome).
+
+  Thus-exported commits can be imported, retaining the exact same commit-digest, provided the
+  importing repository has the same head-commit, into which the commit passed to this action had.
+
+  For convenience, the commit-digest is written to hardcoded ref `refs/capture-commit` (and may
+  therefore be retrieve, e.g. using `git rev-parse capture-commit`), thus allowing it to be read
+  w/o the need to pass `commit-digest` from this step's outputs.
+
+  Caveat: if more than one commit is imported, importing steps relying on said ref will have to
+  guard against overwrites which will otherwise happen.
+
+inputs:
+  timestamp-reference:
+    required: true
+    description: |
+      historical: filepath pointing to a file created before the head-commit.
+      No longer used by the bundle-based implementation; kept as a required input
+      for backwards-compat with existing callers. May be dropped in a future release.
+  commit:
+    required: false
+    description: |
+      the commit to capture. Defaults to HEAD if not specified.
+  to-artefact:
+    required: false
+    description: |
+      if specified, the captured commit will also be uploaded as an artefact of the specified
+      name. The artefact will contain a single file named `commit-objects.bundle` (a git bundle
+      with the same contents as the `commit-objects` output).
+  commit-summary:
+    description: |
+      controls the step-summary to be emitted by this action.
+
+      `short` will contain the changed files + commit-message
+      `full`  will also contain the full diff
+      `none`  will result in no summary
+    default: short
+    type: choice
+    options:
+      - short
+      - full
+      - none
+
+outputs:
+  commit-digest:
+    description: |
+      the commit-digest of the head-commit (for convenience - previous step might already know
+      it, of course)
+    value: ${{ steps.capture.outputs.commit-digest }}
+  commit-objects:
+    description: |
+      a base64-encoded git bundle containing the objects required to restore the head-commit.
+    value: ${{ steps.capture.outputs.commit-objects }}
+
+runs:
+  using: composite
+  steps:
+    - name: capture-commit
+      id: capture
+      run: |
+        set -euo pipefail
+
+        objects_out='commit-objects.bundle'
+        # The digest is invocation-owned scratch data, not a checkout file. A later
+        # version action stages all worktree changes, so leaving it there pollutes its commit.
+        commit_out="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/capture-commit-digest.XXXXXX")"
+        trap 'rm -f -- "${commit_out}"' EXIT
+        GIT_DIR="$PWD/.git" \
+          "${GITHUB_ACTION_PATH}/capture-commit" \
+            "${objects_out}" \
+            '${{ inputs.timestamp-reference }}' \
+            "${commit_out}" \
+            ${{ inputs.commit }}
+
+        objects_size=$(stat --format=%s ${objects_out})
+        objects_max_size=65536 # 64 KiB
+
+        echo "commit-digest=$(cat "${commit_out}")" >> ${GITHUB_OUTPUT}
+        if [ ${objects_size} -lt ${objects_max_size} ]; then
+          echo "commit-objects=$(base64 -w0 < ${objects_out})" >> ${GITHUB_OUTPUT}
+        else
+          echo "Warning: captured bundle too large (${objects_size} octets)"
+          echo "commit-objects output will not be set"
+        fi
+
+        summary_kind="${{ inputs.commit-summary }}"
+
+        if [ "${summary_kind}" == 'full' ]; then
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        <details>
+          <summary>
+            <h2>Capture-Commit Summary</h2>
+          </summary>
+
+        commit-digest: \`$(cat "${commit_out}")\`
+        bundle-refs:
+        $(git bundle list-heads ${objects_out})
+        commit-message:
+        $(git show)
+        </details>
+        EOF
+
+        elif [ "${summary_kind}" == 'short' ]; then
+        cat << EOF > ${GITHUB_STEP_SUMMARY}
+        <details>
+          <summary>
+            <h2>Capture-Commit Summary</h2>
+          </summary>
+
+        commit-digest: \`$(cat "${commit_out}")\`
+        bundle-refs:
+        $(git bundle list-heads ${objects_out})
+        </details>
+        EOF
+
+        elif [ "${summary_kind}" == 'none' ]; then
+          echo "will not print a summary"
+        else
+          echo "Error: unexpected summary-kind: ${summary_kind}"
+          exit 1
+        fi
+      shell: bash
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@6b2ec3821ca5c112f804739af41dc574971c5138
+      if: ${{ inputs.to-artefact != '' }}
+      with:
+        name: ${{ inputs.to-artefact }}
+        path: commit-objects.bundle
+
+    - name: clean-up-capture-commit-archive
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # bundle was uploaded already, avoid local collisions in filesystem
+        unlink commit-objects.bundle

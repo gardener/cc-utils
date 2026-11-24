@@ -1,0 +1,1014 @@
+name: OCI-Build (multiarch)
+
+# description: |
+#   Reusable Workflow for building multi-platform OCI Images (grouped with an OCI Image Index),
+#   accompanied by an OCM Component Descriptor Resource fragment.
+#
+#   The workflow will spawn a separate job for each specified platform, trying to use matching runners.
+#   Currently, native runners for either `linux/arm64`. and `linux/amd64` are used. Other platforms
+#   will be built on runners on `linux/amd64`, using emulation.
+
+on:
+  workflow_call:
+    inputs:
+      oci-registry:
+        description: |
+          The (optional) oci-registry as part of image-push-target.
+          If both oci-registry, and oci-repository are present, push-target is calculated as:
+          {oci-registry}/{oci-repository}
+        type: string
+        required: false
+      oci-repository:
+        description: |
+          The oci-repository as part of image-push-target.
+          If both oci-registry, and oci-repository are present, push-target is calculated as:
+          {oci-registry}/{oci-repository}
+          If only one of both is passed, the missing parameter will be ignored.
+        type: string
+        required: true
+      oci-platforms:
+        description: |
+          The (comma-separated) OCI Platforms to build for. Only linux/arm64 and linux/amd64 are
+          currently supported for being run natively on arm/x86_64-runners respectively.
+        type: string
+        default: 'linux/arm64,linux/amd64'
+      tag:
+        description: |
+          The image-tag to set. Occurrences of `{version}` will be replaced by `version` input
+          (which is the default).
+        type: string
+        default: '{version}'
+        required: false
+      extra-tags:
+        type: string
+        required: false
+        description: |
+          A comma-separated list of additional tags to set. Existing tags will be updated.
+          Commonly used to reset `latest`-tag.
+      oci-platforms-to-runners-map:
+        type: string
+        description: |
+          Specifies which runners to use for which target-platform. The value is expected to be
+          a YAML-document of the following form:
+            ```
+            <platform-name>: <runner-name>
+            ```
+
+          Example:
+            ```
+            linux/amd64: 'ubuntu-latest'
+            ```
+
+          Unused platforms are ignored.
+        default: |
+          linux/arm64: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+          linux/amd64: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+      push:
+        description: |
+          Whether or not to push the built image. Allowed values:
+          - always
+          - never
+          - if-possible
+
+          `if-possible` assumes `prepare.yaml` workflow was run prior to this workflow, and
+          assumes an artefact `prepare-workflow-values` was emitted by it.
+
+          It is assumed pushing is not possible if workflow-trigger stems from a pullrequest from
+          a forked repository (where owner differs from fork's origin).
+        type: string
+        default: if-possible
+      target:
+        description: |
+          The (optional) target to build (passed to `docker build` as --target).
+        type: string
+        required: false
+      dockerfile:
+        type: string
+        required: false
+      build-args:
+        description: |
+          build-args, passed to `actions/build-push-action`. newline-separated values of form
+          NAME=VALUE
+        type: string
+        required: false
+      prebuild-hook:
+        description: |
+          if set, value will be executed as a bash-expression _after_ repository-checkout and
+          (if configured) artefact-import, but _before_ running build.
+
+          This can be useful, e.g. to conveniently pass-in some dynamic values from other build-jobs,
+          or to run some pre-generation steps.
+
+          The value will _not_ be quoted, so any valid bash-script can be passed.
+        type: string
+        required: false
+      postbuild-callback-action-path:
+        required: false
+        type: string
+        description: |
+          the path to a local action (relative to repository-root) that will be called
+          _after_ docker-build, but _before_ pushing the built image.
+
+          The action will receive the following inputs:
+            - `image-reference`: the image-reference of the just-built image
+
+          The action is expected to overwrite the image under the same tag (i.e. the tag
+          must remain unchanged after the action completes).
+
+          This can be useful, e.g. to run `unbase_oci` or other image-slimming tools on
+          the built image before it is pushed.
+      build-ctx-artefact:
+        description: |
+          Specifies GitHub-Actions-Artifact to download.
+
+          Will be parsed as a YAML document, and has two forms:
+
+          - single string (the artefact-name)
+          - map: <platform-name>: <artefact-name>
+
+          The latter form is helpful if platform-specific artefacts are needed.
+
+          Artefacts are downloaded into the default working directory after
+          doing a repository-checkout.
+
+          Note that thus-imported files will overwrite existing ones from repository-checkout.
+          Contained files will be merged recursively into existing directories.
+        type: string
+        required: false
+      build-directory:
+        description: |
+          relative path to repository-root in which docker-build should be run.
+        type: string
+        default: '.'
+      untar-build-ctx-artefact:
+        description: |
+          If passed, along w/ build-ctx-artefact, the downloaded artefact is assumed to contain
+          a tarfile, and will be extracted. This parameter's name is used to specify the
+          filename of said tarfile. This is useful, as GitHubActions choose to use ZIP by default,
+          so wrapping in TAR is a recommended practise, e.g. to preserve executable bits.
+
+          Consistently to `build-ctx-artefact`, has two forms (parsed as YAML document):
+
+          - single string (the fname)
+          - map: <platform-name>: <fname>
+        type: string
+        required: false
+      name:
+        description: |
+          The Image's name (used as OCM-Resource-Name)
+        type: string
+        required: true
+      version:
+        description: |
+          The Image's version (used as OCM-Resource-Version). Will by default also used as `tag`.
+          Must be a valid "relaxed semver".
+        type: string
+        required: true
+      ocm-labels:
+        description: |
+          optional OCM-Labels to add to the OCM Resource fragment. May either be a single label,
+          or a list of labels in either YAML or JSON format.
+
+          Example (single label):
+            ```
+            name: my-label
+            value: my-label-value
+            ```
+          Example (list of labels):
+            ```
+            - name: first-label
+              value: value1
+            - name: second-label
+              value: value2
+            ```
+        type: string
+      ctx:
+        description: |
+          will be passed to `export-ocm-fragments` for exporting OCM-Resource-Fragment
+        type: string
+        required: false
+      commit-objects-artefact:
+        type: string
+        description: |
+          the github-artifact-name containing a captured commit as output by the `capture-commit`
+          action. The default value will import the commit emitted by the `prepare` workflow
+          (which will result in the build to see the to-be-released commit, with correct
+          commit-digest).
+        default: release-commit-objects # exported from prepare.yaml
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
+      omit-ocm-fragment:
+        type: boolean
+        default: false
+        description: |
+          Set to true to suppress emission of an OCM-Resource fragment via export-ocm-fragments.
+      generate-sbom:
+        type: boolean
+        default: true
+        required: false
+        description: |
+          Whether to generate SPDX and CycloneDX SBOMs for each built image and push them as OCI
+          referrer manifests alongside the image. Requires the image to have been pushed
+          (`push != never`).
+    secrets:
+      auth-token:
+        required: false
+        description: |
+          An optional authtoken to use for authenticating against push-target. It is written
+          unchanged into `$HOME/.docker/config.json`, and is assumed to be base64-encoded output of
+          `<username>:<secret>`.
+
+          Note that it is only necessary to pass an auth-token if OIDC-authentication is not
+          possible. OIDC-Authentication should be preferred over using a static token.
+      dockerhub-auth-token:
+        required: false
+        description: |
+          An optional authtoken that is hardcoded to be used for authentication against dockerhub.
+          This is often needed in order to avoid running into rate-limits.
+
+          For convenience, if this workflow is called inheriting all secrets, this is read from
+          hardcoded secret `DOCKERHUB_RO_AUTH`. If passing secrets explicitly, and auth against
+          dockerhub is required, this input must be provided.
+
+          It is passed as-is, and should be the result of base64-encoding `user:secret`
+
+    outputs:
+      ocm-resource:
+        description: |
+          OCM Resource fragment describing the published image.
+        value: ${{ jobs.collect-images.outputs.ocm-resource }}
+      oci-reference:
+        description: |
+          The OCI-Image-Reference to which the built Image-Index was pushed to
+        value: ${{ jobs.collect-images.outputs.oci-reference }}
+
+jobs:
+  preprocess:
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions: {}
+    outputs:
+      args: ${{ steps.preprocess.outputs.args }}
+      target-image-ref: ${{ steps.preprocess.outputs.target-image-ref }}
+      push: ${{ steps.check.outputs.push }}
+    steps:
+      - name: retrieve-params
+        if: ${{ inputs.push == 'if-possible' }}
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: prepare-workflow-values
+      - name: check-params
+        id: check
+        run: |
+          set -euo pipefail
+          case "${{ inputs.push }}" in
+            'if-possible')
+              tar xf prepare-workflow-values.tar prepare-values.d/can-push
+              push="$(cat prepare-values.d/can-push)"
+              rm -rf prepare-values.d prepare-workflow-values.tar
+              ;;
+            always)
+              push=true
+              ;;
+            never)
+              push=false
+              ;;
+            *)
+              echo "unexpected value for inputs.push: ${{ inputs.push }}"
+              exit 1
+              ;;
+          esac
+          echo "push=${push}" >> ${GITHUB_OUTPUT}
+      - name: preprocess
+        shell: python
+        id: preprocess
+        run: |
+          import json
+          import os
+          import pprint
+
+          import yaml
+
+          platform_names = '${{ inputs.oci-platforms }}'.split(',')
+          ref_parts = []
+          if (oci_registry := '${{ inputs.oci-registry }}'):
+            ref_parts.append(oci_registry.strip('/'))
+          if (oci_repository := '${{ inputs.oci-repository }}'):
+            ref_parts.append(oci_repository.strip('/'))
+
+          build_artefact = '''
+          ${{ inputs.build-ctx-artefact }}
+          '''.strip()
+
+          if build_artefact:
+            build_artefact = yaml.safe_load(build_artefact)
+            if isinstance(build_artefact, str):
+              build_artefacts = {
+                p: build_artefact for p in platform_names
+              }
+            elif isinstance(build_artefact, dict):
+              build_artefacts = build_artefact
+            else:
+              print(f'error: expected either a string, or a dict: {build_artefact=}')
+              exit(1)
+          else:
+            build_artefacts = dict()
+
+          untar_build_artefact = '''
+          ${{ inputs.untar-build-ctx-artefact }}
+          '''.strip()
+
+          if untar_build_artefact:
+            untar_build_artefact = yaml.safe_load(untar_build_artefact)
+            if isinstance(untar_build_artefact, str):
+              untar_build_artefacts = {
+                p: untar_build_artefact for p in platform_names
+              }
+            elif isinstance(untar_build_artefact, dict):
+              untar_build_artefacts = untar_build_artefact
+            else:
+              print(f'error: expected either a string, or a dict: {untar_build_artefact=}')
+              exit(1)
+          else:
+            untar_build_artefacts = dict()
+
+          image_ref_base = '/'.join(ref_parts)
+
+          # todo: validate version
+          version = '${{ inputs.version }}'
+
+          # note: `version` must be in scope to resolve occurrences of `{version}`
+          tag = f'${{ inputs.tag }}'
+
+          runners_by_platform = yaml.safe_load(
+          '''${{ inputs.oci-platforms-to-runners-map }}'''
+          )
+
+          args = []
+
+          for platform_name in platform_names:
+            if not platform_name in runners_by_platform:
+              print(f'WARNING: no runner for {platform_name=}')
+            platform_tag = f'${{ inputs.tag }}-{platform_name.replace("/", "_")}'
+            build_artefact = build_artefacts.get(platform_name, '')
+            untar_build_artefact = untar_build_artefacts.get(platform_name, '')
+            args.append({
+              'platform-name': platform_name,
+              'runner': runners_by_platform.get(platform_name, '${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}'),
+              'tag': platform_tag,
+              'image-reference': f'{image_ref_base}:{platform_tag}',
+              'build-artefact': build_artefact,
+              'untar-build-artefact': untar_build_artefact,
+            })
+
+          pprint.pprint(args)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'args={json.dumps(args)}')
+            f.write('\n')
+
+            f.write(f'target-image-ref={image_ref_base}:${{ inputs.tag }}')
+            f.write('\n')
+
+  build-images:
+    needs: preprocess
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ matrix.args.runner }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      matrix:
+        args: ${{ fromJSON(needs.preprocess.outputs.args) }}
+    steps:
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: inject-authtoken-for-dockerhub
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # cannot check in if-clause above, as `secrets` ctx is not accessible there
+          if [ -n '${{ secrets.dockerhub-auth-token }}' ]; then
+            dockerhub_token='${{ secrets.dockerhub-auth-token }}'
+          elif [ -n '${{ secrets.DOCKERHUB_RO_AUTH }}' ]; then
+            dockerhub_token='${{ secrets.DOCKERHUB_RO_AUTH }}'
+          else
+            dockerhub_token=''
+            echo "warning: did not receive a token for dockerhub"
+          fi
+
+          if [ -n '${dockerhub_token:-}' ]; then
+          cat <<EOF >> /tmp/config.json
+          {
+            "registry-1.docker.io": {
+              "auth": "${dockerhub_token}"
+            },
+            "docker.io": {
+              "auth": "${dockerhub_token}"
+            },
+            "index.docker.io": {
+              "auth": "${dockerhub_token}"
+            },
+            "https://index.docker.io/v1/": {
+              "auth": "${dockerhub_token}"
+            }
+          }
+          EOF
+          else
+          echo "{}" >> /tmp/config.json
+          fi
+          echo 'extra-auths<<EOF' >> "${GITHUB_OUTPUT}"
+          if ${{ secrets.auth-token != '' }}; then
+            target_host=$(echo '${{ matrix.args.image-reference }}' | cut -d/ -f1)
+            jq \
+              "setpath([\"$target_host\"]; {\"auth\": \"${{ secrets.auth-token }}\"})" \
+              /tmp/config.json \
+              >> "${GITHUB_OUTPUT}"
+          else
+            cat /tmp/config.json >> "${GITHUB_OUTPUT}"
+          fi
+          echo EOF >> "${GITHUB_OUTPUT}"
+      - uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+        continue-on-error: true # successful auth might not be required
+        with:
+          oci-image-reference: ${{ matrix.args.image-reference }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - name: import-release-commit
+        if: ${{ inputs.commit-objects-artefact != '' }}
+        uses: gardener/cc-utils/.github/actions/import-commit@a755376b7a3617b87124cc182b9dbee131e3b102
+        with:
+          commit-objects-artefact: ${{ inputs.commit-objects-artefact }}
+          after-import: rebase
+      - name: retrieve build-ctx-artefact
+        if: ${{ matrix.args.build-artefact != '' }}
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: ${{ matrix.args.build-artefact }}
+          merge-multiple: true
+      - name: untar build-ctx-artefact
+        if: ${{ matrix.args.build-artefact && matrix.args.untar-build-artefact }}
+        run: |
+          fname="${{ matrix.args.untar-build-artefact }}"
+          echo "untarring ${fname}"
+          tar xf "${fname}"
+      - name: prebuild-hook
+        if: ${{ inputs.prebuild-hook }}
+        run: |
+          ${{ inputs.prebuild-hook }}
+      - name: 'build ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        id: build
+        with:
+          outputs: type=docker
+          tags: ${{ matrix.args.image-reference }}
+          context: ${{ inputs.build-directory }}
+          platforms: ${{ matrix.args.platform-name }}
+          target: ${{ inputs.target }}
+          file: ${{ inputs.dockerfile }}
+          build-args: ${{ inputs.build-args }}
+
+      - name: prepare-postbuild-callback-action
+        if: ${{ inputs.postbuild-callback-action-path != '' }}
+        shell: bash
+        run: |
+          set -eu
+          cp -r "${{ inputs.postbuild-callback-action-path }}" ../postbuild-callback-action
+      - name: postbuild-callback-action
+        if: ${{ inputs.postbuild-callback-action-path != '' }}
+        uses: ./../postbuild-callback-action
+        with:
+          image-reference: ${{ matrix.args.image-reference }}
+
+      - uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        with:
+          oci-image-reference: ${{ matrix.args.image-reference }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+
+      - name: 'push ${{ inputs.name }} / ${{ matrix.args.platform-name }}'
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        shell: bash
+        id: push
+        run: |
+          set -eu
+          docker push ${{ matrix.args.image-reference }}
+
+      - name: 'install syft / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/install-syft@a48a6f94d69833263b319780178654c0481c0556
+
+      - name: 'install cbomkit-theia / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@a48a6f94d69833263b319780178654c0481c0556
+
+      - name: 'generate SBOM / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: sbom-generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          syft scan '${{ matrix.args.image-reference }}' \
+            -o 'spdx-json=sbom.spdx.json' \
+            -o 'cyclonedx-json@1.6=sbom.cdx.json'
+          version="$(syft version --output json | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: 'generate CBOM / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: cbom-generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cbomkit-theia image --bom sbom.cdx.json \
+            '${{ matrix.args.image-reference }}' > cbom.cdx.json
+          version="$(cbomkit-theia version 2>/dev/null | awk '{print $NF}' || true)"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+
+      - name: 'push SBOM referrers / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: sbom-push
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import os
+
+          import oci.auth
+          import oci.client
+          import oci.model
+          import sbom.oci
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+
+          image_ref = oci.model.OciImageReference.to_image_ref(
+              '${{ matrix.args.image-reference }}',
+          )
+
+          tool_version = '${{ steps.sbom-generate.outputs.version }}' or None
+
+          with open('sbom.spdx.json', 'rb') as f:
+              spdx_bytes = f.read()
+          with open('sbom.cdx.json', 'rb') as f:
+              cdx_bytes = f.read()
+
+          spdx_digest, cdx_digest = sbom.oci.push_sbom_referrers(
+              spdx_bytes=spdx_bytes,
+              cdx_bytes=cdx_bytes,
+              image_reference=image_ref,
+              oci_client=oci_client,
+              tool_version=tool_version,
+          )
+
+          repo = image_ref.ref_without_tag
+          spdx_ref = f'{repo}@{spdx_digest}'
+          cdx_ref = f'{repo}@{cdx_digest}'
+          print(f'SPDX referrer: {spdx_ref}')
+          print(f'CycloneDX referrer: {cdx_ref}')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'spdx-referrer-ref={spdx_ref}\n')
+              f.write(f'cdx-referrer-ref={cdx_ref}\n')
+
+      - name: 'build SBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import dataclasses
+          import os
+
+          import yaml
+
+          import ocm
+
+          platform = '${{ matrix.args.platform-name }}'  # e.g. linux/amd64
+          os_name, architecture = platform.split('/', 1)
+          name = '${{ inputs.name }}'
+          version = '${{ inputs.version }}'
+
+          tool_version = '${{ steps.sbom-generate.outputs.version }}' or None
+
+          def make_label(sbom_format):
+              if not tool_version:
+                  return None
+              return ocm.Label(
+                  name='gardener.cloud/sbom',
+                  value={
+                      'data-source': {
+                          'kind': 'local-scan',
+                          'tool': 'syft',
+                          'tool-version': tool_version,
+                      },
+                      'format': sbom_format,
+                  },
+              )
+
+          def make_resources(sbom_format, media_type, inline_path, referrer_ref):
+              extra_identity = {
+                  'version': version,
+                  'os': os_name,
+                  'architecture': architecture,
+                  'sbom-format': sbom_format,
+              }
+              label = make_label(sbom_format)
+              labels = [label] if label else []
+              inline = ocm.Resource(
+                  name=name,
+                  version=version,
+                  type=media_type,
+                  extraIdentity=extra_identity,
+                  access=ocm.LocalBlobAccess(
+                      localReference=inline_path,
+                      mediaType=media_type,
+                  ),
+                  relation=ocm.ResourceRelation.LOCAL,
+                  labels=labels,
+              )
+              ref = ocm.Resource(
+                  name=f'{name}-sbom-ref',
+                  version=version,
+                  type=media_type,
+                  extraIdentity=extra_identity,
+                  access=ocm.OciAccess(
+                      imageReference=referrer_ref,
+                  ),
+                  relation=ocm.ResourceRelation.LOCAL,
+                  labels=labels,
+              )
+              return inline, ref
+
+          spdx_inline, spdx_ref = make_resources(
+              sbom_format='spdx-2.3',
+              media_type='application/spdx+json',
+              inline_path='sbom.spdx.json',
+              referrer_ref='${{ steps.sbom-push.outputs.spdx-referrer-ref }}',
+          )
+          cdx_inline, cdx_ref = make_resources(
+              sbom_format='cyclonedx-1.6',
+              media_type='application/vnd.cyclonedx+json',
+              inline_path='sbom.cdx.json',
+              referrer_ref='${{ steps.sbom-push.outputs.cdx-referrer-ref }}',
+          )
+
+          resources = (spdx_inline, spdx_ref, cdx_inline, cdx_ref)
+          with open('sbom-ocm-resources.yaml', 'w') as f:
+              yaml.dump_all(
+                  [dataclasses.asdict(r) for r in resources],
+                  stream=f,
+                  Dumper=ocm.EnumValueYamlDumper,
+              )
+
+          os.makedirs('blobs.d', exist_ok=True)
+          os.link('sbom.spdx.json', 'blobs.d/sbom.spdx.json')
+          os.link('sbom.cdx.json', 'blobs.d/sbom.cdx.json')
+
+      - name: 'export SBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+        with:
+          ocm-resources-file: sbom-ocm-resources.yaml
+          blobs-directory: blobs.d
+          ctx: ${{ inputs.ctx }}
+
+      - name: 'enrich CBOM with key sizes / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import sbom.cbomenrich as scbe
+
+          with open('cbom.cdx.json', 'rb') as f:
+              cbom_bytes = f.read()
+
+          cbom_bytes = scbe.enrich(
+              cbom_bytes,
+              image_reference='${{ matrix.args.image-reference }}',
+          )
+
+          with open('cbom.cdx.json', 'wb') as f:
+              f.write(cbom_bytes)
+
+      - name: 'push CBOM referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        id: cbom-push
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import os
+
+          import oci.auth
+          import oci.client
+          import oci.model
+          import sbom.cbom
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+
+          image_ref = oci.model.OciImageReference.to_image_ref(
+              '${{ matrix.args.image-reference }}',
+          )
+
+          tool_version = '${{ steps.cbom-generate.outputs.version }}' or None
+
+          with open('cbom.cdx.json', 'rb') as f:
+              cbom_bytes = f.read()
+
+          cbom_digest = sbom.cbom.push_cbom_referrer(
+              cbom_bytes=cbom_bytes,
+              image_reference=image_ref,
+              oci_client=oci_client,
+              tool_version=tool_version,
+          )
+
+          repo = image_ref.ref_without_tag
+          cbom_ref = f'{repo}@{cbom_digest}'
+          print(f'CBOM referrer: {cbom_ref}')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'cbom-referrer-ref={cbom_ref}\n')
+
+      - name: 'push go-module CBOM referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import oci.auth
+          import oci.client
+          import oci.model
+          import sbom.cbom as scbom
+          import sbom.gobinary as sgob
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+          image_ref = oci.model.OciImageReference.to_image_ref(
+              '${{ matrix.args.image-reference }}',
+          )
+
+          with open('sbom.cdx.json', 'rb') as f:
+              cdx_bytes = f.read()
+
+          inference = sgob.infer_from_cdx(cdx_bytes)
+          if not inference:
+              print('no Go modules found — skipping go-module CBOM')
+          else:
+              cbom_bytes = sgob.build_inferred_cbom(image_ref=image_ref, inference=inference)
+              scbom.push_cbom_referrer(
+                  cbom_bytes=cbom_bytes,
+                  image_reference=image_ref,
+                  oci_client=oci_client,
+                  tool_version=sgob.TOOL_NAME,
+                  extra_annotations={sgob.ANALYSIS_METHOD_ANNOTATION: sgob.ANALYSIS_METHOD_VALUE},
+              )
+              print(
+                  f'pushed go-module CBOM: '
+                  f'{inference["module_count"]} modules, '
+                  f'{len(inference["algorithms"])} algorithms, '
+                  f'{len(inference["protocols"])} protocols'
+              )
+
+      - name: 'push go-buildinfo referrer / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import oci.auth
+          import oci.client
+          import sbom.inject
+
+          oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+          )
+          digest = sbom.inject.scan_go_buildinfo(
+              image_ref='${{ matrix.args.image-reference }}',
+              oci_client=oci_client,
+          )
+          print(f'go-buildinfo referrer: {digest or "none (no Go binaries)"}')
+
+      - name: 'build CBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        shell: python
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          import dataclasses
+          import os
+
+          import yaml
+
+          import ocm
+          import sbom.cbom
+
+          platform = '${{ matrix.args.platform-name }}'  # e.g. linux/amd64
+          os_name, architecture = platform.split('/', 1)
+          name = '${{ inputs.name }}'
+          version = '${{ inputs.version }}'
+
+          tool_version = '${{ steps.cbom-generate.outputs.version }}' or None
+
+          with open('cbom.cdx.json', 'rb') as f:
+              cbom_bytes = f.read()
+
+          import hashlib
+          cbom_digest = f'sha256:{hashlib.sha256(cbom_bytes).hexdigest()}'
+
+          resources = sbom.cbom.build_cbom_ocm_resources(
+              resource_name=name,
+              version=version,
+              source_image_ref='${{ matrix.args.image-reference }}',
+              source_digest='',
+              cbom_bytes=cbom_bytes,
+              cbom_blob_digest=cbom_digest,
+              tool_ver=tool_version,
+              cbom_referrer_digest='${{ steps.cbom-push.outputs.cbom-referrer-ref }}',
+          )
+
+          # patch extraIdentity with platform info (mirroring SBOM convention)
+          for r in resources:
+              r['extraIdentity']['os'] = os_name
+              r['extraIdentity']['architecture'] = architecture
+
+          with open('cbom-ocm-resources.yaml', 'w') as f:
+              yaml.dump_all(resources, stream=f)
+
+          os.makedirs('blobs.d', exist_ok=True)
+          os.link('cbom.cdx.json', 'blobs.d/cbom.cdx.json')
+
+      - name: 'export CBOM OCM fragments / ${{ matrix.args.platform-name }}'
+        if: ${{ inputs.generate-sbom && needs.preprocess.outputs.push == 'true' }}
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+        with:
+          ocm-resources-file: cbom-ocm-resources.yaml
+          blobs-directory: blobs.d
+          ctx: ${{ inputs.ctx }}
+
+  collect-images:
+    needs:
+      - build-images
+      - preprocess
+    outputs:
+      ocm-resource: ${{ steps.collect-images.outputs.ocm-resource }}
+      oci-reference: ${{ steps.collect-images.outputs.oci-reference }}
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+      - name: inject-authtoken
+        id: extra-auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          # cannot access secret in if on step-level
+          if ${{ secrets.auth-token == '' }}; then
+            exit 0
+          fi
+          hostname=$(echo ${{ needs.preprocess.outputs.target-image-ref }} | cut -d/ -f1 )
+          echo "extra-auths={\"$hostname\": {\"auth\": \"${{ secrets.auth-token }}\" }}" \
+            >> $GITHUB_OUTPUT
+      - uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+        if: ${{ needs.preprocess.outputs.push == 'true' }}
+        with:
+          oci-image-reference: ${{ needs.preprocess.outputs.target-image-ref }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          extra-auths: ${{ steps.extra-auth.outputs.extra-auths }}
+      - name: collect-images
+        id: collect-images
+        shell: python
+        run: |
+          import dataclasses
+          import json
+          import os
+          import pprint
+          import textwrap
+
+          import yaml
+
+          import oci.auth
+          import oci.client
+          import oci.merge
+          import oci.model
+          import ocm
+
+          args = json.loads('''
+            ${{ needs.preprocess.outputs.args }}
+          ''')
+          pprint.pprint(args)
+
+          push = '${{ needs.preprocess.outputs.push }}' == 'true'
+
+          src_image_refs = [
+            a['image-reference'] for a in args
+          ]
+
+          tgt_image_ref = '${{ needs.preprocess.outputs.target-image-ref }}'
+
+          print(f'merging {src_image_refs=} into {tgt_image_ref=}')
+
+          if push:
+            oci_client = oci.client.Client(
+              credentials_lookup=oci.auth.docker_credentials_lookup(),
+            )
+
+            extra_tags='${{ inputs.extra-tags }}'.strip()
+            if extra_tags:
+              extra_tags = extra_tags.split(',')
+            else:
+              extra_tags = ()
+
+            oci.merge.into_image_index(
+              src_image_refs=src_image_refs,
+              tgt_image_ref=tgt_image_ref,
+              oci_client=oci_client,
+              extra_tags=extra_tags,
+            )
+
+            print(f'published to {tgt_image_ref=}')
+
+          labels_str = '''${{ inputs.ocm-labels }}'''.strip()
+          if labels_str:
+            labels = yaml.safe_load(labels_str)
+            if isinstance(labels, dict):
+              labels = [labels]
+            elif isinstance(labels, list):
+              pass
+            else:
+              raise ValueError(f'label must either be a dict or a list - saw: {type(labels)=}')
+          else:
+            labels = []
+
+          resource = ocm.Resource(
+            name='${{ inputs.name }}',
+            version='${{ inputs.version }}',
+            type=ocm.ArtefactType.OCI_IMAGE,
+            extraIdentity={
+              'version': '${{ inputs.version }}',
+            },
+            access=ocm.OciAccess(
+              imageReference=tgt_image_ref,
+            ),
+            relation=ocm.ResourceRelation.LOCAL,
+            labels=labels,
+          )
+
+          resource_str = yaml.dump(
+            data=dataclasses.asdict(resource),
+            Dumper=ocm.EnumValueYamlDumper,
+          )
+
+          print('ocm-resource:')
+          print(resource_str)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'oci-reference={tgt_image_ref}\n')
+            f.write('ocm-resource<<EOF\n')
+            f.write(resource_str)
+            f.write('EOF\n')
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(textwrap.dedent(f'''\
+            ## OCM OCI Image Build Summary
+            pushed to: `{tgt_image_ref}`
+            platforms: `${{ inputs.oci-platforms }}`
+
+            *OCM Resource Fragment*
+            ```
+            {resource_str}
+            ```
+            '''))
+      - name: export-ocm-fragments
+        if: ${{ !inputs.omit-ocm-fragment }}
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+        with:
+          ocm-resources: ${{ steps.collect-images.outputs.ocm-resource }}
+          ctx: ${{ inputs.ctx }}

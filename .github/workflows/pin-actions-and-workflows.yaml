@@ -1,0 +1,114 @@
+name: Pin Actions and Workflows
+
+on:
+  workflow_dispatch:
+    inputs:
+      own-ref:
+        type: string
+        default: master
+        description: |
+          Ref (branch name or commit digest) to read from. Defaults to `master`.
+      target-branch:
+        type: string
+        default: preview
+        description: |
+          Branch to push pinned commits to. Will be force-pushed. Defaults to `preview`.
+  workflow_call:
+    inputs:
+      own-ref:
+        type: string
+        default: master
+        description: |
+          Ref (branch name or commit digest) to read from. Defaults to `master`.
+      target-branch:
+        type: string
+        default: v1
+        description: |
+          Branch to push pinned commits to. Will be force-pushed. Defaults to `v1`.
+      own-org:
+        type: string
+        default: ''
+        description: |
+          GitHub organisation owning this repository. Defaults to the calling
+          repository's organisation.
+      own-repo:
+        type: string
+        default: ''
+        description: |
+          GitHub repository name. Defaults to the calling repository's name.
+      release-commit-objects-artefact:
+        type: string
+        default: ''
+        description: |
+          Optional name of an artifact produced by `capture-commit`. If set, the artifact
+          is imported before pinning so the captured commit is reachable as `own-ref`.
+
+jobs:
+  build-bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+            arch: amd64
+          - runs-on: ${{ vars.DEFAULT_RUNNER_ARM || 'ubuntu-24.04-arm' }}
+            arch: arm64
+    runs-on: ${{ matrix.runs-on }}
+    name: build-bundle (${{ matrix.arch }})
+    permissions:
+      contents: read
+      id-token: write  # required for trusted-checkout OIDC token exchange
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          fetch-depth: 0
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          init-git-identity: true
+          github-auth-token-permissions: |
+            contents: write
+            workflows: write
+      - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+        id: bundle
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: gardener-gha-libs-bundle-${{ matrix.arch }}
+          path: ${{ steps.bundle.outputs.bundle-dir }}
+
+  pin:
+    needs: build-bundle
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: write  # required to push the target branch and preservation refs
+      id-token: write  # required for OIDC federated token exchange
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          fetch-depth: 0  # full history required for git worktree operations
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          init-git-identity: true
+          github-auth-token-permissions: |
+            contents: write
+            workflows: write
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gardener-gha-libs-bundle-amd64
+          path: /tmp/bundle-amd64
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: gardener-gha-libs-bundle-arm64
+          path: /tmp/bundle-arm64
+      - name: merge-wheelhouses
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
+          cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
+      - name: pin-actions-and-workflows
+        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@124f5677708174be45648a3f2185a7e12d5db396
+        with:
+          own-ref: ${{ inputs.own-ref }}
+          target-branch: ${{ inputs.target-branch }}
+          own-org: ${{ inputs.own-org }}
+          own-repo: ${{ inputs.own-repo }}
+          release-commit-objects-artefact: ${{ inputs.release-commit-objects-artefact }}
+          bundle-dir: /tmp/gardener-gha-libs-bundle

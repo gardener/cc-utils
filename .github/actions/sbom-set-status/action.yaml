@@ -1,0 +1,154 @@
+name: 'Set Cumulus release status (sbom-set-status)'
+description: >
+  Writes a Cumulus release-status entry for one or more GCS run-keys, with smart
+  transition logic: targets that require a prior "promoted" write
+  (deployed-to-production, released) will have it prepended automatically
+  if not already present. For "released", also polls until sbom/ is locked
+  before writing, confirming Cumulus has processed the promoted write.
+
+inputs:
+  gcs-bucket:
+    description: 'GCS bucket name (Cumulus pipeline UUID)'
+    required: true
+  gcs-token:
+    description: 'Bearer token for the GCS JSON API'
+    required: true
+  run-key:
+    description: 'Single GCS path prefix (run-key) to set status on, e.g. "1.2.3"'
+    required: false
+    default: ''
+  run-keys:
+    description: 'Newline-separated list of GCS run-keys to set status on'
+    required: false
+    default: ''
+  release-status:
+    description: >
+      Target release status. One of:
+        release-candidate    – informational; no file locks.
+        promoted             – registers run-key with Cumulus; locks sbom/** permanently.
+        deployed-to-production – informational; no additional locks beyond promoted.
+        released             – locks all of <run-key>/ permanently (terminal state).
+      For deployed-to-production and released, a promoted write is prepended
+      automatically if not already present. For released, additionally waits
+      for sbom/ to become locked before writing.
+    required: true
+  on-already-released:
+    description: >
+      Action when the run-key is already in "released" state:
+        skip – exit 0 (default)
+        fail – exit 1
+    required: false
+    default: 'skip'
+  on-absent:
+    description: >
+      Action when a run-key has no status entries in the bucket:
+        skip – silently ignore (default)
+        fail – exit 1
+      Ignored unless mode is "update".
+    required: false
+    default: 'skip'
+  mode:
+    description: >
+      Write mode:
+        create           – fail if status entries already exist (exclusive first write).
+        update           – skip/fail if absent (on-absent applies); existence is fine.
+        create-or-update – write unconditionally; neither absence nor existence is an error.
+    required: false
+    default: 'create-or-update'
+  poll-interval:
+    description: 'Seconds between lock-poll attempts when transitioning to released (default: 30)'
+    required: false
+    default: '30'
+  poll-timeout:
+    description: >
+      Max seconds to wait for sbom/ lock before proceeding to write released (default: 600).
+      A warning is printed if the timeout is reached; the released write still proceeds.
+    required: false
+    default: '600'
+  # token refresh — optional; when all four are supplied, set_status.py re-requests a
+  # fresh GCS token on HTTP 401, so a long-running poll cannot expire mid-flight.
+  token-exchange-api-url:
+    description: 'Base URL of the token exchange API (enables mid-run token refresh)'
+    required: false
+    default: ''
+  token-exchange-audience:
+    description: 'OIDC audience for token refresh'
+    required: false
+    default: ''
+  token-exchange-pipeline-id:
+    description: 'Pipeline identifier for token refresh'
+    required: false
+    default: ''
+  token-exchange-pipeline-group-id:
+    description: 'Pipeline group identifier for token refresh'
+    required: false
+    default: ''
+  token-exchange-scope:
+    description: 'Scope to re-request on token refresh (e.g. "cumulus")'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Set release status
+      shell: bash
+      env:
+        GCS_BUCKET: ${{ inputs.gcs-bucket }}
+        GCS_TOKEN: ${{ inputs.gcs-token }}
+        RUN_KEY: ${{ inputs.run-key }}
+        RUN_KEYS: ${{ inputs.run-keys }}
+        RELEASE_STATUS: ${{ inputs.release-status }}
+        ON_ALREADY_RELEASED: ${{ inputs.on-already-released }}
+        ON_ABSENT: ${{ inputs.on-absent }}
+        MODE: ${{ inputs.mode }}
+        POLL_INTERVAL: ${{ inputs.poll-interval }}
+        POLL_TIMEOUT: ${{ inputs.poll-timeout }}
+        TOKEN_EXCHANGE_API_URL: ${{ inputs.token-exchange-api-url }}
+        TOKEN_EXCHANGE_AUDIENCE: ${{ inputs.token-exchange-audience }}
+        TOKEN_EXCHANGE_PIPELINE_ID: ${{ inputs.token-exchange-pipeline-id }}
+        TOKEN_EXCHANGE_PIPELINE_GROUP_ID: ${{ inputs.token-exchange-pipeline-group-id }}
+        TOKEN_EXCHANGE_SCOPE: ${{ inputs.token-exchange-scope }}
+      run: |
+        set -euo pipefail
+        if [ -n "${RUN_KEY}" ]; then
+          echo "set-release-status: run-key='${RUN_KEY}' target=${RELEASE_STATUS} mode=${MODE}" >&2
+        else
+          n=$(echo "${RUN_KEYS}" | grep -c '[^[:space:]]' || true)
+          echo "set-release-status: ${n} run-key(s) target=${RELEASE_STATUS} mode=${MODE}" >&2
+        fi
+        extra_args=()
+        if [ -n "${TOKEN_EXCHANGE_API_URL}" ]; then
+          extra_args+=(
+            --token-exchange-api-url           "$TOKEN_EXCHANGE_API_URL"
+            --token-exchange-audience          "$TOKEN_EXCHANGE_AUDIENCE"
+            --token-exchange-pipeline-id       "$TOKEN_EXCHANGE_PIPELINE_ID"
+            --token-exchange-pipeline-group-id "$TOKEN_EXCHANGE_PIPELINE_GROUP_ID"
+            --token-exchange-scope             "$TOKEN_EXCHANGE_SCOPE"
+          )
+        fi
+        if [ -n "${RUN_KEYS}" ]; then
+          python3 "$GITHUB_ACTION_PATH/set_status.py" \
+            --gcs-bucket           "$GCS_BUCKET" \
+            --gcs-token            "$GCS_TOKEN" \
+            --run-keys             "$RUN_KEYS" \
+            --release-status       "$RELEASE_STATUS" \
+            --on-already-released  "$ON_ALREADY_RELEASED" \
+            --on-absent            "$ON_ABSENT" \
+            --mode                 "$MODE" \
+            --poll-interval        "$POLL_INTERVAL" \
+            --poll-timeout         "$POLL_TIMEOUT" \
+            "${extra_args[@]}"
+        else
+          python3 "$GITHUB_ACTION_PATH/set_status.py" \
+            --gcs-bucket           "$GCS_BUCKET" \
+            --gcs-token            "$GCS_TOKEN" \
+            --run-key              "$RUN_KEY" \
+            --release-status       "$RELEASE_STATUS" \
+            --on-already-released  "$ON_ALREADY_RELEASED" \
+            --on-absent            "$ON_ABSENT" \
+            --mode                 "$MODE" \
+            --poll-interval        "$POLL_INTERVAL" \
+            --poll-timeout         "$POLL_TIMEOUT" \
+            "${extra_args[@]}"
+        fi

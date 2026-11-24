@@ -1,0 +1,321 @@
+name: helmchart
+description: |
+  Packages a Helm-Chart in a localisable fashion, publishing the helmchart as an OCI-Artefact,
+  a mapping (for localisation) as an OCM-side-artefact, and an OCM-Resource-Fragment. The latter
+  two are published using the `export-ocm-fragments`-action.
+
+  Localisation means that metadata in the form of mappings between the Chart's values, and
+  OCM-Resources (typically OCI-Images) are declared (and exposed) in machine-readable form, such
+  that it is possible to generate a full `values.yaml` from a (localised) OCM-Component-Descriptor
+  (containing a reference to the localised helmchart), so that all external references of the
+  chart are explicitly defined (in other words: the helmchart can be used w/o any of its hardcoded
+  default-references).
+
+inputs:
+  name:
+    required: true
+    type: string
+    description: |
+      The Helm-Chart's name. This value will be injected into the Helm-Chart's `Chart.yaml` file
+      as `.name` attribute (if not identical). It will also be used as OCM-Resource-Name, and be
+      appended to the target-OCI-repository (the latter is mandated by Helm).
+
+  dir:
+    required: true
+    type: string
+    description: |
+      Relative path to Chart-Directory (directory containing `Chart.yaml`).
+
+  ocm-repository:
+    required: false
+    type: string
+    description: |
+      The OCM-Repository to use to lookup sub-components for Helm chart image-mappings.
+
+  oci-registry:
+    required: true
+    type: string
+    description: |
+      The OCI-Registry to publish the Helm-Chart to.
+
+  oci-repository:
+    required: false
+    type: string
+    description: |
+      If passed, this value is concatenated to `oci-registry`-input. Note that also in this case,
+      the `name` input will be appended to the end of the target-oci-reference.
+
+  push:
+    default: true
+    type: boolean
+    description: |
+      whether or not to push the built helmchart.
+
+  component-descriptor:
+    required: false
+    type: string
+    description: |
+      An OCM-Component-Descriptor in YAML form (inline). Prefer `component-descriptor-artifact`.
+
+  component-descriptor-artifact:
+    required: false
+    type: string
+    description: |
+      Name of a GHA artifact containing the component-descriptor (preferred over inline input).
+
+  component-descriptor-path:
+    required: false
+    type: string
+    description: |
+      Path to a component-descriptor.yaml on the runner filesystem. Use when
+      merge-ocm-fragments is called in the same job with upload: false.
+
+  mappings:
+    required: true
+    type: string
+    description: |
+      A YAML document of mappings between OCM-Resources and Helm-Chart-Values that can be used
+      to generate localised Helm-Values.
+
+      Must be a list of the following form:
+
+      ```
+      - ref: ocm-resource:<resource-name>.<resource-attribute>
+        attribute: <jsonpath-to-helmvalues>
+      ```
+
+      Where:
+        `resource-name` is the name of a referenced OCM-Resource (typically an OCI-Image)
+        `resource-attribute` is one of: `repository`, `tag`, `image`
+      Where:
+        `repository` is the resource's OCI-Image-Reference w/o tag
+        `tag` is the resources's OCI-Image-Reference's tag (which may be a digest-tag)
+        `image` is the resource's full OCI-Image-Reference (including tag)
+
+      For all OCI-Images used by the given Helm-Chart, mapping-entries *must* be specified such
+      that it is possible to generate a valid `values.yaml` document so that all references to
+      OCI-Registries are specified (thus localising the helm-chart).
+
+  gh-token:
+    required: true
+    type: string
+    description: |
+      an auth-token to authenticate against GitHub. Pass-in secrets.GITHUB_TOKEN
+
+  extra-auths:
+    required: false
+    type: string
+    description: |
+      A JSON-Document containing a mapping of additional auth-cfgs of the following form:
+      { <host>: {"auth": <token>}}
+
+      example:
+      ```
+      {"registry-1.docker.io": {"auth": "abcd"}}
+      ```
+      Passed tokens will be _appended_ to resulting docker-cfg, and thus have precedence.
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C /tmp component-descriptor.yaml
+    - name: write-component-descriptor-from-input
+      if: ${{ inputs.component-descriptor-artifact == '' }}
+      shell: bash
+      run: |
+        cat <<'EOF' > /tmp/component-descriptor.yaml
+        ${{ inputs.component-descriptor }}
+        EOF
+    - name: copy-component-descriptor-from-path
+      if: ${{ inputs.component-descriptor-path != '' }}
+      shell: bash
+      run: cp '${{ inputs.component-descriptor-path }}' /tmp/component-descriptor.yaml
+    - name: preprocess-inputs
+      shell: bash
+      run: |
+        cat <<EOF > /tmp/mappings.yaml
+        ${{ inputs.mappings }}
+        EOF
+    - name: authenticate
+      if: ${{ inputs.push == 'true' }}
+      uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+      with:
+        oci-image-reference: ${{ inputs.oci-registry }}
+        gh-token: ${{ inputs.gh-token }}
+        extra-auths: ${{ inputs.extra-auths }}
+    - name: helmchart
+      shell: python
+      run: |
+        import os
+        import sys
+        sys.path.insert(1, os.environ['GITHUB_ACTION_PATH'])
+
+        import dataclasses
+        import json
+        import pprint
+        import subprocess
+
+        import dacite
+        import yaml
+
+        import ocm.retrieve
+        import oci.client
+        import ocm
+
+        import helm
+
+        name = '${{ inputs.name }}'
+        dir = '${{ inputs.dir }}'
+        with open('/tmp/component-descriptor.yaml') as f:
+          component_descriptor = ocm.ComponentDescriptor.from_dict(
+            yaml.safe_load(f),
+          )
+        component = component_descriptor.component
+
+        version = component.version
+        oci_registry = '${{ inputs.oci-registry }}'
+        oci_repository = '${{ inputs.oci-repository }}'
+        oci_target_ref = oci_registry
+        if oci_repository:
+          oci_target_ref = f'{oci_target_ref.strip("/")}/{oci_repository.strip("/")}'
+        oci_target_ref = f'{oci_target_ref.strip("/")}/{name}:{version}'
+        oci_target_ref = oci.model.OciImageReference(oci_target_ref)
+
+        oci_client = oci.client.client_with_dockerauth()
+
+        if ocm_repository := '${{ inputs.ocm-repository }}':
+          component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+            ocm_repository_lookup=ocm.retrieve.ocm_repository_lookup(ocm_repository),
+            oci_client=oci_client,
+          )
+        else:
+          component_descriptor_lookup = None
+
+        with open('/tmp/mappings.yaml') as f:
+          mappings = yaml.safe_load(f)
+          if not isinstance(mappings, list):
+            print(f'Eror: expected a list (mappings input), but found {mappings=}')
+            exit(1)
+
+          mappings = [
+            dacite.from_dict(
+              data=mapping,
+              data_class=helm.HelmchartValueMapping,
+            ) for mapping in mappings
+          ]
+
+        if not os.path.isdir(dir):
+          print(f'Not an existing directory: {dir=} (expected helmchart-dir)')
+          exit(1)
+
+        helm.patch_helmchart_name(
+          chart_yaml_path=(chart_yaml_path := os.path.join(dir, 'Chart.yaml')),
+          name=name,
+        )
+
+        helm.patch_values_yaml(
+          component=component,
+          values_yaml_path=(values_yaml_path := os.path.join(dir, 'values.yaml')),
+          mappings=mappings,
+          component_descriptor_lookup=component_descriptor_lookup,
+        )
+
+        outdir = 'helmchart.d'
+        os.mkdir(outdir)
+
+        helm_package_argv = (
+          'helm',
+          'package',
+          dir,
+          '--destination', outdir,
+          '--version', version,
+        )
+        print(helm_package_argv)
+
+        subprocess.run(
+          helm_package_argv,
+          check=True,
+        )
+
+        helmchart_archive_path = os.path.join(
+          outdir,
+          f'{name}-{version}.tgz',
+        )
+
+        ocm_mappings = helm.to_ocm_mapping(
+          helmchart_name=name,
+          mappings=mappings,
+        )
+        print('ocm-mappings:')
+        pprint.pprint(ocm_mappings)
+        blobs_outdir = 'blobs.d'
+        os.makedirs(blobs_outdir)
+        ocm_mappings_path = os.path.join(blobs_outdir, f'{name}.ocm-mappings.json')
+
+        with open(ocm_mappings_path, 'w') as f:
+          json.dump(ocm_mappings, f)
+        print(f'wrote mappings to {ocm_mappings_path=}')
+
+        with open(chart_yaml_path) as f:
+          chart = yaml.safe_load(f)
+
+        if '${{ inputs.push }}' == 'true':
+          helmchart_resource = helm.upload_helmchart(
+            helmchart_archive_path=helmchart_archive_path,
+            helmchart_name=name,
+            helmchart_description=chart.get('description', 'no description available'),
+            version=version,
+            helm_values_path=values_yaml_path,
+            target_ref=oci_target_ref,
+            oci_client=oci_client,
+          )
+        else:
+          helmchart_resource = helm.helmchart_resource(
+            helmchart_name=name,
+            version=version,
+            target_ref=oci_target_ref,
+          )
+
+        helmchart_imagemap = ocm.Resource(
+          name=name,
+          version=version,
+          type='helmchart-imagemap',
+          extraIdentity={
+            'type': 'helmchart-imagemap',
+          },
+          access=ocm.LocalBlobAccess(
+            mediaType='application/json',
+            localReference=ocm_mappings_path, # will be processed / patched by export-ocm action
+            size=-1, # will be patched by export-ocm-action
+          )
+        )
+
+        with open('ocm-resources.yaml', 'w') as f:
+          yaml.dump(
+            data=[
+              dataclasses.asdict(helmchart_resource),
+              dataclasses.asdict(helmchart_imagemap),
+            ],
+            Dumper=ocm.EnumValueYamlDumper,
+            stream=f,
+          )
+
+    - name: export-ocm-fragments
+      uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+      with:
+        ocm-resources-file: ocm-resources.yaml
+        blobs-directory: blobs.d

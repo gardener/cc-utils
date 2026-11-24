@@ -1,0 +1,390 @@
+name: Trusted Checkout
+description: |
+  A wrapper around github.com/actions/checkout, with safety measures for pullrequests triggered
+  from forks with `pull_request_target` event.
+
+  Also handles submodule checkout (set `submodules: recursive`), including private submodules
+  across organisations, by transparently obtaining federated tokens via the OIDC federation
+  service (when `token-server` is configured).
+
+  It will by default behave identical to wrapped checkout-action. For pullrequests from forked
+  repositories, which are triggered by the `pull_request_target` event (where wrapped checkout
+  action will by default checkout receiving repository's contents), this action will instead
+  checkout the pullrequest's contents (to allow for building/testing code proposed by the
+  pullrequest). As this is generally considered to be unsafe, this will only be done under certain
+  conditions:
+
+  - if the author_association is one of:
+    - COLLABORATOR
+    - MEMBER
+    - OWNER
+  OR
+  - the pullrequest has a certain label (default: ``ok-to-test``) set
+
+inputs:
+  fetch-depth:
+    type: number
+    default: 1
+    required: false
+    description: |
+      passed to `actions/checkout` as `fetch-depth` input.
+
+      useful for cases where longer history is required.
+  submodules:
+    type: string
+    default: false
+    description: |
+      Controls submodule checkout. Accepted values:
+
+      - `false` (default): no submodule checkout
+      - `recursive`: check out all submodules recursively, using federated tokens
+        (via `token-server`) or app credentials where available, so private submodules
+        across organisations are handled transparently
+      - any other value (e.g. `true`): ignored — no submodule checkout will occur
+  auth-app-client-id:
+    type: string
+    default: ''
+    description: |
+      if passed, must also pass `auth-app-private-key`. The app must be authorised to
+      (read-)access all git-repositories (including submodules, if any).
+
+      If auth-app-private-key is _not_ passed, this will be silently ignored, which might
+      result in authorisation-errors. This is done such as to be friendly towards callers
+      from reusable workflows, which may not inherit secrets to called workflows.
+
+      if set, `token` input must not be passed.
+  auth-app-private-key:
+    type: string
+    default: ''
+    description: |
+      if passed, must also pass `auth-app-client-id`. The app must be authorised to
+      (read-)access all git-repositories (including submodules, if any).
+
+      if set, `token` input must not be passed.
+  token:
+    type: string
+    default: ''
+    description: |
+      passed to `actions/checkout` as `token` input. Must not be passed if `auth-app-*`-inputs
+      are set.
+  trusted-label:
+    type: string
+    required: false
+    description: |
+      a label, that can be used to mark pullrequests as trusted, regardless of author's association.
+
+      For security-reasons, this action will remove the label, such that it will have to be
+      added again (adding the label will work as trigger).
+  remove-trusted-label:
+    type: boolean
+    default: true
+    description: |
+      if set to false, will not attempt to remove "trusted-label". Use to run from workflows
+      that do not have `pull-requests: write` permission. Be sure to run w/ this input
+      set to true (the default) in an early run.
+  path:
+    type: string
+    description: |
+      passed as `path` input to checkout-action (relative path to checkout into)
+  repository:
+    type: string
+    description: |
+      passed as `repository` input to checkout-action
+  ref:
+    type: string
+    description: |
+      passed as `ref` input to checkout-action
+  token-server:
+    type: string
+    required: false
+    description: |
+      The URL of the github-oidc-federation server which offers a `/token-exchange` endpoint. See
+      github.com/gardener/github-oidc-federation for more information. By convention, pass-in the
+      organization variable `FEDERATED_GITHUB_ACCESS_TOKEN_SERVER`.
+  github-auth-token-permissions:
+    type: string
+    default: |
+      contents: read
+    description: |
+      Input is passed to `github-auth` action as `permissions` input. Hence it is only considered if
+      `token-server` input is set as well.
+  github-server-url:
+    type: string
+    required: false
+    description: |
+      Input is passed to `github-auth` action as `host`, and checkout action as `github-server-url`
+      input. Example URLs are
+      "https://github.com" or "https://my-ghes-server.example.com"
+  init-git-identity:
+    type: boolean
+    default: false
+    description: |
+      if set to `true`, the repository will be initialised with default values for `user.name`
+      and `user.email`. This is needed, if commits are to be created. This is a convenience
+      short-cut for calling `setup-git-identity` from this repository (use if more control is
+      needed).
+outputs:
+  token:
+    description: |
+      the auth-token created for "toplevel" repository, if such a token was created using inputs
+      passed via `auth-app-client-id`, `aut-app-private-key` inputs.
+    value: ${{ steps.token.outputs.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: preprocess-inputs
+      id: preprocess
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if ${{ inputs.repository != '' }}; then
+          org=$(echo '${{ inputs.repository }}' | cut -d/ -f1)
+          repo=$(echo '${{ inputs.repository }}' | cut -d/ -f2)
+        else
+          org=$(echo '${{ github.repository }}' | cut -d/ -f1)
+          repo=$(echo '${{ github.repository }}' | cut -d/ -f2)
+        fi
+
+        echo "org=${org}" >> ${GITHUB_OUTPUT}
+        echo "repo=${repo}" >> ${GITHUB_OUTPUT}
+
+        if ${{ inputs.token-server != '' }}; then
+          if ${{ inputs.remove-trusted-label == 'true' }}; then
+            # ensure token has permissions to remove labels (accept permission duplicates)
+            cat >> ${GITHUB_OUTPUT} <<EOF
+        permissions<<PEOF
+        ${{ inputs.github-auth-token-permissions }}
+        pull-requests: write
+        PEOF
+        EOF
+          else
+            cat >> ${GITHUB_OUTPUT} <<EOF
+        permissions<<PEOF
+        ${{ inputs.github-auth-token-permissions }}
+        PEOF
+        EOF
+          fi
+        fi
+
+    - name: create-token-via-federated-github-access-token-server
+      uses: gardener/cc-utils/.github/actions/github-auth@a48a6f94d69833263b319780178654c0481c0556
+      if: ${{ inputs.token-server != '' }}
+      id: fed-token
+      with:
+        token-server: ${{ inputs.token-server }}
+        organization: ${{ steps.preprocess.outputs.org }}
+        repositories: ${{ steps.preprocess.outputs.repo }}
+        permissions: ${{ steps.preprocess.outputs.permissions }}
+        host: ${{ inputs.github-server-url }}
+
+    - name: create-token-via-github-app
+      if: ${{ inputs.auth-app-private-key != '' && inputs.token-server == '' }}
+      id: app-token
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ${{ inputs.token != '' }}; then
+          echo 'Error: must not pass `token` if passing `auth-app-*`'
+          exit 1
+        fi
+
+        org=${{ steps.preprocess.outputs.org }}
+        repo=${{ steps.preprocess.outputs.repo }}
+
+        echo "creating an auth-token for org $org"
+        cat <<EOF > /tmp/key
+        ${{ inputs.auth-app-private-key }}
+        EOF
+        token=$(
+          ${{ github.action_path }}/create_app_token.py \
+            --client-id '${{ inputs.auth-app-client-id }}' \
+            --private-key "$(cat /tmp/key)" \
+            --github-org "$org" \
+            --repository "$repo" \
+        )
+        unlink /tmp/key
+        echo "token=${token}" >> ${GITHUB_OUTPUT}
+
+    - name: collect-token
+      id: token
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        if ${{ steps.fed-token.outputs.token != '' }}; then
+          token="${{ steps.fed-token.outputs.token }}"
+        elif ${{ steps.app-token.outputs.token != '' }}; then
+          token="${{ steps.app-token.outputs.token }}"
+        elif ${{ inputs.token != '' }}; then
+          token="${{ inputs.token }}"
+        else
+          token="${{ github.token }}"
+        fi
+
+        echo "token=${token}" >> ${GITHUB_OUTPUT}
+
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+        path: ${{ inputs.path }}
+        repository: ${{ steps.preprocess.outputs.org }}/${{ steps.preprocess.outputs.repo }}
+        ref: ${{ inputs.ref }}
+        token: ${{ steps.token.outputs.token }}
+        github-server-url: ${{ inputs.github-server-url }}
+
+    - name: checkout-submodules
+      if: ${{ inputs.submodules == 'recursive' }}
+      shell: bash
+      run: |
+        set -euo
+
+        echo "checking out submodules.."
+        set +x
+        TOKEN_SERVER="${{ inputs.token-server }}" \
+        APP_ID="${{ inputs.auth-app-client-id }}" \
+        APP_KEY="${{ inputs.auth-app-private-key }}" \
+        GIT_DIR=$PWD/.git \
+        GIT_WORK_TREE=$PWD \
+          "${{ github.action_path }}/checkout-submodules.sh"
+
+    - name: checkout-pullrequest
+      if: ${{ github.event_name == 'pull_request_target' }}
+      id: calc
+      shell: python
+      env:
+        # pass expression values via env; event fields (label name, head ref,
+        # head repo) are attacker-controlled on pull_request_target and must not
+        # be interpolated into the python source or into subprocess arguments
+        AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        TRUSTED_LABEL: ${{ inputs.trusted-label || 'ok-to-test' }}
+        EVENT_ACTION: ${{ github.event.action }}
+        EVENT_LABEL: ${{ github.event.label.name }}
+        HEAD_REPO_FULL_NAME: ${{ github.event.pull_request.head.repo.full_name }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        REPO_PATH: ${{ inputs.path }}
+        HEAD_REF: ${{ github.head_ref }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        import os
+        import subprocess
+        import textwrap
+
+        allowed_author_associations = (
+          'COLLABORATOR',
+          'MEMBER',
+          'OWNER',
+        )
+        author_association = os.environ.get('AUTHOR_ASSOCIATION', '')
+        allowed_to_checkout = author_association in allowed_author_associations
+
+        # if pullrequest is labelled, it is also considered trusted, regardless of
+        # author's association (rationale: labels can only be applied by users with
+        # at least triage-permission, and created by users with write-permission)
+        trusted_label = os.environ['TRUSTED_LABEL']
+
+        if os.environ.get('EVENT_ACTION', '') == 'labeled':
+          if os.environ.get('EVENT_LABEL', '') == trusted_label:
+            allowed_to_checkout = True
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f'remove-label={trusted_label}\n')
+
+        if not allowed_to_checkout:
+          summary = textwrap.dedent(f'''\
+          > [!WARNING]
+          > Checked out target-repository's contents, as pullrequest author is not trusted
+          ''')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(summary)
+          exit(0)
+
+        # allowed to checkout
+        repository = os.environ['HEAD_REPO_FULL_NAME']
+        remote = f'{os.environ["GITHUB_SERVER_URL"]}/{repository}'
+        summary = ''
+
+        repo_path = os.environ['REPO_PATH']
+        if repo_path == '.':
+          repo_path = ''
+
+        head_ref = os.environ['HEAD_REF']
+        subprocess.run(
+          (
+            'git',
+            '-C',  repo_path,
+            'fetch', remote, f'refs/heads/{head_ref}',
+          ),
+          check=True,
+        )
+
+        output = subprocess.run(
+          (
+            'git',
+            '-C',  repo_path,
+            'rev-parse', 'FETCH_HEAD',
+          ),
+          check=True,
+          capture_output=True,
+          encoding='utf-8',
+        )
+
+        fetched_head_digest = output.stdout.strip()
+        checkout_ref = os.environ['HEAD_SHA']
+        if checkout_ref != fetched_head_digest:
+          print('WARNING: pullrequest seems to have been modified')
+          print(f'{fetched_head_digest=} vs {checkout_ref=}')
+
+          summary = textwrap.dedent(f'''\
+          > [!WARNING]
+          > The pullrequest was modified after pipeline was triggered:
+          > initial: {checkout_ref}
+          > after change: {fetched_head_digest}
+          >
+          > The pipeline will run based on `initial` commit
+          ''')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(summary)
+          exit(0)
+
+        subprocess.run(
+          (
+            'git',
+            '-C',  repo_path,
+            'checkout', '-B', head_ref, checkout_ref,
+          ),
+          check=True,
+        )
+    - if: ${{ steps.calc.outputs.remove-label }}
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - name: remove-trusted-label
+      if: ${{ steps.calc.outputs.remove-label != '' && inputs.remove-trusted-label == 'true' }}
+      shell: python
+      run: |
+        import github3.exceptions
+        import github
+        gh_api = github.github_api(token='${{ steps.token.outputs.token }}')
+        _, org, repo = github.host_org_and_repo()
+        gh_repo = gh_api.repository(org, repo)
+
+        # we need issue-api to rm label (id is equal for pr and issue)
+        pull_request = gh_repo.issue(${{ github.event.number }})
+
+        label_to_rm = '${{ steps.calc.outputs.remove-label }}'
+        for label in pull_request.labels():
+          if label.name == label_to_rm:
+            break
+        else:
+          # label not present - hence do not need to attempt removal
+          exit(0)
+
+        try:
+          pull_request.remove_label(label_to_rm)
+        except github3.exceptions.NotFoundError:
+          # trusted-checkout typically runs multiple times, so the label already being absent
+          # is an expected, and of course, acceptable case
+          exit(0)
+    - if: ${{ inputs.init-git-identity == 'true' }}
+      uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+      with:
+        scope: ${{ inputs.path || '.' }}/.git/config

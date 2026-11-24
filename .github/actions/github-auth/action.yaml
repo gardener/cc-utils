@@ -1,0 +1,119 @@
+name: Authenticate against GitHub using OIDC
+description: |
+  An opinionated action used to retrieve a GitHub access token using OIDC. The calling GHA run must
+  be configured in the `oidc-federation.json` file of the `.github` repository of the passed
+  `organization`.
+
+inputs:
+  token-server:
+    type: string
+    required: true
+    description: |
+      The URL of the github-oidc-federation server which offers a `/token-exchange` endpoint. See
+      github.com/gardener/github-oidc-federation for more information. By convention, pass-in the
+      organization variable `FEDERATED_GITHUB_ACCESS_TOKEN_SERVER`.
+  host:
+    type: string
+    required: false
+    description: |
+      The GitHub host the access token should be valid for. If not specified, defaults to current
+      GitHub host.
+  organization:
+    type: string
+    required: false
+    description: |
+      The GitHub organization the access token should be valid for. If not specified, defaults to
+      current repository owner.
+  repositories:
+    type: string
+    required: false
+    description: |
+      The (newline separated) list of repositories the access token should be valid for. If omitted,
+      the token will be valid for all repositories in the specified `organization`.
+
+      Example:
+      ```
+      repositories: |
+        repo1
+        repo2
+      ```
+  permissions:
+    type: string
+    default: |
+      contents: read
+    description: |
+      The permissions that should be granted to the access token. Permission names are expected to
+      be in kebab-case format. For a list of available permissions, please refer to
+      https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps.
+
+      Example:
+      ```
+      permissions: |
+        contents: read
+        issues: write
+      ```
+  audience:
+    type: string
+    default: github-oidc-federation
+  retries:
+    type: number
+    default: 3
+    description: |
+      Number of retry attempts on transient errors (5xx, 408, 429, network failures).
+  backoff-base:
+    type: number
+    default: 1.0
+    description: |
+      Base for exponential backoff (delay = min(base^attempt, backoff-cap)).
+  backoff-cap:
+    type: number
+    default: 60
+    description: |
+      Maximum delay in seconds between retries.
+
+outputs:
+  token:
+    value: ${{ steps.token.outputs.token }}
+    description: |
+      The GitHub access token.
+
+runs:
+  using: composite
+  steps:
+    - name: Preprocess Inputs
+      id: preprocess
+      shell: python
+      run: |
+        import os
+        import sys
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import preprocess
+
+        result = preprocess.preprocess(
+            host='${{ inputs.host }}',
+            organization='${{ inputs.organization }}',
+            repositories_raw='''${{ inputs.repositories }}''',
+            permissions_raw='''${{ inputs.permissions }}''',
+            default_host='${{ github.server_url }}',
+            default_organization='${{ github.repository_owner }}',
+        )
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            for key, value in result.items():
+                f.write(f'{key}={value}\n')
+
+    - name: Retrieve GitHub access token
+      id: token
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 "${{ github.action_path }}/get-token.py" \
+          --token-server "${{ inputs.token-server }}" \
+          --audience "${{ inputs.audience }}" \
+          --host "${{ steps.preprocess.outputs.host }}" \
+          --organization "${{ steps.preprocess.outputs.organization }}" \
+          --repositories '${{ steps.preprocess.outputs.repositories }}' \
+          --permissions '${{ steps.preprocess.outputs.permissions }}' \
+          --retries '${{ inputs.retries }}' \
+          --backoff-base '${{ inputs.backoff-base }}' \
+          --backoff-cap '${{ inputs.backoff-cap }}'

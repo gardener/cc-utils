@@ -1,0 +1,58 @@
+name: test-capture-import-multi-file
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: make-timestamp-reference
+        shell: bash
+        run: touch /tmp/ts-ref
+      - name: make-multi-file-commit
+        shell: bash
+        run: |
+          echo 'first' > a.txt
+          echo 'second' > b.txt
+          mkdir sub
+          echo 'nested' > sub/c.txt
+          git add a.txt b.txt sub/c.txt
+          git commit -m 'multi-file commit'
+      - id: capture
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref
+      - name: assert-capture
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects'
+            exit 1
+          fi
+      - name: reset-to-parent
+        shell: bash
+        run: git reset --hard HEAD~1
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture.outputs.commit-digest }}
+          after-import: rebase
+      - name: assert-import
+        shell: bash
+        run: |
+          head="$(git rev-parse HEAD)"
+          expected='${{ steps.capture.outputs.commit-digest }}'
+          if [ "${head}" != "${expected}" ]; then
+            echo "Expected HEAD=${expected}, got: ${head}"
+            exit 1
+          fi
+          # verify all files are present with correct content
+          [ "$(cat a.txt)" = 'first' ] || { echo "a.txt mismatch"; exit 1; }
+          [ "$(cat b.txt)" = 'second' ] || { echo "b.txt mismatch"; exit 1; }
+          [ "$(cat sub/c.txt)" = 'nested' ] || { echo "sub/c.txt mismatch"; exit 1; }
+          git fsck --no-dangling
+          echo "multi-file import: HEAD=${head} OK"

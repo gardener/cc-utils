@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+repo_root="$(dirname "${BASH_SOURCE[0]}")/.."
+version=$(cat -)
+
+versionfiles=(
+  VERSION
+  ci/VERSION
+  oci/VERSION
+  ocm/VERSION
+  cli/gardener_ci/VERSION
+)
+
+for fpath in "${versionfiles[@]}"; do
+  echo "${version}" > "${repo_root}/${fpath}"
+done

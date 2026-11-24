@@ -1,0 +1,98 @@
+name: Build OCM (Image w/ CLI)
+on:
+  push:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the "mode" to use. passed to `prepare` (currently for selecting  target-registries)
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yaml
+    permissions:
+      id-token: write
+    with:
+      mode: ${{ inputs.mode || 'snapshot' }}
+      versionfile: ocm/image-version
+      version-prerelease: ${{ (inputs.mode == 'snapshot' || inputs.mode == '') && 'dev0' || '' }}
+      base-component-file: .ocm/ocm-component.yaml
+
+  lint-pybandit:
+    runs-on: ${{ vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+      - name: install-linters
+        shell: bash
+        run: |
+          pip3 install --break-system-packages bandit
+      - name: lint-python
+        shell: bash
+        run: |
+          set -euo pipefail
+          blobs_dir=/tmp/blobs.d
+          mkdir -p "${blobs_dir}"
+
+          bandit_logfile=bandit.log
+          bandit_evidence="${blobs_dir}/bandit.tar.gz"
+
+          bandit \
+            --configfile pyproject.toml \
+            --recursive \
+            -f txt -o "${bandit_logfile}" \
+            ocm/
+
+          tar czf "${bandit_evidence}" "${bandit_logfile}" pyproject.toml
+      - name: add-banditlog-to-component-descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            name: sast-linting-evidence
+            relation: local
+            access:
+              type: localBlob
+              localReference: bandit.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - pybandit
+              - name: gardener.cloud/comment
+                value: |
+                  we use bandit (linter) for SAST-Scans.
+                  See: https://bandit.readthedocs.io/en/latest/
+
+  build-ocm-oci-image:
+    name: Build OCM-OCI-Image
+    needs:
+      - prepare
+    secrets: inherit
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/oci-ocm.yaml
+    with:
+      name: ocm-image
+      dockerfile: Dockerfile.ocm
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
+      oci-repository: cicd/ocm
+      oci-platforms: 'linux/amd64,linux/arm64'
+      version: ${{ needs.prepare.outputs.version }}
+      extra-tags: latest
+      ocm-labels: |
+        - name: gardener.cloud/cve-categorisation
+          value:
+            authentication_enforced: false
+            availability_requirement: low
+            confidentiality_requirement: high
+            integrity_requirement: high
+            network_exposure: protected
+            user_interaction: gardener-operator

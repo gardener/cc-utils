@@ -1,0 +1,37 @@
+name: upload-artifact
+description: |
+  a wrapper for actions/upload-artifact.
+
+  depending on whether run on github.com, or a GHE-instance, it will dispatch to either v4 or v3
+  (v4 is only available on github.com)
+
+inputs:
+  name:
+    type: string
+    required: true
+  path:
+    type: string
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: render
+      shell: sh
+      run: |
+        set -eu
+        if ${{ github.server_url == 'https://github.com' }}; then
+          version='b7c566a772e6b6bfb58ed0dc250532a479d7789f' # v6
+        else
+          version='ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5' # v3
+        fi
+        echo "using  upload-artifact@${version}"
+
+        mkdir -p ../upload-artifact
+        "${GITHUB_ACTION_PATH}/template.sh" \
+          ../upload-artifact/action.yaml \
+          "${version}"
+    - uses: ./../upload-artifact
+      with:
+        name: ${{ inputs.name }}
+        path: ${{ inputs.path }}

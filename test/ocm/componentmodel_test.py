@@ -1,0 +1,340 @@
+import dataclasses
+import os
+import typing
+import unittest
+
+import jsonschema.exceptions
+import pytest
+import yaml
+
+import ocm
+
+own_dir = os.path.dirname(__file__)
+test_res_dir = own_dir
+
+
+def test_deserialisation():
+    with open(os.path.join(test_res_dir, 'component_descriptor_v2.yaml')) as f:
+        component_descriptor_dict = yaml.safe_load(f)
+    component_descriptor = ocm.ComponentDescriptor.from_dict(
+        component_descriptor_dict=component_descriptor_dict,
+    )
+    component = component_descriptor.component
+
+    assert component.resources[0].type is ocm.ArtefactType.OCI_IMAGE
+    assert isinstance(component.resources[0].access, ocm.OciAccess)
+    assert component.resources[0].access.type is ocm.AccessType.OCI_REGISTRY
+
+    source = component.sources[0]
+    assert isinstance(source.access, ocm.GithubAccess)
+
+
+def test_schema_rejects_extra_identity_int_value():
+    '''regression: YAML parses unquoted `386` as int; schema must reject such documents'''
+    cd_dict = {
+        'meta': {'schemaVersion': 'v2'},
+        'component': {
+            'name': 'github.test/foo/bar',
+            'version': '1.0.0',
+            'provider': 'test',
+            'repositoryContexts': [{'baseUrl': 'eu.gcr.io/test', 'type': 'ociRegistry'}],
+            'componentReferences': [],
+            'labels': [],
+            'sources': [],
+            'resources': [{
+                'name': 'docforge',
+                'version': '1.0.0',
+                'type': 'application/octet-stream',
+                'relation': 'local',
+                'labels': [],
+                'srcRefs': [],
+                'extraIdentity': {'architecture': 386, 'os': 'windows'},
+                'access': {'type': 'localBlob', 'localReference': 'sha256:abc', 'size': 0},
+            }],
+        },
+    }
+
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        ocm.ComponentDescriptor.validate(cd_dict, validation_mode=ocm.ValidationMode.FAIL)
+
+
+def test_deserialisation_of_custom_resources():
+    with open(os.path.join(test_res_dir, 'component_descriptor_v2_custom.yaml')) as f:
+        component_descriptor_dict = yaml.safe_load(f)
+
+    component_descriptor = ocm.ComponentDescriptor.from_dict(
+        component_descriptor_dict=component_descriptor_dict,
+    )
+    component = component_descriptor.component
+
+    assert isinstance(component.resources[0].access, dict)
+    assert component.resources[0].access.type == 'localFilesystemBlob'
+    assert component.resources[1].access is None
+    assert isinstance(component.resources[2].access, dict)
+    assert isinstance(component.resources[3].access, ocm.RelativeOciAccess)
+
+
+def test_github_access():
+    gha = ocm.GithubAccess(
+        repoUrl='github.com/org/repo',
+        ref='refs/heads/master',
+        type=ocm.AccessType.GITHUB,
+    )
+
+    assert gha.repository_name() == 'repo'
+    assert gha.org_name() == 'org'
+    assert gha.hostname() == 'github.com'
+
+
+def test_component():
+    component = ocm.Component(
+        name='component-name',
+        version='1.2.3',
+        repositoryContexts=[
+            ocm.OciOcmRepository(baseUrl='old-ctx-url'),
+            ocm.OciOcmRepository(baseUrl='current-ctx-url'),
+        ],
+        provider=None,
+        sources=(),
+        componentReferences=(),
+        resources=(),
+        labels=(),
+    )
+
+    assert component.current_ocm_repo.baseUrl == 'current-ctx-url'
+
+
+class TestVersionValidation(unittest.TestCase):
+
+    def _create_test_component_dict(
+        self,
+        component_version: str,
+        resource_version: str,
+        source_version: str,
+    ):
+        return {
+            'component': {
+                'componentReferences': [],
+                'labels': [],
+                'name': 'github.test/foo/bar',
+                'provider': 'some-provider',
+                'repositoryContexts': [{
+                    'baseUrl': 'eu.gcr.io/test/context',
+                    'type': 'ociRegistry',
+                }],
+                'resources': [{
+                    'access': {
+                        'type': 'None',
+                    },
+                    'extraIdentity': {},
+                    'labels': [],
+                    'name': 'test_resource',
+                    'relation': 'local',
+                    'srcRefs': [],
+                    'type': 'ociImage',
+                    'version': resource_version,
+                }],
+                'sources': [{
+                    'access': {
+                        'ref': 'refs/tags/test',
+                        'repoUrl': 'github.test/foo/bar',
+                        'type': 'github',
+                    },
+                    'extraIdentity': {},
+                    'labels': [],
+                    'name': 'test_source',
+                    'type': 'git',
+                    'version': source_version,
+                }],
+                'version': component_version,
+            },
+            'meta': {
+                'schemaVersion': 'v2',
+            },
+        }
+
+    def test_validation_fails_on_absent_component_version(self):
+        test_cd_dict = self._create_test_component_dict(
+            component_version=None,
+            resource_version='2.4.6',
+            source_version='3.6.9',
+        )
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            ocm.ComponentDescriptor.validate(test_cd_dict, validation_mode=ocm.ValidationMode.FAIL)
+
+    def test_validation_fails_on_absent_resource_version(self):
+        test_cd_dict = self._create_test_component_dict(
+            component_version='1.2.3',
+            resource_version=None,
+            source_version='3.6.9',
+        )
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            ocm.ComponentDescriptor.validate(test_cd_dict, validation_mode=ocm.ValidationMode.FAIL)
+
+    def test_validation_fails_on_absent_source_version(self):
+        test_cd_dict = self._create_test_component_dict(
+            component_version='1.2.3',
+            resource_version='2.4.6',
+            source_version=None,
+        )
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            ocm.ComponentDescriptor.validate(test_cd_dict, validation_mode=ocm.ValidationMode.FAIL)
+
+
+def test_set_label():
+    ctt_label_name = 'cloud.gardener/ctt-hint'
+    processing_rule_name = 'test-processing-rule'
+
+    @dataclasses.dataclass
+    class TestCase(unittest.TestCase):
+        name: str
+        input_labels: typing.List[ocm.Label]
+        label_to_set: ocm.Label
+        raise_if_present: bool
+        expected_labels: typing.List[ocm.Label]
+        expected_err_msg: str
+
+    testcases = [
+        TestCase(
+            name='appends label to empty input_labels list with raise_if_present == True',
+            input_labels=[],
+            label_to_set=ocm.Label(
+                name=ctt_label_name,
+                value={
+                    'processingRules': [
+                        processing_rule_name,
+                    ],
+                },
+            ),
+            raise_if_present=True,
+            expected_labels=[
+                ocm.Label(
+                    name=ctt_label_name,
+                    value={
+                        'processingRules': [
+                            processing_rule_name,
+                        ],
+                    },
+                ),
+            ],
+            expected_err_msg=''
+        ),
+        TestCase(
+            name='appends label to empty input_labels list with raise_if_present == False',
+            input_labels=[],
+            label_to_set=ocm.Label(
+                name=ctt_label_name,
+                value={
+                    'processingRules': [
+                        processing_rule_name,
+                    ],
+                },
+            ),
+            raise_if_present=False,
+            expected_labels=[
+                ocm.Label(
+                    name=ctt_label_name,
+                    value={
+                        'processingRules': [
+                            processing_rule_name,
+                        ],
+                    },
+                ),
+            ],
+            expected_err_msg=''
+        ),
+        TestCase(
+            name='throws exception if label exists and raise_if_present == True',
+            input_labels=[
+                ocm.Label(
+                    name=ctt_label_name,
+                    value={
+                        'processingRules': [
+                            'first-pipeline',
+                        ],
+                    },
+                ),
+            ],
+            label_to_set=ocm.Label(
+                name=ctt_label_name,
+                value={
+                    'processingRules': [
+                        processing_rule_name,
+                    ],
+                },
+            ),
+            raise_if_present=True,
+            expected_labels=None,
+            expected_err_msg=f'label {ctt_label_name} is already present'
+        ),
+        TestCase(
+            name='throws no exception if label exists and raise_if_present == False',
+            input_labels=[
+                ocm.Label(
+                    name='test-label',
+                    value='test-val',
+                ),
+                ocm.Label(
+                    name=ctt_label_name,
+                    value={
+                        'processingRules': [
+                            'first-pipeline',
+                        ],
+                        'otherOperations': 'test',
+                    },
+                ),
+            ],
+            label_to_set=ocm.Label(
+                name=ctt_label_name,
+                value={
+                    'processingRules': [
+                        processing_rule_name,
+                    ],
+                },
+            ),
+            raise_if_present=False,
+            expected_labels=[
+                ocm.Label(
+                    name='test-label',
+                    value='test-val',
+                ),
+                ocm.Label(
+                    name=ctt_label_name,
+                    value={
+                        'processingRules': [
+                            processing_rule_name,
+                        ],
+                    },
+                ),
+            ],
+            expected_err_msg='',
+        ),
+    ]
+
+    for testcase in testcases:
+        test_resource = ocm.Resource(
+            name='test-resource',
+            version='v0.1.0',
+            type=ocm.ArtefactType.OCI_IMAGE,
+            access=ocm.OciAccess(
+                imageReference='test-repo.com/test-resource:v0.1.0',
+            ),
+            labels=testcase.input_labels,
+        )
+
+        if testcase.expected_err_msg != '':
+            with testcase.assertRaises(ValueError) as ctx:
+                patched_resource = test_resource.set_label(
+                    label=testcase.label_to_set,
+                    raise_if_present=testcase.raise_if_present,
+                )
+            assert str(ctx.exception) == testcase.expected_err_msg
+        else:
+            patched_resource = test_resource.set_label(
+                label=testcase.label_to_set,
+                raise_if_present=testcase.raise_if_present,
+            )
+            testcase.assertListEqual(
+                list1=patched_resource.labels,
+                list2=testcase.expected_labels,
+            )

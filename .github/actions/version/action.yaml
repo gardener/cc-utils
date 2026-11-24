@@ -1,0 +1,282 @@
+name: Version
+description: |
+  performs version-operations for release- and non-release pipelines. This action assumes version
+  is kept track of within repository (either in a regular versionfile, or using callbacks). It also
+  assumes versions adhere to "relaxed semver" (relaxed in that an optional v-prefix is allowed, and
+  `patch` may be omitted (e.g. v1.2)).
+
+  The action defines some defaults w.r.t versionfile/callback-lookup such to reduce amount of
+  explicit configuration for convenience.
+
+  Specifically, the following files are honoured (all paths relative to repository-root):
+    - VERSION # textfile containing version
+    - .ci/read-version # executable; callback (version read from stdout)
+    - .ci/write-version # executable; callback (version written to stdin)
+
+  If exactly one of `VERSION`, or `.ci/read-version`, `.ci/write-version` is present, those are
+  used (without the need to set inputs accordingly). If both are present, `.ci/read-version` and
+  `.ci/write-version` callbacks have precedence.
+
+  The action will read the current version (repository-version), and calculate the "effective
+  version" from it, by performing the specified `version-operation`.
+
+  The action offers different options of how to convey created diff from  writing effective version,
+  controlled via the `repository-operation`-input:
+
+  - commit-to-head: create a commit, update head (regular result of git commit)
+  - capture-commit: create a commit, but capture using `capture-commit` action (no change to head)
+
+inputs:
+  versionfile:
+    required: false
+    type: string
+  read-callback:
+    required: false
+    type: string
+  write-callback:
+    required: false
+    type: string
+  version:
+    required: false
+    type: string
+    description: |
+      pass-in version for more control, if needed. versionfile/callbacks will not be used for
+      reading (however, they will be used for writing). In conjunction w/ setting version-operation
+      to `noop`, this allows for full control over effective-version.
+  callback-action-path:
+    required: false
+    type: string
+    description: |
+      an optional path (relative to caller's repository-tree) to a GitHub-Action that is to be
+      called during creation of version-commit.
+      The called action can assume PWD is set to repository-root. Effective version will already
+      have been written, honouring either `versionfile` or `write-callback` and chosen
+      `version-operation`.
+
+      The effective version will be passed via an input named `effective-version`. Any diff created
+      by the callback-action will be included in version-commit. The callback should _not_ create
+      a commit itself.
+
+      A typical use-case for such a callback action is installation of runtime dependencies, such
+      as golang-toolchain and doing code-generation using such dependencies.
+  callback-command:
+    required: false
+    type: string
+    default: ''
+    description: |
+      an (optional) command to run during creation of version commit. It can be assumed PWD is set
+      to repository-root. Effective version will already have been written, honouring either
+      `versionfile` or `write-callback` and chosen `version-operation`.
+
+      The effective version will be available via an env var `EFFECTIVE_VERSION`. Any diff created
+      by the callback-command will be included in version-commit. The command should _not_ create
+      a commit itself.
+  commit-message:
+    required: false
+    type: string
+    description: |
+      commit-message-template to use if the action should create a commit.
+      currently only supported template-var: ${version} (bash-syntax).
+    default: Set version to ${version}
+  version-operation:
+    required: true
+    type: choice
+    default: set-prerelease
+    description: |
+      how to calculate effective version. Possible values:
+      - noop: keep version as-is (useful in conjunction w/ passing-in `version`)
+      - set-prerelease: replace / set version's prerelease (e.g. 1.2.3-${prerelease})
+      - bump-major: increment major-version by 1
+      - bump-minor: increment minor-version by 1
+      - bump-patch: increment patch-version by 1
+
+      Note to `commit-digest-as-prelease`: The commit-digest that will be used is the one on which
+      pipeline-run is based (not, e.g. the commit-digest of version-change-commit)
+    options:
+      - noop
+      - set-prerelease
+      - bump-major
+      - bump-minor
+      - bump-patch
+  prerelease:
+    required: false
+    type: string
+    default: ''
+    description: |
+      the prerelease to set. value will be interpreted as a bash-expression. The following variables
+      are available (for convenience):
+      - ${commit_digest} # output of `git rev-parse @`, i.e. current head's digest
+      - ${epoch} # output of `rate +%s`; unix epoch in seconds
+
+      If `noop` is set as `version-operation`, passed values are ignored.
+      Setting prerelease to the empty string (which is the default) will "finalise" version.
+  commit-objects-artefact:
+    required: false
+    type: string
+    description: |
+      if passed, captured commit (as output by `capture-commit` action) will (also) be uploaded
+      as an artefat of the passed name.
+
+  repository-operation:
+    required: true
+    type: choice
+    default: capture-commit
+    description: |
+      Controls how to convey effective version.
+      *capture-commit* (default)
+      will leave repository in clean state (that is: discard _any_ changes from worktree).
+      version-changing commit will be exposed using `capture-commit` action (and thus will need
+      to be imported again for consumption).
+      This is particularly useful if commit is to be conveyed to other jobs, with identical
+      commit-digest, but without pushing the commit to upstream repository (yet).
+
+      *commit-to-head*
+      create a commit, and update head to it
+    options:
+      - capture-commit
+      - commit-to-head
+
+  commit-kind:
+    required: false
+    type: choice
+    description: |
+      the semantical kind the created version-change-commit has. passed as `commit-kind` input to
+      action specified via `callback-action-path`, if any. If no such callback is passed, this
+      value is ignored.
+
+      bump: the commit increments the version
+      release: the commit sets a release-version (typically a final semver-version)
+      build: the commit sets a build-version (e.g. including a commit-digest)
+
+    options:
+      - bump
+      - release
+      - build
+
+outputs:
+  version:
+    description: |
+      the effective version
+    value: ${{ steps.version.outputs.version }}
+  commit-objects:
+    description: |
+      a base64-encoded tarfile containing the objects required to restore the version-change-commit,
+      as output by capture-commit action (see for additional reference).
+    value: ${{ steps.capture-commit.outputs.commit-objects }}
+  commit-digest:
+    description: |
+      the commit-digest (as hex-string) of the created version-commit
+    value: ${{ steps.capture-commit.outputs.commit-digest }}
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - name: calculate-version
+      id: calc-version
+      shell: bash
+      env:
+        PRERELEASE_TEMPLATE: ${{ inputs.prerelease }}
+        VERSIONFILE: ${{ inputs.versionfile }}
+        READ_CALLBACK: ${{ inputs.read-callback }}
+        WRITE_CALLBACK: ${{ inputs.write-callback }}
+        INPUT_VERSION: ${{ inputs.version }}
+        VERSION_OPERATION: ${{ inputs.version-operation }}
+        COMMIT_SHA: ${{ github.sha }}
+      run: |
+        set -eu
+
+        touch /tmp/timestamp-ref
+
+        # expand ${commit_digest} / ${epoch} documented template variables
+        commit_digest=$(git rev-parse @)
+        epoch=$(date +%s)
+        prerelease="${PRERELEASE_TEMPLATE//'${commit_digest}'/$commit_digest}"
+        prerelease="${prerelease//'${epoch}'/$epoch}"
+
+        "${GITHUB_ACTION_PATH}/version_cli.py" \
+          --versionfile="${VERSIONFILE}" \
+          --read-callback="${READ_CALLBACK}" \
+          --write-callback="${WRITE_CALLBACK}" \
+          --root-dir="${PWD}" \
+          --version="${INPUT_VERSION}" \
+          --operation="${VERSION_OPERATION}" \
+          --prerelease="${prerelease}" \
+          --extra-version-outfile /tmp/effective-version \
+          --commit-digest="${COMMIT_SHA}"
+
+        echo "effective-version=$(cat /tmp/effective-version)" >> ${GITHUB_OUTPUT}
+
+    - name: prepare-callback-action
+      if: ${{ inputs.callback-action-path != '' }}
+      shell: bash
+      env:
+        CALLBACK_ACTION_PATH: ${{ inputs.callback-action-path }}
+      run: |
+        set -eu
+        # cp outside of repository-tree so we do not have to cleanup afterwards; also, we need a
+        # static path, as github-actions do not allow using parameters for this
+        cp -r "${CALLBACK_ACTION_PATH}" ../version-callback-action
+    - name: call-callback-action
+      if: ${{ inputs.callback-action-path != '' }}
+      uses: ./../version-callback-action
+      with:
+        effective-version: ${{ steps.calc-version.outputs.effective-version }}
+        commit-kind: ${{ inputs.commit-kind }}
+
+    - name: run-callback-command
+      if: ${{ inputs.callback-command != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        # read from file rather than interpolating the effective-version (which, for
+        # the `noop` operation, may contain shell metacharacters) into the script text
+        export EFFECTIVE_VERSION="$(cat /tmp/effective-version)"
+
+        ${{ inputs.callback-command }}
+
+    - name: version
+      id: version
+      shell: bash
+      run: |
+        set -eu
+        # expose to commit-message template
+        version="$(cat /tmp/effective-version)"
+
+        git add -A
+        git commit --allow-empty -m "${{ inputs.commit-message }}"
+
+        echo "version=${version}" >> $GITHUB_OUTPUT
+
+        echo "<details><summary>" >> $GITHUB_STEP_SUMMARY
+        echo " <h2>Version-Commit Summary</h2>" >> $GITHUB_STEP_SUMMARY
+        echo "</summary>" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        len=$(git show | wc -c)
+        if [ $len -gt 4098 ]; then
+          # GHA only allows a maximum of 1024 kiB. Let's stay well below this limit, and also avoid
+          # spamming build-summary with lengthy diff.
+          git log --stat -1 >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+          exit 0
+        else
+          git show >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: capture-commit
+      id: capture-commit
+      uses: gardener/cc-utils/.github/actions/capture-commit@b8312974dfb53e461b5077bccca6f1ac93f5e757
+      with:
+        timestamp-reference: /tmp/timestamp-ref
+        to-artefact: ${{ inputs.commit-objects-artefact }}
+    - name: reset-repository
+      if: ${{ inputs.repository-operation == 'capture-commit' }}
+      shell: bash
+      run: |
+        echo "resetting (hard) worktree and index, as capture-commit was chosen"
+        git reset --hard @~
+        git status

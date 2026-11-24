@@ -1,0 +1,186 @@
+name: Params
+description: |
+  An opinionated action that will emit parameters, such as OCI- and OCM-Target-Repositories, based
+  on input-parameters, such as:
+  - whether running on a forked repository vs. upstream
+  - `mode` (snapshot vs. release)
+
+inputs:
+  mode:
+    required: true
+    type: choice
+    default: snapshot
+    options:
+      - snapshot
+      - release
+    description: |
+      "mode" will influence target-repositories to be returned.
+  gh-token:
+    required: true
+    type: string
+    description: |
+      Pass-in GITHUB_TOKEN. Needs permissions to read-contents (for accessing metadata about current
+      repository).
+  trusted-label:
+    type: string
+    required: false
+    description: |
+      a label that, in case of pullrequests, is considered a marker for a pullrequest to be
+      trusted.
+  oci-registry-prefix:
+    type: string
+    default: europe-docker.pkg.dev/gardener-project
+    description: |
+      the OCI-registry to use as prefix to calculate target OCI- and OCM-Repositories.
+      depending on `mode`, `oci-registry` and `ocm-repository` outputs will be:
+
+      ${oci-registry-prefix}/snapshots
+      ${oci-registry-prefix}/releases
+
+      `ocm-release-repository` will always have `releases` as suffix.
+  snapshots-suffix:
+    type: string
+    default: snapshots
+    description: |
+      the suffix to append to oci-registry-prefix for mode `snapshot`
+  releases-suffix:
+    type: string
+    default: releases
+    description: |
+      the suffix to append to oci-registry-prefix for mode `release`
+  ocm-repositories:
+    required: false
+    type: string
+    description: |
+      An optional, comma-separated list of OCM-Repositories that should be used for looking-up
+      OCM-Component-Versions. The OCM releases repository will always be appended to the list if
+      it is not part of it yet.
+
+outputs:
+  oci-registry:
+    description: |
+      the OCI-Registry to use for publishing OCI-Artefacts to, considering the chosen `mode`
+    value: ${{ steps.params.outputs.oci-registry }}
+  ocm-repository:
+    description: |
+      the OCM-Repository to use for both publishing, and looking-up of OCM-Components
+    value: ${{ steps.params.outputs.ocm-repository }}
+  ocm-releases-repository:
+    description: |
+      the OCM-Repository hosting (final) release-versions (returned independent from chosen mode)
+    value: ${{ steps.params.outputs.ocm-releases-repository }}
+  ocm-repositories:
+    description: the ocm-repositories which may be used to lookup component-versions
+    value: ${{ steps.params.outputs.ocm-repositories }}
+  is-fork:
+    description: |
+      true if current repository is a fork, else false
+    value: ${{ steps.params.outputs.is-fork }}
+  is-pr-from-fork:
+    description: |
+      true if triggering event is `pull_request`, and underlying pullrequest stems from a fork that
+      does not belong to the same owner as the target repository.
+    value: ${{ steps.params.outputs.is-pr-from-fork }}
+  can-push:
+    description: |
+      boolean indicating whether or not it will likely be possible for this workflow to push
+      contents (to OCI-Registries).
+
+      If repository from which the workflow was triggered is not a fork (or a fork within the same
+      organisation), pushing is always deemed possible (following cases refer to forks, only).
+
+      If the `workflow_event` reads `pull_request`, pushing is _not_ deemded to be possible.
+
+      If the `workflow_event` reads `pull_request_target`, pushing is possible, if the
+      `author_association` of the pullrequest-event is one of `COLLABORATOR`,
+      `MEMBER`, `OWNER`.
+
+      Note that consistent usage of `cc-utils/.github/actions/trusted-checkout` is required.
+      Workflows offered from cc-utils repository already do this.
+    value: ${{ steps.params.outputs.can-push }}
+  can-push-reason:
+    description: |
+      An indication (in natural language) as to why `can-push` was chosen to be either true or false.
+    value: ${{ steps.params.outputs.can-push-reason }}
+
+runs:
+  using: composite
+  steps:
+    - id: repo-metadata
+      uses: gardener/cc-utils/.github/actions/repo-metadata@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        gh-token: ${{ inputs.gh-token }}
+    - name: params
+      id: params
+      shell: python
+      env:
+        # pass all expression values via env (never interpolate ${{ }} into the
+        # python source): event fields like label.name are attacker-influenceable
+        # and would otherwise break the parse or inject code before the trust gate
+        REPO_IS_FORK: ${{ steps.repo-metadata.outputs.fork }}
+        MODE: ${{ inputs.mode }}
+        OCI_REGISTRY_PREFIX: ${{ inputs.oci-registry-prefix }}
+        SNAPSHOTS_SUFFIX: ${{ inputs.snapshots-suffix }}
+        RELEASES_SUFFIX: ${{ inputs.releases-suffix }}
+        OCM_REPOSITORIES: ${{ inputs.ocm-repositories }}
+        EVENT_NAME: ${{ github.event_name }}
+        REPO_OWNER: ${{ github.repository_owner }}
+        HEAD_OWNER: ${{ github.event.pull_request.head.repo.owner.login }}
+        AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        EVENT_ACTION: ${{ github.event.action }}
+        TRUSTED_LABEL: ${{ inputs.trusted-label || 'ok-to-test' }}
+        EVENT_LABEL: ${{ github.event.label.name }}
+        GITHUB_REF: ${{ github.ref }}
+      run: |
+        import os
+        import sys
+        sys.path.insert(0, os.environ['GITHUB_ACTION_PATH'])
+        import params
+
+        is_fork = os.environ['REPO_IS_FORK']
+        print(f'repo is a fork: {is_fork}')
+
+        urls = params.compute_registry_urls(
+            mode=os.environ['MODE'],
+            prefix=os.environ['OCI_REGISTRY_PREFIX'],
+            snapshots_suffix=os.environ['SNAPSHOTS_SUFFIX'],
+            releases_suffix=os.environ['RELEASES_SUFFIX'],
+            ocm_repositories=os.environ['OCM_REPOSITORIES'],
+        )
+
+        can_push, is_pr_from_fork = params.determine_can_push(
+            event_name=os.environ['EVENT_NAME'],
+            repo_owner=os.environ['REPO_OWNER'],
+            head_owner=os.environ.get('HEAD_OWNER', ''),
+            author_association=os.environ.get('AUTHOR_ASSOCIATION', ''),
+            event_action=os.environ.get('EVENT_ACTION', ''),
+            trusted_label=os.environ['TRUSTED_LABEL'],
+            event_label=os.environ.get('EVENT_LABEL', ''),
+            ref=os.environ['GITHUB_REF'],
+        )
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f'oci-registry={urls.oci_registry}\n')
+            f.write(f'ocm-repository={urls.ocm_repository}\n')
+            f.write(f'ocm-releases-repository={urls.ocm_releases_repository}\n')
+            f.write(f'ocm-repositories={urls.ocm_repositories}\n')
+            f.write(f'is-fork={is_fork}\n')
+            f.write(f'is-pr-from-fork={str(is_pr_from_fork).lower()}\n')
+            f.write(f'can-push={str(can_push.value).lower()}\n')
+            f.write(f'can-push-reason={can_push.reason}\n')
+
+        mode = os.environ['MODE']
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'w') as f:
+            f.write(f'''## Pipeline-Params-Summary
+
+        <table> <tbody>
+          <tr> <td>mode</td>            <td>{mode}</td> </tr>
+          <tr> <td>oci-registry</td>    <td>{urls.oci_registry}</td> </tr>
+          <tr> <td>ocm-repository</td>  <td>{urls.ocm_repository}</td> </tr>
+          <tr> <td>ocm-repositories</td><td>{urls.ocm_repositories}</td> </tr>
+          <tr> <td>is-fork</td>         <td>{is_fork}</td> </tr>
+          <tr> <td>is-pr-from-fork</td> <td>{str(is_pr_from_fork).lower()}</td> </tr>
+          <tr> <td>can-push</td>        <td>{str(can_push.value).lower()}</td> </tr>
+          <tr> <td>can-push-reason</td> <td>{can_push.reason}</td> </tr>
+        </tbody> </table>
+        ''')

@@ -1,0 +1,117 @@
+name: SAST-Lint-OCM
+
+# description: |
+#   A re-usable, and strongly opinionated workflow for running SAST-Linter, and export
+#   linting-results as an OCM-Fragment using the `export-ocm-fragments`-action.
+
+on:
+  workflow_call:
+    inputs:
+      linter:
+        required: true
+        type: string
+        default: gosec
+        description: |
+          the linter to run. Currently, only `gosec` is supported.
+      run:
+        required: true
+        default: .ci/verify
+        type: string
+        description: |
+          the command to run. Passed to `bash` without any quoting or preprocessing.
+
+      go-version:
+        required: false
+        default: 'greatest'
+        type: string
+        description: |
+          if passed, golang will be installed prior to calling command specified by `run` input.
+
+          If special value `greatest` is passed, greatest available golang version will be setup.
+          Otherwise, the passed version will be installed. To disable installation of golang, pass
+          the empty string.
+
+      go-version-file:
+        required: false
+        type: string
+        description: |
+          passed to `setup-go`'s equally-named input:
+          https://github.com/actions/setup-go?tab=readme-ov-file#getting-go-version-from-the-gomod-file
+
+      setup-git-identity:
+        type: boolean
+        required: false
+        default: false
+        description: |
+          if set, run `setup-git-identity` action prior to running command.
+
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.
+
+jobs:
+  run-linter:
+    environment: ${{ inputs.github-environment }}
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    steps:
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        if: ${{ inputs.go-version != '' || inputs.go-version-file != '' }}
+        with:
+          go-version: ${{ inputs.go-version != 'greatest' && inputs.go-version || '' }}
+          go-version-file: ${{ inputs.go-version-file }}
+      - name: setup-git-identity
+        if: ${{ inputs.setup-git-identity }}
+        uses: 'gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138'
+      - name: run-linter
+        shell: bash
+        run: |
+          set -eu
+
+          if [ '${{ inputs.linter }}' != 'gosec' ]; then
+            echo 'do not know how to run ${{ inputs.linter }}'
+            exit 1
+          fi
+
+          # it is okay for the passed expression to be split into multiple tokens - have bash
+          # interpret whatever is passed
+          ${{ inputs.run }}
+
+          # linter-script is expected to output `gosec-report.sarif` (hardcoded contract)
+          mkdir -p /tmp/blobs.d
+          tar czf /tmp/blobs.d/gosec-report.tar.gz gosec-report.sarif
+
+      - name: add-sast-report-to-component-descriptor
+        uses: gardener/cc-utils/.github/actions/export-ocm-fragments@37a629438f27bc7bf8e8ae4f24af2faee11149f6
+        with:
+          blobs-directory: /tmp/blobs.d
+          ocm-resources: |
+            name: gosec-report
+            relation: local
+            access:
+              type: localBlob
+              localReference: gosec-report.tar.gz
+            labels:
+              - name: gardener.cloud/purposes
+                value:
+                  - lint
+                  - sast
+                  - gosec
+              - name: gardener.cloud/comment
+                value: |
+                  we use gosec (linter) for SAST scans
+                  see: https://github.com/securego/gosec

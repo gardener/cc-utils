@@ -1,0 +1,142 @@
+name: Run Testmachinery-Tests
+
+# description: |
+#   Runs Integrationtests using TestMachinery
+#
+#   see: https://github.com/gardener/test-infra
+
+on:
+  workflow_call:
+    inputs:
+      k8s-api-endpoint:
+        required: false
+        type: string
+        default: https://api.tm-os-opensource.core.shoot.canary.k8s-hana.ondemand.com
+        description: |
+          The URL referring to the k8s-apiserver-endpoint in which the testmachinery-instance to use
+          runs. Pipeline-Runs will authenticate against this cluster using OIDC.
+
+          Note that in case of the default-cluster, only a subset of repositories below
+          https://github.com/gardener are authorised. Runs triggered from forked repositories will
+          also fail, unless `on.pull_request_target` is used as trigger-event.
+      k8s-api-ca:
+        required: false
+        type: string
+      k8s-api-ca-discovery-url:
+        required: false
+        type: string
+        default: https://discovery.ingress.garden.canary.k8s.ondemand.com/projects/core/shoots/751e98f4-a57d-40f7-b8de-e5dbf4f48d2d/cluster-ca
+        description: |
+          url to the Gardener discovery server to retrieve the Kubernetes server CA
+      kubeconfig-path:
+        required: false
+        type: string
+        default: /tmp/kubeconfig.yaml
+        description: |
+          The path to which the generated kubeconfig will be generated (this needs to be passed
+          to `testrunner`).
+      service-account-name:
+        required: false
+        type: string
+        default: testrunner
+        description: |
+          the service account in the target-cluster to authenticate request a token for.
+          It should be used by the testrunner invocation at a later stage.
+      service-account-namespace:
+        required: false
+        type: string
+        default: default
+        description: |
+          the namespace in which the service account resides.
+      service-account-token-expiration:
+        required: false
+        type: number
+        default: 10800
+        description: |
+          the requested expiration (in seconds) of the service account token.
+          Note that the actual expiration might differ, depending on the cluster's configuration.
+      test-command:
+        required: true
+        type: string
+        description: |
+          The command to trigger test-machinery. Will be run within a bash-script (subshell)
+          without quoting or escaping.
+
+          For convenience, the `testrunner_run`-environment-variable is set to:
+
+          ```
+          testrunner run --tm-kubeconfig-path=<kubeconfig-path>
+          ```
+
+          For example, the following value might be passed:
+
+          ```
+          ${testrunner_run} \
+            --no-execution-group \
+            --testrun-prefix tm-extension-aws
+          ```
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+
+jobs:
+  trigger-testmachinery-tests:
+    environment: ${{ inputs.github-environment }}
+    runs-on: ubuntu-latest-static-ip
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+      - uses: gardener/cc-utils/.github/actions/setup-testrunner@b183b5873a6da3c7871cd8947263a9d13f40beb7
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@0bb904aa11d4039ec4cb32aade554cefb22278e0
+        with:
+          remove-trusted-label: false
+      - uses: gardener/cc-utils/.github/actions/kubernetes-auth@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          server: ${{ inputs.k8s-api-endpoint }}
+          server-ca: ${{ inputs.k8s-api-ca }}
+          server-ca-discovery-url: ${{ inputs.k8s-api-ca-discovery-url }}
+          kubeconfig-path: ${{ inputs.kubeconfig-path }}
+          service-account-name: ${{ inputs.service-account-name }}
+          service-account-namespace: ${{ inputs.service-account-namespace }}
+          service-account-token-expiration: ${{ inputs.service-account-token-expiration }}
+      - name: trigger-testmachinery-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export testrunner_run='testrunner run --tm-kubeconfig-path=${{ inputs.kubeconfig-path }}'
+
+          if (
+          ${{ inputs.test-command }}
+          ) |& tee /tmp/testrunner-output; then
+            result='success'
+            succeeded=true
+          else
+            result='test-errors'
+            succeeded=false
+          fi
+
+          cat << EOF > ${GITHUB_STEP_SUMMARY}
+          ## Testmachinery-Summary
+
+          *result*: ${result}
+
+          *Command*
+          ${{ inputs.test-command }}
+
+          *Log*
+          $(cat /tmp/testrunner-output)
+          EOF
+
+          if ${succeeded}; then
+            exit 0
+          else
+            exit 1
+          fi

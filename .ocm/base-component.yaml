@@ -1,0 +1,21 @@
+componentReferences: []
+labels:
+  - name: cloud.gardener.cnudie/responsibles
+    value:
+      - type: githubTeam
+        teamname: gardener/ci-maintainers
+        github_hostname: github.com
+sources: []
+resources: []
+
+main-source:
+  labels:
+    - name: gardener.cloud/purposes
+      value:
+        - lint
+        - sast
+        - pybandit
+    - name: gardener.cloud/comment
+      value: |
+        we use bandit (linter) for SAST scans
+        see: https://bandit.readthedocs.io/en/latest/

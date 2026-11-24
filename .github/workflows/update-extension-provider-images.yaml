@@ -1,0 +1,179 @@
+#
+# SPDX-FileCopyrightText: Contributors to the Gardener project
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+name: Reusable Image Version Updater
+
+on:
+  workflow_call:
+    inputs:
+      images-yaml-path:
+        description: 'Path to the images.yaml file.'
+        required: false
+        type: string
+        default: 'imagevector/images.yaml'
+      release-notes-path:
+        description: 'Path where the release-notes.md file will be generated.'
+        required: false
+        type: string
+        default: '/tmp/release-notes.md'
+      base-branch:
+        description: 'The base branch for the pull request.'
+        required: false
+        type: string
+        default: 'master'
+      branch-name:
+        description: 'The name of the branch for the pull request. The branch must not be protected and should allow force pushes.'
+        required: false
+        type: string
+        default: 'chore/auto-update-images'
+      github-environment:
+        required: false
+        default: ""
+        type: string
+        description: |
+          Optionally define github environment.
+          By default no github environment is used.
+      github-runs-on:
+        required: false
+        type: string
+        description: |
+          The runner to use for executing the workflow. If not set, default values are being used.ironment is used.
+
+jobs:
+  update-and-pr:
+    runs-on: ${{ inputs.github-runs-on || vars.DEFAULT_RUNNER || 'ubuntu-latest' }}
+    environment: ${{ inputs.github-environment }}
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Run image update action
+        id: image_update
+        uses: gardener/cc-utils/.github/actions/update-extension-provider-images@e75023b8aebc61ddaeb680713f75cc51c4c02401
+        with:
+          images-yaml-path: ${{ inputs.images-yaml-path }}
+          release-notes-path: ${{ inputs.release-notes-path }}
+
+      - name: Read release notes file
+        id: release_notes
+        run: |
+          release_notes_path="${{ inputs.release-notes-path }}"
+          if [ -f "$release_notes_path" ]; then
+            notes=$(cat "$release_notes_path")
+          {
+            echo "notes_content<<EOF"
+            echo "$notes"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          else
+            echo "No release-notes.md file found. No updates were made."
+            echo "notes_content=" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: gardener/cc-utils/.github/actions/github-auth@a48a6f94d69833263b319780178654c0481c0556
+        if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          repositories: |
+            ${{ github.event.repository.name }}
+          permissions: |
+            pull-requests: write
+
+      - name: Setup Git Identity
+        uses: gardener/cc-utils/.github/actions/setup-git-identity@6b2ec3821ca5c112f804739af41dc574971c5138
+
+      - name: Check for Changes
+        id: check_changes
+        run: |
+          images_path="${{ inputs.images-yaml-path }}"
+          if git diff --quiet "$images_path"; then
+            echo "No changes detected in $images_path. Exiting."
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected, proceeding with PR."
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and Push Changes
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        run: |
+          images_path="${{ inputs.images-yaml-path }}"
+          git add "$images_path"
+          git add .ocm/release-notes/ 2>/dev/null || true
+          git commit -m "Chore: Auto-update image versions"
+          git checkout -B ${{ inputs.branch-name }}
+          git push origin ${{ inputs.branch-name }} --force
+
+      - name: Create or Update Pull Request
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        env:
+          GITHUB_TOKEN: ${{ steps.fed-token.outputs.token }}
+          BRANCH_NAME: ${{ inputs.branch-name }}
+          BASE_BRANCH: ${{ inputs.base-branch }}
+          IMAGES_YAML_PATH: ${{ inputs.images-yaml-path }}
+          NOTES_CONTENT: ${{ steps.release_notes.outputs.notes_content }}
+          UPDATE_SUMMARY: ${{ steps.image_update.outputs.summary }}
+        run: |
+          set -euo pipefail
+          pr_number=$(gh pr list --head "$BRANCH_NAME" --state open --json number --jq '.[].number')
+
+          # build the body from env-vars only; never interpolate GitHub expressions into the script,
+          # so attacker-controlled notes/summary/path cannot break out into shell
+          {
+            cat <<-'STATIC_HEAD'
+          /area ops-productivity
+          /kind enhancement
+
+          **What this PR does / why we need it**:
+          STATIC_HEAD
+            printf 'This PR was auto-generated to update container image versions defined in `%s`.\n' "$IMAGES_YAML_PATH"
+            cat <<-'STATIC_MID1'
+
+          ---
+
+          # Component Changelogs
+          This section lists the release notes for all updated components. Please review them for any breaking changes.
+
+          STATIC_MID1
+            printf '%s\n' "$NOTES_CONTENT"
+            cat <<-'STATIC_MID2'
+
+          ---
+
+          **Special notes for your reviewer**:
+          Please review the "Component Changelogs" section above and verify that no breaking changes require modifications to our Helm charts or code.
+
+          **Release note**:
+          ```other dependency
+          STATIC_MID2
+            printf '%s\n' "$UPDATE_SUMMARY"
+            cat <<-'STATIC_MID3'
+          ```
+
+          ---
+
+          # ✅ Reviewer Checklist
+          - [ ] I have reviewed the release notes for all updated components.
+          - [ ] I have verified that no breaking changes require modifications to our Helm charts or code.
+          STATIC_MID3
+            printf -- '- [ ] I have confirmed that the changes in `%s` are correct.\n' "$IMAGES_YAML_PATH"
+          } > /tmp/pr_body.md
+
+          if [ -n "$pr_number" ]; then
+            echo "Pull Request #$pr_number already exists, updating..."
+            # Only update the body, leave the title as is
+            gh pr edit "$pr_number" --body-file /tmp/pr_body.md
+          else
+            echo "Creating new Pull Request..."
+            gh pr create \
+              --head "$BRANCH_NAME" \
+              --base "$BASE_BRANCH" \
+              --title "🤖 Chore: Auto-update container image versions" \
+              --body-file /tmp/pr_body.md
+          fi

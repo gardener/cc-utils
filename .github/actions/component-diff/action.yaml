@@ -1,0 +1,154 @@
+name: component-diff
+description: |
+  An action to determine the component-diff between the current version (read from passed-in
+  component-descriptor) and the greatest published release-version. The diff is structured according
+  to `ocm.diff.ComponentDiff`.
+
+inputs:
+  component-descriptor:
+    required: false
+    type: string
+    description: |
+      An OCM-Component-Descriptor in YAML form.
+
+      Either this input or `component-descriptor-artifact` must be provided.
+  component-descriptor-artifact:
+    required: false
+    type: string
+    description: |
+      Name of a GHA artifact containing the component-descriptor, as produced by
+      `merge-ocm-fragments` (output `component-descriptor-artifact`).  The artifact must contain
+      `component-descriptor.tar.gz`, which in turn must contain `component-descriptor.yaml`.
+
+      Preferred over the inline `component-descriptor` input for large descriptors.
+  ocm-repositories:
+    required: true
+    type: string
+    description: |
+      A (comma-separated) list of ocm-repository-URLs where component-versions are to be looked up
+      (order is honoured).
+
+      Caveat: this action will only honour final versions. Hence, at least one ocm-repository
+      containing final/release versions must be passed.
+
+outputs:
+  has-diff:
+    description: |
+      Indicates whether (at least) one of the component dependency versions has changed.
+    value: ${{ steps.component-diff.outputs.has-diff }}
+
+runs:
+  using: composite
+  steps:
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@a48a6f94d69833263b319780178654c0481c0556
+    - uses: gardener/cc-utils/.github/actions/oci-auth@76717b7fa688681886606502bb6dc1fa4e9c05bd
+      with:
+        oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
+    - name: download-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+      with:
+        name: ${{ inputs.component-descriptor-artifact }}
+        path: /tmp/cd-artifact
+    - name: extract-component-descriptor-artifact
+      if: ${{ inputs.component-descriptor-artifact != '' }}
+      shell: bash
+      run: |
+        set -eu
+        tar xf /tmp/cd-artifact/component-descriptor.tar.gz \
+          -C "${{ github.workspace }}" component-descriptor.yaml
+    - name: Create component diff
+      id: component-diff
+      shell: python
+      run: |
+        import os
+        import sys
+        import textwrap
+
+        import yaml
+
+        import ocm.retrieve
+        import oci.client
+        import ocm
+        import version
+
+        if '${{ inputs.component-descriptor-artifact }}':
+          with open('component-descriptor.yaml') as f:
+            raw = yaml.safe_load(f)
+        else:
+          raw = yaml.safe_load('''${{ inputs.component-descriptor}}''')
+
+        current_component_descriptor = ocm.ComponentDescriptor.from_dict(
+          component_descriptor_dict=raw,
+        )
+        component_name = current_component_descriptor.component.name
+        component_version = current_component_descriptor.component.version
+
+        ocm_repositories = '${{ inputs.ocm-repositories }}'.split(',')
+        ocm_repository_lookup = ocm.retrieve.ocm_repository_lookup(*ocm_repositories)
+
+        oci_client = oci.client.client_with_dockerauth()
+
+        component_descriptor_lookup = ocm.retrieve.create_default_component_descriptor_lookup(
+          ocm_repository_lookup=ocm_repository_lookup,
+          oci_client=oci_client,
+        )
+
+        version_lookup = ocm.retrieve.version_lookup(
+          ocm_repository_lookup=ocm_repository_lookup,
+          oci_client=oci_client,
+        )
+
+        greatest_version = version.greatest_version(
+          versions=version_lookup(current_component_descriptor),
+          ignore_prerelease_versions=True,
+        )
+
+        latest_component_descriptor = component_descriptor_lookup(
+          ocm.ComponentIdentity(
+            name=component_name,
+            version=greatest_version,
+          ),
+        )
+
+        component_diff = ocm.retrieve.component_diff(
+          left_component=latest_component_descriptor,
+          right_component=current_component_descriptor,
+          ignore_component_names=(component_name,),
+          component_descriptor_lookup=component_descriptor_lookup,
+        )
+
+        if not component_diff:
+          component_diff_str = (
+            f'No differences were found between current ({component_version}) '
+            f'and greatest release ({greatest_version}).'
+          )
+          print(component_diff_str)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write('has-diff=false\n')
+
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+            f.write(textwrap.dedent(f'''\
+              ## Component-Diff
+
+              {component_diff_str}
+            '''))
+            sys.exit(0)
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+          f.write('has-diff=true\n')
+
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+          f.write(textwrap.dedent(f'''\
+            ## Component-Diff
+
+            ```
+            {
+              '\n'.join(textwrap.indent(
+                text=f'{left_c.name}: released: {left_c.version}, current: {right_c.version}',
+                prefix='  ',
+              ) for left_c, right_c in component_diff.cpairs_version_changed)
+            }
+            ```
+          '''))

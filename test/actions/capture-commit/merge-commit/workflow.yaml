@@ -1,0 +1,89 @@
+name: test-capture-import-merge-commit
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: make-timestamp-reference
+        shell: bash
+        run: touch /tmp/ts-ref
+      - name: create-merge-commit
+        id: build
+        shell: bash
+        run: |
+          set -eu
+          base="$(git rev-parse HEAD)"
+          echo "base=${base}" >> ${GITHUB_OUTPUT}
+
+          # feat "side" — commit, remember sha, then reset back
+          echo 'feat' > feat.txt
+          git add feat.txt
+          git commit -m 'feat commit'
+          feat_sha="$(git rev-parse HEAD)"
+          git reset --hard "${base}"
+
+          # main "side"
+          echo 'main' > main.txt
+          git add main.txt
+          git commit -m 'main commit'
+
+          # merge feat side
+          git merge --no-ff -m 'merge feat' "${feat_sha}"
+
+          # sanity: HEAD must have 2 parents (3 tokens: sha + 2 parent shas)
+          parents="$(git rev-list --parents -n 1 HEAD | wc -w)"
+          if [ "${parents}" -ne 3 ]; then
+            echo "expected merge commit, got ${parents} tokens"
+            git log --oneline --graph
+            exit 1
+          fi
+      - id: capture
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref
+      - name: assert-capture
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects'
+            exit 1
+          fi
+      - name: reset-to-base
+        shell: bash
+        run: git reset --hard '${{ steps.build.outputs.base }}'
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture.outputs.commit-digest }}
+          after-import: noop
+      - name: assert-import
+        shell: bash
+        run: |
+          set -eu
+          expected='${{ steps.capture.outputs.commit-digest }}'
+          # move HEAD explicitly to the imported commit — `noop` leaves HEAD
+          # at base by design; this asserts the objects landed intact.
+          git reset --hard "${expected}"
+          head="$(git rev-parse HEAD)"
+          if [ "${head}" != "${expected}" ]; then
+            echo "Expected HEAD=${expected}, got: ${head}"
+            git log --oneline --graph
+            exit 1
+          fi
+          # merge structure preserved
+          parents="$(git rev-list --parents -n 1 HEAD | wc -w)"
+          if [ "${parents}" -ne 3 ]; then
+            echo "expected merge preserved (3 tokens), got ${parents}"
+            git log --oneline --graph
+            exit 1
+          fi
+          [ -f feat.txt ] || { echo "feat.txt missing after import"; exit 1; }
+          [ -f main.txt ] || { echo "main.txt missing after import"; exit 1; }
+          git fsck --no-dangling
+          echo "merge-commit import: HEAD=${head} OK"

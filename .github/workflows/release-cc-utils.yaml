@@ -1,0 +1,86 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      release-to-pypi:
+        required: false
+        type: boolean
+        default: false
+        description: Whether to release to PYPI
+      slack-channel-id:
+        type: string
+        default: C0170EXLULE # gardener-cicd channel
+        description: which slack-channel to post release-notes to (defaults to gardener-cicd)
+      post-to-slack:
+        type: boolean
+        default: true
+        description: post to slack
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-and-test.yaml
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    with:
+      mode: release
+
+  pin:
+    uses: ./.github/workflows/pin-actions-and-workflows.yaml
+    needs:
+      - build
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      own-ref: refs/capture-commit
+      release-commit-objects-artefact: release-commit-objects
+
+  release-to-github-and-bump:
+    uses: ./.github/workflows/release.yaml
+    needs:
+      - build
+      - pin
+    secrets: inherit
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    with:
+      release-commit-target: branch
+      next-version: bump-minor
+      slack-channel-id: ${{ inputs.post-to-slack && 'C0170EXLULE' || '' }}
+
+  pypi:
+    if: ${{ inputs.release-to-pypi }}
+    runs-on: ubuntu-latest
+    name: Publish to PYPI
+    needs:
+      - build
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Retrieve Distribution Packages
+        uses: gardener/cc-utils/.github/actions/download-artifact@a48a6f94d69833263b319780178654c0481c0556
+        with:
+          name: distribution-packages
+          path: /tmp/dist
+      - name: prepare build-filesystem
+        id: prepare
+        run: |
+          ls -lta /tmp/dist
+          mv /tmp/dist/distribution-packages.tar.gz .
+          tar xf distribution-packages.tar.gz
+          ls -lta dist/
+          rm -rf dist/blobs.d dist/ocm_resources.yaml
+          ls -lta dist/
+      - name: publish to pypi
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1

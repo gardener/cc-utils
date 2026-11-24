@@ -1,0 +1,75 @@
+name: test-capture-import-cherry-pick
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: make-timestamp-reference
+        shell: bash
+        run: touch /tmp/ts-ref
+      - name: make-commit
+        shell: bash
+        run: |
+          echo 'extra content' >> hello.txt
+          git add hello.txt
+          git commit -m 'commit-to-cherry-pick'
+      - id: capture
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref
+      - name: assert-capture
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects'
+            exit 1
+          fi
+      - name: reset-and-diverge
+        shell: bash
+        run: |
+          # go back to fixture, then create a divergent commit so that
+          # cherry-pick is the only sensible way to apply the captured commit
+          git reset --hard HEAD~1
+          echo 'divergent' > other.txt
+          git add other.txt
+          git commit -m 'divergent commit'
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture.outputs.commit-digest }}
+          after-import: cherry-pick
+      - name: assert-cherry-pick
+        shell: bash
+        run: |
+          expected='${{ steps.capture.outputs.commit-digest }}'
+          head="$(git rev-parse HEAD)"
+          if [ "${head}" = "${expected}" ]; then
+            echo "HEAD unexpectedly equals captured digest (cherry-pick should re-parent): ${head}"
+            exit 1
+          fi
+          # captured commit's payload must be present in HEAD's tree
+          if ! grep -q '^extra content$' hello.txt; then
+            echo "expected captured content in hello.txt, got:"
+            cat hello.txt
+            exit 1
+          fi
+          # divergent commit must still be present as HEAD's ancestor
+          if ! git log --format=%s | grep -qx 'divergent commit'; then
+            echo "divergent commit missing from log:"
+            git log --format=%s
+            exit 1
+          fi
+          # cherry-picked message must appear on HEAD
+          msg="$(git log -1 --format=%s)"
+          if [ "${msg}" != 'commit-to-cherry-pick' ]; then
+            echo "expected HEAD message 'commit-to-cherry-pick', got: ${msg}"
+            exit 1
+          fi
+          git fsck --no-dangling
+          echo "cherry-pick: HEAD=${head} OK"

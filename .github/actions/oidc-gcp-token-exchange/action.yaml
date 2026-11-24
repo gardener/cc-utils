@@ -1,0 +1,119 @@
+name: 'OIDC + GCP identity token exchange'
+description: >
+  Performs a dual-token authentication exchange using a GitHub OIDC token and a GCP
+  instance-metadata identity token. Intended for use on self-hosted GitHub Enterprise
+  runners with access to the GCP instance metadata endpoint.
+
+  For each scope $s, exports ${token-env-prefix}${S}_TOKEN into $GITHUB_ENV
+  (where $S is $s uppercased).
+
+  Requires:
+    - id-token: write  (for GitHub OIDC)
+    - a runner with access to the GCP instance metadata endpoint
+
+inputs:
+  api-url:
+    description: 'Token exchange API base URL'
+    required: true
+  oidc-audience:
+    description: 'Audience claim for both the GitHub OIDC and GCP identity tokens'
+    required: true
+  pipeline-id:
+    description: 'Pipeline identifier passed to the token exchange API'
+    required: true
+  pipeline-group-id:
+    description: 'Pipeline group identifier passed to the token exchange API'
+    required: true
+  scopes:
+    description: >
+      Newline-separated list of scopes to fetch tokens for.
+      For each scope $s, ${token-env-prefix}${S}_TOKEN is exported (S = $s uppercased).
+    required: false
+    default: ''
+  token-env-prefix:
+    description: 'Prefix for exported token env vars (e.g. "MY_" → MY_${S}_TOKEN)'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Exchange tokens
+      shell: bash
+      env:
+        API_URL: ${{ inputs.api-url }}
+        OIDC_AUDIENCE: ${{ inputs.oidc-audience }}
+        PIPELINE_ID: ${{ inputs.pipeline-id }}
+        GROUP_ID: ${{ inputs.pipeline-group-id }}
+        SCOPES: ${{ inputs.scopes }}
+        TOKEN_PREFIX: ${{ inputs.token-env-prefix }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+          echo "::error::Missing id-token: write permission"
+          exit 1
+        fi
+
+        actions_token=$(curl -sf \
+          -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${OIDC_AUDIENCE}" \
+          | jq -r .value)
+        echo "::add-mask::$actions_token"
+
+        gcp_token=$(curl -sf \
+          -H "Metadata-Flavor: Google" \
+          "http://metadata/computeMetadata/v1/instance/service-accounts/default/identity?audience=${OIDC_AUDIENCE}&format=full")
+        echo "::add-mask::$gcp_token"
+
+        # GET /auth?group_id=<group>&pipeline_id=<pipeline>
+        #   X-Trust-Authorization-Orchestrator: <gh-oidc-jwt>
+        #   X-Trust-Authorization-Runtime:      <gcp-jwt>
+        # Response: {"token": "<session-token>"}
+        group_id_enc=$(printf '%s' "$GROUP_ID" | jq -Rr @uri)
+        pipeline_id_enc=$(printf '%s' "$PIPELINE_ID" | jq -Rr @uri)
+        auth_response=$(curl -sf \
+          -H "X-Trust-Authorization-Orchestrator: $actions_token" \
+          -H "X-Trust-Authorization-Runtime: $gcp_token" \
+          "${API_URL}/auth?group_id=${group_id_enc}&pipeline_id=${pipeline_id_enc}" \
+          || true)
+
+        session_token=$(echo "$auth_response" | jq -r '.token // empty')
+
+        if [ -z "$session_token" ]; then
+          echo "::error::Token exchange failed; response: $auth_response"
+          exit 1
+        fi
+
+        echo "::add-mask::$session_token"
+
+        if [ -z "${SCOPES:-}" ]; then
+          exit 0
+        fi
+
+        # GET /tokens?systems=<comma-separated scopes>
+        # Authorization: Bearer <session-token>
+        # Response: {"scope": "<token>", ...}
+        scopes_csv=$(printf '%s' "$SCOPES" | tr '\n' ',' | sed 's/,*$//')
+        tokens_json=$(curl -sf \
+          -H "Authorization: Bearer $session_token" \
+          "${API_URL}/tokens?systems=${scopes_csv}" \
+          || true)
+
+        if [ -z "$tokens_json" ]; then
+          echo "::error::Failed to retrieve scoped tokens"
+          exit 1
+        fi
+
+        while IFS= read -r scope; do
+          [ -z "$scope" ] && continue
+          token=$(echo "$tokens_json" | jq -r --arg s "$scope" '.[$s] // empty')
+          if [ -n "$token" ]; then
+            echo "::add-mask::$token"
+            upper=$(echo "$scope" | tr '[:lower:]' '[:upper:]')
+            echo "${TOKEN_PREFIX}${upper}_TOKEN=$token" >> "$GITHUB_ENV"
+          else
+            echo "::error::No token returned for scope '$scope'"
+            exit 1
+          fi
+        done <<< "$SCOPES"

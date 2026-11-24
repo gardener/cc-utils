@@ -1,0 +1,11 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  cc-utils-reviewers:
+  - ccwienk
+  - Michael5601
+  - TuanAnh17N
+  cc-utils-approvers:
+  - ccwienk
+  - Michael5601
+  - TuanAnh17N

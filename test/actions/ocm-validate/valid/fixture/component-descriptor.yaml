@@ -1,0 +1,12 @@
+meta:
+  schemaVersion: v2
+component:
+  name: example.com/test-component
+  version: 0.1.0
+  provider: acme
+  repositoryContexts:
+    - type: OCIRegistry
+      baseUrl: example.com/ocm
+  resources: []
+  sources: []
+  componentReferences: []

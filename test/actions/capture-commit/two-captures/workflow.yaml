@@ -1,0 +1,109 @@
+name: test-capture-two-captures
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: setup-git
+        shell: bash
+        run: |
+          git config user.email 'test@example.com'
+          git config user.name 'test'
+      - name: ts-ref-1-and-commit-A
+        id: a
+        shell: bash
+        run: |
+          touch /tmp/ts-ref-1
+          echo 'A' >> hello.txt
+          git add hello.txt
+          git commit -m 'commit A'
+          echo "sha=$(git rev-parse HEAD)" >> ${GITHUB_OUTPUT}
+      - id: capture-a
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref-1
+      - name: assert-capture-a-non-empty
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture-a.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects for capture-a'
+            exit 1
+          fi
+      - name: ts-ref-2-and-commit-B
+        id: b
+        shell: bash
+        run: |
+          touch /tmp/ts-ref-2
+          echo 'B' >> hello.txt
+          git add hello.txt
+          git commit -m 'commit B'
+          echo "sha=$(git rev-parse HEAD)" >> ${GITHUB_OUTPUT}
+      - id: capture-b
+        uses: gardener/cc-utils/.github/actions/capture-commit@master
+        with:
+          timestamp-reference: /tmp/ts-ref-2
+      - name: assert-capture-b-non-empty
+        shell: bash
+        run: |
+          if [ -z '${{ steps.capture-b.outputs.commit-objects }}' ]; then
+            echo 'expected non-empty commit-objects for capture-b'
+            exit 1
+          fi
+      - name: assert-captures
+        shell: bash
+        run: |
+          da='${{ steps.capture-a.outputs.commit-digest }}'
+          db='${{ steps.capture-b.outputs.commit-digest }}'
+          expected_a='${{ steps.a.outputs.sha }}'
+          expected_b='${{ steps.b.outputs.sha }}'
+          if [ "${da}" != "${expected_a}" ]; then
+            echo "capture-a digest=${da}, expected ${expected_a}"; exit 1
+          fi
+          if [ "${db}" != "${expected_b}" ]; then
+            echo "capture-b digest=${db}, expected ${expected_b}"; exit 1
+          fi
+          if [ "${da}" = "${db}" ]; then
+            echo "capture-a and capture-b unexpectedly identical: ${da}"; exit 1
+          fi
+          # refs/capture-commit must point at the *second* capture (B)
+          ref_digest="$(git rev-parse refs/capture-commit)"
+          if [ "${ref_digest}" != "${db}" ]; then
+            echo "refs/capture-commit=${ref_digest}, expected ${db} (second capture)"; exit 1
+          fi
+          echo "two-captures: A=${da} B=${db} OK"
+      - name: reset-and-import-a
+        shell: bash
+        run: git reset --hard HEAD~2
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture-a.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture-a.outputs.commit-digest }}
+          after-import: rebase
+      - name: assert-import-a
+        shell: bash
+        run: |
+          head="$(git rev-parse HEAD)"
+          expected='${{ steps.capture-a.outputs.commit-digest }}'
+          if [ "${head}" != "${expected}" ]; then
+            echo "after importing A: HEAD=${head}, expected ${expected}"; exit 1
+          fi
+          echo "import capture-a OK: HEAD=${head}"
+      - name: reset-and-import-b
+        shell: bash
+        run: git reset --hard HEAD~1
+      - uses: gardener/cc-utils/.github/actions/import-commit@master
+        with:
+          commit-objects: ${{ steps.capture-b.outputs.commit-objects }}
+          commit-digest: ${{ steps.capture-b.outputs.commit-digest }}
+          after-import: rebase
+      - name: assert-import-b
+        shell: bash
+        run: |
+          head="$(git rev-parse HEAD)"
+          expected='${{ steps.capture-b.outputs.commit-digest }}'
+          if [ "${head}" != "${expected}" ]; then
+            echo "after importing B: HEAD=${head}, expected ${expected}"; exit 1
+          fi
+          git fsck --no-dangling
+          echo "import capture-b OK: HEAD=${head}"

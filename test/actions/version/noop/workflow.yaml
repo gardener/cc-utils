@@ -1,0 +1,26 @@
+name: test-version-noop
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - id: version
+        uses: gardener/cc-utils/.github/actions/version@master
+        with:
+          version-operation: noop
+          repository-operation: capture-commit
+      - name: assert
+        shell: bash
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          if [ "${version}" != '1.2.3' ]; then
+            echo "Expected version 1.2.3, got: ${version}"
+            exit 1
+          fi
+          digest='${{ steps.version.outputs.commit-digest }}'
+          if ! echo "${digest}" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "Expected 40-char hex commit-digest, got: ${digest}"
+            exit 1
+          fi
+          echo "version=${version} commit-digest=${digest} OK"
