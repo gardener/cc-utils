@@ -557,6 +557,14 @@ class _RefreshableGarCredentialsLookup:
         if ref.registry_type not in (om.OciRegistryType.GAR, om.OciRegistryType.GCR):
             return None
 
+        if not(
+            (netloc := ref.netloc) == om.OCIRegistrySuffix.GCR
+            or netloc.endswith('.' + om.OCIRegistrySuffix.GCR)
+            # GAR image refs _must_ have a location prefix
+            or netloc.endswith('.' + om.OCIRegistrySuffix.GAR)
+        ):
+            return None
+
         with self._lock:
             if self._needs_refresh():
                 self._refresh()
