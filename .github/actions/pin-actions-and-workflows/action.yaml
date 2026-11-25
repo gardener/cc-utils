@@ -70,12 +70,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: install-dependencies
-      shell: bash
-      run: |
-        set -euo pipefail
-        pip install --quiet gitpython ruamel.yaml
-
     - name: configure-git-identity
       shell: bash
       run: |
@@ -93,6 +87,13 @@ runs:
     - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
       id: bundle
       if: ${{ inputs.bundle-dir == '' }}
+
+    # install gardener-gha-libs so `github` (used by the sibling signed_commit.py when signing
+    # pin-commits) is importable; also provides gitpython + ruamel.yaml used by pin.py itself.
+    - name: install-gardener-gha-libs
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      with:
+        bundle-dir: ${{ inputs.bundle-dir || steps.bundle.outputs.bundle-dir }}
 
     - name: pin
       shell: bash
