@@ -36,7 +36,8 @@ def res(
             name='imagevector.gardener.cloud/target-version',
             value='version-from-label',
         ),
-    )
+    ),
+    digest: ocm.DigestSpec | None=None,
 ) -> ocm.Resource:
     return ocm.Resource(
         name=name,
@@ -44,6 +45,7 @@ def res(
         type=type,
         access=access,
         labels=labels,
+        digest=digest,
     )
 
 
@@ -157,6 +159,74 @@ def test_oci_image_dict_from_resource_regardless_of_label():
     }
 
 
+_OCI_DIGEST = ocm.DigestSpec(
+    hashAlgorithm='SHA-256',
+    normalisationAlgorithm=ocm.NormalisationAlgorithm.OCI_ARTIFACT_DIGEST,
+    value='cafe1234',
+)
+
+
+def test_oci_image_dict_from_resource_emits_signed_digest():
+    # an OCI-artifact-digest (signature-covered) pins the emitted tag
+    result = og.oci_image_dict_from_resource(
+        resource=res(digest=_OCI_DIGEST),
+    )
+    assert result['tag'] == 'tag@sha256:cafe1234'
+
+    # digest from the (unsigned) access-reference is overridden by the signed digest
+    result = og.oci_image_dict_from_resource(
+        resource=res(
+            access=ocm.OciAccess(
+                imageReference=(
+                    'acme.org/image-ref:tag@sha256:'
+                    'beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef'
+                ),
+            ),
+            digest=_OCI_DIGEST,
+        ),
+    )
+    assert result['tag'] == 'tag@sha256:cafe1234'
+
+    # digest-only access-reference: no symbolic tag to retain
+    result = og.oci_image_dict_from_resource(
+        resource=res(
+            access=ocm.OciAccess(
+                imageReference=(
+                    'acme.org/image-ref@sha256:'
+                    'beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef'
+                ),
+            ),
+            digest=_OCI_DIGEST,
+        ),
+    )
+    assert result['tag'] == 'sha256:cafe1234'
+
+    # digests of other normalisation-algorithms are not emitted
+    result = og.oci_image_dict_from_resource(
+        resource=res(
+            digest=ocm.DigestSpec(
+                hashAlgorithm='SHA-256',
+                normalisationAlgorithm=ocm.NormalisationAlgorithm.GENERIC_BLOB_DIGEST,
+                value='cafe1234',
+            ),
+        ),
+    )
+    assert result['tag'] == 'tag'
+
+    # excluded-from-signature digests are not emitted
+    result = og.oci_image_dict_from_resource(
+        resource=res(digest=ocm.ExcludeFromSignatureDigest()),
+    )
+    assert result['tag'] == 'tag'
+
+
+def test_oci_image_dict_from_resource_regardless_of_label_emits_signed_digest():
+    result = og.oci_image_dict_from_resource_regardless_of_label(
+        resource=res(labels=(), digest=_OCI_DIGEST),
+    )
+    assert result['tag'] == 'tag@sha256:cafe1234'
+
+
 def test_image_dict_from_image_dict_and_resource():
     assert og.image_dict_from_image_dict_and_resource(
         component_name='cname',
@@ -201,6 +271,20 @@ def test_image_dict_from_image_dict_and_resource():
         'sourceRepository': 'cname',
         'tag': 'tag',
         'targetVersion': 'tversion',
+    }
+
+    # signed OCI-artifact digest pins the emitted tag
+    assert og.image_dict_from_image_dict_and_resource(
+        component_name='cname',
+        image={
+            'name': 'iname',
+        },
+        resource=res(digest=_OCI_DIGEST),
+    ) == {
+        'name': 'iname',
+        'repository': 'acme.org/image-ref',
+        'sourceRepository': 'cname',
+        'tag': 'tag@sha256:cafe1234',
     }
 
 
