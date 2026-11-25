@@ -93,17 +93,8 @@ class OciConfig:
         if not self.url_prefixes:
             return True
 
-        unmodified_ref = image_reference.lower()
-        image_reference = oci.util.normalise_image_reference(image_reference=image_reference).lower()
-
         for prefix in self.url_prefixes:
-            prefix = prefix.lower()
-
-            if image_reference.startswith(oci.util.normalise_image_reference(prefix)):
-                return True
-            if image_reference.startswith(prefix.lower()):
-                return True
-            if unmodified_ref.startswith(prefix):
+            if oci.util.image_reference_matches_prefix(image_reference, prefix):
                 return True
 
         return False
@@ -336,14 +327,16 @@ def docker_credentials_lookup(
         creds_store = docker_auth.get('credsStore')
         helpers_enabled = credential_helper_policy is not CredentialHelperPolicy.DISABLED
 
-        # prefer exact netloc match (host+port), fall back to host-only — consistent with auths
-        # lookup; pass configured key as server_url so helpers receive exactly what the user
-        # configured (e.g. 'localhost:5000')
+        # prefer exact netloc match (host+port), fall back to a port-less entry for the same
+        # host — consistent with the static auths lookup below. A `host:5000` key is
+        # port-specific and must not be handed to `host:6000`; only a port-less `host` key acts
+        # as a wildcard across ports. Pass the configured key as server_url so helpers receive
+        # exactly what the user configured (e.g. 'localhost:5000')
         matched_helper_key = next(
             (k for k in cred_helpers if k == image_netloc),
             None,
         ) or next(
-            (k for k in cred_helpers if k.split(':')[0] == image_host),
+            (k for k in cred_helpers if k == image_host),
             None,
         )
 
@@ -351,10 +344,23 @@ def docker_credentials_lookup(
             auths = docker_auth.get('auths')
             if not auths:
                 return None
-            for netloc, auth_dict in auths.items():
-                if netloc.split(':')[0] == image_host:
-                    break
-            else:
+            # prefer an exact netloc match (host+port), fall back to a port-less entry for the
+            # same host — consistent with the credHelpers lookup above. A `host:5000` entry is
+            # port-specific and must not be handed to `host:6000`; only a port-less `host` entry
+            # acts as a wildcard across ports.
+            auth_dict = next(
+                (d for k, d in auths.items() if k.split('://')[-1] == image_netloc),
+                None,
+            )
+            if auth_dict is None:
+                auth_dict = next(
+                    (
+                        d for k, d in auths.items()
+                        if (key := k.split('://')[-1]) == image_host and ':' not in key
+                    ),
+                    None,
+                )
+            if auth_dict is None:
                 return None
 
             if (
