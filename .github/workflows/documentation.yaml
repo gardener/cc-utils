@@ -1,0 +1,76 @@
+name: Documentation
+
+# Repository-local workflow; documentation is not part of the reusable build-and-test workflow.
+on:
+  push:
+    branches-ignore:
+      - gh-pages # Publishing documentation must not trigger another documentation build.
+    paths:
+      - doc/**
+  workflow_dispatch:
+
+jobs:
+  documentation:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    environment: build
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install Sphinx
+        run: pip3 install --break-system-packages sphinx sphinx-rtd-theme
+      - name: Generate Documentation
+        run: |
+          mkdir documentation-out.d
+          GH_PAGES_PATH=$PWD/documentation-out.d .ci/generate_documentation
+          ls documentation-out.d
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+        with:
+          name: documentation
+          path: documentation-out.d
+
+  publish-documentation:
+    if: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    needs:
+      - documentation
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: refs/heads/gh-pages
+      - name: Retrieve Documentation
+        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        with:
+          name: documentation
+          path: /tmp/documentation-out.d
+      - name: Prepare Documentation
+        id: documentation
+        run: |
+          set -euo pipefail
+          tar c -C /tmp/documentation-out.d . | tar x -C.
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no changes in documentation - no need to update documentation"
+            echo "unchanged=true" >> "${GITHUB_OUTPUT}"
+          fi
+      - uses: gardener/cc-utils/.github/actions/github-auth@master
+        if: ${{ steps.documentation.outputs.unchanged != 'true' }}
+        id: fed-token
+        with:
+          token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
+          repositories: |
+            ${{ github.event.repository.name }}
+          permissions: |
+            contents: write
+      - name: Publish Documentation
+        if: ${{ steps.documentation.outputs.unchanged != 'true' }}
+        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        with:
+          token: ${{ steps.fed-token.outputs.token }}
+          branch: gh-pages
+          message: update documentation
