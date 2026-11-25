@@ -45,15 +45,14 @@ class OciTagType(enum.Enum):
 
 
 class OCIRegistrySuffix(enum.StrEnum):
+    ALIYUN = 'cr.aliyuncs.com'
+    AWS_ECR_PUBLIC = 'public.ecr.aws' # entire hostname
+    AWS_PRIVATE = 'amazonaws.com'
+    AZURE = 'azurecr.io'
+    DOCKERHUB = 'docker.io' # entire hostname
     GAR = 'pkg.dev'
     GCR = 'gcr.io'
-    DOCKERHUB = 'docker.io'
     GHCR = 'ghcr.io'
-    ALIYUN = 'cr.aliyuncs.com'
-    AWS_PRIVATE = 'amazonaws.com'
-    AWS_ECR_PUBLIC = 'public.ecr.aws'
-    AZURE = 'azurecr.io'
-    KEPPEL = 'keppel.'
 
 
 class OciRegistryType(enum.Enum):
@@ -75,29 +74,29 @@ class OciRegistryType(enum.Enum):
     ) -> 'OciRegistryType':
         netloc = OciImageReference.to_image_ref(image_reference=image_reference).netloc
 
-        if netloc == OCIRegistrySuffix.GAR or netloc.endswith('.' + OCIRegistrySuffix.GAR):
-            return OciRegistryType.GAR
-        if netloc == OCIRegistrySuffix.GCR or netloc.endswith('.' + OCIRegistrySuffix.GCR):
-            return OciRegistryType.GCR
-        if netloc == OCIRegistrySuffix.DOCKERHUB or netloc.endswith('.' + OCIRegistrySuffix.DOCKERHUB):
-            return OciRegistryType.DOCKERHUB
-        if netloc == OCIRegistrySuffix.GHCR or netloc.endswith('.' + OCIRegistrySuffix.GHCR):
-            return OciRegistryType.GHCR
-        if netloc == OCIRegistrySuffix.ALIYUN or netloc.endswith('.' + OCIRegistrySuffix.ALIYUN):
-            return OciRegistryType.ALIYUN
-        if (
-            netloc == OCIRegistrySuffix.AWS_PRIVATE
-            or netloc.endswith('.' + OCIRegistrySuffix.AWS_PRIVATE)
-            or netloc == OCIRegistrySuffix.AWS_ECR_PUBLIC
-            or netloc.endswith('.' + OCIRegistrySuffix.AWS_ECR_PUBLIC)
-          ):
-            return OciRegistryType.AWS
-        if netloc == OCIRegistrySuffix.AZURE or netloc.endswith('.' + OCIRegistrySuffix.AZURE):
-            return OciRegistryType.AZURE
-        if netloc == OCIRegistrySuffix.KEPPEL or netloc.endswith('.' + OCIRegistrySuffix.KEPPEL):
+        for suffix, registry_type in _SUFFIX_TO_TYPE:
+            if netloc == suffix or netloc.endswith('.' + suffix):
+                return registry_type
+
+        # We currently support one registry (keppel) that canonically can be identified by
+        # prefix instead
+        if netloc.startswith("keppel."):
             return OciRegistryType.KEPPEL
 
         return OciRegistryType.UNKNOWN
+
+
+_SUFFIX_TO_TYPE = (
+    (OCIRegistrySuffix.ALIYUN, OciRegistryType.ALIYUN),
+    (OCIRegistrySuffix.AWS_ECR_PUBLIC, OciRegistryType.AWS),
+    (OCIRegistrySuffix.AWS_PRIVATE, OciRegistryType.AWS),
+    (OCIRegistrySuffix.AZURE, OciRegistryType.AZURE),
+    (OCIRegistrySuffix.DOCKERHUB, OciRegistryType.DOCKERHUB),
+    (OCIRegistrySuffix.GAR, OciRegistryType.GAR),
+    (OCIRegistrySuffix.GCR, OciRegistryType.GCR),
+    (OCIRegistrySuffix.GHCR, OciRegistryType.GHCR),
+)
+
 
 
 class OciImageReference:
