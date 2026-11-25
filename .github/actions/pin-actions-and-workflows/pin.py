@@ -453,6 +453,33 @@ def _sign_one(
     return oid
 
 
+def _sign_many(
+    *,
+    token: str,
+    repository_full_name: str,
+    signing_branch: str,
+    parent: str,
+    files: list[tuple[str, bytes]],
+    message: str,
+    host: str,
+) -> str:
+    '''
+    sign a single commit containing all `(path, content)` pairs in `files` onto `signing_branch`
+    at `parent`, and return the signed oid.
+    '''
+    oid = sign_pin_commit.sign_files_commit(
+        token=token,
+        repository_full_name=repository_full_name,
+        branch=signing_branch,
+        expected_head_oid=parent,
+        files=files,
+        message=message,
+        host=host,
+    )
+    logger.info('Created signed bundle commit %s (%d files)', oid, len(files))
+    return oid
+
+
 def _iter_bundle_files(
     *,
     worktree_path: str,
@@ -521,66 +548,6 @@ def _rewritten_content(
         return f.read()
 
 
-def _plan_pinned_chain(
-    *,
-    repo: gitpython.Repo,
-    own_commit: gitpython.Commit,
-    own_org: str,
-    own_repo: str,
-    ordered_prefixes,
-    prefix_to_blob: dict[str, gitpython.Blob],
-    bundle_dir: str | None,
-    bundle_action_prefix: str,
-    bundle_rel: str,
-) -> int:
-    '''
-    compute how many signed commits a real run would create, logging each, without any remote
-    interaction. Used for dry-run. Returns the planned commit count.
-    '''
-    count = 0
-    with tempfile.TemporaryDirectory(prefix='pin-dry-') as tmpdir:
-        worktree_path = os.path.join(tmpdir, 'worktree')
-        repo.git.worktree('add', '--detach', worktree_path, own_commit.hexsha)
-        try:
-            for path, content in _iter_bundle_files(
-                worktree_path=worktree_path,
-                bundle_dir=bundle_dir,
-                bundle_action_prefix=bundle_action_prefix,
-                bundle_rel=bundle_rel,
-            ):
-                count += 1
-                logger.info('[dry-run]   bundle commit %d: %s (%d bytes)', count, path, len(content))
-
-            fake_digest = '0' * 40
-            prefix_to_digest: dict[str, str] = {}
-            for prefix in ordered_prefixes:
-                blob = prefix_to_blob.get(prefix)
-                if blob is None:
-                    continue
-                content = _rewritten_content(
-                    blob=blob,
-                    own_org=own_org,
-                    own_repo=own_repo,
-                    prefix=prefix,
-                    prefix_to_digest=prefix_to_digest,
-                    repo=repo,
-                    bundle_dir=bundle_dir,
-                    bundle_action_prefix=bundle_action_prefix,
-                    worktree_path=worktree_path,
-                )
-                if content is None:
-                    # unchanged: pins against a placeholder digest (dry-run only)
-                    prefix_to_digest[prefix] = fake_digest
-                    continue
-                count += 1
-                prefix_to_digest[prefix] = fake_digest
-                logger.info('[dry-run]   rewrite commit %d: %s (%d bytes)',
-                            count, blob.path, len(content))
-        finally:
-            repo.git.worktree('remove', '--force', worktree_path)
-    return count
-
-
 def create_pinned_branch(
     *,
     repo_root: str,
@@ -590,17 +557,13 @@ def create_pinned_branch(
     own_repo: str | None,
     token: str,
     host: str | None = None,
-    dry_run: bool = False,
     bundle_dir: str | None = None,
     bundle_action_prefix: str = '.github/actions/install-gardener-gha-libs',
 ) -> None:
     '''
     Build GitHub-signed pinned commits via createCommitOnBranch and move the target branch to the
     resulting tip. The signed-commit chain is built on a throwaway signing-branch; the target
-    branch (e.g. v1) is moved with --force-with-lease at the end.
-
-    With dry_run=True, only the rewrites are computed and logged — no signing-branch is created,
-    no createCommitOnBranch call is made, and the target branch is not moved.
+    branch (e.g. v1) is moved at the end.
 
     If bundle_dir is given, its contents are copied into <bundle_action_prefix>/_bundle/ and the
     action YAML at that prefix is rewritten to install from the bundle instead of cloning.
@@ -636,30 +599,6 @@ def create_pinned_branch(
     repository_full_name = f'{push_org}/{push_repo}'
     bundle_rel = '_bundle'
 
-    # Dry-run computes the rewrites and the chain length without any remote interaction; it logs
-    # the plan and returns before creating a signing-branch or moving the target branch.
-    if dry_run:
-        commit_count = _plan_pinned_chain(
-            repo=repo,
-            own_commit=own_commit,
-            own_org=own_org,
-            own_repo=own_repo,
-            ordered_prefixes=ordered_prefixes,
-            prefix_to_blob=prefix_to_blob,
-            bundle_dir=bundle_dir,
-            bundle_action_prefix=bundle_action_prefix,
-            bundle_rel=bundle_rel,
-        )
-        if commit_count == 0:
-            logger.info('No rewrites were necessary; target branch unchanged')
-        else:
-            logger.info(
-                '[dry-run] would create %d signed commit(s), move %s and push preservation ref',
-                commit_count,
-                target_branch,
-            )
-        return
-
     # Real run: build the signed-commit chain on a throwaway signing-branch, then move the target
     # branch. signing_branch and host are resolved lazily on the first commit so an empty run stays
     # remote-free. The whole phase runs under one try/finally so a failure still deletes the branch.
@@ -675,25 +614,26 @@ def create_pinned_branch(
             try:
                 prefix_to_digest: dict[str, str] = {}
 
-                # --- bundling pass: each bundle file becomes one signed commit (before rewrites)
-                for path, content in _iter_bundle_files(
+                # --- bundling pass: the whole bundle becomes ONE signed commit (before rewrites).
+                #     createCommitOnBranch carries all additions in a single mutation, so there is no
+                #     need (and it would bloat the v1 chain) to sign one commit per bundle file.
+                bundle_files = list(_iter_bundle_files(
                     worktree_path=worktree_path,
                     bundle_dir=bundle_dir,
                     bundle_action_prefix=bundle_action_prefix,
                     bundle_rel=bundle_rel,
-                ):
+                ))
+                if bundle_files:
                     if signing_branch is None:
                         signing_branch = _create_signing_branch(repo=repo, parent=own_digest)
                     if resolved_host is None:
                         resolved_host = _resolve_host(host)
-                    current = _sign_one(
-                        repo=repo,
+                    current = _sign_many(
                         token=token,
                         repository_full_name=repository_full_name,
                         signing_branch=signing_branch,
                         parent=current,
-                        path=path,
-                        content=content,
+                        files=bundle_files,
                         message=(
                             f'pin: bundle own sources into '
                             f'{bundle_action_prefix}/{bundle_rel}\n\n'
@@ -827,13 +767,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help='GitHub host for the GraphQL endpoint (default: derived from environment)',
     )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        default=False,
-        help='Compute rewrites and log them, but make no createCommitOnBranch calls and do not '
-             'move the target branch',
-    )
     return parser.parse_args(argv)
 
 
@@ -851,7 +784,6 @@ def main(argv: list[str] | None = None) -> None:
         own_repo=args.own_repo,
         token=args.token,
         host=args.host,
-        dry_run=args.dry_run,
         bundle_dir=args.bundle_dir,
     )
 

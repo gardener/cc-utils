@@ -32,6 +32,42 @@ def _load_signed_commit():
 signed_commit = _load_signed_commit()
 
 
+def sign_files_commit(
+    *,
+    token: str,
+    repository_full_name: str,
+    branch: str,
+    expected_head_oid: str,
+    files: list[tuple[str, bytes]],
+    message: str,
+    host: str | None = None,
+) -> str:
+    '''
+    creates a single signed commit on `branch` (which must be at `expected_head_oid`) that sets all
+    `(path, content)` pairs in `files` at once, and returns the signed commit-oid.
+
+    `message` is split at the first `\\n\\n` into headline/body (like a git commit-message).
+    Raises ValueError on empty `token` or empty `files`.
+    '''
+    if not token:
+        raise ValueError('token must not be empty')
+    if not files:
+        raise ValueError('files must not be empty')
+
+    headline, _, body = message.partition('\n\n')
+
+    return signed_commit.create_signed_commit(
+        token=token,
+        repository=repository_full_name,
+        branch=branch,
+        expected_head_oid=expected_head_oid,
+        headline=headline,
+        body=body,
+        changes=[signed_commit.FileChange(path=path, content=content) for path, content in files],
+        host=host,
+    )
+
+
 def sign_file_commit(
     *,
     token: str,
@@ -50,18 +86,12 @@ def sign_file_commit(
     `message` is split at the first `\\n\\n` into headline/body (like a git commit-message).
     Raises ValueError on empty `token`.
     '''
-    if not token:
-        raise ValueError('token must not be empty')
-
-    headline, _, body = message.partition('\n\n')
-
-    return signed_commit.create_signed_commit(
+    return sign_files_commit(
         token=token,
-        repository=repository_full_name,
+        repository_full_name=repository_full_name,
         branch=branch,
         expected_head_oid=expected_head_oid,
-        headline=headline,
-        body=body,
-        changes=[signed_commit.FileChange(path=path, content=content)],
+        files=[(path, content)],
+        message=message,
         host=host,
     )

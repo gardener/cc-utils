@@ -153,22 +153,6 @@ def test_signing_branch_cleaned_up_on_commit_failure(tmp_repo, monkeypatch):
     assert deleted == ['sign-leak']
 
 
-def test_dry_run_makes_no_remote_calls(tmp_repo, monkeypatch):
-    called = []
-    monkeypatch.setattr(pin.sign_pin_commit, 'sign_file_commit',
-                        lambda **kw: called.append('sign') or 'x')
-    monkeypatch.setattr(pin, '_create_signing_branch',
-                        lambda **kw: called.append('branch') or 'b')
-    monkeypatch.setattr(pin, '_move_target_branch',
-                        lambda **kw: called.append('move') or None)
-
-    pin.create_pinned_branch(
-        repo_root=tmp_repo, own_ref='HEAD', target_branch='v1',
-        own_org='myorg', own_repo='myrepo', token='t', dry_run=True,
-    )
-    assert called == []
-
-
 def test_empty_run_no_signing_branch(tmp_repo_already_pinned, monkeypatch):
     called = []
     monkeypatch.setattr(pin, '_create_signing_branch',
