@@ -6,7 +6,6 @@
 import base64
 import json
 import logging
-import urllib.parse
 
 import dacite
 
@@ -120,9 +119,16 @@ class ContainerRegistryConfig(model.base.NamedModelElement, model.base.ModelDefa
 
         hostnames = set()
         for image_prefix in self.image_reference_prefixes():
-            if '://' not in image_prefix:
-                image_prefix = f'x://{image_prefix}'
-            hostnames.add(urllib.parse.urlparse(image_prefix).hostname)
+            # only host-only prefixes are emitted as whole-host docker auths; widening a
+            # path-scoped prefix (e.g. eu.gcr.io/team) to the bare host would hand the
+            # credential to every repository on that host
+            netloc, path_segments = oci.util._netloc_and_path_segments(
+                image_prefix,
+                is_prefix=True,
+            )
+            if path_segments:
+                continue
+            hostnames.add(netloc)
 
         auths = {
             host: {'auth': auth_str} for host in hostnames
@@ -177,7 +183,7 @@ class ContainerRegistryConfig(model.base.NamedModelElement, model.base.ModelDefa
                 return False
 
         for prefix in prefixes:
-            if image_reference.startswith(prefix):
+            if oci.util.image_reference_matches_prefix(image_reference, prefix):
                 return True
         return False
 
