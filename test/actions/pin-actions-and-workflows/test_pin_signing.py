@@ -183,3 +183,89 @@ def test_empty_run_no_signing_branch(tmp_repo_already_pinned, monkeypatch):
         own_org='myorg', own_repo='myrepo', token='t',
     )
     assert called == []  # nothing to rewrite -> no branch, no signing, no move
+
+
+# --- _move_target_branch: refs are moved via REST (not `git push <tip>`), because the chain is
+#     authored server-side and `tip` is not a local object ---
+
+class _FakeResponse:
+    def __init__(self, status_code=200):
+        self.status_code = status_code
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f'HTTP {self.status_code}')
+
+
+class _FakeSession:
+    def __init__(self, post_status=201):
+        self.post_status = post_status
+        self.calls = []
+
+    def patch(self, url, json):
+        self.calls.append(('PATCH', url, json))
+        return _FakeResponse(200)
+
+    def post(self, url, json):
+        self.calls.append(('POST', url, json))
+        return _FakeResponse(self.post_status)
+
+
+def _patch_session(monkeypatch, session):
+    # github.github_api(token=...).session -> our fake
+    class _Api:
+        def __init__(self, session):
+            self.session = session
+
+    monkeypatch.setattr(
+        pin.sign_pin_commit.signed_commit.github,
+        'github_api',
+        lambda token: _Api(session),
+    )
+
+
+def test_move_target_branch_uses_rest_refs(monkeypatch):
+    session = _FakeSession()
+    _patch_session(monkeypatch, session)
+
+    pin._move_target_branch(
+        token='t', repository_full_name='myorg/myrepo', target_branch='v1',
+        tip='deadbeef', own_digest='cafef00d', host='github.com',
+    )
+
+    patch, post = session.calls
+    assert patch == (
+        'PATCH',
+        'https://api.github.com/repos/myorg/myrepo/git/refs/heads/v1',
+        {'sha': 'deadbeef', 'force': True},
+    )
+    assert post == (
+        'POST',
+        'https://api.github.com/repos/myorg/myrepo/git/refs',
+        {'ref': 'refs/tags/fixated/cafef00d', 'sha': 'deadbeef'},
+    )
+
+
+def test_move_target_branch_uses_ghe_api_base(monkeypatch):
+    session = _FakeSession()
+    _patch_session(monkeypatch, session)
+
+    pin._move_target_branch(
+        token='t', repository_full_name='gardener/cc-utils', target_branch='v1',
+        tip='deadbeef', own_digest='cafef00d', host='github.tools.sap',
+    )
+
+    assert all(call[1].startswith('https://github.tools.sap/api/v3/') for call in session.calls)
+
+
+def test_move_target_branch_tolerates_existing_preservation_ref(monkeypatch):
+    # a re-run with the same own-digest re-creates the preservation ref -> POST returns 422; this
+    # must not fail the pin-run (the branch move already succeeded).
+    session = _FakeSession(post_status=422)
+    _patch_session(monkeypatch, session)
+
+    pin._move_target_branch(  # must not raise
+        token='t', repository_full_name='myorg/myrepo', target_branch='v1',
+        tip='deadbeef', own_digest='cafef00d', host='github.com',
+    )
+    assert [c[0] for c in session.calls] == ['PATCH', 'POST']

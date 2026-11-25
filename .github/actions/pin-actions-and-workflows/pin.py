@@ -345,24 +345,57 @@ def _create_signing_branch(
     return branch
 
 
+def _rest_api_base(host: str | None) -> str:
+    '''REST base-url for `host` (mirrors signed_commit._graphql_endpoint's host-switch).'''
+    if not host or host == 'github.com':
+        return 'https://api.github.com'
+    return f'https://{host}/api/v3'
+
+
 def _move_target_branch(
     *,
-    repo: gitpython.Repo,
+    token: str,
+    repository_full_name: str,
     target_branch: str,
     tip: str,
     own_digest: str,
+    host: str | None = None,
 ) -> None:
     '''
-    point the target branch (e.g. v1) at `tip` on origin via --force-with-lease, and push the
-    preservation ref refs/tags/fixated/<own-digest> (GC-protection for old pinned digests).
-    force-with-lease is a controlled force (only overwrites the expected prior state); see design
-    doc decision #1.
+    point the target branch (e.g. v1) at `tip` and create the preservation ref
+    refs/tags/fixated/<own-digest> (GC-protection for old pinned digests), both via the REST
+    git-refs API.
+
+    The whole pin-chain is authored server-side via createCommitOnBranch, so `tip` only exists on
+    the remote - it was never fetched into the local repo. Moving the refs over REST (rather than
+    `git push <tip>:<ref>`) therefore avoids a `bad object` failure without having to fetch the
+    chain just to advance a pointer. The branch move is a deliberate force (a pin-run fully rewrites
+    the branch, so a non-fast-forward update is expected); REST has no force-with-lease equivalent.
     '''
-    repo.git.push('--force-with-lease', 'origin', f'{tip}:refs/heads/{target_branch}')
-    logger.info('Moved origin/%s -> %s (force-with-lease)', target_branch, tip)
+    owner, repo = repository_full_name.split('/', 1)
+    session = sign_pin_commit.signed_commit.github.github_api(token=token).session
+    base = _rest_api_base(host)
+
+    response = session.patch(
+        f'{base}/repos/{owner}/{repo}/git/refs/heads/{target_branch}',
+        json={'sha': tip, 'force': True},
+    )
+    response.raise_for_status()
+    logger.info('Moved %s/%s -> %s', repository_full_name, target_branch, tip)
+
     preservation_ref = f'refs/tags/fixated/{own_digest}'
-    repo.git.push('origin', f'{tip}:{preservation_ref}')
-    logger.info('Created preservation ref %s -> %s', preservation_ref, tip)
+    response = session.post(
+        f'{base}/repos/{owner}/{repo}/git/refs',
+        json={'ref': preservation_ref, 'sha': tip},
+    )
+    # a re-run with the same own-digest re-creates an existing preservation ref: POST /git/refs
+    # returns 422 ("Reference already exists"). The old `git push` (no --force) rejected this too,
+    # so tolerate it rather than fail the whole pin-run.
+    if response.status_code == 422:
+        logger.info('Preservation ref %s already exists - leaving as-is', preservation_ref)
+    else:
+        response.raise_for_status()
+        logger.info('Created preservation ref %s -> %s', preservation_ref, tip)
 
 
 def _delete_signing_branch(
@@ -725,10 +758,12 @@ def create_pinned_branch(
             return
 
         _move_target_branch(
-            repo=repo,
+            token=token,
+            repository_full_name=repository_full_name,
             target_branch=target_branch,
             tip=current,
             own_digest=own_digest,
+            host=resolved_host,
         )
         logger.info('Done. Pinned tip: %s', current)
     finally:
