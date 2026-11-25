@@ -131,10 +131,7 @@ def prune(component: ocm.ComponentIdentity, ctx: PruneCtx, lookup=None):
             return
         ctx.retain_set.add(desc_ref)
 
-    cd = lookup(component, absent_ok=True)
-    if cd is None:
-        logger.warning(f'could not resolve {component.name}:{component.version}')
-        return
+    cd = lookup(component, absent_ok=False)
 
     for node in ocm_iter.iter(
         component=cd.component,
