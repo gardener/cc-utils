@@ -74,10 +74,19 @@ import graphlib
 import logging
 import os
 import shutil
+import sys
 import tempfile
+import uuid
 
 import git as gitpython
 import ruamel.yaml
+
+try:
+    import sign_pin_commit
+except ImportError:
+    # when not loaded from GITHUB_ACTION_PATH (e.g. local tests), make the sibling resolvable
+    sys.path.insert(1, os.path.dirname(os.path.abspath(__file__)))
+    import sign_pin_commit
 
 
 logger = logging.getLogger(__name__)
@@ -320,6 +329,225 @@ def _org_and_repo_from_remote(repo: gitpython.Repo) -> tuple[str, str]:
     return parts[-2], parts[-1]
 
 
+def _create_signing_branch(
+    *,
+    repo: gitpython.Repo,
+    parent: str,
+) -> str:
+    '''
+    create-only push of a throwaway signing-branch at `parent` on origin, returns its name.
+    Mirrors the release-action pattern: createCommitOnBranch moves an existing branch, so we
+    give each run its own fresh branch to build the chain on.
+    '''
+    branch = f'pin-signing/{uuid.uuid4().hex}'
+    repo.git.push('origin', f'{parent}:refs/heads/{branch}')
+    logger.info('Created signing branch %s @ %s', branch, parent)
+    return branch
+
+
+def _rest_api_base(host: str | None) -> str:
+    '''REST base-url for `host` (mirrors signed_commit._graphql_endpoint's host-switch).'''
+    if not host or host == 'github.com':
+        return 'https://api.github.com'
+    return f'https://{host}/api/v3'
+
+
+def _move_target_branch(
+    *,
+    token: str,
+    repository_full_name: str,
+    target_branch: str,
+    tip: str,
+    own_digest: str,
+    host: str | None = None,
+) -> None:
+    '''
+    point the target branch (e.g. v1) at `tip` and create the preservation ref
+    refs/tags/fixated/<own-digest> (GC-protection for old pinned digests), both via the REST
+    git-refs API.
+
+    The whole pin-chain is authored server-side via createCommitOnBranch, so `tip` only exists on
+    the remote - it was never fetched into the local repo. Moving the refs over REST (rather than
+    `git push <tip>:<ref>`) therefore avoids a `bad object` failure without having to fetch the
+    chain just to advance a pointer. The branch move is a deliberate force (a pin-run fully rewrites
+    the branch, so a non-fast-forward update is expected); REST has no force-with-lease equivalent.
+    '''
+    owner, repo = repository_full_name.split('/', 1)
+    session = sign_pin_commit.signed_commit.github.github_api(token=token).session
+    base = _rest_api_base(host)
+
+    response = session.patch(
+        f'{base}/repos/{owner}/{repo}/git/refs/heads/{target_branch}',
+        json={'sha': tip, 'force': True},
+    )
+    response.raise_for_status()
+    logger.info('Moved %s/%s -> %s', repository_full_name, target_branch, tip)
+
+    preservation_ref = f'refs/tags/fixated/{own_digest}'
+    response = session.post(
+        f'{base}/repos/{owner}/{repo}/git/refs',
+        json={'ref': preservation_ref, 'sha': tip},
+    )
+    # a re-run with the same own-digest re-creates an existing preservation ref: POST /git/refs
+    # returns 422 ("Reference already exists"). The old `git push` (no --force) rejected this too,
+    # so tolerate it rather than fail the whole pin-run.
+    if response.status_code == 422:
+        logger.info('Preservation ref %s already exists - leaving as-is', preservation_ref)
+    else:
+        response.raise_for_status()
+        logger.info('Created preservation ref %s -> %s', preservation_ref, tip)
+
+
+def _delete_signing_branch(
+    *,
+    repo: gitpython.Repo,
+    branch: str,
+) -> None:
+    try:
+        repo.git.push('origin', '--delete', branch)
+        logger.info('Deleted signing branch %s', branch)
+    except Exception as e:
+        logger.warning('failed to delete signing branch %s: %r', branch, e)
+
+
+def _resolve_host(host: str | None) -> str:
+    '''
+    return `host` if given, otherwise derive it from the environment so createCommitOnBranch hits
+    the right GitHub (incl. GHE mirrors — the whole point of this change; without it signed_commit
+    defaults to api.github.com). github is reached via the action-path-loaded signed_commit module,
+    not the gha-libs bundle.
+    '''
+    if host is not None:
+        return host
+    host, _, _ = sign_pin_commit.signed_commit.github.host_org_and_repo(repo_url=None)
+    logger.info('Derived GraphQL host: %s', host)
+    return host
+
+
+def _sign_one(
+    *,
+    repo: gitpython.Repo,
+    token: str,
+    repository_full_name: str,
+    signing_branch: str,
+    parent: str,
+    path: str,
+    content: bytes,
+    message: str,
+    host: str,
+) -> str:
+    '''
+    sign one file-commit onto `signing_branch` at `parent` and return the signed oid.
+    '''
+    oid = sign_pin_commit.sign_file_commit(
+        token=token,
+        repository_full_name=repository_full_name,
+        branch=signing_branch,
+        expected_head_oid=parent,
+        path=path,
+        content=content,
+        message=message,
+        host=host,
+    )
+    logger.info('Created signed pinning commit %s for %s', oid, path)
+    return oid
+
+
+def _sign_many(
+    *,
+    token: str,
+    repository_full_name: str,
+    signing_branch: str,
+    parent: str,
+    files: list[tuple[str, bytes]],
+    message: str,
+    host: str,
+) -> str:
+    '''
+    sign a single commit containing all `(path, content)` pairs in `files` onto `signing_branch`
+    at `parent`, and return the signed oid.
+    '''
+    oid = sign_pin_commit.sign_files_commit(
+        token=token,
+        repository_full_name=repository_full_name,
+        branch=signing_branch,
+        expected_head_oid=parent,
+        files=files,
+        message=message,
+        host=host,
+    )
+    logger.info('Created signed bundle commit %s (%d files)', oid, len(files))
+    return oid
+
+
+def _iter_bundle_files(
+    *,
+    worktree_path: str,
+    bundle_dir: str | None,
+    bundle_action_prefix: str,
+    bundle_rel: str,
+):
+    '''
+    copy `bundle_dir` into <bundle_action_prefix>/<bundle_rel> inside the worktree and yield
+    (worktree-relative-path, content-bytes) for each bundle file, in a deterministic order.
+    Yields nothing when no bundle is given.
+    '''
+    if not bundle_dir:
+        return
+    target_bundle = os.path.join(worktree_path, bundle_action_prefix, bundle_rel)
+    shutil.copytree(bundle_dir, target_bundle)
+    for dirpath, _, fnames in os.walk(target_bundle):
+        for fname in sorted(fnames):
+            abspath = os.path.join(dirpath, fname)
+            relpath = os.path.relpath(abspath, worktree_path)
+            with open(abspath, 'rb') as f:
+                yield relpath, f.read()
+
+
+def _rewritten_content(
+    *,
+    blob: gitpython.Blob,
+    own_org: str,
+    own_repo: str,
+    prefix: str,
+    prefix_to_digest: dict[str, str],
+    repo: gitpython.Repo,
+    bundle_dir: str | None,
+    bundle_action_prefix: str,
+    worktree_path: str,
+) -> bytes | None:
+    '''
+    rewrite `blob`'s `uses:` references to pinned digests (and apply the bundle rewrite for the
+    install action) and return the new file content as bytes. Returns None when nothing changed.
+    '''
+    parsed = yaml.load(_read_blob(blob))
+    changed = _rewrite_parsed(
+        parsed,
+        own_org=own_org,
+        own_repo=own_repo,
+        prefix_to_digest=prefix_to_digest,
+        repo=repo,
+    )
+
+    if bundle_dir and prefix == bundle_action_prefix:
+        changed |= _rewrite_for_bundle(
+            parsed,
+            own_org=own_org,
+            own_repo=own_repo,
+        )
+
+    if not changed:
+        logger.debug('No changes needed for %s', blob.path)
+        return None
+
+    abs_path = os.path.join(worktree_path, blob.path)
+    os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+    with open(abs_path, 'w') as f:
+        yaml.dump(parsed, f)
+    with open(abs_path, 'rb') as f:
+        return f.read()
+
+
 def create_pinned_branch(
     *,
     repo_root: str,
@@ -327,20 +555,18 @@ def create_pinned_branch(
     target_branch: str,
     own_org: str | None,
     own_repo: str | None,
+    token: str,
+    host: str | None = None,
     bundle_dir: str | None = None,
     bundle_action_prefix: str = '.github/actions/install-gardener-gha-libs',
 ) -> None:
     '''
-    Build pinned commits locally and update the target branch ref in the local
-    repository. Pushing to the remote is intentionally left to the caller (action
-    or workflow), so this function is safe to run locally without side-effects on
-    the remote.
+    Build GitHub-signed pinned commits via createCommitOnBranch and move the target branch to the
+    resulting tip. The signed-commit chain is built on a throwaway signing-branch; the target
+    branch (e.g. v1) is moved at the end.
 
-    If bundle_dir is given, its contents are copied into
-    <bundle_action_prefix>/_bundle/ in the worktree, and the action YAML at
-    that prefix is rewritten to install from the bundle instead of cloning.
-    bundle_dir is expected to contain one subdirectory per package, each with
-    source files and a setup.py (as produced by bundle-gardener-gha-libs).
+    If bundle_dir is given, its contents are copied into <bundle_action_prefix>/_bundle/ and the
+    action YAML at that prefix is rewritten to install from the bundle instead of cloning.
     '''
     repo = gitpython.Repo(repo_root)
 
@@ -365,95 +591,124 @@ def create_pinned_branch(
     # TopologicalSorter yields leaves (no deps) first — exactly what we need
     ordered_prefixes = graphlib.TopologicalSorter(dep_graph).static_order()
 
-    with tempfile.TemporaryDirectory(prefix='pin-') as tmpdir:
-        worktree_path = os.path.join(tmpdir, 'worktree')
-        repo.git.worktree('add', '--detach', worktree_path, own_digest)
-        worktree_repo = gitpython.Repo(worktree_path)
+    # The commit target is the origin remote (where createCommitOnBranch authors and where we push
+    # the target branch). This is the push target, NOT own_org/own_repo (which only identifies
+    # whose `uses:` references get rewritten — usually the same repo, but not when pinning a
+    # different repo's refs, e.g. a fork pinning upstream refs).
+    push_org, push_repo = _org_and_repo_from_remote(repo)
+    repository_full_name = f'{push_org}/{push_repo}'
+    bundle_rel = '_bundle'
 
-        try:
-            prefix_to_digest: dict[str, str] = {}
-            current_digest = own_digest
+    # Real run: build the signed-commit chain on a throwaway signing-branch, then move the target
+    # branch. signing_branch and host are resolved lazily on the first commit so an empty run stays
+    # remote-free. The whole phase runs under one try/finally so a failure still deletes the branch.
+    signing_branch: str | None = None
+    resolved_host: str | None = None
+    current = own_digest
+    commit_count = 0
 
-            # --- bundling pass (before YAML rewriting) ---
-            bundle_rel = '_bundle'
-            if bundle_dir:
-                target_bundle = os.path.join(worktree_path, bundle_action_prefix, bundle_rel)
-                shutil.copytree(bundle_dir, target_bundle)
-                bundle_files = [
-                    os.path.relpath(os.path.join(dirpath, fname), worktree_path)
-                    for dirpath, _, fnames in os.walk(target_bundle)
-                    for fname in fnames
-                ]
-                worktree_repo.index.add(bundle_files)
-                worktree_repo.index.commit(
-                    f'pin: bundle own sources into {bundle_action_prefix}/{bundle_rel}\n\n'
-                    f'own-commit: {own_digest}\n'
-                    f'own-ref: {own_ref}'
-                )
-                current_digest = worktree_repo.head.commit.hexsha
-                logger.info('Created bundle commit %s', current_digest)
+    try:
+        with tempfile.TemporaryDirectory(prefix='pin-') as tmpdir:
+            worktree_path = os.path.join(tmpdir, 'worktree')
+            repo.git.worktree('add', '--detach', worktree_path, own_digest)
+            try:
+                prefix_to_digest: dict[str, str] = {}
 
-            for prefix in ordered_prefixes:
-                blob = prefix_to_blob.get(prefix)
-                if blob is None:
-                    logger.warning('No blob for prefix %s — skipping', prefix)
-                    continue
+                # --- bundling pass: the whole bundle becomes ONE signed commit (before rewrites).
+                #     createCommitOnBranch carries all additions in a single mutation, so there is no
+                #     need (and it would bloat the v1 chain) to sign one commit per bundle file.
+                bundle_files = list(_iter_bundle_files(
+                    worktree_path=worktree_path,
+                    bundle_dir=bundle_dir,
+                    bundle_action_prefix=bundle_action_prefix,
+                    bundle_rel=bundle_rel,
+                ))
+                if bundle_files:
+                    if signing_branch is None:
+                        signing_branch = _create_signing_branch(repo=repo, parent=own_digest)
+                    if resolved_host is None:
+                        resolved_host = _resolve_host(host)
+                    current = _sign_many(
+                        token=token,
+                        repository_full_name=repository_full_name,
+                        signing_branch=signing_branch,
+                        parent=current,
+                        files=bundle_files,
+                        message=(
+                            f'pin: bundle own sources into '
+                            f'{bundle_action_prefix}/{bundle_rel}\n\n'
+                            f'own-commit: {own_digest}\nown-ref: {own_ref}'
+                        ),
+                        host=resolved_host,
+                    )
+                    commit_count += 1
 
-                parsed = yaml.load(_read_blob(blob))
-                changed = _rewrite_parsed(
-                    parsed,
-                    own_org=own_org,
-                    own_repo=own_repo,
-                    prefix_to_digest=prefix_to_digest,
-                    repo=repo,
-                )
+                # --- rewrite pass: leaf-first, signing each changed file immediately so parents
+                #     can pin against the child's real signed oid ---
+                for prefix in ordered_prefixes:
+                    blob = prefix_to_blob.get(prefix)
+                    if blob is None:
+                        logger.warning('No blob for prefix %s — skipping', prefix)
+                        continue
 
-                if bundle_dir and prefix == bundle_action_prefix:
-                    changed |= _rewrite_for_bundle(
-                        parsed,
+                    content = _rewritten_content(
+                        blob=blob,
                         own_org=own_org,
                         own_repo=own_repo,
+                        prefix=prefix,
+                        prefix_to_digest=prefix_to_digest,
+                        repo=repo,
+                        bundle_dir=bundle_dir,
+                        bundle_action_prefix=bundle_action_prefix,
+                        worktree_path=worktree_path,
                     )
 
-                if not changed:
-                    logger.debug('No changes needed for %s', blob.path)
-                    prefix_to_digest[prefix] = current_digest
-                    continue
+                    if content is None:
+                        # unchanged file is already in its final pinned state at the current chain
+                        # tip; parents pin against that (mirrors original local-commit behaviour).
+                        prefix_to_digest[prefix] = current
+                        continue
 
-                abs_path = os.path.join(worktree_path, blob.path)
-                os.makedirs(os.path.dirname(abs_path), exist_ok=True)
-                with open(abs_path, 'w') as f:
-                    yaml.dump(parsed, f)
+                    if signing_branch is None:
+                        signing_branch = _create_signing_branch(repo=repo, parent=own_digest)
+                    if resolved_host is None:
+                        resolved_host = _resolve_host(host)
+                    current = _sign_one(
+                        repo=repo,
+                        token=token,
+                        repository_full_name=repository_full_name,
+                        signing_branch=signing_branch,
+                        parent=current,
+                        path=blob.path,
+                        content=content,
+                        message=(
+                            f'pin: rewrite references in {blob.path}\n\n'
+                            f'own-commit: {own_digest}\nown-ref: {own_ref}'
+                        ),
+                        host=resolved_host,
+                    )
+                    commit_count += 1
+                    # parents pin against this child's real signed oid
+                    prefix_to_digest[prefix] = current
+            finally:
+                repo.git.worktree('remove', '--force', worktree_path)
 
-                worktree_repo.index.add([blob.path])
-                worktree_repo.index.commit(
-                    f'pin: rewrite references in {blob.path}\n\n'
-                    f'own-commit: {own_digest}\n'
-                    f'own-ref: {own_ref}'
-                )
-                current_digest = worktree_repo.head.commit.hexsha
-                prefix_to_digest[prefix] = current_digest
-                logger.info('Created pinning commit %s for %s', current_digest, blob.path)
+        if commit_count == 0:
+            logger.info('No rewrites were necessary; target branch unchanged')
+            return
 
-            tip_digest = worktree_repo.head.commit.hexsha
-
-            if tip_digest == own_digest:
-                logger.info('No rewrites were necessary; target branch tip unchanged')
-                return
-
-            # update local target branch ref — caller is responsible for pushing
-            repo.git.update_ref(f'refs/heads/{target_branch}', tip_digest)
-            logger.info('Updated local ref refs/heads/%s -> %s', target_branch, tip_digest)
-
-            # preservation ref — keeps tip alive after future force-pushes to remote
-            preservation_ref = f'refs/tags/fixated/{own_digest}'
-            repo.git.update_ref(preservation_ref, tip_digest)
-            logger.info('Created preservation ref %s -> %s', preservation_ref, tip_digest)
-
-            logger.info('Done. Pinned tip: %s', tip_digest)
-
-        finally:
-            repo.git.worktree('remove', '--force', worktree_path)
+        _move_target_branch(
+            token=token,
+            repository_full_name=repository_full_name,
+            target_branch=target_branch,
+            tip=current,
+            own_digest=own_digest,
+            host=resolved_host,
+        )
+        logger.info('Done. Pinned tip: %s', current)
+    finally:
+        if signing_branch is not None:
+            _delete_signing_branch(repo=repo, branch=signing_branch)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -502,6 +757,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             'is rewritten to install from it instead of cloning at runtime.'
         ),
     )
+    parser.add_argument(
+        '--token',
+        default=os.environ.get('GITHUB_TOKEN'),
+        help='GitHub token used to author signed commits (default: $GITHUB_TOKEN)',
+    )
+    parser.add_argument(
+        '--host',
+        default=None,
+        help='GitHub host for the GraphQL endpoint (default: derived from environment)',
+    )
     return parser.parse_args(argv)
 
 
@@ -517,6 +782,8 @@ def main(argv: list[str] | None = None) -> None:
         target_branch=args.target_branch,
         own_org=args.own_org,
         own_repo=args.own_repo,
+        token=args.token,
+        host=args.host,
         bundle_dir=args.bundle_dir,
     )
 

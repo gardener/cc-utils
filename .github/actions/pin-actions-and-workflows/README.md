@@ -24,7 +24,7 @@ Design decisions:
     so callers typically do not need to specify them explicitly
   - Pinned commits are pushed to a separate target branch (default: v1) via
     force-push; previous tips are preserved via refs/tags/fixated/<own-commit-digest>
-  - pin.py has a full CLI for local testing (--dry-run, --verbose)
+  - pin.py has a CLI for local testing (--verbose)
 LLM-CONTEXT-END -->
 
 ## Motivation

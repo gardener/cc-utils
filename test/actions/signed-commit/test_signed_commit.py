@@ -174,6 +174,20 @@ def test_payload_additions_and_deletions():
     assert inp['fileChanges']['deletions'] == [{'path': '.ocm/release-notes/old.yaml'}]
 
 
+def test_payload_includes_body_when_given():
+    ok = _signed_commit_response('deadbeef')
+    session, captured = _mock_session(ok)
+    with _patch_api(session):
+        sc.create_signed_commit(
+            token='t', repository='gardener/cc-utils', branch='master',
+            expected_head_oid='cafe1234', headline='pin: rewrite a.yaml',
+            body='own-commit: deadbeef',
+            changes=[sc.FileChange(path='a', content=b'x')],
+        )
+    inp = captured['json']['variables']['input']
+    assert inp['message'] == {'headline': 'pin: rewrite a.yaml', 'body': 'own-commit: deadbeef'}
+
+
 def test_payload_binary_base64():
     ok = _signed_commit_response('x')
     session, captured = _mock_session(ok)
