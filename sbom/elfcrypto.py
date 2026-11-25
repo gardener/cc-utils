@@ -536,27 +536,9 @@ def _discover_via_docker(image_reference: str) -> list:
     '''Return [(path, 0)] for executable binaries discovered via docker.'''
     extra_paths = _docker_entrypoint_paths(image_reference)
 
-    # Try docker run with find (may fail if find is not in the image).
-    try:
-        result = subprocess.run(
-            ['docker', 'run', '--rm', '--entrypoint', 'find',  # nosec B607
-             image_reference] + list(_SEARCH_DIRS) + ['-type', 'f', '-executable'],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            found = [(p.strip(), 0) for p in result.stdout.splitlines() if p.strip()]
-            # Add explicit entrypoint paths not already discovered
-            found_paths = {p for p, _ in found}
-            for p in extra_paths:
-                if p not in found_paths:
-                    found.append((p, 0))
-            return found
-    except Exception as exc:
-        logger.debug('elfcrypto (Docker): find failed for %s: %s', image_reference, exc)
-
-    # Fallback: docker create + docker export (scans the full filesystem).
+    # NB: deliberately not using `docker run`: the image is untrusted, so executing its
+    # binaries (e.g. as entrypoint) would mean code-execution on the host. Instead,
+    # export the (unstarted) container's filesystem (scans the full filesystem).
     try:
         cid = subprocess.run(
             ['docker', 'create', image_reference],  # nosec B607
