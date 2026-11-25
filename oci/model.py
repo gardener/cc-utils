@@ -60,25 +60,34 @@ class OciRegistryType(enum.Enum):
     def from_image_ref(
         image_reference: str | 'OciImageReference',
     ) -> 'OciRegistryType':
-        netloc = OciImageReference.to_image_ref(image_reference=image_reference).netloc
+        # NB: match at dns-label boundaries only; substring matching would also match
+        # lookalike hosts (e.g. `europe-docker.pkg.dev.attacker.example`), which must not
+        # be trusted with registry-type-specific credential handling
+        hostname = (
+            OciImageReference.to_image_ref(image_reference=image_reference)
+            .urlparsed.hostname or ''
+        )
 
-        if 'pkg.dev' in netloc:
+        def matches(suffix: str) -> bool:
+            return hostname == suffix or hostname.endswith(f'.{suffix}')
+
+        if matches('pkg.dev'):
             return OciRegistryType.GAR
-        if 'gcr.io' in netloc:
+        if matches('gcr.io'):
             return OciRegistryType.GCR
-        if 'docker.io' in netloc:
+        if matches('docker.io'):
             return OciRegistryType.DOCKERHUB
-        if 'ghcr.io' in netloc:
+        if matches('ghcr.io'):
             return OciRegistryType.GHCR
-        if 'cr.aliyuncs.com' in netloc:
+        if matches('cr.aliyuncs.com'):
             return OciRegistryType.ALIYUN
-        if 'keppel.' in netloc:
+        if hostname.startswith('keppel.'):
             return OciRegistryType.KEPPEL
-        if 'amazonaws.com' in netloc: # AWS ECR private
+        if matches('amazonaws.com'): # AWS ECR private
             return OciRegistryType.AWS
-        if 'public.ecr.aws' in netloc: # AWS ECR public
+        if matches('public.ecr.aws'): # AWS ECR public
             return OciRegistryType.AWS
-        if 'azurecr.io' in netloc:
+        if matches('azurecr.io'):
             return OciRegistryType.AZURE
 
         return OciRegistryType.UNKNOWN

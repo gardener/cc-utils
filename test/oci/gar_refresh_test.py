@@ -57,6 +57,27 @@ def test_refreshable_lookup_returns_none_for_non_gar(monkeypatch):
     assert creds is None
 
 
+def test_refreshable_lookup_returns_none_for_lookalike_hosts(monkeypatch):
+    call_count = {'n': 0}
+
+    def fake_exchange():
+        call_count['n'] += 1
+        return 'token-A'
+
+    lookup = _lookup_stubbing_exchange(monkeypatch, fake_exchange)
+
+    for lookalike in (
+        'europe-docker.pkg.dev.attacker.example/project/repo/image:tag',
+        'pkg.dev.attacker.example/project/repo/image:tag',
+        'gcr.io.attacker.example/project/repo/image:tag',
+    ):
+        creds = lookup(image_reference=lookalike, absent_ok=True)
+        assert creds is None
+
+    # no token must have been minted for any lookalike host
+    assert call_count['n'] == 0
+
+
 def test_refreshable_lookup_no_refetch_while_valid(monkeypatch):
     call_count = {'n': 0}
 

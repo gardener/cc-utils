@@ -130,6 +130,44 @@ def test_parsed_digest_tag():
     assert dig == example_digest.split(':')[-1]
 
 
+@pytest.mark.parametrize(
+    'image_reference, expected_type',
+    (
+        # genuine registry hosts (exact hostname or sub-label thereof)
+        ('europe-docker.pkg.dev/p/i:1', om.OciRegistryType.GAR),
+        ('gcr.io/p/i:1', om.OciRegistryType.GCR),
+        ('eu.gcr.io/p/i:1', om.OciRegistryType.GCR),
+        ('alpine:3', om.OciRegistryType.DOCKERHUB),  # normalised to registry-1.docker.io
+        ('ghcr.io/o/i:1', om.OciRegistryType.GHCR),
+        ('keppel.example.invalid/i:1', om.OciRegistryType.KEPPEL),
+        ('123456789012.dkr.ecr.eu-north-1.amazonaws.com/p/i:1', om.OciRegistryType.AWS),
+        ('public.ecr.aws/o/i:1', om.OciRegistryType.AWS),
+        ('example.azurecr.io/p/i:1', om.OciRegistryType.AZURE),
+        # hostname matching must be case-insensitive and port-agnostic
+        ('EU.GCR.IO/p/i:1', om.OciRegistryType.GCR),
+        ('ghcr.io:443/o/i:1', om.OciRegistryType.GHCR),
+        # lookalike hosts must NOT classify (suffixes glued to foreign labels/domains)
+        ('europe-docker.pkg.dev.attacker.example/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('pkg.dev.attacker.example/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('attacker-pkg.dev/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('evilpkg.dev/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('gcr.io.attacker.example/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('evilgcr.io/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('evilghcr.io/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('ghcr.io.attacker.example/o/i:1', om.OciRegistryType.UNKNOWN),
+        ('evil.azurecr.io.attacker.example/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('public.ecr.aws.attacker.example/o/i:1', om.OciRegistryType.UNKNOWN),
+        ('attacker-amazonaws.com/p/i:1', om.OciRegistryType.UNKNOWN),
+        ('example.org/p/i:1', om.OciRegistryType.UNKNOWN),
+    ),
+)
+def test_registry_type_classification_matches_at_label_boundaries(
+    image_reference,
+    expected_type,
+):
+    assert om.OciRegistryType.from_image_ref(image_reference) is expected_type
+
+
 def test_oci_image_manifest_serialisation():
     manifest = om.OciImageManifest(
         config=om.OciBlobRef(
