@@ -558,7 +558,7 @@ jobs:
           release_branch_template="release-v$major.$minor"
 
           if [ -f .ocm/branch-info.yaml ]; then
-            release_branch_template_overwrite=$(cat .ocm/branch-info.yaml | yq .release-branch-template)
+            release_branch_template_overwrite=$(cat .ocm/branch-info.yaml | yq -r '.["release-branch-template"]')
 
             if [ $release_branch_template_overwrite != "null" ]; then
               echo "INFO: Found .ocm/branch-info.yaml file with branch template $release_branch_template_overwrite"
