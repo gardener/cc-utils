@@ -178,7 +178,6 @@ class ImageEntry:
                 self,
                 tag=new_tag,
                 targetVersion=new_target_version,
-                digest=None,
         )
 
 
