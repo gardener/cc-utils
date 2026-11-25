@@ -190,6 +190,7 @@ def _run_create_upgrade_pullrequests(**kwargs):
             branch='main',
             oci_client=unittest.mock.MagicMock(),
             pr_naming_pattern='component-name',
+            github_token='t',
             **kwargs,
         ))
 

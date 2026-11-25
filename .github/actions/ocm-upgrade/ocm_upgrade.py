@@ -34,7 +34,10 @@ import ocm.gardener
 import release_notes.model as rnm
 import release_notes.ocm as rno
 import release_notes.tarutil as rnt
+# loaded from GITHUB_ACTION_PATH at runtime (same action dir); not on pylint's analysis path
+import sign_upgrade_commit  # pylint: disable=import-error
 import version
+
 
 logger = logging.getLogger(__name__)
 
@@ -310,6 +313,8 @@ def create_upgrade_pullrequest(
     merge_method: MergeMethod,
     branch: str,
     oci_client: oci.client.Client,
+    github_token: str,
+    host: str | None=None,
     component_reference_name: str | None=None,
     reference_component: ocm.Component | None=None,
 ) -> github.pullrequest.UpgradePullRequest:
@@ -377,6 +382,9 @@ def create_upgrade_pullrequest(
         repository=repository,
         git_helper=git_helper,
         commit_message=commit_message,
+        github_token=github_token,
+        sign=sign_upgrade_commit.sign_commit_onto_branch,
+        host=host,
         delete_on_exit=auto_merge,
     ) as upgrade_branch_name:
         pull_request = repository.create_pull(
@@ -436,6 +444,9 @@ def create_upgrade_pullrequests(
     upstream_update_policy: UpstreamUpdatePolicy = UpstreamUpdatePolicy.STRICTLY_FOLLOW,
     ignore_prerelease_versions: bool=True,
     component_policies: list[ComponentPolicy] | None=None,
+    *,
+    github_token: str,
+    host: str | None=None,
 ) -> collections.abc.Iterable[github.pullrequest.UpgradePullRequest]:
     for cref in ocm.gardener.iter_greatest_component_references(
         references=ocm.gardener.iter_component_references(component=component),
@@ -581,6 +592,8 @@ def create_upgrade_pullrequests(
                     merge_method=current_merge_method,
                     branch=branch,
                     oci_client=oci_client,
+                    github_token=github_token,
+                    host=host,
                     component_reference_name=component_reference_name,
                     reference_component=component
                 )
