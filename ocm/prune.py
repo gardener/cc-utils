@@ -65,6 +65,9 @@ def resolve_versions(
 ) -> list[str]:
     '''Return up to keep_versions version strings <= anchor_version, ascending semver.
     If anchor_version is None, the greatest available version is used.'''
+    if keep_versions <= 0:
+        raise ValueError("The number of versions to keep must be greater than zero")
+
     all_versions = oci_client.tags(image_reference=ocm_repo.component_oci_ref(component_name))
 
     if not all_versions:
@@ -85,6 +88,12 @@ def resolve_versions(
         eligible = [v for v in sorted_versions if version_mod.parse_to_semver(v) <= anchor_sv]
     except Exception:
         eligible = [v for v in sorted_versions if v <= anchor_version]
+
+    if not eligible and keep_versions > 0:
+        raise RuntimeError(
+            f'{component_name!r}: no versions to retain after applying '
+            f"anchor version {anchor_version!r}"
+        )
 
     return eligible[-keep_versions:]
 

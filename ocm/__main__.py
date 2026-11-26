@@ -1477,9 +1477,18 @@ def main():
             'omit version to use the greatest available'
         ),
     )
+
+    def _positive_int(v):
+        i = int(v)
+        if i <= 0:
+            raise argparse.ArgumentTypeError(
+                "The number of versions to retain must be greater than zero."
+            )
+        return i
+
     prune_parser.add_argument(
         '--keep-versions',
-        type=int,
+        type=_positive_int,
         default=1,
         metavar='N',
         help=(
