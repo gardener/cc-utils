@@ -480,7 +480,7 @@ def exchange_gar_token(
             'audience': oidc_cfg.audience,
             'grantType': 'urn:ietf:params:oauth:grant-type:token-exchange',
             'requestedTokenType': 'urn:ietf:params:oauth:token-type:access_token',
-            'scope': 'https://www.googleapis.com/auth/cloud-platform',
+            'scope': 'https://www.googleapis.com/auth/iam',
             'subjectTokenType': 'urn:ietf:params:oauth:token-type:jwt',
             'subjectToken': subject_token,
         },
@@ -494,7 +494,10 @@ def exchange_gar_token(
         ),
         method='POST',
         json_body={
-            'scope': 'https://www.googleapis.com/auth/cloud-platform',
+            'scope': [
+                'https://www.googleapis.com/auth/cloud-platform.read-only',
+                'https://www.googleapis.com/auth/devstorage.read_write',
+            ],
             'lifetime': f'{lifetime_seconds}s',
         },
         headers={'Authorization': f'Bearer {sts_token}'},
