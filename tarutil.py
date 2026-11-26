@@ -189,7 +189,7 @@ def tar_filter(
     '''
     if (
         not member.isfile()
-        or ((member.islnk() or member.issym) and os.path.isabs(member.linkname))
+        or ((member.islnk() or member.issym()) and os.path.isabs(member.linkname))
     ):
         logger.warning(f'skipped tarfile {member.name=} because of applied filter')
         return None
