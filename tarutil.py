@@ -182,8 +182,8 @@ def tar_filter(
     **kwargs,
 ) -> tarfile.TarInfo | None:
     '''
-    Can be used as tarfile extraction filter method to skip potentially dangerous tar file members
-    to prevent directory traversal attacks. It skips:
+    Can be used as tarfile extraction filter method to skip potentially dangerous tar file members.
+    It skips:
     - Non-regular files such as directories
     - Hard links and symbolic links that point to absolute paths
     '''
