@@ -58,7 +58,7 @@ def release_notes_docs_into_tarstream(
 def tarstream_into_release_notes_docs(
     tarstream: collections.abc.Iterable[bytes],
 ) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
-    tar = tarfile.open(
+    tar: tarfile.TarFile = tarfile.open(
         fileobj=tarutil.FilelikeProxy(tarstream),
         mode='r|*',
     )
