@@ -68,8 +68,7 @@ def resolve_versions(
     all_versions = oci_client.tags(image_reference=ocm_repo.component_oci_ref(component_name))
 
     if not all_versions:
-        logger.warning(f'{component_name!r}: no versions found in {ocm_repo.oci_ref!r}')
-        return []
+        raise RuntimeError(f'{component_name!r}: no versions found in {ocm_repo.oci_ref!r}')
 
     try:
         sorted_versions = sorted(all_versions, key=version_mod.parse_to_semver)
