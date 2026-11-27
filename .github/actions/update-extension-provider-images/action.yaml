@@ -33,7 +33,7 @@ runs:
         fi
 
     - name: Install Gardener GHA Libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@3a7cc600b304cf05dc01b29198a468294c721cf4
 
     - name: Run image update script
       id: run_script_step
