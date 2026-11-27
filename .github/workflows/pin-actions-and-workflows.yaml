@@ -42,6 +42,15 @@ on:
         description: |
           Optional name of an artifact produced by `capture-commit`. If set, the artifact
           is imported before pinning so the captured commit is reachable as `own-ref`.
+    outputs:
+      # A reusable workflow does not forward job-level outputs to callers automatically: the caller's
+      # `needs.pin.outputs.pin-tip` resolves against THIS block, not the `pin` job's `outputs:`. This
+      # declaration is the bridge across the workflow_call boundary.
+      pin-tip:
+        description: |
+          The pinned chain tip the target branch was moved to (the transitively-frozen snapshot a
+          consumer may tag immutably). Empty on a no-op run (nothing needed rewriting).
+        value: ${{ jobs.pin.outputs.pin-tip }}
 
 jobs:
   build-bundle:
