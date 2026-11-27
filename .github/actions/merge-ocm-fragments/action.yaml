@@ -136,7 +136,7 @@ runs:
   using: composite
   steps:
     - name: install-gardener-gha-libs
-      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+      uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@3a7cc600b304cf05dc01b29198a468294c721cf4
     - name: preprocess
       id: preprocess
       shell: bash
@@ -163,7 +163,7 @@ runs:
         printf '%s\n' "${COMPONENT_DESCRIPTOR}" > "${OUTDIR}/base-component-descriptor.yaml"
     - name: import-component-descriptor-artefact
       if: ${{ inputs.component-descriptor-artefact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@3a7cc600b304cf05dc01b29198a468294c721cf4
       with:
         name: ${{ inputs.component-descriptor-artefact }}
     - name: extract-component-descriptor-artefact
@@ -201,7 +201,7 @@ runs:
            --out "${component_descriptor}"
         fi
     - name: import-ocm-fragments
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@3a7cc600b304cf05dc01b29198a468294c721cf4
       with:
         pattern: ${{ steps.preprocess.outputs.artefact-name }}
         path: ${{ inputs.outdir }}
@@ -249,7 +249,7 @@ runs:
           f.write(f'component-version={name}:{version}\n')
 
     - name: checkout-for-postprocessing
-      uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      uses: gardener/cc-utils/.github/actions/trusted-checkout@8c014c6094a0e932c276b8c1e244dd2197bcedb2
       if: ${{ inputs.post-process == 'component-cli' }}
       with:
         path: repo.d # avoid conflicts w/ component-descriptor
@@ -353,15 +353,15 @@ runs:
 
     - name: install-syft
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/install-syft@master
+      uses: gardener/cc-utils/.github/actions/install-syft@3a7cc600b304cf05dc01b29198a468294c721cf4
 
     - name: install-cbomkit-theia
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@master
+      uses: gardener/cc-utils/.github/actions/install-cbomkit-theia@3a7cc600b304cf05dc01b29198a468294c721cf4
 
     - name: authenticate-for-spdx
       if: ${{ inputs.oci-registry != '' }}
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@b9a14b3db5e22b881c32babf50ee153205bc051a
       with:
         oci-image-reference: ${{ inputs.oci-registry }}
         gh-token: ${{ github.token }}
@@ -402,7 +402,7 @@ runs:
         set -eu
         tar czf /tmp/component-descriptor.tar.gz \
           -C "${OUTDIR}" component-descriptor.yaml
-    - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+    - uses: gardener/cc-utils/.github/actions/upload-artifact@3a7cc600b304cf05dc01b29198a468294c721cf4
       if: ${{ inputs.upload-artifact-name != '' }}
       with:
         name: ${{ inputs.upload-artifact-name }}
