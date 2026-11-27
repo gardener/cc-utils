@@ -84,9 +84,14 @@ GARDENER_OCM_REPOSITORY = 'europe-docker.pkg.dev/gardener-project/releases'
 DirectivesMap = dict[tuple[str, str, str], dict[str, Any]]
 
 
+def _bare_tag(tag: str) -> str:
+    """Strip digest suffix from a tag, e.g. 'v1.2.3@sha256:abc...' -> v1.2.3"""
+    return tag.split('@', 1)[0]
+
+
 def _directive_key(entry: 'ImageEntry') -> tuple[str, str, str]:
     """Create a unique key for an image entry in the directives map."""
-    return (entry.name, entry.repository, entry.tag)
+    return (entry.name, entry.repository, _bare_tag(entry.tag))
 
 
 def is_frozen(entry: 'ImageEntry', directives: DirectivesMap) -> bool:
@@ -125,7 +130,7 @@ def has_explicit_k8s_constraint(entry: 'ImageEntry', directives: DirectivesMap) 
     try:
         target_version_str = entry.targetVersion.replace('>=', '').strip()
         target_version = parse_to_semver(target_version_str)
-        image_version = parse_to_semver(entry.tag)
+        image_version = parse_to_semver(_bare_tag(entry.tag))
 
         # If target version doesn't match image version, it's an explicit constraint
         return (target_version.major, target_version.minor) != \
@@ -194,7 +199,7 @@ class ImagesData:
 
         def sort_key(image: ImageEntry) -> tuple[str, semver.Version]:
             try:
-                return (image.name, parse_to_semver(image.tag))
+                return (image.name, parse_to_semver(_bare_tag(image.tag)))
             except ValueError:
                 return (image.name, semver.Version(0))
 
@@ -231,6 +236,26 @@ class ImageUpdate:
 
 
 # --- Helper Functions ---
+def refresh_digest(
+    entry: ImageEntry,
+    oci_api: oci_client.Client,
+) -> None:
+    """Resolve digest and embed it into the entry's tag as 'tag@sha256:...'."""
+    ref = f'{entry.repository}:{entry.tag}'
+    try:
+        digest_ref = oci_api.to_digest_hash(ref, accept=om.MimeTypes.prefer_multiarch)
+    except (
+        om.OciImageNotFoundException,
+        requests.exceptions.HTTPError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+    ) as e:
+        print(f"Error: could not resolve digest for {ref}: {e}", file=sys.stderr)
+        sys.exit(1)
+    digest = digest_ref.split('@', 1)[1]  # strip repository prefix, keep sha256:...
+    entry.tag = f'{entry.tag}@{digest}'
+
+
 def load_and_validate_images_data(yaml_content: str) -> ImagesData:
     """
     Load and validate images.yaml data using dacite.
@@ -473,7 +498,8 @@ def update_singleton_image(
     image_list: list[ImageEntry],
     all_greater_tags: list[str],
     name: str,
-    directives: DirectivesMap
+    directives: DirectivesMap,
+    oci_api: oci_client.Client,
 ) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Handle updates for images without targetVersion (singleton components).
@@ -513,10 +539,11 @@ def update_singleton_image(
 
     latest_tag = max(all_greater_tags, key=parse_to_semver)
     old_key = _directive_key(image_list[0])
-    old_tag = image_list[0].tag
+    old_tag = _bare_tag(image_list[0].tag)
 
     if old_tag != latest_tag:
         image_list[0].update_tag(latest_tag)
+        refresh_digest(image_list[0], oci_api)
         new_key = _directive_key(image_list[0])
 
         # Migrate directives to new key if entry had directives
@@ -539,7 +566,8 @@ def apply_patch_updates(
     image_list: list[ImageEntry],
     patch_tags: list[str],
     name: str,
-    directives: DirectivesMap
+    directives: DirectivesMap,
+    oci_api: oci_client.Client,
 ) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Apply patch version updates to existing image entries.
@@ -579,7 +607,7 @@ def apply_patch_updates(
         # Find the image entry with matching major.minor
         for img_entry in image_list:
             try:
-                img_version = parse_to_semver(img_entry.tag)
+                img_version = parse_to_semver(_bare_tag(img_entry.tag))
                 if (img_version.major, img_version.minor) == (major, minor):
                     # Check if this specific image should skip patch updates
                     if is_frozen(img_entry, directives):
@@ -591,8 +619,9 @@ def apply_patch_updates(
                         continue
 
                     old_key = _directive_key(img_entry)
-                    old_tag = img_entry.tag
+                    old_tag = _bare_tag(img_entry.tag)
                     img_entry.update_tag(highest_patch_tag)
+                    refresh_digest(img_entry, oci_api)
                     new_key = _directive_key(img_entry)
 
                     # Migrate directives to new key if entry had directives
@@ -617,7 +646,8 @@ def create_minor_version_entries(
     image_list: list[ImageEntry],
     minor_tags: list[str],
     name: str,
-    directives: DirectivesMap
+    directives: DirectivesMap,
+    oci_api: oci_client.Client,
 ) -> tuple[list[ImageUpdate], list[ImageEntry], DirectivesMap]:
     """
     Create new image entries for minor/major version updates.
@@ -644,7 +674,7 @@ def create_minor_version_entries(
 
     # Check if the highest version entry (which controls minor updates) should be kept
     try:
-        highest_existing = max(image_list, key=lambda img: parse_to_semver(img.tag))
+        highest_existing = max(image_list, key=lambda img: parse_to_semver(_bare_tag(img.tag)))
         if should_skip_minor_update(highest_existing, directives):
             print(
                 f"Skipping minor/major updates for {name} due to "
@@ -679,6 +709,7 @@ def create_minor_version_entries(
             target_version = f"{major}.{minor}.x"
 
         new_entry = image_list[-1].copy_as_template(highest_tag, target_version)
+        refresh_digest(new_entry, oci_api)
         new_entries.append(new_entry)
 
         # Propagate version_mapping directive to new entries
@@ -686,7 +717,7 @@ def create_minor_version_entries(
             new_directives[_directive_key(new_entry)] = {'version_mapping': True}
 
         # Find the previous highest version for the update record
-        all_tags = [img.tag for img in image_list] + [entry.tag for entry in new_entries]
+        all_tags = [_bare_tag(img.tag) for img in image_list] + [_bare_tag(entry.tag) for entry in new_entries]
         previous_tags = []
         for tag in all_tags:
             try:
@@ -732,7 +763,7 @@ def update_target_versions(
     parseable_existing = []
     for entry in existing_entries:
         try:
-            parse_to_semver(entry.tag)
+            parse_to_semver(_bare_tag(entry.tag))
             parseable_existing.append(entry)
         except ValueError:
             continue
@@ -741,7 +772,7 @@ def update_target_versions(
     parseable_new = []
     for entry in new_entries:
         try:
-            parse_to_semver(entry.tag)
+            parse_to_semver(_bare_tag(entry.tag))
             parseable_new.append(entry)
         except ValueError:
             continue
@@ -750,14 +781,14 @@ def update_target_versions(
         return
 
     # Get the previously highest existing entry
-    previously_highest = max(parseable_existing, key=lambda img: parse_to_semver(img.tag))
+    previously_highest = max(parseable_existing, key=lambda img: parse_to_semver(_bare_tag(img.tag)))
 
     # Get the new overall highest entry (could be existing or new)
     all_parseable = parseable_existing + parseable_new
-    new_highest = max(all_parseable, key=lambda img: parse_to_semver(img.tag))
+    new_highest = max(all_parseable, key=lambda img: parse_to_semver(_bare_tag(img.tag)))
 
     # Update the previously highest version from ">= X.Y" to "X.Y.x"
-    prev_version = parse_to_semver(previously_highest.tag)
+    prev_version = parse_to_semver(_bare_tag(previously_highest.tag))
     if has_version_mapping(previously_highest, directives):
         previously_highest.update_target_version(f"1.{prev_version.major}.x")
     else:
@@ -765,14 +796,14 @@ def update_target_versions(
 
     # Set all new entries to "X.Y.x" format
     for entry in parseable_new:
-        version = parse_to_semver(entry.tag)
+        version = parse_to_semver(_bare_tag(entry.tag))
         if has_version_mapping(entry, directives):
             entry.update_target_version(f"1.{version.major}.x")
         else:
             entry.update_target_version(f"{version.major}.{version.minor}.x")
 
     # Set the new highest entry to ">= X.Y" format
-    new_highest_version = parse_to_semver(new_highest.tag)
+    new_highest_version = parse_to_semver(_bare_tag(new_highest.tag))
     if has_version_mapping(new_highest, directives):
         new_highest.update_target_version(f">= 1.{new_highest_version.major}")
     else:
@@ -784,7 +815,8 @@ def update_explicit_constraint_images(
     image_list: list[ImageEntry],
     all_greater_tags: list[str],
     name: str,
-    directives: DirectivesMap
+    directives: DirectivesMap,
+    oci_api: oci_client.Client,
 ) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Handle updates for images with explicit k8s version constraints.
@@ -825,10 +857,11 @@ def update_explicit_constraint_images(
     if constraint_entry:
         latest_tag = max(all_greater_tags, key=parse_to_semver)
         old_key = _directive_key(constraint_entry)
-        old_tag = constraint_entry.tag
+        old_tag = _bare_tag(constraint_entry.tag)
 
         if old_tag != latest_tag:
             constraint_entry.update_tag(latest_tag)
+            refresh_digest(constraint_entry, oci_api)
             new_key = _directive_key(constraint_entry)
 
             # Migrate directives to new key if entry had directives
@@ -864,14 +897,15 @@ def update_explicit_constraint_images(
             if is_frozen(entry, directives):
                 continue
             try:
-                entry_version = parse_to_semver(entry.tag)
+                entry_version = parse_to_semver(_bare_tag(entry.tag))
                 key = (entry_version.major, entry_version.minor)
                 if key in tags_by_version:
                     highest_patch = max(tags_by_version[key], key=parse_to_semver)
-                    if entry.tag != highest_patch:
+                    if _bare_tag(entry.tag) != highest_patch:
                         old_key = _directive_key(entry)
-                        old_tag = entry.tag
+                        old_tag = _bare_tag(entry.tag)
                         entry.update_tag(highest_patch)
+                        refresh_digest(entry, oci_api)
                         new_key = _directive_key(entry)
 
                         # Migrate directives to new key if entry had directives
@@ -895,7 +929,8 @@ def update_versioned_images(
     image_list: list[ImageEntry],
     greater: dict[str, list[str]],
     name: str,
-    directives: DirectivesMap
+    directives: DirectivesMap,
+    oci_api: oci_client.Client,
 ) -> tuple[list[ImageUpdate], list[ImageEntry], DirectivesMap]:
     """
     Handle updates for images with targetVersion (versioned components).
@@ -921,7 +956,7 @@ def update_versioned_images(
 
     # Apply patch updates to existing entries
     patch_updates, patch_directives = apply_patch_updates(
-        image_list, greater["patch"], name, directives
+        image_list, greater["patch"], name, directives, oci_api
     )
     all_updates.extend(patch_updates)
     new_directives.update(patch_directives)
@@ -931,7 +966,7 @@ def update_versioned_images(
 
     # Create new entries for minor/major versions
     minor_updates, new_entries, entry_directives = create_minor_version_entries(
-        image_list, greater["minor"], name, working_directives
+        image_list, greater["minor"], name, working_directives, oci_api
     )
     all_updates.extend(minor_updates)
     new_directives.update(entry_directives)
@@ -948,7 +983,8 @@ def update_versioned_images(
 def update_images_data(
     images_data: ImagesData,
     new_versions_by_name_repo: dict[tuple[str, str], dict[str, list[str]]],
-    directives: DirectivesMap
+    directives: DirectivesMap,
+    oci_api: oci_client.Client,
 ) -> tuple[list[ImageUpdate], DirectivesMap]:
     """
     Update the ImagesData structure with new versions and return structured update info.
@@ -1009,7 +1045,7 @@ def update_images_data(
             # Handle singleton images (no targetVersion)
             all_greater_tags = greater["patch"] + greater["minor"]
             updates, new_directives = update_singleton_image(
-                active_entries, all_greater_tags, name, updated_directives,
+                active_entries, all_greater_tags, name, updated_directives, oci_api,
             )
             all_updates.extend(updates)
             updated_directives.update(new_directives)
@@ -1017,14 +1053,14 @@ def update_images_data(
             # Handle images with explicit k8s constraints (e.g., '>= 1.34' with v6.x image)
             all_greater_tags = greater["patch"] + greater["minor"]
             updates, new_directives = update_explicit_constraint_images(
-                active_entries, all_greater_tags, name, updated_directives,
+                active_entries, all_greater_tags, name, updated_directives, oci_api,
             )
             all_updates.extend(updates)
             updated_directives.update(new_directives)
         else:
             # Handle versioned images (with targetVersion)
             updates, new_entries, new_directives = update_versioned_images(
-                active_entries, greater, name, updated_directives,
+                active_entries, greater, name, updated_directives, oci_api,
             )
             all_updates.extend(updates)
             all_new_entries.extend(new_entries)
@@ -1329,7 +1365,7 @@ def main() -> None:
             sys.exit(1)
 
         all_available_tags[(name, repository)] = available_tags
-        current_tags = [img.tag for img in image_list]
+        current_tags = [_bare_tag(img.tag) for img in image_list]
 
         greater_versions = find_greater_versions(current_tags, available_tags)
 
@@ -1345,7 +1381,7 @@ def main() -> None:
 
     if all_new_versions:
         updates, updated_directives = update_images_data(
-            images_data, all_new_versions, directives
+            images_data, all_new_versions, directives, oci_api
         )
 
         if updates:
