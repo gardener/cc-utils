@@ -60,6 +60,17 @@ inputs:
     options:
       - tag
       - branch
+  release-tag-commitish:
+    type: string
+    description: |
+      optional commit(ish) the release tag and GitHub-release should point at, instead of the
+      release-commit. Intended for publishing a pre-pinned, transitively-frozen snapshot (e.g. the
+      tip produced by pin-actions-and-workflows) as the immutable release tag. When empty (default),
+      the release-commit is tagged as before. The commit(ish) is fetched from origin before tagging,
+      so it may live only on the remote. Must NOT be combined with `release-commit-target: tag`
+      (that mode stores the release-commit only at the tag, which this would overwrite).
+    required: false
+    default: ''
   next-version:
     type: string
     description: |
@@ -219,6 +230,17 @@ defaults:
 runs:
   using: composite
   steps:
+    - name: validate-inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -n '${{ inputs.release-tag-commitish }}' ] \
+          && [ '${{ inputs.release-commit-target }}' = 'tag' ]; then
+          echo '::error::release-tag-commitish must not be combined with release-commit-target: tag' \
+            '(tag mode stores the release-commit only at the tag, which release-tag-commitish would' \
+            'overwrite, orphaning the release-commit).'
+          exit 1
+        fi
     - name: install-gardener-gha-libs
       uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -593,10 +615,21 @@ runs:
       # In particular, do not replace an existing annotated tag with its peeled commit.
       if: ${{ steps.existing-release-commit.outputs.digest == '' }}
       shell: bash
+      env:
+        TAG_COMMITISH: ${{ inputs.release-tag-commitish }}
       run: |
         set -eu
 
-        push_spec="@:${{ steps.preprocess.outputs.tag-ref }}"
+        # default: tag the release-commit (current HEAD). When release-tag-commitish is given, tag
+        # that commit instead (e.g. a pre-pinned, transitively-frozen snapshot). It may live only on
+        # the remote (mirrors the signed-commit fetch elsewhere), so fetch it before tagging.
+        src='@'
+        if [ -n "${TAG_COMMITISH}" ]; then
+          git fetch --no-tags origin "${TAG_COMMITISH}"
+          src="${TAG_COMMITISH}"
+        fi
+
+        push_spec="${src}:${{ steps.preprocess.outputs.tag-ref }}"
         echo "pushing tag ref using ${push_spec}"
         git push origin "${push_spec}"
 
@@ -719,6 +752,13 @@ runs:
         draft_tag_name = f'{release_tag_name}-draft'
         prerelease = '${{ steps.preprocess.outputs.is-rc }}' == 'true'
 
+        # the release tag was already pushed (push tag-ref) at either the release-commit or, if
+        # release-tag-commitish was given, that commit. GitHub's create-release uses target_commitish
+        # only when the tag does NOT yet exist; passing it keeps the release bound to the intended
+        # commit in that edge case (empty -> omit, i.e. today's behaviour).
+        tag_commitish = '${{ inputs.release-tag-commitish }}'
+        create_kwargs = {'target_commitish': tag_commitish} if tag_commitish else {}
+
         # Keep the release as a draft until all assets are uploaded. GitHub
         # immutable-releases seal a release at publish-time, after which no
         # further assets may be uploaded (422 "Cannot upload assets to an
@@ -733,6 +773,7 @@ runs:
             body=release_notes_markdown or 'no release-notes available',
             draft=True,
             prerelease=prerelease,
+            **create_kwargs,
           )
         else:
           gh_release.edit(

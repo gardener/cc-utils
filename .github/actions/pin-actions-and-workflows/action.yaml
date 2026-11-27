@@ -94,6 +94,7 @@ runs:
         bundle-dir: ${{ inputs.bundle-dir || steps.bundle.outputs.bundle-dir }}
 
     - name: pin
+      id: pin
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
@@ -120,3 +121,11 @@ runs:
           --own-org "${own_org}" \
           --own-repo "${own_repo}" \
           --bundle-dir "${bundle_dir}"
+
+outputs:
+  pin-tip:
+    description: |
+      The pinned chain tip - the transitively-frozen snapshot commit the target branch was moved to.
+      Empty when nothing needed rewriting (no pinned commits were created). A downstream job may tag
+      this commit (e.g. as an immutable release tag) to publish a genuinely transitively-pinned ref.
+    value: ${{ steps.pin.outputs.pin-tip }}

@@ -559,7 +559,7 @@ def create_pinned_branch(
     host: str | None = None,
     bundle_dir: str | None = None,
     bundle_action_prefix: str = '.github/actions/install-gardener-gha-libs',
-) -> None:
+) -> str | None:
     '''
     Build GitHub-signed pinned commits via createCommitOnBranch and move the target branch to the
     resulting tip. The signed-commit chain is built on a throwaway signing-branch; the target
@@ -567,6 +567,9 @@ def create_pinned_branch(
 
     If bundle_dir is given, its contents are copied into <bundle_action_prefix>/_bundle/ and the
     action YAML at that prefix is rewritten to install from the bundle instead of cloning.
+
+    Returns the pinned chain tip (the transitively-frozen snapshot a consumer may tag immutably),
+    or None when nothing needed rewriting (no commits were created, target branch left unchanged).
     '''
     repo = gitpython.Repo(repo_root)
 
@@ -695,7 +698,7 @@ def create_pinned_branch(
 
         if commit_count == 0:
             logger.info('No rewrites were necessary; target branch unchanged')
-            return
+            return None
 
         _move_target_branch(
             token=token,
@@ -706,6 +709,7 @@ def create_pinned_branch(
             host=resolved_host,
         )
         logger.info('Done. Pinned tip: %s', current)
+        return current
     finally:
         if signing_branch is not None:
             _delete_signing_branch(repo=repo, branch=signing_branch)
@@ -770,13 +774,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _emit_github_output(name: str, value: str) -> None:
+    '''
+    append `name=value` to the file named by $GITHUB_OUTPUT (the GitHub Actions step-output
+    mechanism). No-op when the variable is unset, so local CLI runs stay side-effect-free.
+    '''
+    github_output = os.environ.get('GITHUB_OUTPUT')
+    if not github_output:
+        return
+    with open(github_output, 'a') as f:
+        f.write(f'{name}={value}\n')
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(levelname)s %(message)s',
     )
-    create_pinned_branch(
+    tip = create_pinned_branch(
         repo_root=args.repo_root,
         own_ref=args.own_ref,
         target_branch=args.target_branch,
@@ -786,6 +802,10 @@ def main(argv: list[str] | None = None) -> None:
         host=args.host,
         bundle_dir=args.bundle_dir,
     )
+    # expose the pinned tip so a downstream job can tag it (e.g. as an immutable release tag). On a
+    # no-op run (tip is None) nothing is written, leaving the step-output empty.
+    if tip is not None:
+        _emit_github_output('pin-tip', tip)
 
 
 if __name__ == '__main__':
