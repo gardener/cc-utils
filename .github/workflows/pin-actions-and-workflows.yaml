@@ -80,6 +80,8 @@ jobs:
     permissions:
       contents: write  # required to push the target branch and preservation refs
       id-token: write  # required for OIDC federated token exchange
+    outputs:
+      pin-tip: ${{ steps.pin.outputs.pin-tip }}  # transitively-frozen tip; empty on a no-op run
     steps:
       - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
         id: checkout
@@ -105,6 +107,7 @@ jobs:
           cp -r /tmp/bundle-amd64 /tmp/gardener-gha-libs-bundle
           cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
       - name: pin-actions-and-workflows
+        id: pin
         uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
         with:
           own-ref: ${{ inputs.own-ref }}
