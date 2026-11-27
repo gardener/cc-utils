@@ -218,7 +218,7 @@ def _github_api(repository, tmp_path):
     '''External GraphQL boundary backed by the real bare Git repository.'''
     session = mock.Mock()
 
-    def post(url, json):
+    def post(url, json, timeout=None):
         assert url == 'https://api.github.com/graphql'
         inp = json['variables']['input']
         branch = inp['branch']['branchName']
