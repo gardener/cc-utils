@@ -59,7 +59,7 @@ jobs:
       contents: read
       id-token: write  # required for trusted-checkout OIDC token exchange
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@ed7894f6895882bf81d28bac2fa121282aa6daca
         with:
           fetch-depth: 0
           token-server: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER }}
@@ -67,7 +67,7 @@ jobs:
           github-auth-token-permissions: |
             contents: write
             workflows: write
-      - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@master
+      - uses: gardener/cc-utils/.github/actions/bundle-gardener-gha-libs@90b41203a3391863920ffde956e81d8d7c8f47ba
         id: bundle
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -83,7 +83,7 @@ jobs:
     outputs:
       pin-tip: ${{ steps.pin.outputs.pin-tip }}  # transitively-frozen tip; empty on a no-op run
     steps:
-      - uses: gardener/cc-utils/.github/actions/trusted-checkout@master
+      - uses: gardener/cc-utils/.github/actions/trusted-checkout@ed7894f6895882bf81d28bac2fa121282aa6daca
         id: checkout
         with:
           fetch-depth: 0  # full history required for git worktree operations
@@ -108,7 +108,7 @@ jobs:
           cp /tmp/bundle-arm64/wheels/*.whl /tmp/gardener-gha-libs-bundle/wheels/
       - name: pin-actions-and-workflows
         id: pin
-        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@master
+        uses: gardener/cc-utils/.github/actions/pin-actions-and-workflows@2e25bb902f03c0d41c269c5bf4989a898b8f0b78
         with:
           own-ref: ${{ inputs.own-ref }}
           target-branch: ${{ inputs.target-branch }}
