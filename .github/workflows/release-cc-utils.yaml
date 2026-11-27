@@ -43,6 +43,18 @@ jobs:
       own-ref: refs/capture-commit
       release-commit-objects-artefact: release-commit-objects
 
+  # TEMPORARY DEBUG (revert before merge): surface the pin-tip value the caller actually receives,
+  # to localize why release-tag-commitish arrived empty despite pin.py emitting pin-tip.
+  debug-pin-tip:
+    needs:
+      - pin
+    runs-on: ubuntu-latest
+    steps:
+      - name: echo pin-tip seen by caller
+        run: |
+          echo "::notice title=pin-tip::caller sees needs.pin.outputs.pin-tip = [${{ needs.pin.outputs.pin-tip }}]"
+          echo "pin-tip = [${{ needs.pin.outputs.pin-tip }}]"
+
   release-to-github-and-bump:
     uses: ./.github/workflows/release.yaml
     needs:
