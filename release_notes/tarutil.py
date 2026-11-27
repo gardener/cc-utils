@@ -58,7 +58,7 @@ def release_notes_docs_into_tarstream(
 def tarstream_into_release_notes_docs(
     tarstream: collections.abc.Iterable[bytes],
 ) -> collections.abc.Iterable[rnm.ReleaseNotesDoc]:
-    tar = tarfile.open(
+    tar: tarfile.TarFile = tarfile.open(
         fileobj=tarutil.FilelikeProxy(tarstream),
         mode='r|*',
     )
@@ -93,10 +93,19 @@ def tarstream_into_release_notes_files(
         exist_ok=True,
     )
 
+    # We need to combine several filters when extracting here. Our filter is more restrictive w.r.t
+    # directories and links, whereas the stdlib filter is more suited to path related checks at
+    # extraction time
+    def _extraction_chain_filter(tf, path):
+        return (
+            tarfile.data_filter(t, path) if (t := tarutil.tar_filter(tf)) is not None
+            else None
+        )
+
     with tarfile.open(fileobj=tarutil.FilelikeProxy(tarstream), mode='r|*') as tar:
-        tar.extractall( # nosec B202 files are already being filtered by `tar_filter`
+        tar.extractall( # nosec B202 files are being filtered by `tar_filter` and the stdlib's filter
             path=release_notes_dir,
-            filter=tarutil.tar_filter,
+            filter=_extraction_chain_filter,
         )
 
 
