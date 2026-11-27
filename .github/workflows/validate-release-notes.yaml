@@ -25,7 +25,7 @@ jobs:
     environment: ${{ inputs.github-environment }}
     steps:
       - name: install-gardener-gha-libs
-        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+        uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@808fef9ce3a75749d9a79530d6616f03fb6fed09
 
       - name: raise-on-malformed-release-notes
         shell: python
