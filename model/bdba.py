@@ -45,15 +45,17 @@ class BDBAConfig(NamedModelElement):
         returns integer in range [-1;2] representing quality of match where -1 states "no match" and
         2 "perfect match".
         '''
-        def normalise_url(url: str) -> str:
+        def scheme_and_host(url: str) -> str:
             parsed = ci.util.urlparse(url)
-            return f'{parsed.scheme}://{parsed.hostname}{parsed.path}'
+            return f'{parsed.scheme}://{parsed.hostname}'
 
         score = 0
 
         if base_url:
-            base_url = normalise_url(base_url)
-            if base_url.startswith(self.base_url()):
+            # require an exact scheme+host match rather than a raw prefix,
+            # so a lookalike host cannot match a trusted base-url.
+            # self.base_url() is scheme://host only (no path), so no path leg is lost.
+            if scheme_and_host(base_url) == self.base_url():
                 score += 1
             else:
                 return -1
