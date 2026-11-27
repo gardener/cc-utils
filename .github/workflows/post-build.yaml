@@ -266,7 +266,7 @@ jobs:
             exit 0
           fi
 
-          release_branch_template=$(cat .ocm/branch-info.yaml | yq .release-branch-template)
+          release_branch_template=$(cat .ocm/branch-info.yaml | yq -r '.["release-branch-template"]')
 
           if [ $release_branch_template == "null" ]; then
             info="INFO: Not on default branch and no release-branch-template found, skipping draft release."

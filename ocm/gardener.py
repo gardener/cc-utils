@@ -465,6 +465,37 @@ a list of `ImageOverwriteDict`s, sorted by `repository` attribute.
 ImageOverwrite = dict
 
 
+def _image_tag(
+    image_ref: oci.model.OciImageReference,
+    resource: ocm.Resource,
+) -> str:
+    '''
+    Returns the tag to be used in imagevector-overwrite entries. If the resource carries an
+    OCI-artifact digest (which, as opposed to the access-reference, is covered by the
+    component's signature), it is emitted (prefixed by the symbolic tag, if any), thus
+    pinning content. Falls back to the access-reference's tag, otherwise.
+    '''
+    if (
+        (digest := resource.digest)
+        and digest.normalisationAlgorithm == ocm.NormalisationAlgorithm.OCI_ARTIFACT_DIGEST
+        and digest.hashAlgorithm.upper() == 'SHA-256'
+    ):
+        if image_ref.has_mixed_tag:
+            symbolic, _ = image_ref.parsed_mixed_tag
+        elif image_ref.has_symbolical_tag:
+            symbolic = image_ref.tag
+        else:
+            # digest-only access-reference: no symbolic tag to retain
+            return digest.oci_tag
+        return f'{symbolic}@{digest.oci_tag}'
+
+    if image_ref.has_mixed_tag:
+        symbolic, digest = image_ref.parsed_mixed_tag
+        return f'{symbolic}@{digest}'
+
+    return image_ref.tag
+
+
 def image_dict_from_image_dict_and_resource(
     component_name: str,
     image: ImageDict,
@@ -477,17 +508,14 @@ def image_dict_from_image_dict_and_resource(
     '''
     image_ref = oci.model.OciImageReference(resource.access.imageReference)
 
-    if image_ref.has_mixed_tag:
-        symbolic, digest = image_ref.parsed_mixed_tag
-        tag = f'{symbolic}@{digest}'
-    else:
-        tag = image_ref.tag
-
     image_dict = {
         'name': image['name'],
         'repository': image_ref.ref_without_tag,
         'sourceRepository': component_name,
-        'tag': tag,
+        'tag': _image_tag(
+            image_ref=image_ref,
+            resource=resource,
+        ),
     }
 
     if (target_version := image.get('targetVersion')):
@@ -550,16 +578,13 @@ def oci_image_dict_from_resource(
     image_ref = oci.model.OciImageReference(access.imageReference)
     repository = image_ref.ref_without_tag
 
-    if image_ref.has_mixed_tag:
-        symbolic, digest = image_ref.parsed_mixed_tag
-        tag = f'{symbolic}@{digest}'
-    else:
-        tag = image_ref.tag
-
     image_dict = {
         'name': name,
         'repository': repository,
-        'tag': tag,
+        'tag': _image_tag(
+            image_ref=image_ref,
+            resource=resource,
+        ),
     }
 
     if (target_version_label := resource.find_label(
@@ -598,7 +623,10 @@ def oci_image_dict_from_resource_regardless_of_label(
     return {
         'name': resource.name,
         'repository': image_ref.ref_without_tag,
-        'tag': image_ref.tag,
+        'tag': _image_tag(
+            image_ref=image_ref,
+            resource=resource,
+        ),
     }
 
 
