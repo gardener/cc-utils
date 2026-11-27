@@ -339,7 +339,7 @@ def _git_tree_api(repo, reported_tree=None):
     captured = {}
     session = unittest.mock.Mock()
 
-    def post(url, json):
+    def post(url, json, timeout=None):
         captured['query'] = json['query']
         inp = captured['input'] = json['variables']['input']
         parent = inp['expectedHeadOid']
