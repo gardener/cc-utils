@@ -155,13 +155,14 @@ def test_authenticate_401_triggers_invalidate_and_retry(monkeypatch):
 
     lookup = _lookup_stubbing_exchange(monkeypatch, fake_exchange)
 
-    # /v2/ probe → bearer challenge
+    # /v2/ probe → bearer challenge. The realm host matches the registry host (GAR serves its
+    # token endpoint same-host); a cross-host realm is refused by the credential-forwarding guard
     probe_resp = unittest.mock.MagicMock()
     probe_resp.ok = True
     probe_resp.headers = {
         'www-authenticate': (
-            'Bearer realm="https://auth.example.com/token",'
-            'service="registry.example.com"'
+            'Bearer realm="https://europe-docker.pkg.dev/v2/token",'
+            'service="europe-docker.pkg.dev"'
         ),
     }
 

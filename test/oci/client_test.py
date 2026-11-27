@@ -180,3 +180,126 @@ def test_batch_delete_manifests_aws():
     assert {'imageTag': 'v1'} in image_ids
     assert {'imageTag': 'v2'} in image_ids
     assert {'imageDigest': 'sha256:abcdef'} in image_ids
+
+
+def test_host_is_allowed():
+    h = co.host_is_allowed
+    # same host
+    assert h('https://eu.gcr.io/v2/x', 'eu.gcr.io')
+    # default-port normalisation
+    assert h('https://eu.gcr.io:443/v2/x', 'eu.gcr.io')
+    assert h('https://eu.gcr.io/v2/x', 'eu.gcr.io:443')
+    # cross-host
+    assert not h('https://attacker.example/x', 'eu.gcr.io')
+    # subdomain is NOT the same host
+    assert not h('https://eu.gcr.io.attacker.example/x', 'eu.gcr.io')
+    # docker-hub split-host token service
+    assert h('https://auth.docker.io/token', 'registry-1.docker.io')
+    assert not h('https://auth.docker.io/token', 'eu.gcr.io')
+    # public ECR realm is same-host
+    assert h('https://public.ecr.aws/token/', 'public.ecr.aws')
+    # scheme: http refused unless insecure opt-in
+    assert not h('http://eu.gcr.io/v2/x', 'eu.gcr.io')
+    assert h('http://eu.gcr.io/v2/x', 'eu.gcr.io', disable_tls_validation=True)
+
+
+def test_require_same_registry_host_raises():
+    import pytest
+    with pytest.raises(ValueError):
+        co.require_same_registry_host('https://attacker.example/x', 'eu.gcr.io', 'realm')
+    # allowed -> no raise
+    co.require_same_registry_host('https://eu.gcr.io/v2/x', 'eu.gcr.io', 'realm')
+
+
+def _client_for_realm_test():
+    return co.Client(
+        credentials_lookup=lambda **kw: None,
+        routes=co.OciRoutes(),
+    )
+
+
+def test_authenticate_refuses_cross_host_realm():
+    client = _client_for_realm_test()
+    calls = []
+
+    def fake_get(url, **kwargs):
+        calls.append(url)
+        # first GET (/v2/) returns a bearer challenge whose realm is on a foreign host
+        return _mock_response(
+            401,
+            headers={'www-authenticate': 'Bearer realm="https://attacker.example/token",service="x"'},
+        )
+
+    with unittest.mock.patch.object(client.session, 'get', side_effect=fake_get):
+        try:
+            client._authenticate(image_reference='eu.gcr.io/foo/bar:1', scope='repository:foo/bar:pull')
+            raise AssertionError('expected ValueError for cross-host realm')
+        except ValueError:
+            pass
+
+    # the foreign realm URL must never have been requested
+    assert not any('attacker.example' in u for u in calls)
+
+
+def test_authenticate_allows_docker_hub_split_host_realm():
+    client = _client_for_realm_test()
+
+    def fake_get(url, **kwargs):
+        if url.endswith('/v2/'):
+            return _mock_response(
+                401,
+                headers={'www-authenticate': 'Bearer realm="https://auth.docker.io/token",service="registry.docker.io"'},
+            )
+        # the realm GET (auth.docker.io) is allowed and returns a token
+        return _mock_response(200)
+
+    client._mock_token_payload = True
+    with unittest.mock.patch.object(client.session, 'get', side_effect=fake_get):
+        # registry-1.docker.io image → realm auth.docker.io is on the allowlist; must not raise
+        # (token parsing may fail on the empty 200 body, so we only assert no ValueError from the host check)
+        try:
+            client._authenticate(image_reference='registry-1.docker.io/library/alpine:3', scope='repository:library/alpine:pull')
+        except ValueError as e:
+            if 'refusing to send credentials' in str(e):
+                raise AssertionError('docker-hub split-host realm was wrongly refused') from e
+        except Exception:
+            pass  # token/json parsing issues on the mock 200 are not what this test checks
+
+
+def test_put_blob_single_post_refuses_cross_host_location():
+    client = _client_for_realm_test()
+    seen_methods = []
+
+    def fake_request(url, image_reference, scope, method='GET', **kwargs):
+        seen_methods.append(method)
+        if method == 'POST':
+            r = _mock_response(202, headers={'Location': 'https://attacker.example/upload/abc'})
+            r.url = 'https://eu.gcr.io/v2/foo/blobs/uploads/'
+            return r
+        return _mock_response(201)
+
+    with unittest.mock.patch.object(client, '_request', side_effect=fake_request):
+        try:
+            client._put_blob_single_post(
+                image_reference='eu.gcr.io/foo:1',
+                digest='sha256:' + 'a' * 64,
+                octets_count=3,
+                data=b'abc',
+            )
+            raise AssertionError('expected ValueError for cross-host upload Location')
+        except ValueError:
+            pass
+
+    # the PUT (second _request) must never have fired
+    assert 'PUT' not in seen_methods
+
+
+def test_next_paginated_url_stops_on_cross_host():
+    u = co._next_paginated_url
+    hdr_cross = {'Link': '<https://attacker.example/v2/_tags?n=1&last=x>; rel="next"'}
+    assert u('https://eu.gcr.io/v2/x/tags/list', hdr_cross, 'eu.gcr.io') is None
+    hdr_same = {'Link': '<https://eu.gcr.io/v2/x/tags/list?last=x>; rel="next"'}
+    assert u('https://eu.gcr.io/v2/x/tags/list', hdr_same, 'eu.gcr.io') is not None
+    # relative next stays same-host
+    hdr_rel = {'Link': '</v2/x/tags/list?last=x>; rel="next"'}
+    assert u('https://eu.gcr.io/v2/x/tags/list', hdr_rel, 'eu.gcr.io').startswith('https://eu.gcr.io/')

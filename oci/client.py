@@ -264,9 +264,74 @@ def _scope(image_reference: str | om.OciImageReference, action: str):
     return scope
 
 
+# registries whose bearer-token realm legitimately lives on a different host than the registry
+# itself (split-host token service). Keep this minimal and backed by real configurations.
+_SPLIT_HOST_TOKEN_SERVICES = {
+    'registry-1.docker.io': {'auth.docker.io'},
+}
+
+
+def _normalise_netloc(netloc: str, scheme: str='https') -> str:
+    netloc = netloc.lower()
+    # drop a redundant default port so `host` and `host:443` compare equal (https)
+    if scheme == 'https' and netloc.endswith(':443'):
+        netloc = netloc[:-len(':443')]
+    return netloc
+
+
+def host_is_allowed(
+    url: str,
+    expected_netloc: str,
+    disable_tls_validation: bool=False,
+) -> bool:
+    '''
+    returns whether credentials scoped to `expected_netloc` may accompany a request to `url`.
+
+    A response-nominated URL (bearer realm, blob-upload Location, pagination next-url) is allowed
+    only if its host equals the registry host the credentials are scoped to, or is an explicit
+    split-host token service for that registry. https is required unless insecure mode is opted
+    into via `disable_tls_validation` (the client never constructs http:// URLs itself).
+    '''
+    parsed = urllib.parse.urlparse(url)
+
+    if parsed.scheme != 'https' and not disable_tls_validation:
+        return False
+
+    # compare on netloc, NOT hostname: netloc includes any userinfo, so a credential-leak URL like
+    # `https://registry.example@attacker.example/` fails closed (its netloc is
+    # 'registry.example@attacker.example', not 'registry.example'). Refactoring this to
+    # `.hostname` would silently reintroduce that userinfo bypass.
+    url_netloc = _normalise_netloc(parsed.netloc, parsed.scheme)
+    expected = _normalise_netloc(expected_netloc)
+
+    if url_netloc == expected:
+        return True
+
+    return parsed.netloc.lower() in _SPLIT_HOST_TOKEN_SERVICES.get(expected, set())
+
+
+def require_same_registry_host(
+    url: str,
+    expected_netloc: str,
+    what: str,
+    disable_tls_validation: bool=False,
+) -> None:
+    '''
+    raises ValueError unless `url` is an allowed destination for credentials scoped to
+    `expected_netloc` (see host_is_allowed). `what` names the sink for the error message.
+    '''
+    if not host_is_allowed(url, expected_netloc, disable_tls_validation):
+        raise ValueError(
+            f'refusing to send credentials for {what}: {url!r} is not on registry host '
+            f'{expected_netloc!r}'
+        )
+
+
 def _next_paginated_url(
     url: str,
     headers: dict,
+    expected_netloc: str,
+    disable_tls_validation: bool=False,
 ) -> str | None:
     # follow pagination as per OCI Distribution Spec
     # Link header format: <url>; rel="next"
@@ -280,6 +345,13 @@ def _next_paginated_url(
             url = next_url
     else:
         url = None
+
+    # do not follow a response-nominated next-url onto a foreign host with the registry's auth
+    if url is not None and not host_is_allowed(url, expected_netloc, disable_tls_validation):
+        logger.warning(
+            f'stopping pagination: next-url {url!r} is not on registry host {expected_netloc!r}'
+        )
+        return None
 
     return url
 
@@ -645,6 +717,13 @@ class Client:
             bearer_dict['service'] = service
 
         realm = bearer['realm'] + '?' + urllib.parse.urlencode(bearer_dict)
+
+        require_same_registry_host(
+            url=realm,
+            expected_netloc=om.OciImageReference(image_reference).netloc,
+            what='bearer realm',
+            disable_tls_validation=self.disable_tls_validation,
+        )
 
         if oci_creds:
             auth = requests.auth.HTTPBasicAuth(
@@ -1184,6 +1263,8 @@ class Client:
         next_url = _next_paginated_url(
             url=url,
             headers=res.headers,
+            expected_netloc=om.OciImageReference.to_image_ref(image_reference).netloc,
+            disable_tls_validation=self.disable_tls_validation,
         )
 
         return tags, next_url
@@ -1668,6 +1749,15 @@ class Client:
         if upload_url.startswith('/'):
             parsed_url = urllib.parse.urlparse(res.url)
             upload_url = f'{parsed_url.scheme}://{parsed_url.netloc}{upload_url}'
+
+        # the resolved upload target must stay on the registry the push is scoped to; a
+        # response-nominated cross-host Location would otherwise receive the push token and blob
+        require_same_registry_host(
+            url=upload_url,
+            expected_netloc=image_reference.netloc,
+            what='blob-upload Location',
+            disable_tls_validation=self.disable_tls_validation,
+        )
 
         if '?' in upload_url:
             prefix = '&'

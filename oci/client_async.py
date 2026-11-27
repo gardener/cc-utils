@@ -210,6 +210,13 @@ class Client:
 
         realm = bearer['realm'] + '?' + urllib.parse.urlencode(bearer_dict)
 
+        oci.client.require_same_registry_host(
+            url=realm,
+            expected_netloc=om.OciImageReference(image_reference).netloc,
+            what='bearer realm',
+            disable_tls_validation=self.disable_tls_validation,
+        )
+
         if oci_creds:
             auth = aiohttp.BasicAuth(
                 login=oci_creds.username,
@@ -625,6 +632,8 @@ class Client:
         next_url = oci.client._next_paginated_url(
             url=url,
             headers=res.headers,
+            expected_netloc=om.OciImageReference.to_image_ref(image_reference).netloc,
+            disable_tls_validation=self.disable_tls_validation,
         )
 
         return tags, next_url
@@ -963,6 +972,15 @@ class Client:
         if upload_url.startswith('/'):
             parsed_url = urllib.parse.urlparse(res.url)
             upload_url = f'{parsed_url.scheme}://{parsed_url.netloc}{upload_url}'
+
+        # the resolved upload target must stay on the registry the push is scoped to; a
+        # response-nominated cross-host Location would otherwise receive the push token and blob
+        oci.client.require_same_registry_host(
+            url=upload_url,
+            expected_netloc=image_reference.netloc,
+            what='blob-upload Location',
+            disable_tls_validation=self.disable_tls_validation,
+        )
 
         if '?' in upload_url:
             prefix = '&'

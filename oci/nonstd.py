@@ -7,12 +7,16 @@ registries instead of raising.
 
 Currently supported: Keppel, Google Artifact Registry (GAR), AWS ECR, Azure ACR.
 '''
+import logging
 import typing
 import urllib.parse
 
 import oci.auth as oa
 import oci.client as oc
 import oci.model as om
+
+
+logger = logging.getLogger(__name__)
 
 
 def iter_repositories(
@@ -157,4 +161,17 @@ def _iter_repositories_catalog(
     while url:
         res = client._request(url=url, image_reference=image_reference, scope=scope)
         yield from res.json().get('repositories', [])
-        url = _parse_catalog_next_url(res.headers.get('Link', ''))
+        next_url = _parse_catalog_next_url(res.headers.get('Link', ''))
+        if next_url is None:
+            break
+        # _parse_catalog_next_url does not rebase relative URLs; resolve against the registry host
+        if next_url.startswith('/'):
+            next_url = f'https://{host}{next_url}'
+        # do not follow a response-nominated next-url onto a foreign host with the registry's auth
+        if not oc.host_is_allowed(next_url, host, client.disable_tls_validation):
+            logger.warning(
+                f'stopping catalog pagination: next-url {next_url!r} is not on registry host '
+                f'{host!r}'
+            )
+            break
+        url = next_url
