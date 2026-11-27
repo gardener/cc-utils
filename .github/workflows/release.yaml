@@ -79,6 +79,15 @@ on:
           input. Allowed values are:
             - branch # will push to same branch the workflow was run for
             - tag # will push release-commit to release-tag
+      release-tag-commitish:
+        required: false
+        default: ''
+        type: string
+        description: |
+          Optional commit(ish) the release tag + GitHub-release should point at, instead of the
+          release-commit. Passed through to the `release` action's equally-named input. When empty
+          (the default), the release-commit is tagged as before. Must not be combined with
+          `release-commit-target: tag`.
       next-version:
         required: false
         default: bump-minor
@@ -445,6 +454,7 @@ jobs:
           release-commit-objects: ${{ inputs.release-commit-objects }}
           release-commit-objects-artefact: release-commit-objects
           release-commit-target: ${{ inputs.release-commit-target }}
+          release-tag-commitish: ${{ inputs.release-tag-commitish }}
           next-version: ${{ steps.prep-next-version.outputs.next-version }}
           next-version-commit-message: "next version: ${version}"
           next-version-callback-action-path: ${{ inputs.next-version-callback-action-path }}

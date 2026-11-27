@@ -57,6 +57,10 @@ jobs:
       release-commit-target: branch
       next-version: bump-minor
       slack-channel-id: ${{ inputs.post-to-slack && 'C0170EXLULE' || '' }}
+      # tag the transitively-frozen pin tip (not the release-commit) so the immutable release tag is
+      # truly immutable transitively. Empty on a no-op pin run -> release falls back to tagging the
+      # release-commit (today's behaviour).
+      release-tag-commitish: ${{ needs.pin.outputs.pin-tip }}
 
   pypi:
     if: ${{ inputs.release-to-pypi }}

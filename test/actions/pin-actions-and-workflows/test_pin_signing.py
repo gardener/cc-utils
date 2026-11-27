@@ -253,3 +253,67 @@ def test_move_target_branch_tolerates_existing_preservation_ref(monkeypatch):
         tip='deadbeef', own_digest='cafef00d', host='github.com',
     )
     assert [c[0] for c in session.calls] == ['PATCH', 'POST']
+
+
+# --- create_pinned_branch returns the pinned tip (so a downstream job can tag it); None on no-op ---
+
+def test_returns_tip_on_success(tmp_repo, monkeypatch):
+    # the tip is the last signed oid in the chain (what the target branch is moved to)
+    calls = []
+    monkeypatch.setattr(pin.sign_pin_commit, 'sign_file_commit',
+                        lambda **kw: calls.append(kw) or f'oid{len(calls)}')
+    monkeypatch.setattr(pin, '_create_signing_branch', lambda **kw: 'sign-xyz')
+    monkeypatch.setattr(pin, '_move_target_branch', lambda **kw: None)
+    monkeypatch.setattr(pin, '_delete_signing_branch', lambda **kw: None)
+
+    tip = pin.create_pinned_branch(
+        repo_root=tmp_repo, own_ref='HEAD', target_branch='v1',
+        own_org='myorg', own_repo='myrepo', token='t', host='github.com',
+    )
+    assert tip == f'oid{len(calls)}'  # last signed oid
+
+
+def test_returns_none_on_noop(tmp_repo_already_pinned, monkeypatch):
+    monkeypatch.setattr(pin, '_create_signing_branch', lambda **kw: 'b')
+    monkeypatch.setattr(pin, '_move_target_branch', lambda **kw: None)
+    monkeypatch.setattr(pin.sign_pin_commit, 'sign_file_commit', lambda **kw: 'x')
+
+    tip = pin.create_pinned_branch(
+        repo_root=tmp_repo_already_pinned, own_ref='HEAD', target_branch='v1',
+        own_org='myorg', own_repo='myrepo', token='t',
+    )
+    assert tip is None
+
+
+# --- main() exposes the tip via $GITHUB_OUTPUT (the pin-tip step-output), nothing on a no-op ---
+
+def test_main_writes_pin_tip_to_github_output(tmp_path, monkeypatch):
+    output_file = tmp_path / 'gh_output'
+    output_file.write_text('')
+    monkeypatch.setenv('GITHUB_OUTPUT', str(output_file))
+    monkeypatch.setattr(pin, 'create_pinned_branch', lambda **kw: 'tipsha')
+    monkeypatch.setattr(pin, 'parse_args', lambda argv=None: _args_ns())
+
+    pin.main([])
+
+    assert output_file.read_text() == 'pin-tip=tipsha\n'
+
+
+def test_main_writes_nothing_on_noop(tmp_path, monkeypatch):
+    output_file = tmp_path / 'gh_output'
+    output_file.write_text('')
+    monkeypatch.setenv('GITHUB_OUTPUT', str(output_file))
+    monkeypatch.setattr(pin, 'create_pinned_branch', lambda **kw: None)
+    monkeypatch.setattr(pin, 'parse_args', lambda argv=None: _args_ns())
+
+    pin.main([])
+
+    assert output_file.read_text() == ''
+
+
+def _args_ns():
+    import argparse
+    return argparse.Namespace(
+        repo_root='.', own_ref='master', target_branch='v1', own_org=None,
+        own_repo=None, token='t', host=None, bundle_dir=None, verbose=False,
+    )
