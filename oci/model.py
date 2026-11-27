@@ -44,6 +44,17 @@ class OciTagType(enum.Enum):
     NO_TAG = 'no_tag'
 
 
+class OCIRegistrySuffix(enum.StrEnum):
+    ALIYUN = 'cr.aliyuncs.com'
+    AWS_ECR_PUBLIC = 'public.ecr.aws' # entire hostname
+    AWS_PRIVATE = 'amazonaws.com'
+    AZURE = 'azurecr.io'
+    DOCKERHUB = 'docker.io' # entire hostname
+    GAR = 'pkg.dev'
+    GCR = 'gcr.io'
+    GHCR = 'ghcr.io'
+
+
 class OciRegistryType(enum.Enum):
     AWS = 'aws'
     AZURE = 'azure'
@@ -62,26 +73,28 @@ class OciRegistryType(enum.Enum):
     ) -> 'OciRegistryType':
         netloc = OciImageReference.to_image_ref(image_reference=image_reference).netloc
 
-        if 'pkg.dev' in netloc:
-            return OciRegistryType.GAR
-        if 'gcr.io' in netloc:
-            return OciRegistryType.GCR
-        if 'docker.io' in netloc:
-            return OciRegistryType.DOCKERHUB
-        if 'ghcr.io' in netloc:
-            return OciRegistryType.GHCR
-        if 'cr.aliyuncs.com' in netloc:
-            return OciRegistryType.ALIYUN
-        if 'keppel.' in netloc:
+        for suffix, registry_type in _SUFFIX_TO_TYPE:
+            if netloc == suffix or netloc.endswith('.' + suffix):
+                return registry_type
+
+        # We currently support one registry (keppel) that canonically can be identified by
+        # prefix instead
+        if netloc.startswith("keppel."):
             return OciRegistryType.KEPPEL
-        if 'amazonaws.com' in netloc: # AWS ECR private
-            return OciRegistryType.AWS
-        if 'public.ecr.aws' in netloc: # AWS ECR public
-            return OciRegistryType.AWS
-        if 'azurecr.io' in netloc:
-            return OciRegistryType.AZURE
 
         return OciRegistryType.UNKNOWN
+
+
+_SUFFIX_TO_TYPE = (
+    (OCIRegistrySuffix.ALIYUN, OciRegistryType.ALIYUN),
+    (OCIRegistrySuffix.AWS_ECR_PUBLIC, OciRegistryType.AWS),
+    (OCIRegistrySuffix.AWS_PRIVATE, OciRegistryType.AWS),
+    (OCIRegistrySuffix.AZURE, OciRegistryType.AZURE),
+    (OCIRegistrySuffix.DOCKERHUB, OciRegistryType.DOCKERHUB),
+    (OCIRegistrySuffix.GAR, OciRegistryType.GAR),
+    (OCIRegistrySuffix.GCR, OciRegistryType.GCR),
+    (OCIRegistrySuffix.GHCR, OciRegistryType.GHCR),
+)
 
 
 class OciImageReference:
