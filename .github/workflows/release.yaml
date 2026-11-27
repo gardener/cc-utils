@@ -328,7 +328,7 @@ jobs:
 
     steps:
       - name: fetch-prepare-values
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@3fb3f16c501e1eafc1d7c35a4bb5378393556149
         with:
           name: prepare-workflow-values
       - name: prepare-prepare-workflow-values
@@ -344,7 +344,7 @@ jobs:
           echo "oci-registry=${oci_registry}" >> ${GITHUB_OUTPUT}
       - name: collect-component-descriptor
         id: component-descriptor
-        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@b09b115630d0e3dea2a76fd4b4b08577bd55ea73
         with:
           component-descriptor-artefact: base-component-descriptor
           component-descriptor: ${{ inputs.component-descriptor }}
@@ -414,7 +414,7 @@ jobs:
           print(f'INFO: "automatic" version operation has been resolved to {next_version=}')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
             f.write(f'next-version={next_version}\n')
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@90b41203a3391863920ffde956e81d8d7c8f47ba
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
@@ -422,7 +422,7 @@ jobs:
           repositories: |
             ${{ github.event.repository.name }}
           permissions: ${{ inputs.github-auth-token-permissions }}
-      - uses: gardener/cc-utils/.github/actions/release-notes@master
+      - uses: gardener/cc-utils/.github/actions/release-notes@cf1966a23be7ae2c8570c8a3be5c5c3c2e4e7e2e
         id: release-notes
         with:
           component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
@@ -446,7 +446,7 @@ jobs:
               categories: ''
               recursion_depth: 0
               include_resources: true
-      - uses: gardener/cc-utils/.github/actions/release@master
+      - uses: gardener/cc-utils/.github/actions/release@328e9adcce8d7459d1554d84674aac271bb9d0e5
         id: release
         with:
           component-descriptor-artifact: ${{ steps.component-descriptor.outputs.component-descriptor-artifact }}
@@ -528,7 +528,7 @@ jobs:
       - name: create-release-branch-bump-commit
         id: release-branch-bump
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
-        uses: gardener/cc-utils/.github/actions/version@master
+        uses: gardener/cc-utils/.github/actions/version@9f90814f658416bf813d69234244a32a639468eb
         # must be kept in sync with version action called in release action (except "version-operation")
         with:
           versionfile: ${{ inputs.version-versionfile }}
@@ -588,7 +588,7 @@ jobs:
 
       - name: sign-release-branch-bump-commit
         if: ${{ inputs.create-release-branch && steps.prep-next-version.outputs.next-version != 'bump-patch' }}
-        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        uses: gardener/cc-utils/.github/actions/signed-commit@97367388b2b1bc71479a8fd976a2096950fd72cf
         with:
           token: ${{ steps.fed-token.outputs.token || secrets.GITHUB_TOKEN }}
           branch: ${{ steps.release-branch.outputs.name }}
@@ -598,7 +598,7 @@ jobs:
 
       - name: cleanup-stale-release-branches
         if: ${{ inputs.cleanup-release-branches }}
-        uses: gardener/cc-utils/.github/actions/cleanup-release-branches@master
+        uses: gardener/cc-utils/.github/actions/cleanup-release-branches@90b41203a3391863920ffde956e81d8d7c8f47ba
         with:
           version: ${{ steps.component-descriptor.outputs.version }}
           github-token: ${{ steps.fed-token.outputs.token }}
