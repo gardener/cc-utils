@@ -127,14 +127,14 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
+    - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@808fef9ce3a75749d9a79530d6616f03fb6fed09
     - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       with:
         token: ${{ inputs.github-token }}
-    - uses: gardener/cc-utils/.github/actions/setup-git-identity@master
+    - uses: gardener/cc-utils/.github/actions/setup-git-identity@808fef9ce3a75749d9a79530d6616f03fb6fed09
     - name: download-component-descriptor-artifact
       if: ${{ inputs.component-descriptor-artifact != '' }}
-      uses: gardener/cc-utils/.github/actions/download-artifact@master
+      uses: gardener/cc-utils/.github/actions/download-artifact@808fef9ce3a75749d9a79530d6616f03fb6fed09
       with:
         name: ${{ inputs.component-descriptor-artifact }}
         path: /tmp/cd-artifact
@@ -173,7 +173,7 @@ runs:
       if: ${{ inputs.prepare-action-path != '' }}
       uses: ./../prepare-action
     - name: authenticate-against-oci-registry
-      uses: gardener/cc-utils/.github/actions/oci-auth@master
+      uses: gardener/cc-utils/.github/actions/oci-auth@4aff491ccbcfc0eae73d2b47b169022d69b60a8f
       with:
         oci-image-reference: ${{ inputs.ocm-repositories }} # only the first entry will be used
         gh-token: ${{ github.server_url == 'https://github.com' && inputs.github-token || '' }} # only try to authenticate for gh-com
