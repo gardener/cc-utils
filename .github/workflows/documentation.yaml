@@ -25,7 +25,7 @@ jobs:
           mkdir documentation-out.d
           GH_PAGES_PATH=$PWD/documentation-out.d .ci/generate_documentation
           ls documentation-out.d
-      - uses: gardener/cc-utils/.github/actions/upload-artifact@master
+      - uses: gardener/cc-utils/.github/actions/upload-artifact@808fef9ce3a75749d9a79530d6616f03fb6fed09
         with:
           name: documentation
           path: documentation-out.d
@@ -44,7 +44,7 @@ jobs:
         with:
           ref: refs/heads/gh-pages
       - name: Retrieve Documentation
-        uses: gardener/cc-utils/.github/actions/download-artifact@master
+        uses: gardener/cc-utils/.github/actions/download-artifact@808fef9ce3a75749d9a79530d6616f03fb6fed09
         with:
           name: documentation
           path: /tmp/documentation-out.d
@@ -58,7 +58,7 @@ jobs:
             echo "no changes in documentation - no need to update documentation"
             echo "unchanged=true" >> "${GITHUB_OUTPUT}"
           fi
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@808fef9ce3a75749d9a79530d6616f03fb6fed09
         if: ${{ steps.documentation.outputs.unchanged != 'true' }}
         id: fed-token
         with:
@@ -69,7 +69,7 @@ jobs:
             contents: write
       - name: Publish Documentation
         if: ${{ steps.documentation.outputs.unchanged != 'true' }}
-        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        uses: gardener/cc-utils/.github/actions/signed-commit@dec3ffa5717ea5c5f9d2d466db990931e46ee291
         with:
           token: ${{ steps.fed-token.outputs.token }}
           branch: gh-pages
