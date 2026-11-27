@@ -23,8 +23,10 @@ import dataclasses
 import os
 import subprocess
 import tempfile
+import time
 
 import github
+import requests.exceptions
 
 
 _MUTATION = '''
@@ -237,10 +239,35 @@ def create_signed_commit(
     variables = {'input': commit_input}
 
     session = github.github_api(token=token).session
-    response = session.post(
-        _graphql_endpoint(host),
-        json={'query': _MUTATION, 'variables': variables},
-    )
+
+    # createCommitOnBranch signs the commit server-side over the whole file-tree, which can take
+    # noticeably longer than github3.py's 10s default read-timeout when the tree is large or the
+    # API is under load. A single slow response would otherwise abort an entire ~60-commit pin
+    # chain with no retry. Use a generous explicit timeout and a bounded exponential backoff over
+    # transient connection/timeout errors (the mutation is effectively idempotent for our use: a
+    # retried success re-creates the same tree, and expectedHeadOid guards against double-apply).
+    endpoint = _graphql_endpoint(host)
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = session.post(
+                endpoint,
+                json={'query': _MUTATION, 'variables': variables},
+                timeout=(10, 60),
+            )
+            break
+        except (
+            requests.exceptions.Timeout,
+            requests.exceptions.ConnectionError,
+        ) as e:
+            if attempt == max_attempts:
+                raise
+            backoff = 2 ** (attempt - 1)
+            print(
+                f'createCommitOnBranch POST failed ({type(e).__name__}) on attempt '
+                f'{attempt}/{max_attempts}; retrying in {backoff}s'
+            )
+            time.sleep(backoff)
     response.raise_for_status()
     payload = response.json()
 
