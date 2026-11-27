@@ -56,7 +56,7 @@ jobs:
 
       - name: Run image update action
         id: image_update
-        uses: gardener/cc-utils/.github/actions/update-extension-provider-images@master
+        uses: gardener/cc-utils/.github/actions/update-extension-provider-images@ec83646e585b076c41f57f304f35e70c9b50f3c7
         with:
           images-yaml-path: ${{ inputs.images-yaml-path }}
           release-notes-path: ${{ inputs.release-notes-path }}
@@ -77,7 +77,7 @@ jobs:
             echo "notes_content=" >> $GITHUB_OUTPUT
           fi
 
-      - uses: gardener/cc-utils/.github/actions/github-auth@master
+      - uses: gardener/cc-utils/.github/actions/github-auth@808fef9ce3a75749d9a79530d6616f03fb6fed09
         if: ${{ vars.FEDERATED_GITHUB_ACCESS_TOKEN_SERVER != '' }}
         id: fed-token
         with:
@@ -116,7 +116,7 @@ jobs:
       - name: Create signed upgrade commit
         if: steps.check_changes.outputs.changes_detected == 'true'
         id: sign-commit
-        uses: gardener/cc-utils/.github/actions/signed-commit@master
+        uses: gardener/cc-utils/.github/actions/signed-commit@dec3ffa5717ea5c5f9d2d466db990931e46ee291
         with:
           token: ${{ steps.fed-token.outputs.token }}
           branch: ${{ inputs.branch-name }}
