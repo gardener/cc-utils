@@ -67,7 +67,6 @@ class OciRegistryType(enum.Enum):
     KEPPEL = 'keppel'
     UNKNOWN = 'unknown'
 
-
     @staticmethod
     def from_image_ref(
         image_reference: str | 'OciImageReference',
@@ -96,7 +95,6 @@ _SUFFIX_TO_TYPE = (
     (OCIRegistrySuffix.GCR, OciRegistryType.GCR),
     (OCIRegistrySuffix.GHCR, OciRegistryType.GHCR),
 )
-
 
 
 class OciImageReference:
